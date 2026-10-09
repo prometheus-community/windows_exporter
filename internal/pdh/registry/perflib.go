@@ -409,8 +409,17 @@ func parsePerformanceData(buffer []byte, counterName string) ([]*PerfObject, err
 			numInstances = 1
 		}
 
+		// The counters of all instances share one backing array below, which
+		// grows with instances × counters. Counter values do not overlap, so
+		// each takes at least one byte of the object. Checking that keeps the
+		// allocation linear in the buffer size for malformed data.
+		if numInstances*numCounterDefs > bufLen-objOffset {
+			return nil, fmt.Errorf("%w: %d instances with %d counters each do not fit into the buffer", errMalformedPerformanceData, numInstances, numCounterDefs)
+		}
+
 		instances := make([]PerfInstance, numInstances)
 		counterDefs := make([]PerfCounterDef, numCounterDefs)
+		counters := make([]PerfCounter, numInstances*numCounterDefs)
 
 		objects[i] = &PerfObject{
 			Name:        perfCounterName,
@@ -444,19 +453,14 @@ func parsePerformanceData(buffer []byte, counterName string) ([]*PerfObject, err
 			}
 		}
 
-		// The instances are walked before the counters are allocated, so
-		// inconsistent data fails before the allocation that scales with
-		// instances × counters.
-		blockOffsets := make([]int64, numInstances)
-
 		if obj.NumInstances <= 0 { //nolint:nestif
 			blockOffset := objOffset + int64(obj.DefinitionLength)
 
-			if _, err := counterBlockLength(buffer, blockOffset); err != nil {
+			if _, err := parseCounterBlock(buffer, blockOffset, counterDefs, counters); err != nil {
 				return nil, err
 			}
 
-			blockOffsets[0] = blockOffset
+			instances[0].Counters = counters
 		} else {
 			instOffset := objOffset + int64(obj.DefinitionLength)
 
@@ -475,28 +479,16 @@ func parsePerformanceData(buffer []byte, counterName string) ([]*PerfObject, err
 				instances[j].Name, nameScratch = decodeUTF16String(buffer[namePos:namePos+int64(inst.NameLength)], nameScratch)
 
 				blockOffset := instOffset + int64(inst.ByteLength)
+				instCounters := counters[j*numCounterDefs : (j+1)*numCounterDefs : (j+1)*numCounterDefs]
 
-				blockLength, err := counterBlockLength(buffer, blockOffset)
+				blockLength, err := parseCounterBlock(buffer, blockOffset, counterDefs, instCounters)
 				if err != nil {
 					return nil, err
 				}
 
-				blockOffsets[j] = blockOffset
+				instances[j].Counters = instCounters
 				instOffset = blockOffset + blockLength
 			}
-		}
-
-		// One backing array holds the counters of all instances.
-		counters := make([]PerfCounter, numInstances*numCounterDefs)
-
-		for j, blockOffset := range blockOffsets {
-			instCounters := counters[int64(j)*numCounterDefs : int64(j+1)*numCounterDefs : int64(j+1)*numCounterDefs]
-
-			if err := parseCounterValues(buffer, blockOffset, counterDefs, instCounters); err != nil {
-				return nil, err
-			}
-
-			instances[j].Counters = instCounters
 		}
 
 		if counterName != "" {
@@ -520,8 +512,9 @@ func bytesAt(b []byte, pos int64) []byte {
 	return b[pos:]
 }
 
-// counterBlockLength returns the length of the PERF_COUNTER_BLOCK at pos.
-func counterBlockLength(b []byte, pos int64) (int64, error) {
+// parseCounterBlock reads the PERF_COUNTER_BLOCK at pos into counters, which
+// has one element per definition in defs. It returns the length of the block.
+func parseCounterBlock(b []byte, pos int64, defs []PerfCounterDef, counters []PerfCounter) (int64, error) {
 	var block perfCounterBlock
 
 	if err := block.decode(bytesAt(b, pos)); err != nil {
@@ -534,12 +527,6 @@ func counterBlockLength(b []byte, pos int64) (int64, error) {
 		return 0, fmt.Errorf("%w: counter block at offset %d has length %d", errMalformedPerformanceData, pos, block.ByteLength)
 	}
 
-	return int64(block.ByteLength), nil
-}
-
-// parseCounterValues reads the values of the counter block at pos into
-// counters, which has one element per definition in defs.
-func parseCounterValues(b []byte, pos int64, defs []PerfCounterDef, counters []PerfCounter) error {
 	for i := range defs {
 		def := &defs[i]
 
@@ -552,7 +539,7 @@ func parseCounterValues(b []byte, pos int64, defs []PerfCounterDef, counters []P
 		}
 
 		if end > int64(len(b)) {
-			return fmt.Errorf("%w: value of counter %s at offset %d exceeds the buffer", errMalformedPerformanceData, def.Name, valueOffset)
+			return 0, fmt.Errorf("%w: value of counter %s at offset %d exceeds the buffer", errMalformedPerformanceData, def.Name, valueOffset)
 		}
 
 		value := convertCounterValue(&def.rawData, b, valueOffset)
@@ -569,7 +556,7 @@ func parseCounterValues(b []byte, pos int64, defs []PerfCounterDef, counters []P
 		}
 	}
 
-	return nil
+	return int64(block.ByteLength), nil
 }
 
 // counterValueSize returns the number of bytes convertCounterValue reads.
