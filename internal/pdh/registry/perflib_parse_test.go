@@ -20,6 +20,7 @@ package registry
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"testing"
 	"unsafe"
 
@@ -190,6 +191,73 @@ func TestParsePerformanceDataTruncated(t *testing.T) {
 	}
 }
 
+// sharedValuePerfData returns a consistent PERF_DATA_BLOCK with one object
+// whose counters all read the same 4 bytes of each minimal counter block.
+func sharedValuePerfData(tb testing.TB, numCounters, numInstances uint32) []byte {
+	tb.Helper()
+
+	var body bytes.Buffer
+
+	write := func(v any) {
+		require.NoError(tb, binary.Write(&body, bo, v))
+	}
+
+	for range numCounters {
+		write(perfCounterDefinition{
+			ByteLength:  uint32(perfCounterDefinitionSize),
+			CounterType: pdh.PERF_COUNTER_RAWCOUNT,
+			CounterSize: 4,
+		})
+	}
+
+	for range numInstances {
+		write(perfInstanceDefinition{ByteLength: uint32(perfInstanceDefinitionSize)})
+		write(perfCounterBlock{ByteLength: uint32(perfCounterBlockSize)})
+	}
+
+	object := perfObjectType{
+		TotalByteLength:  uint32(perfObjectTypeSize) + uint32(body.Len()),
+		DefinitionLength: uint32(perfObjectTypeSize) + numCounters*uint32(perfCounterDefinitionSize),
+		HeaderLength:     uint32(perfObjectTypeSize),
+		NumCounters:      numCounters,
+		NumInstances:     int32(numInstances),
+	}
+
+	header := perfDataBlock{
+		Signature:       [4]uint16{'P', 'E', 'R', 'F'},
+		LittleEndian:    1,
+		TotalByteLength: uint32(perfDataBlockSize) + object.TotalByteLength,
+		HeaderLength:    uint32(perfDataBlockSize),
+		NumObjectTypes:  1,
+	}
+
+	var buf bytes.Buffer
+
+	require.NoError(tb, binary.Write(&buf, bo, header))
+	require.NoError(tb, binary.Write(&buf, bo, object))
+	buf.Write(body.Bytes())
+
+	return buf.Bytes()
+}
+
+// TestParsePerformanceDataCounterProduct checks that the counters of all
+// instances, which share one allocation, are bounded by the buffer size. Data
+// whose counter values overlap could otherwise request an allocation that
+// grows with the square of the buffer size.
+func TestParsePerformanceDataCounterProduct(t *testing.T) {
+	t.Parallel()
+
+	objects, err := parsePerformanceData(sharedValuePerfData(t, 200, 10), "")
+	require.NoError(t, err)
+	require.Len(t, objects[0].Instances, 10)
+	require.Len(t, objects[0].Instances[9].Counters, 200)
+	require.Equal(t, perfCounterBlockSize, objects[0].Instances[9].Counters[199].Value)
+
+	_, err = parsePerformanceData(sharedValuePerfData(t, 200, 200), "")
+	require.ErrorIs(t, err, errMalformedPerformanceData)
+	require.ErrorContains(t, err, "200 instances with 200 counters each")
+}
+
 // TestParsePerformanceDataLive parses the data of a real object.
 func TestParsePerformanceDataLive(t *testing.T) {
 	t.Parallel()
@@ -308,4 +376,50 @@ func TestNewCollectorUnknownObject(t *testing.T) {
 
 	_, err := NewCollector[counterValues]("Object That Does Not Exist", nil)
 	require.ErrorContains(t, err, "not found in the counter name table")
+}
+
+// BenchmarkParsePerformanceData measures the parser alone, without the
+// RegQueryValueEx call that dominates BenchmarkCollectorCollect.
+func BenchmarkParsePerformanceData(b *testing.B) {
+	buffer := livePerformanceData(b, "Process")
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		if _, err := parsePerformanceData(buffer, "Process"); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// TestDecodeMatchesBinaryRead checks the hand-written decoders of the raw
+// structures against binary.Read.
+func TestDecodeMatchesBinaryRead(t *testing.T) {
+	t.Parallel()
+
+	type decoder interface {
+		decode(b []byte) error
+	}
+
+	for _, tc := range []struct {
+		decoded, expected decoder
+	}{
+		{new(perfDataBlock), new(perfDataBlock)},
+		{new(perfObjectType), new(perfObjectType)},
+		{new(perfCounterDefinition), new(perfCounterDefinition)},
+		{new(perfCounterBlock), new(perfCounterBlock)},
+		{new(perfInstanceDefinition), new(perfInstanceDefinition)},
+	} {
+		// Distinct bytes, so a field read from the wrong offset gets a different value.
+		buffer := make([]byte, binary.Size(tc.expected))
+		for i := range buffer {
+			buffer[i] = byte(i + 1)
+		}
+
+		require.NoError(t, binary.Read(bytes.NewReader(buffer), bo, tc.expected))
+		require.NoError(t, tc.decoded.decode(buffer))
+		require.Equal(t, tc.expected, tc.decoded)
+
+		require.ErrorIs(t, tc.decoded.decode(buffer[:len(buffer)-1]), io.ErrUnexpectedEOF)
+	}
 }

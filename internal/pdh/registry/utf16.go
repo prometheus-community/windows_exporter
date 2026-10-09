@@ -18,27 +18,23 @@
 package registry
 
 import (
-	"encoding/binary"
 	"io"
 
 	"golang.org/x/sys/windows"
 )
 
-// readUTF16StringAtPos Read an unterminated UTF16 string at a given position, specifying its length.
-func readUTF16StringAtPos(r io.ReadSeeker, absPos int64, length uint32) (string, error) {
-	value := make([]uint16, length/2)
+// decodeUTF16String decodes the unterminated UTF16 string b up to the first NUL.
+// A trailing odd byte is ignored. scratch holds the code units; it is returned
+// with any growth so the caller can reuse it for the next string. The returned
+// string does not reference b.
+func decodeUTF16String(b []byte, scratch []uint16) (string, []uint16) {
+	scratch = scratch[:0]
 
-	_, err := r.Seek(absPos, io.SeekStart)
-	if err != nil {
-		return "", err
+	for i := 0; i+1 < len(b); i += 2 {
+		scratch = append(scratch, bo.Uint16(b[i:]))
 	}
 
-	err = binary.Read(r, bo, value)
-	if err != nil {
-		return "", err
-	}
-
-	return windows.UTF16ToString(value), nil
+	return windows.UTF16ToString(scratch), scratch
 }
 
 // readUTF16String Reads a null-terminated UTF16 string at the current offset.
