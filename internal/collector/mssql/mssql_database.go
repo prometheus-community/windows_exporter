@@ -466,6 +466,12 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)
 	}
 
+	c.emitDatabasesMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitDatabasesMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	for _, data := range c.databasesPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesActiveTransactions,
@@ -778,7 +784,7 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPControllerDLCPeakLatency,
 			prometheus.GaugeValue,
-			data.DatabasesXTPControllerDLCPeakLatency*1000000.0,
+			data.DatabasesXTPControllerDLCPeakLatency/1e6,
 			sqlInstance.name, data.Name,
 		)
 
@@ -796,8 +802,6 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 			sqlInstance.name, data.Name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesDatabases2019]) error {
