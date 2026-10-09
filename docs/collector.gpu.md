@@ -1,6 +1,6 @@
-# gpu collector
+# GPU collector
 
-The gpu collector exposes metrics about GPU usage and memory consumption, both at the adapter (physical GPU) and
+The GPU collector exposes metrics about GPU usage and memory consumption, both at the adapter (physical GPU) and
 per-process level.
 
 |                     |                                      |
@@ -22,7 +22,7 @@ These metrics are available on supported versions of Windows with compatible GPU
 
 | Name                                             | Description                                                                        | Type  | Labels                                                                                                         |
 |--------------------------------------------------|------------------------------------------------------------------------------------|-------|----------------------------------------------------------------------------------------------------------------|
-| `windows_gpu_info`                               | A metric with a constant '1' value labeled with gpu device information.            | gauge | `architecture`,`bus_number`,`device_id`,`driver_version`,`function_number`,`luid`,`name`,`phys`,`wddm_version` |
+| `windows_gpu_info`                               | A metric with a constant '1' value labeled with GPU device information.            | gauge | `architecture`,`bus_number`,`device_id`,`driver_version`,`function_number`,`luid`,`name`,`phys`,`wddm_version` |
 | `windows_gpu_dedicated_system_memory_size_bytes` | The size, in bytes, of memory that is dedicated from system memory.                | gauge | `device_id`,`luid`                                                                                             |
 | `windows_gpu_dedicated_video_memory_size_bytes`  | The size, in bytes, of memory that is dedicated from video memory.                 | gauge | `device_id`,`luid`                                                                                             |
 | `windows_gpu_shared_system_memory_size_bytes`    | The size, in bytes, of memory from system memory that can be shared by many users. | gauge | `device_id`,`luid`                                                                                             |
