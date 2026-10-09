@@ -144,7 +144,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) && c.perfDataCollector != nil {
 		c.perfDataCollector.Close()
 	}
 

@@ -108,3 +108,11 @@ func TestNativeDenialCounterNames(t *testing.T) {
 
 	require.NoError(t, err, "the production denial counter names must exist on the native provider")
 }
+
+func TestCloseAfterInvalidSubcollectorBuild(t *testing.T) {
+	t.Parallel()
+
+	c := New(&Config{CollectorsEnabled: []string{subCollectorServerMetrics, "invalid"}})
+	require.Error(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	require.NoError(t, c.Close())
+}
