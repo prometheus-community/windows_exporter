@@ -308,9 +308,16 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 // because closing it would release resources that are still in use.
 // The MI session is then left open as well.
 //
+// Close does nothing on a filtered view returned by WithCollectors. The original
+// Collection owns the shared collectors and MI resources and must be closed.
+//
 // Close is safe to call after a failed or partial Build and more than once.
 // Collectors that were never built are not closed. A closed collector is never built or collected again.
 func (c *Collection) Close() error {
+	if c.isView {
+		return nil
+	}
+
 	c.state.closeMu.Lock()
 	defer c.state.closeMu.Unlock()
 
@@ -390,10 +397,13 @@ func newMISession(app *mi.Application, destinationOptions *mi.DestinationOptions
 // WithCollectors To be called by the exporter for collector initialization.
 // The returned Collection shares the collector instances and their state with c,
 // so a collector never runs twice at the same time, whichever Collection scrapes it.
+// It does not own these resources: Close on a view does nothing. Close the original
+// Collection when all of its views are no longer needed.
 func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
 	metricCollectors := &Collection{
 		startTime:                   c.startTime,
 		state:                       c.state,
+		isView:                      true,
 		scrapeDurationDesc:          c.scrapeDurationDesc,
 		collectorScrapeDurationDesc: c.collectorScrapeDurationDesc,
 		collectorScrapeSuccessDesc:  c.collectorScrapeSuccessDesc,

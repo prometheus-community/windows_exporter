@@ -117,3 +117,63 @@ func (c *lifecycleCollector) Close() error {
 
 	return c.closeErr
 }
+
+func TestFilteredCloseKeepsNativeSession(t *testing.T) {
+	t.Parallel()
+
+	selected := &sessionProbeCollector{name: "selected"}
+	omitted := &sessionProbeCollector{name: "omitted"}
+	collection := collector.New(collector.Map{"selected": selected, "omitted": omitted})
+	require.NoError(t, collection.Build(t.Context(), slog.New(slog.DiscardHandler)))
+	t.Cleanup(func() { require.NoError(t, collection.Close()) })
+
+	view, err := collection.WithCollectors([]string{"selected"})
+	require.NoError(t, err)
+	require.NoError(t, view.Close())
+	require.False(t, selected.closed)
+	require.False(t, omitted.closed)
+
+	query, err := mi.NewQuery("SELECT Caption FROM Win32_OperatingSystem")
+	require.NoError(t, err)
+
+	var result []struct{ Caption string }
+	require.NoError(t, omitted.session.Query(&result, mi.NamespaceRootCIMv2, query, time.Second*5))
+	require.NotEmpty(t, result)
+	require.NoError(t, collection.Close())
+	require.True(t, selected.closed)
+	require.True(t, omitted.closed)
+}
+
+type sessionProbeCollector struct {
+	lifecycleCollector
+
+	session *mi.Session
+}
+
+func (c *sessionProbeCollector) Build(_ *slog.Logger, session *mi.Session) error {
+	c.session = session
+
+	return nil
+}
+
+func TestFilteredCloseWhileOmittedCollectorActive(t *testing.T) {
+	t.Parallel()
+
+	selected := &lifecycleCollector{name: "selected"}
+	running := newBlockingCollector()
+	collection := collector.New(collector.Map{"selected": selected, "test": running})
+	require.NoError(t, collection.Build(t.Context(), slog.New(slog.DiscardHandler)))
+	t.Cleanup(func() { require.NoError(t, collection.Close()) })
+
+	view, err := collection.WithCollectors([]string{"selected"})
+	require.NoError(t, err)
+	result := scrapeInBackground(t.Context(), collection, time.Minute)
+
+	<-running.started
+	require.NoError(t, view.Close())
+	require.False(t, selected.closed)
+	close(running.block)
+	require.Contains(t, <-result, `windows_exporter_collector_success{collector="test"} 1`)
+	require.NoError(t, collection.Close())
+	require.True(t, selected.closed)
+}

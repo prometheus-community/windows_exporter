@@ -34,6 +34,8 @@ type Collection struct {
 
 	// state is shared with every Collection derived from this one by WithCollectors.
 	state *collectionState
+	// isView marks a non-owning view returned by WithCollectors.
+	isView bool
 
 	scrapeDurationDesc          *prometheus.Desc
 	collectorScrapeDurationDesc *prometheus.Desc
