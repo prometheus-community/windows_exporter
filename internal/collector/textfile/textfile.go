@@ -324,10 +324,9 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	mTimes := map[string]time.Time{}
 
-	// Create empty metricFamily slice here and append parsedFamilies to it inside the loop.
-	// Once loop is complete, raise error if any duplicates are present.
-	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
 	var metricFamilies []*dto.MetricFamily
+
+	seriesFiles := make(map[string]string)
 
 	errs := make([]error, 0)
 
@@ -338,32 +337,58 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 				return fmt.Errorf("error reading directory: %w", err)
 			}
 
-			if !dirEntry.IsDir() && strings.HasSuffix(dirEntry.Name(), ".prom") {
-				c.logger.Debug("Processing file: " + path)
+			if dirEntry.IsDir() || !strings.HasSuffix(dirEntry.Name(), ".prom") {
+				return nil
+			}
 
-				families_array, err := scrapeFile(path, c.logger)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("error scraping file %q: %w", path, err))
+			c.logger.Debug("Processing file: " + path)
 
-					return nil
+			families_array, err := scrapeFile(path, c.logger)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("error scraping file %q: %w", path, err))
+
+				return nil
+			}
+
+			fileInfo, err := os.Stat(path)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("error reading file info %q: %w", path, err))
+
+				return nil
+			}
+
+			if _, hasName := mTimes[fileInfo.Name()]; hasName {
+				errs = append(errs, fmt.Errorf("duplicate filename detected: %q", path))
+
+				return nil
+			}
+
+			fileHasDuplicates := false
+
+			for _, family := range families_array {
+				metrics := family.GetMetric()[:0]
+				for _, metric := range family.GetMetric() {
+					key := seriesKey(family.GetName(), metric.GetLabel())
+					if previousFile, exists := seriesFiles[key]; exists {
+						errs = append(errs, fmt.Errorf("duplicate metric %q with labels %v in %q and %q", family.GetName(), metric.GetLabel(), previousFile, path))
+						fileHasDuplicates = true
+
+						continue
+					}
+
+					seriesFiles[key] = path
+
+					metrics = append(metrics, metric)
 				}
 
-				fileInfo, err := os.Stat(path)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("error reading file info %q: %w", path, err))
-
-					return nil
+				family.Metric = metrics
+				if len(metrics) != 0 {
+					metricFamilies = append(metricFamilies, family)
 				}
+			}
 
-				if _, hasName := mTimes[fileInfo.Name()]; hasName {
-					errs = append(errs, fmt.Errorf("duplicate filename detected: %q", path))
-
-					return nil
-				}
-
+			if !fileHasDuplicates {
 				mTimes[fileInfo.Name()] = fileInfo.ModTime()
-
-				metricFamilies = append(metricFamilies, families_array...)
 			}
 
 			return nil
@@ -375,13 +400,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	c.exportMTimes(mTimes, ch)
 
-	// If duplicates are detected across *multiple* files, return error.
-	if duplicateMetricEntry(metricFamilies) {
-		c.logger.Warn("duplicate metrics detected across multiple files")
-	} else {
-		for _, mf := range metricFamilies {
-			c.convertMetricFamily(c.logger, mf, ch)
-		}
+	for _, mf := range metricFamilies {
+		c.convertMetricFamily(c.logger, mf, ch)
 	}
 
 	return errors.Join(errs...)
