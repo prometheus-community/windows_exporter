@@ -426,7 +426,7 @@ func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {
 		}
 
 		if mf.Help == nil {
-			help := "Metric read from " + path
+			help := "Metric read from textfile collector"
 			mf.Help = &help
 		}
 	}
