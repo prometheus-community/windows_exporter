@@ -21,13 +21,14 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorRootPartition Hyper-V Hypervisor Root Partition metrics
 type collectorHypervisorRootPartition struct {
-	perfDataCollectorHypervisorRootPartition *pdh.Collector[perfDataCounterValuesHypervisorRootPartition]
+	perfDataCollectorHypervisorRootPartition pdhtypes.Collector[perfDataCounterValuesHypervisorRootPartition]
 	perfDataObjectHypervisorRootPartition    []perfDataCounterValuesHypervisorRootPartition
 
 	hypervisorRootPartitionAddressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
@@ -85,6 +86,12 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Partition collector: %w", err)
 	}
 
+	c.buildHypervisorRootPartitionDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 	c.hypervisorRootPartitionAddressSpaces = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "root_partition_address_spaces"),
 		"The number of address spaces in the virtual TLB of the partition",
@@ -211,8 +218,6 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		nil,
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) error {
@@ -249,6 +254,12 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) 
 		c.hypervisorRootPartitionDeviceInterruptErrors,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptErrors,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.hypervisorRootPartitionDeviceInterruptMappings,
+		prometheus.GaugeValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptMappings,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

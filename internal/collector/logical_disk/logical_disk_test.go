@@ -134,3 +134,20 @@ func TestCollectorVolumeFilters(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectorReadOnlyMetric(t *testing.T) {
+	metrics := testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
+		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
+		VolumeInclude:     types.RegExpAny,
+	})
+	family := metrics["windows_logical_disk_readonly"]
+	require.NotNil(t, family)
+	require.NotEmpty(t, family.GetMetric())
+
+	for _, metric := range family.GetMetric() {
+		value := metric.GetGauge().GetValue()
+		require.True(t, value == 0 || value == 1, "read-only flag must be normalized to a boolean")
+		require.Len(t, metric.GetLabel(), 1)
+		require.Equal(t, "volume", metric.GetLabel()[0].GetName())
+	}
+}

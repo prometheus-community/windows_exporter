@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -381,6 +382,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			)
 		}
 
+		if err == nil {
+			ch <- prometheus.MustNewConstMetric(c.readOnly, prometheus.GaugeValue, info.readonly, data.Name)
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.information,
 			prometheus.GaugeValue,
@@ -714,7 +719,7 @@ func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, err
 		label:        windows.UTF16PtrToString(&volBufLabel[0]),
 		filesystem:   windows.UTF16PtrToString(&volBufType[0]),
 		serialNumber: fmt.Sprintf("%X", volSerialNum),
-		readonly:     float64(fsFlags & windows.FILE_READ_ONLY_VOLUME),
+		readonly:     utils.BoolToFloat(fsFlags&windows.FILE_READ_ONLY_VOLUME != 0),
 	}, nil
 }
 
