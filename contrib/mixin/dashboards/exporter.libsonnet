@@ -109,12 +109,13 @@ b.tab(
     }),
 
     b.panel.new(93, 'Failed collectors', 'stat')
-    + b.panel.withDescription('Collectors that failed at least once in the selected time range.')
+    + b.panel.withDescription('Number of collectors that failed on the latest scrape, including timeouts. The graph shows the count over the selected time range.')
     + b.panel.withQueries([
-      b.query.new('count(min_over_time(windows_exporter_collector_success{job=~"$job", instance="$instance"}[$__range]) == 0) or vector(0)', 'A')
-      + b.query.withInstant(),
+      b.query.new('count(windows_exporter_collector_success{job=~"$job", instance="$instance"} == 0) or vector(0)', 'A'),
     ])
     + b.panel.withDefaults({
+      decimals: 0,
+      min: 0,
       thresholds: {
         steps: [
           {
@@ -127,15 +128,19 @@ b.tab(
           },
         ],
       },
+    })
+    + b.panel.withOptions({
+      graphMode: 'area',
     }),
 
     b.panel.new(94, 'Timed-out collectors', 'stat')
-    + b.panel.withDescription('Collectors that hit the collector timeout at least once in the selected time range.')
+    + b.panel.withDescription('Number of collectors that timed out on the latest scrape. The graph shows the count over the selected time range.')
     + b.panel.withQueries([
-      b.query.new('count(max_over_time(windows_exporter_collector_timeout{job=~"$job", instance="$instance"}[$__range]) == 1) or vector(0)', 'A')
-      + b.query.withInstant(),
+      b.query.new('count(windows_exporter_collector_timeout{job=~"$job", instance="$instance"} == 1) or vector(0)', 'A'),
     ])
     + b.panel.withDefaults({
+      decimals: 0,
+      min: 0,
       thresholds: {
         steps: [
           {
@@ -148,6 +153,9 @@ b.tab(
           },
         ],
       },
+    })
+    + b.panel.withOptions({
+      graphMode: 'area',
     }),
 
     b.panel.new(95, 'Samples per scrape', 'stat')

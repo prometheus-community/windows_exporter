@@ -12300,10 +12300,10 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(min_over_time(windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"}[$__range]) == 0) or vector(0)",
-                                                "instant": true,
+                                                "expr": "count(windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"} == 0) or vector(0)",
+                                                "instant": false,
                                                 "legendFormat": "__auto",
-                                                "range": false
+                                                "range": true
                                             },
                                             "version": "v0"
                                         },
@@ -12315,7 +12315,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Collectors that failed at least once in the selected time range.",
+                    "description": "Number of collectors that failed on the latest scrape, including timeouts. The graph shows the count over the selected time range.",
                     "id": 93,
                     "links": [],
                     "title": "Failed collectors",
@@ -12328,6 +12328,8 @@
                                     "color": {
                                         "mode": "thresholds"
                                     },
+                                    "decimals": 0,
+                                    "min": 0,
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -12347,7 +12349,7 @@
                             },
                             "options": {
                                 "colorMode": "value",
-                                "graphMode": "none",
+                                "graphMode": "area",
                                 "justifyMode": "auto",
                                 "orientation": "auto",
                                 "percentChangeColorMode": "standard",
@@ -12386,10 +12388,10 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(max_over_time(windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"}[$__range]) == 1) or vector(0)",
-                                                "instant": true,
+                                                "expr": "count(windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"} == 1) or vector(0)",
+                                                "instant": false,
                                                 "legendFormat": "__auto",
-                                                "range": false
+                                                "range": true
                                             },
                                             "version": "v0"
                                         },
@@ -12401,7 +12403,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Collectors that hit the collector timeout at least once in the selected time range.",
+                    "description": "Number of collectors that timed out on the latest scrape. The graph shows the count over the selected time range.",
                     "id": 94,
                     "links": [],
                     "title": "Timed-out collectors",
@@ -12414,6 +12416,8 @@
                                     "color": {
                                         "mode": "thresholds"
                                     },
+                                    "decimals": 0,
+                                    "min": 0,
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -12433,7 +12437,7 @@
                             },
                             "options": {
                                 "colorMode": "value",
-                                "graphMode": "none",
+                                "graphMode": "area",
                                 "justifyMode": "auto",
                                 "orientation": "auto",
                                 "percentChangeColorMode": "standard",
