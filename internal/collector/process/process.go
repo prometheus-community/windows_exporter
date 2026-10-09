@@ -70,6 +70,7 @@ type Collector struct {
 	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 	workerCh          chan processWorkerRequest
+	workerWG          sync.WaitGroup
 
 	lookupCache sync.Map
 
@@ -179,6 +180,7 @@ func (c *Collector) Close() error {
 	if c.workerCh != nil {
 		close(c.workerCh)
 		c.workerCh = nil
+		c.workerWG.Wait()
 	}
 
 	return nil
@@ -216,7 +218,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.workerCh = make(chan processWorkerRequest, 32)
 
 	for range 4 {
-		go c.collectWorker()
+		c.workerWG.Add(1)
+		go c.collectWorker(c.workerCh)
 	}
 
 	c.mu = sync.RWMutex{}
