@@ -15,21 +15,6 @@
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml","**/workflows/govulncheck.yml"],
   "packageRules": [
     {
-      "enabled": true,
-      "matchDatasources": ["golang-version"],
-      "rangeStrategy": "bump"
-    },
-    {
-      "enabled": true,
-      "matchDepNames": ["go", "golang"],
-      "groupName": "go version"
-    },
-    {
-      "enabled": true,
-      "matchCategories": ["go"],
-      "matchUpdateTypes": ["digest"]
-    },
-    {
       "groupName": "golangci-lint",
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",
@@ -63,6 +48,21 @@
       "semanticCommitScope": "github-actions",
       "separateMajorMinor": false,
       "addLabels": ["chore"]
+    },
+    {
+      "enabled": true,
+      "matchDatasources": ["golang-version"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "enabled": true,
+      "matchDepNames": ["go", "golang"],
+      "groupName": "go version"
+    },
+    {
+      "enabled": true,
+      "matchCategories": ["go"],
+      "matchUpdateTypes": ["digest"]
     },
     {
       "groupName": "moby monorepo",
