@@ -1,5 +1,24 @@
 # Keep exceptions scoped to the existing sample dashboard and panels.
 exclusions:
+  target-promql-rule:
+    reason: dashboard-linter 0.3.0's v2 adapter omits custom variable current values and options, so the numeric process_top value becomes a vector identifier. These queries are validated against live Prometheus with limits 5, 10 and 20.
+    entries:
+      - dashboard: Windows Exporter
+        panel: Process CPU usage
+      - dashboard: Windows Exporter
+        panel: Process working set
+      - dashboard: Windows Exporter
+        panel: Process private bytes
+      - dashboard: Windows Exporter
+        panel: Process I/O throughput
+      - dashboard: Windows Exporter
+        panel: Process threads
+      - dashboard: Windows Exporter
+        panel: Process handles
+      - dashboard: Windows Exporter
+        panel: Process I/O operations
+      - dashboard: Windows Exporter
+        panel: Process page faults
   target-instance-rule:
     reason: Fleet panels intentionally span instances; per-host panels use an exact matcher for the single-select instance variable.
     entries:

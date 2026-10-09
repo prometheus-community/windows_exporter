@@ -99,4 +99,30 @@ local new(name, definition) = common
   + query.spec.withLabel('Network interface')
   + query.spec.withMulti(true)
   + query.spec.withRegex('/^(?!isatap|Teredo|6to4).+$/'),
+  new('process', 'label_values(windows_process_info{job=~"$job", instance="$instance", process_id!="0"}, process)')
+  + query.spec.withCurrent({
+    text: [
+      'All',
+    ],
+    value: [
+      '$__all',
+    ],
+  })
+  + query.spec.withIncludeAll(true)
+  + query.spec.withLabel('Process')
+  + query.spec.withMulti(true),
+  variables.CustomVariableKind.withKind()
+  + variables.CustomVariableKind.withSpec({
+    name: 'process_top',
+    label: 'Top N processes',
+    description: 'Maximum number of processes per graph. Summary counters include all selected processes.',
+    query: '5,10,20',
+    current: { text: '10', value: '10' },
+    options: [{ text: value, value: value, selected: value == '10' } for value in ['5', '10', '20']],
+    multi: false,
+    includeAll: false,
+    allowCustomValue: false,
+    hide: 'dontHide',
+    skipUrlSync: false,
+  }),
 ]

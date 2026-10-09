@@ -8,7 +8,7 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The GPU, Hyper-V and Time tabs and the TCP and UDP rows of the Network tab need the `gpu`, `hyperv`, `time`, `tcp` and `udp` collectors, which are not enabled by default.
+  The Processes, GPU, Hyper-V and Time tabs and the TCP and UDP rows of the Network tab need the `process`, `gpu`, `hyperv`, `time`, `tcp` and `udp` collectors, which are not enabled by default.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
 
@@ -24,6 +24,8 @@ Import the JSON file through **Dashboards > New > Import** and pick the Promethe
 | Instance          | The host shown in all tabs except Fleet.                                    |
 | Volume            | Volumes shown in the Overview and Disk tabs. `HarddiskVolume*` are hidden.  |
 | Network interface | Interfaces shown in the Overview and Network tabs.                          |
+| Process           | One or more process names shown in the Processes tab, or All.               |
+| Top N processes   | Maximum processes per graph: 5, 10 (default), or 20.                         |
 
 The **Reboots** annotation marks each reboot of the selected host on all graphs.
 
@@ -38,12 +40,20 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | Disk     | Volume size and free space, usage, busy time, throughput, IOPS, latency and queue length.                                                                           |
 | Network  | Throughput, utilization, packets, errors and discards per interface; TCP connection states and rates, segments and retransmissions; UDP datagrams and errors.       |
 | Services | Running, pending and disabled services, automatic services that are not running, and services that started or stopped in the time range.                            |
+| Processes | CPU usage, working set, private bytes, I/O throughput and operations, threads, handles and page faults per process, labelled with name and PID.                  |
 | GPU      | Utilization by engine type, memory capacity, commitment and locality, temperature, fans, power, clocks, and top processes by GPU utilization and memory.                                                                   |
 | Hyper-V  | VM count and health, Hyper-V WMI health, host CPU time, CPU and memory per VM, virtual disks, virtual switches and VM network adapters.                             |
 | Time     | Time zone, clock sync source, NTP time sources, clock offset and NTP round-trip delay.                                                                              |
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |
 
 Click a hostname in the Fleet tab to open that host in the Overview tab.
+
+The Processes tab starts with totals for all selected processes: process count,
+threads, handles, CPU usage across the host, private working set and private bytes.
+The synthetic Idle process (PID 0) is excluded. Each graph shows at most **Top N**
+processes, ranked separately at the end of the time range, with a fixed set of
+process IDs across the graph. Processes that exited before that point may not
+appear. I/O graphs combine read, write and other operations per process.
 
 ### Changing the dashboard
 
