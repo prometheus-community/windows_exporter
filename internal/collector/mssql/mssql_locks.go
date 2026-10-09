@@ -129,6 +129,12 @@ func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstanc
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Locks"), err)
 	}
 
+	c.emitLocksMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitLocksMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	for _, data := range c.locksPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.locksWaitTime,
@@ -140,7 +146,7 @@ func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstanc
 		ch <- prometheus.MustNewConstMetric(
 			c.locksCount,
 			prometheus.GaugeValue,
-			data.LocksAverageWaitTimeMSBase/1000.0,
+			data.LocksAverageWaitTimeMSBase,
 			sqlInstance.name, data.Name,
 		)
 
@@ -186,8 +192,6 @@ func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstanc
 			sqlInstance.name, data.Name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) closeLocks() {

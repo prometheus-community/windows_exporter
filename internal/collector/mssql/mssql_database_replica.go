@@ -257,11 +257,17 @@ func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, 
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), err)
 	}
 
+	c.emitDatabaseReplicaMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	for _, data := range c.dbReplicaPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaDatabaseFlowControlDelay,
 			prometheus.GaugeValue,
-			data.DbReplicaDatabaseFlowControlDelay,
+			data.DbReplicaDatabaseFlowControlDelay/1e6,
 			sqlInstance.name, data.Name,
 		)
 
@@ -289,7 +295,7 @@ func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaGroupCommitTime,
 			prometheus.GaugeValue,
-			data.DbReplicaGroupCommitTime,
+			data.DbReplicaGroupCommitTime/1e6,
 			sqlInstance.name, data.Name,
 		)
 
@@ -426,8 +432,6 @@ func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, 
 			sqlInstance.name, data.Name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) closeDatabaseReplica() {
