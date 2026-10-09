@@ -278,9 +278,9 @@ b.tab(
     ]),
 
     b.panel.new(78, 'Virtual disk latency and errors', 'timeseries')
-    + b.panel.withDescription('Average I/O latency of each virtual disk. windows_hyperv_virtual_storage_device_latency_seconds holds the raw, growing counter in 100 ns ticks, so the panel divides its rate by the rate of I/O operations. Errors use the right axis.')
+    + b.panel.withDescription('Average I/O latency of each virtual disk. Errors use the right axis.')
     + b.panel.withQueries([
-      b.query.new('rate(windows_hyperv_virtual_storage_device_latency_seconds{job=~"$job", instance="$instance"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_operations_read_total{job=~"$job", instance="$instance"}[$__rate_interval]) + rate(windows_hyperv_virtual_storage_device_operations_written_total{job=~"$job", instance="$instance"}[$__rate_interval])) / 1e7', 'A')
+      b.query.new('rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_hyperv_virtual_storage_device_throughput_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('{{device}} latency'),
       b.query.new('rate(windows_hyperv_virtual_storage_device_error_count_total{job=~"$job", instance="$instance"}[$__rate_interval]) > 0', 'B')
       + b.query.withLegendFormat('{{device}} errors'),

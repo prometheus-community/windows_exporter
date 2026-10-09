@@ -293,11 +293,11 @@ b.tab(
     ]),
 
     b.panel.new(43, 'Disk queue length', 'timeseries')
-    + b.panel.withDescription('Average number of read and write requests queued for the volume. Reads are drawn below the axis. A queue that stays high while latency rises indicates a disk bottleneck. The avg_*_requests_queued metrics grow like counters, so the panel takes their rate.')
+    + b.panel.withDescription('Average number of read and write requests queued for the volume. Reads are drawn below the axis. A queue that stays high while latency rises indicates a disk bottleneck.')
     + b.panel.withQueries([
-      b.query.new('rate(windows_logical_disk_avg_write_requests_queued{job=~"$job", instance="$instance", volume=~"$volume"}[$__rate_interval])', 'A')
+      b.query.new('rate(windows_logical_disk_write_seconds_total{job=~"$job", instance="$instance", volume=~"$volume"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('{{volume}} write'),
-      b.query.new('rate(windows_logical_disk_avg_read_requests_queued{job=~"$job", instance="$instance", volume=~"$volume"}[$__rate_interval])', 'B')
+      b.query.new('rate(windows_logical_disk_read_seconds_total{job=~"$job", instance="$instance", volume=~"$volume"}[$__rate_interval])', 'B')
       + b.query.withLegendFormat('{{volume}} read'),
     ])
     + b.panel.withDefaults({
