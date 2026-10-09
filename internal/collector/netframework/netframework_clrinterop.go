@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrInterop() {
+func (c *Collector) describeClrInterop() {
 	c.numberOfCCWs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_com_callable_wrappers_total"),
 		"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
@@ -48,20 +46,27 @@ func (c *Collector) buildClrInterop() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrInterop() error {
+	c.describeClrInterop()
 
-	NumberofCCWs             uint32 `mi:"NumberofCCWs"`
-	Numberofmarshalling      uint32 `mi:"Numberofmarshalling"`
-	NumberofStubs            uint32 `mi:"NumberofStubs"`
-	NumberofTLBexportsPersec uint32 `mi:"NumberofTLBexportsPersec"`
-	NumberofTLBimportsPersec uint32 `mi:"NumberofTLBimportsPersec"`
+	var err error
+
+	c.perfClrInterop, err = newPerfCollector[perfDataClrInterop](c.logger, ".NET CLR Interop")
+
+	return err
 }
 
-func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRInterop")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrInterop struct {
+	Name                string
+	NumberofCCWs        float64 `perfdata:"# of CCWs"`
+	NumberofStubs       float64 `perfdata:"# of Stubs"`
+	Numberofmarshalling float64 `perfdata:"# of marshalling"`
+}
+
+func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrInterop
+	if err := c.perfClrInterop.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Interop: %w", err)
 	}
 
 	for _, process := range dst {

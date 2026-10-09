@@ -25,7 +25,6 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	// No context name required as Collector source is WMI
 	testutils.FuncBenchmarkCollector(b, netframework.Name, netframework.NewWithFlags)
 }
 

@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrJIT() {
+func (c *Collector) describeClrJIT() {
 	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
@@ -54,22 +52,28 @@ func (c *Collector) buildClrJIT() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRJit struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrJIT() error {
+	c.describeClrJIT()
 
-	Frequency_PerfTime         uint64 `mi:"Frequency_PerfTime"`
-	ILBytesJittedPersec        uint32 `mi:"ILBytesJittedPersec"`
-	NumberofILBytesJitted      uint32 `mi:"NumberofILBytesJitted"`
-	NumberofMethodsJitted      uint32 `mi:"NumberofMethodsJitted"`
-	PercentTimeinJit           uint32 `mi:"PercentTimeinJit"`
-	StandardJitFailures        uint32 `mi:"StandardJitFailures"`
-	TotalNumberofILBytesJitted uint32 `mi:"TotalNumberofILBytesJitted"`
+	var err error
+
+	c.perfClrJIT, err = newPerfCollector[perfDataClrJIT](c.logger, ".NET CLR Jit")
+
+	return err
 }
 
-func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrJIT struct {
+	Name                       string
+	NumberofMethodsJitted      float64 `perfdata:"# of Methods JITted"`
+	PercentTimeinJit           float64 `perfdata:"% Time in Jit"`
+	StandardJitFailures        float64 `perfdata:"Standard Jit Failures"`
+	TotalNumberofILBytesJitted float64 `perfdata:"Total # of IL Bytes Jitted"`
+}
+
+func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrJIT
+	if err := c.perfClrJIT.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Jit: %w", err)
 	}
 
 	for _, process := range dst {
@@ -87,7 +91,7 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, maxScrapeDuration
 		ch <- prometheus.MustNewConstMetric(
 			c.timeInJit,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinJit)/float64(process.Frequency_PerfTime),
+			float64(process.PercentTimeinJit)/c.perfFrequency,
 			process.Name,
 		)
 
