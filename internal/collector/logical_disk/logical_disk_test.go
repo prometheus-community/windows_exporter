@@ -60,8 +60,11 @@ func TestCollectorAvgQueueIsCumulative(t *testing.T) {
 		"windows_logical_disk_avg_write_requests_queued": "windows_logical_disk_write_seconds_total",
 	} {
 		want := testutils.MetricValuesByLabel(metrics, replacement, "volume")
+		values := testutils.MetricValuesByLabel(metrics, deprecated, "volume")
 
-		for volume, got := range testutils.MetricValuesByLabel(metrics, deprecated, "volume") {
+		require.NotEmpty(t, values, "%s was not emitted", deprecated)
+
+		for volume, got := range values {
 			require.Contains(t, want, volume)
 			require.InDelta(t, want[volume], got, 1e-6, "%s{volume=%q}", deprecated, volume)
 		}
