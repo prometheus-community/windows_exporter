@@ -232,14 +232,16 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.avgReadQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "avg_read_requests_queued"),
-		"Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)",
+		"DEPRECATED: use rate(windows_logical_disk_read_seconds_total). "+
+			"Cumulative read queue length in seconds, identical to windows_logical_disk_read_seconds_total (LogicalDisk.AvgDiskReadQueueLength)",
 		[]string{"volume"},
 		nil,
 	)
 
 	c.avgWriteQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "avg_write_requests_queued"),
-		"Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)",
+		"DEPRECATED: use rate(windows_logical_disk_write_seconds_total). "+
+			"Cumulative write queue length in seconds, identical to windows_logical_disk_write_seconds_total (LogicalDisk.AvgDiskWriteQueueLength)",
 		[]string{"volume"},
 		nil,
 	)
@@ -399,6 +401,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 				data.Name,
 			)
 
+			// The raw value of a PERF_COUNTER_100NS_QUEUELEN_TYPE counter is the queue length
+			// integrated over time in 100ns ticks, not an average. It shares its source with
+			// "% Disk Read/Write Time". Kept as gauge for compatibility: as a counter,
+			// OpenMetrics exposition would rename the series to *_total.
 			ch <- prometheus.MustNewConstMetric(
 				c.avgReadQueue,
 				prometheus.GaugeValue,
