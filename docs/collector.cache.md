@@ -47,10 +47,18 @@ Name | Description | Type | Labels
 `windows_cache_sync_mdl_reads_total`            | Number of reads from the file system cache that use a Memory Descriptor List (MDL) to access the pages. If the accessed page(s) are not in main memory, the caller will wait for the pages to fault in from the disk. | counter | None
 `windows_cache_sync_pin_reads_total`            | Number of reads into the file system cache preparatory to writing the data back to disk. The file system will not regain control until the page is pinned in the file system cache, in particular if the disk must be accessed to retrieve the page. | counter | None
 
+`windows_cache_data_map_hits_percent` is retained as a deprecated gauge exposing the same raw hit count as `windows_cache_data_map_hits_total`. It is not a percentage and can exceed 100. Use the hit-total counter for new queries.
+
 ### Example metric
 Percentage of copy reads that hit the cache
 ```
-windows_cache_copy_read_hits_total / windows_cache_copy_reads_total * 100
+100 * rate(windows_cache_copy_read_hits_total[5m]) / rate(windows_cache_copy_reads_total[5m])
+```
+
+Data-map cache hit percentage over the last five minutes:
+
+```promql
+100 * rate(windows_cache_data_map_hits_total[5m]) / rate(windows_cache_data_maps_total[5m])
 ```
 
 ## Useful queries

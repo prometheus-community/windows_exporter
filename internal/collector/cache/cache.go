@@ -25,6 +25,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -40,7 +41,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *pdh.Collector[perfDataCounterValues]
+	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	asyncCopyReadsTotal         *prometheus.Desc
@@ -53,6 +54,7 @@ type Collector struct {
 	dataFlushesTotal            *prometheus.Desc
 	dataFlushPagesTotal         *prometheus.Desc
 	dataMapHitsPercent          *prometheus.Desc
+	dataMapHitsTotal            *prometheus.Desc
 	dataMapPinsTotal            *prometheus.Desc
 	dataMapsTotal               *prometheus.Desc
 	dirtyPages                  *prometheus.Desc
@@ -155,9 +157,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
+	c.dataMapHitsTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "data_map_hits_total"),
+		"Number of data-map requests that hit the cache.",
+		nil, nil,
+	)
 	c.dataMapHitsPercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "data_map_hits_percent"),
-		"(DataMapHitsPercent)",
+		"Deprecated: raw data-map hit count, not a percentage. Use windows_cache_data_map_hits_total.",
 		nil,
 		nil,
 	)
@@ -350,9 +357,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	)
 
 	ch <- prometheus.MustNewConstMetric(
+		c.dataMapHitsTotal,
+		prometheus.CounterValue,
+		c.perfDataObject[0].DataMapHitsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
 		c.dataMapHitsPercent,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].DataMapHitsPercent,
+		c.perfDataObject[0].DataMapHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
