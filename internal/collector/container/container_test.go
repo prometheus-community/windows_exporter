@@ -35,6 +35,7 @@ func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, container.New, nil)
 	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "hostprocess", "namespace": "default", "hostprocess": "true"})
 	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "nanoserver", "namespace": "default", "hostprocess": "false"})
+	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_storage_writable_layer_usage_bytes", prometheus.Labels{"container": "nanoserver", "namespace": "default"})
 
 	for _, name := range []string{"hostprocess", "nanoserver"} {
 		labels := prometheus.Labels{"container": name, "namespace": "default"}
