@@ -26,6 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -46,7 +47,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *pdh.Collector[perfDataCounterValues]
+	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
@@ -154,7 +155,9 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	c.perfDataCollector.Close()
+	if c.perfDataCollector != nil {
+		c.perfDataCollector.Close()
+	}
 
 	return nil
 }
@@ -445,6 +448,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			c.badMailedMessagesBadPickupFileTotal,
 			prometheus.CounterValue,
 			data.BadmailedMessagesBadPickupFileTotal,
+			data.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.badMailedMessagesGeneralFailureTotal,
+			prometheus.CounterValue,
+			data.BadmailedMessagesGeneralFailureTotal,
 			data.Name,
 		)
 

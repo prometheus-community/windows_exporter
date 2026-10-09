@@ -83,7 +83,6 @@ type Collector struct {
 	nicIPAddressInfo *prometheus.Desc
 	nicOperStatus    *prometheus.Desc
 	nicInfo          *prometheus.Desc
-	routeInfo        *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -269,12 +268,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "nic_info"),
 		"A metric with a constant '1' value labeled with the network interface's general information.",
 		[]string{"nic", "friendly_name", "mac"},
-		nil,
-	)
-	c.routeInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "route_info"),
-		"A metric with a constant '1' value labeled with the network interface's route information.",
-		[]string{"nic", "src", "dest", "metric"},
 		nil,
 	)
 

@@ -211,7 +211,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		subCollectorHypervisorRootPartition: {
 			build:   c.buildHypervisorRootPartition,
 			collect: c.collectHypervisorRootPartition,
-			close:   func() { c.perfDataCollectorHypervisorRootPartition.Close() },
+			close: func() {
+				if c.perfDataCollectorHypervisorRootPartition != nil {
+					c.perfDataCollectorHypervisorRootPartition.Close()
+				}
+			},
 		},
 		subCollectorHypervisorRootVirtualProcessor: {
 			build:   c.buildHypervisorRootVirtualProcessor,

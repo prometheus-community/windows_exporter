@@ -91,60 +91,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.miQuery = miQuery
 	c.miSession = miSession
 
-	c.quotasCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "count"),
-		"Number of Quotas",
-		nil,
-		nil,
-	)
-	c.peakUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "peak_usage_bytes"),
-		"The highest amount of disk space usage charged to this quota. (PeakUsage)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.size = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
-		"The size of the quota. (Size)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.usage = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "usage_bytes"),
-		"The current amount of disk space usage charged to this quota. (Usage)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.description = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "description"),
-		"Description of the quota (Description)",
-		[]string{"path", "template", "description"},
-		nil,
-	)
-	c.disabled = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "disabled"),
-		"If 1, the quota is disabled. The default value is 0. (Disabled)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.softLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "softlimit"),
-		"If 1, the quota is a soft limit. If 0, the quota is a hard limit. The default value is 0. Optional (SoftLimit)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.template = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "template"),
-		"Quota template name. (Template)",
-		[]string{"path", "template"},
-		nil,
-	)
-	c.matchesTemplate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "matchestemplate"),
-		"If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
-		[]string{"path", "template"},
-		nil,
-	)
+	c.buildDescriptors()
 
 	var dst []msftFSRMQuota
 	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery, 0); err != nil {
@@ -176,6 +123,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
+	c.emitQuotas(ch, dst)
+
+	return nil
+}
+
+func (c *Collector) emitQuotas(ch chan<- prometheus.Metric, dst []msftFSRMQuota) {
 	var count int
 
 	for _, quota := range dst {
@@ -183,6 +136,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		path := quota.Path
 		template := quota.Template
 		Description := quota.Description
+
+		ch <- prometheus.MustNewConstMetric(c.template, prometheus.GaugeValue, 1, path, template)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.peakUsage,
@@ -245,6 +200,61 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		prometheus.GaugeValue,
 		float64(count),
 	)
+}
 
-	return nil
+func (c *Collector) buildDescriptors() {
+	c.quotasCount = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "count"),
+		"Number of Quotas",
+		nil,
+		nil,
+	)
+	c.peakUsage = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "peak_usage_bytes"),
+		"The highest amount of disk space usage charged to this quota. (PeakUsage)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.size = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
+		"The size of the quota. (Size)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.usage = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "usage_bytes"),
+		"The current amount of disk space usage charged to this quota. (Usage)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.description = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "description"),
+		"Description of the quota (Description)",
+		[]string{"path", "template", "description"},
+		nil,
+	)
+	c.disabled = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "disabled"),
+		"If 1, the quota is disabled. The default value is 0. (Disabled)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.softLimit = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "softlimit"),
+		"If 1, the quota is a soft limit. If 0, the quota is a hard limit. The default value is 0. Optional (SoftLimit)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.template = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "template"),
+		"Quota template name. (Template)",
+		[]string{"path", "template"},
+		nil,
+	)
+	c.matchesTemplate = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "matchestemplate"),
+		"If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
+		[]string{"path", "template"},
+		nil,
+	)
 }
