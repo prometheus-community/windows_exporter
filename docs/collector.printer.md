@@ -4,9 +4,9 @@ The printer collector exposes metrics about printers and their jobs.
 
 |                     |                                                                                                                                                                                                |
 |---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Metric name prefix  | `printer`                                                                                                                                                                                      | 
-| Data source         | WMI                                                                                                                                                                                            |
-| Classes             | [Win32_Printer](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer) <br> [Win32_PrintJob](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printjob) |
+| Metric name prefix  | `printer`                                                                                                                                                                                      |
+| Data source         | Print spooler API (`EnumPrintersW`, `EnumJobsW`)                                                                                                                                               |
+| Classes             | Values match [Win32_Printer](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer) and [Win32_PrintJob](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printjob) |
 | Enabled by default? | false                                                                                                                                                                                          |
 
 ## Flags
