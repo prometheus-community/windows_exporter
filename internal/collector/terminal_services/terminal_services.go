@@ -30,14 +30,16 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
 
 const (
-	Name                             = "terminal_services"
-	ConnectionBrokerFeatureID uint32 = 133
+	Name = "terminal_services"
+
+	// connectionBrokerServiceName is the "Remote Desktop Connection Broker"
+	// service, installed by the RDS-Connection-Broker role.
+	connectionBrokerServiceName = "Tssdis"
 )
 
 type Config struct{}
@@ -45,23 +47,24 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
-type Win32_ServerFeature struct {
-	ID uint32
-}
-
-func isConnectionBrokerServer(miSession *mi.Session) bool {
-	var dst []Win32_ServerFeature
-	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature")), 0); err != nil {
+// isConnectionBrokerServer reports whether the Remote Desktop Connection Broker
+// role is installed by looking up its service in the service control manager.
+func isConnectionBrokerServer() bool {
+	scm, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
+	if err != nil {
 		return false
 	}
 
-	for _, d := range dst {
-		if d.ID == ConnectionBrokerFeatureID {
-			return true
-		}
+	defer windows.CloseServiceHandle(scm) //nolint:errcheck
+
+	service, err := windows.OpenService(scm, windows.StringToUTF16Ptr(connectionBrokerServiceName), windows.SERVICE_QUERY_STATUS)
+	if err != nil {
+		return false
 	}
 
-	return false
+	_ = windows.CloseServiceHandle(service)
+
+	return true
 }
 
 // A Collector is a Prometheus Collector for WMI
@@ -233,13 +236,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
 	var err error
 
-	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
+	c.connectionBrokerEnabled = isConnectionBrokerServer()
 
 	if c.connectionBrokerEnabled {
 		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](c.logger, pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
