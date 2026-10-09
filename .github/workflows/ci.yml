@@ -22,7 +22,7 @@ permissions: {}
 jobs:
   detect-changes:
     name: Detect Windows test changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -65,7 +65,7 @@ jobs:
 
   build:
     name: Build Windows binaries
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -262,7 +262,7 @@ jobs:
 
   docker:
     name: Build docker images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.package.result == 'success' && (needs.windows-test.result == 'success' || needs.windows-test.result == 'skipped') }}
     # Images are pushed on branch and tag events, so gate them on the same
     # validation as the release binaries in the publish job.
@@ -343,7 +343,7 @@ jobs:
 
   publish:
     if: github.repository == 'prometheus-community/windows_exporter' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - package
       - windows-test
@@ -1573,7 +1573,7 @@ jobs:
 
   super-linter:
     name: Super Linter
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -1626,7 +1626,7 @@ jobs:
       - windows-test
       - lint
       - super-linter
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Verify checks passed
         run: |
