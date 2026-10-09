@@ -20,6 +20,7 @@ package collector_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -31,13 +32,99 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 // The tests in this file share the package-level scrape slot, so they don't run in parallel.
+
+func TestCollectErrorStatus(t *testing.T) {
+	failure := errors.New("collector failed")
+
+	for _, tc := range []struct {
+		name    string
+		err     error
+		success string
+	}{
+		{name: "success", success: "1"},
+		{name: "failure", err: failure, success: "0"},
+		{name: "no data", err: types.ErrNoData, success: "1"},
+		{name: "PDH no data", err: pdh.ErrNoData, success: "1"},
+		{name: "RPC endpoint absent", err: windows.EPT_S_NOT_REGISTERED, success: "1"},
+		{name: "unexpected no data", err: types.ErrNoDataUnexpected, success: "0"},
+		{
+			name:    "wrapped no data",
+			err:     fmt.Errorf("empty instances: %w", pdh.ErrNoData),
+			success: "1",
+		},
+		{
+			name:    "joined expected errors",
+			err:     errors.Join(pdh.ErrNoData, types.ErrNoData, windows.EPT_S_NOT_REGISTERED),
+			success: "1",
+		},
+		{
+			name: "nested expected errors",
+			err: fmt.Errorf(
+				"groups: %w",
+				errors.Join(pdh.ErrNoData, errors.Join(types.ErrNoData, windows.EPT_S_NOT_REGISTERED)),
+			),
+			success: "1",
+		},
+		{
+			name:    "classified child warning",
+			err:     fmt.Errorf("child failed: %s: %w", failure.Error(), types.ErrNoData),
+			success: "1",
+		},
+		{
+			name:    "failure joined with no data",
+			err:     errors.Join(types.ErrNoData, failure),
+			success: "0",
+		},
+		{
+			name:    "failure joined with PDH no data",
+			err:     errors.Join(pdh.ErrNoData, failure),
+			success: "0",
+		},
+		{
+			name:    "failure joined with absent RPC endpoint",
+			err:     errors.Join(windows.EPT_S_NOT_REGISTERED, failure),
+			success: "0",
+		},
+		{
+			name:    "nested mixed errors",
+			err:     fmt.Errorf("groups: %w", errors.Join(pdh.ErrNoData, errors.Join(types.ErrNoData, failure))),
+			success: "0",
+		},
+		{
+			name:    "multiple wrapped errors",
+			err:     fmt.Errorf("first: %w; second: %w", pdh.ErrNoData, failure),
+			success: "0",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logs := &recordHandler{}
+			collection := collector.New(collector.Map{"test": &fakeCollector{name: "test", collectErr: tc.err}})
+			handler, err := collection.NewHandler(time.Second, slog.New(logs), nil)
+			require.NoError(t, err)
+
+			out := scrape(t, handler)
+			require.Contains(t, out, `windows_exporter_collector_success{collector="test"} `+tc.success)
+			require.Contains(t, out, `windows_exporter_collector_timeout{collector="test"} 0`)
+			require.Contains(t, out, "windows_test_test 42", "partial metrics must still be exported")
+
+			warnings := 0
+			if tc.success == "0" {
+				warnings = 1
+			}
+
+			require.Equal(t, warnings, logs.warnings("failed"))
+		})
+	}
+}
 
 func TestCollectTimedOutCollectorDoesNotOverlap(t *testing.T) {
 	// The collector's delay and the scrape deadlines use synthetic time.
@@ -379,6 +466,7 @@ func TestBuildCloseCyclesDoNotLeakGoroutines(t *testing.T) {
 type fakeCollector struct {
 	name         string
 	buildErr     error
+	collectErr   error
 	buildPanic   bool
 	buildStarted chan struct{}
 	buildBlock   chan struct{}
@@ -428,7 +516,7 @@ func (c *fakeCollector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration t
 
 	ch <- prometheus.MustNewConstMetric(prometheus.NewDesc("windows_test_"+c.name, "Test metric", nil, nil), prometheus.GaugeValue, 42)
 
-	return nil
+	return c.collectErr
 }
 
 func (c *fakeCollector) Close() error {

@@ -258,7 +258,7 @@ func logCollectorResult(ctx context.Context, logger *slog.Logger, name string, e
 	result := "succeeded"
 
 	if err != nil {
-		if !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) && !errors.Is(err, windows.EPT_S_NOT_REGISTERED) {
+		if !expectedCollectionError(err) {
 			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) {
 				err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
 			}
@@ -283,4 +283,26 @@ func logCollectorResult(ctx context.Context, logger *slog.Logger, name string, e
 	)
 
 	return success
+}
+
+// expectedCollectionError checks every cause so an expected error cannot hide an independent failure.
+func expectedCollectionError(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		causes := joined.Unwrap()
+		for _, cause := range causes {
+			if !expectedCollectionError(cause) {
+				return false
+			}
+		}
+
+		return len(causes) != 0
+	}
+
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return expectedCollectionError(wrapped.Unwrap())
+	}
+
+	noData := errors.Is(err, pdh.ErrNoData) || errors.Is(err, types.ErrNoData)
+
+	return noData || errors.Is(err, windows.EPT_S_NOT_REGISTERED)
 }
