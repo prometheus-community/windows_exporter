@@ -22,12 +22,13 @@ import (
 	"regexp"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorW3SVCW3WP struct {
-	w3SVCW3WPPerfDataCollector   *pdh.Collector[perfDataCounterValuesW3SVCW3WP]
+	w3SVCW3WPPerfDataCollector   pdhtypes.Collector[perfDataCounterValuesW3SVCW3WP]
 	w3SVCW3WPPerfDataCollectorV8 *pdh.Collector[perfDataCounterValuesW3SVCW3WPV8]
 	perfDataObjectW3SVCW3WP      []perfDataCounterValuesW3SVCW3WP
 	perfDataObjectW3SVCW3WPV8    []perfDataCounterValuesW3SVCW3WPV8
@@ -102,7 +103,7 @@ type perfDataCounterValuesW3SVCW3WP struct {
 	W3SVCW3WPFilesCachedTotal            float64 `perfdata:"Total Files Cached"`
 	W3SVCW3WPFilesFlushedTotal           float64 `perfdata:"Total Flushed Files"`
 
-	W3SVCW3WPURICacheFlushesTotal float64 `perfdata:"Total Flushed URIs"`
+	W3SVCW3WPURICacheFlushesTotal float64 `perfdata:"URI Cache Flushes"`
 	W3SVCW3WPURICacheHitsTotal    float64 `perfdata:"URI Cache Hits"`
 	W3SVCW3WPURICacheMissesTotal  float64 `perfdata:"URI Cache Misses"`
 	W3SVCW3WPURIsCached           float64 `perfdata:"Current URIs Cached"`
@@ -163,6 +164,12 @@ func (c *Collector) buildW3SVCW3WP() error {
 		}
 	}
 
+	c.buildW3SVCW3WPDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildW3SVCW3WPDescriptors() {
 	// W3SVC_W3WP
 	c.w3SVCW3WPThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_threads"),
@@ -387,8 +394,6 @@ func (c *Collector) buildW3SVCW3WP() error {
 		[]string{"app", "pid"},
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
@@ -720,7 +725,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheActiveFlushedItems,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPOutputCacheActiveFlushedItems,
 			name,
 			pid,
@@ -728,7 +733,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheItems,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPOutputCacheItems,
 			name,
 			pid,
@@ -736,7 +741,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheMemoryUsage,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPOutputCacheMemoryUsage,
 			name,
 			pid,
