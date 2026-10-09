@@ -1,5 +1,15 @@
 {
   "version": 1,
-  "dependencies": [],
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/grafonnet.git",
+          "subdir": "gen/grafonnet-v13.0.0"
+        }
+      },
+      "version": "41e6bfcbe4ef1054298ffff8664f1354c897dd2d"
+    }
+  ],
   "legacyImports": false
 }
