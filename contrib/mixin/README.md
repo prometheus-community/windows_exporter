@@ -6,15 +6,21 @@ source of the sample dashboard. The source uses Jsonnet and exposes the standard
 
 ## Generate rules
 
-Install the pinned Jsonnet, [jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler)
-and [pint](https://github.com/cloudflare/pint) tools:
+Install [mise](https://mise.jdx.dev/) and Go, then install the pinned Jsonnet,
+[jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler),
+[pint](https://github.com/cloudflare/pint),
+[dashboard-linter](https://github.com/grafana/dashboard-linter), and Prometheus
+tools from `mise.toml`. Tasks use a POSIX shell; on Windows, run them in WSL.
 
 ```sh
 cd contrib/mixin
-make tools
-export PATH="$(go env GOPATH)/bin:$PATH"
-make rules
+mise trust
+mise install
+mise run rules
 ```
+
+Mise installs release binaries with checksum verification and builds Jsonnet
+Bundler using Go. `mise run` makes the pinned tools available automatically.
 
 Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
 to generate rules. Generated rule files are ignored by Git:
@@ -233,49 +239,55 @@ b.panel.new(200, 'CPU usage', 'timeseries')
 Regenerate the committed file after changing the dashboard source:
 
 ```sh
-make dashboard
+mise run dashboard
 ```
 
 This runs `jb install` and writes `../../dashboard/windows-exporter-dashboard.json`.
-`make dashboards` is an alias. `make generate` builds both the rules and the
-dashboard, while `make rules` builds only the rules. The same commands work
-inside WSL with the Go tool binaries on `PATH`.
+`mise run dashboards` is an alias. `mise run generate` builds both the rules and the
+dashboard, while `mise run rules` builds only the rules. The same commands work
+inside WSL; mise supplies the tool binaries on `PATH`.
 
 The checked-in JSON remains the reference for the rendered dashboard, including
 queries, IDs, variables, annotations, transformations, and tab/row layout.
-`make check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
+`mise run check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
 any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables and does not read `_config`.
 
 ## Validate
 
-Install Python 3 and `promtool` from a [Prometheus release](https://github.com/prometheus/prometheus/releases),
-then run:
+Install Python 3, run `mise install`, then run:
 
 ```sh
-make test
+mise run test
 ```
 
 This checks Jsonnet formatting, checks that the committed dashboard is up to
-date, validates generated rules with `promtool`, runs
-`pint --offline lint`, and evaluates the rules against synthetic time series.
+date, runs `dashboard-linter lint --strict`, validates generated rules with
+`promtool`, runs `pint --offline lint`, and evaluates the rules against synthetic
+time series.
 Tests cover all 25 recordings, alert timing and recovery, threshold
 boundaries, counter resets, zero denominators, disk forecasts, target-label
 preservation, and custom selectors/thresholds with Active Directory and clock
 alerts enabled. Runbook checks include opt-in alerts and verify that their pages
 and URLs exist. CI uses Prometheus 3.15.0 and the same pinned tool versions as
-`make tools`.
+`mise install`.
 
-If you prefer to run `promtool` through Docker:
+To list the available tasks:
 
 ```sh
-make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"
+mise tasks ls
 ```
 
 The dedicated `Mixin` workflow runs on changes to `contrib/mixin/**`, the
 committed dashboard JSON or its own workflow file, and can also be started
-manually. It caches pinned tool binaries and runs the same `make test` checks
+manually. It caches pinned tool binaries and runs the same `mise run test` checks
 used locally.
+
+Run `mise run lint-dashboards` to lint just the committed dashboard. `.dashboard-lint.yaml`
+documents exceptions for the sample dashboard's single-host selection, fleet
+queries, editable state, and existing panels without descriptions or numeric
+units. Other findings fail validation, including warnings. Remove panel
+exceptions when adding the missing descriptions.
 
 `.pint.hcl` requires a non-empty severity label, summary/description annotations,
 and an HTTP(S) runbook URL on alerts, in addition to pint's built-in checks.
@@ -293,7 +305,7 @@ Then run `pint --config /path/to/local.pint.hcl lint windows_rules.yaml windows_
 without `--offline`. See the [pint documentation](https://cloudflare.github.io/pint/)
 for available checks.
 
-Run `make fmt` after source changes and `make clean` to remove generated rule
+Run `mise run fmt` after source changes and `mise run clean` to remove generated rule
 files. For downstream composition with Jsonnet Bundler, import
 `github.com/prometheus-community/windows_exporter/contrib/mixin/mixin.libsonnet`
 and extend `_config`. See the [monitoring mixin documentation](https://github.com/monitoring-mixins/docs)

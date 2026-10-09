@@ -53,18 +53,19 @@ Don't edit the JSON file by hand. It is generated from Jsonnet with [grafonnet](
 - [dashboards/styles.libsonnet](../contrib/mixin/dashboards/styles.libsonnet) shares the visualization defaults.
 
 The generator writes the v2 schema directly, so it needs neither Grafana nor Prometheus.
-Install the pinned tools and regenerate the file in `contrib/mixin`:
+Install [mise](https://mise.jdx.dev/) and Go, then install the pinned tools and
+regenerate the file in `contrib/mixin` (use WSL on Windows):
 
 ```sh
 cd contrib/mixin
-make tools
-export PATH="$(go env GOPATH)/bin:$PATH"
-make dashboard
+mise trust
+mise install
+mise run dashboard
 ```
 
-`make dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboard.
-`make lint` fails if the committed JSON file differs from the generated one.
-`make check-dashboards` rebuilds it and runs `git diff --exit-code`, as CI does before the mixin tests.
+`mise run dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboard.
+`mise run lint` fails if the committed JSON file differs from the generated one.
+`mise run check-dashboards` rebuilds it and runs `git diff --exit-code`, as CI does before the mixin tests.
 Check new or changed queries in Grafana before you open a pull request, for example by importing the file into a local Grafana 13.
 
 ![Screenshot of the Fleet tab.](dashboard-fleet.png)

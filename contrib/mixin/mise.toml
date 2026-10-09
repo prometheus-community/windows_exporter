@@ -1,0 +1,90 @@
+[tools]
+"github:google/go-jsonnet" = "0.22.0"
+"go:github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb" = "0.6.0"
+"github:cloudflare/pint" = "0.89.2"
+"github:grafana/dashboard-linter" = "0.3.0"
+"github:prometheus/prometheus" = "3.15.0"
+
+[vars]
+sources = "*.libsonnet *.jsonnet lib/*.libsonnet rules/*.libsonnet alerts/*.libsonnet dashboards/*.libsonnet tests/*.libsonnet tests/*.jsonnet"
+fmt_flags = "-n 2 --max-blank-lines 2 --string-style s --comment-style s"
+dashboard = "../../dashboard/windows-exporter-dashboard.json"
+
+[tasks.generate]
+description = "Generate Prometheus rules, alerts, and the dashboard"
+alias = "default"
+depends = ["rules", "dashboard"]
+
+[tasks.rules]
+description = "Generate Prometheus rules and alerts"
+run = [
+  "jsonnet -S rules.jsonnet > windows_rules.yaml",
+  "jsonnet -S alerts.jsonnet > windows_alerts.yaml",
+]
+
+[tasks.vendor]
+description = "Install dashboard Jsonnet libraries"
+run = "jb install"
+
+[tasks.dashboard]
+description = "Regenerate the committed Grafana dashboard"
+alias = "dashboards"
+depends = ["vendor"]
+run = '''
+set -eu
+trap 'rm -f {{vars.dashboard}}.tmp' EXIT
+jsonnet -J vendor -S dashboard.jsonnet > {{vars.dashboard}}.tmp
+mv {{vars.dashboard}}.tmp {{vars.dashboard}}
+'''
+
+[tasks.check-dashboards]
+description = "Regenerate the dashboard and fail on uncommitted changes"
+depends = ["dashboard"]
+run = "git diff --exit-code -- {{vars.dashboard}}"
+
+[tasks.lint-dashboards]
+description = "Lint the committed dashboard in strict mode"
+run = "dashboard-linter lint --strict --config .dashboard-lint.yaml {{vars.dashboard}}"
+
+[tasks.fmt]
+description = "Format all mixin Jsonnet sources"
+run = "jsonnetfmt {{vars.fmt_flags}} -i {{vars.sources}}"
+
+[tasks.custom-rules]
+description = "Generate rules and alerts with the test configuration"
+hide = true
+run = [
+  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusRules)' > tests/custom_rules.yaml''',
+  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusAlerts)' > tests/custom_alerts.yaml''',
+]
+
+[tasks.lint]
+description = "Check Jsonnet formatting, dashboard drift, and Prometheus rules"
+depends = ["rules", "custom-rules", "vendor", "lint-dashboards"]
+run = '''
+set -eu
+for file in {{vars.sources}}; do
+  jsonnetfmt {{vars.fmt_flags}} "$file" | diff -u "$file" -
+done
+jsonnet -J vendor -S dashboard.jsonnet | diff -u {{vars.dashboard}} - \
+  || { echo "{{vars.dashboard}} is out of date; run mise run dashboard"; exit 1; }
+promtool check rules windows_rules.yaml windows_alerts.yaml tests/custom_rules.yaml tests/custom_alerts.yaml
+pint --offline lint windows_rules.yaml windows_alerts.yaml
+pint --offline lint tests/custom_rules.yaml tests/custom_alerts.yaml
+'''
+
+[tasks.check-runbooks]
+description = "Check runbook coverage for all alerts, including opt-in alerts"
+run = '''jsonnet -e '(import "mixin.libsonnet") { _config+:: { enableActiveDirectory: true, enableTime: true } }.prometheusAlerts' | python3 tests/check_runbooks.py ../../docs/runbooks'''
+
+[tasks.test]
+description = "Run all mixin lint, runbook, and rule tests"
+depends = ["lint", "check-runbooks"]
+run = [
+  "jsonnet tests/runbooks.test.jsonnet",
+  "promtool test rules tests/*.test.yaml",
+]
+
+[tasks.clean]
+description = "Remove generated rule and alert files"
+run = "rm -f windows_rules.yaml windows_alerts.yaml tests/custom_rules.yaml tests/custom_alerts.yaml"
