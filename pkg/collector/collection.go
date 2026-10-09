@@ -359,7 +359,6 @@ func (c *Collection) initMI() (*mi.Session, error) {
 
 	session, err := newMISession(app, destinationOptions)
 	if err != nil {
-		_ = destinationOptions.Delete()
 		_ = app.Close()
 
 		return nil, err
@@ -370,7 +369,11 @@ func (c *Collection) initMI() (*mi.Session, error) {
 	return session, nil
 }
 
+// newMISession consumes destinationOptions. The session retains its own options;
+// release the caller's options before initMI can close the application on failure.
 func newMISession(app *mi.Application, destinationOptions *mi.DestinationOptions) (*mi.Session, error) {
+	defer func() { _ = destinationOptions.Delete() }()
+
 	if err := destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
 		return nil, fmt.Errorf("error from set locale: %w", err)
 	}
