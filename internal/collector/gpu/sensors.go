@@ -148,11 +148,12 @@ func newSensorMetrics() sensorMetrics {
 	}
 }
 
-// isSoftwareAdapter reports whether the adapter is a Microsoft software or virtual adapter,
-// like the Microsoft Basic Render Driver (PCI\VEN_1414&DEV_008C). These adapters have no
-// sensors and reject the perf data queries with STATUS_INVALID_PARAMETER.
+// isSoftwareAdapter reports whether the adapter is a software adapter (D3DKMT_ADAPTERTYPE
+// SoftwareDevice flag) or a Microsoft virtual adapter, like the Microsoft Basic Render Driver
+// (PCI\VEN_1414&DEV_008C). These adapters have no sensors and reject the perf data queries
+// with STATUS_INVALID_PARAMETER.
 func isSoftwareAdapter(device gdi32.GPUDevice) bool {
-	return device.AdapterString == "" || strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&`)
+	return device.AdapterString == "" || device.IsSoftwareDevice() || strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&`)
 }
 
 // discoverSensors reads the static adapter data and probes which sensors the driver supports.
@@ -264,6 +265,10 @@ func discoverPhysicalAdapterSensors(logger *slog.Logger, hAdapter gdi32.D3DKMT_H
 
 func (c *Collector) collectGpuSensorMetrics(ch chan<- prometheus.Metric) {
 	for luid, device := range c.gpuDeviceCache {
+		if device.skip {
+			continue
+		}
+
 		// The caps were read during discovery and need no adapter handle.
 		for _, physicalAdapter := range device.sensors.physicalAdapters {
 			c.collectPhysicalAdapterCaps(ch, []string{luid, device.ID, physicalAdapter.phys}, physicalAdapter.caps)

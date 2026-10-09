@@ -95,6 +95,7 @@ type GPUDevice struct {
 	BusNumber                 win32.UINT
 	DeviceNumber              win32.UINT
 	FunctionNumber            win32.UINT
+	AdapterType               D3DKMT_ADAPTERTYPE
 }
 
 // D3DKMT_NODE_PERFDATA is the output of KMTQAITYPE_NODEPERFDATA.
@@ -163,3 +164,30 @@ type D3DKMT_GPUVERSION struct {
 	BiosVersion          [32]uint16
 	GpuArchitecture      [32]uint16
 }
+
+// IsSoftwareDevice reports whether the adapter is a software device,
+// e.g. the Microsoft Basic Render Driver.
+func (d GPUDevice) IsSoftwareDevice() bool {
+	return d.AdapterType&D3DKMT_ADAPTERTYPE_SOFTWARE_DEVICE != 0
+}
+
+// D3DKMT_ADAPTERTYPE is the bitfield returned by KMTQAITYPE_ADAPTERTYPE.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_adaptertype
+type D3DKMT_ADAPTERTYPE uint32
+
+const (
+	D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED         D3DKMT_ADAPTERTYPE = 1 << 0
+	D3DKMT_ADAPTERTYPE_DISPLAY_SUPPORTED        D3DKMT_ADAPTERTYPE = 1 << 1
+	D3DKMT_ADAPTERTYPE_SOFTWARE_DEVICE          D3DKMT_ADAPTERTYPE = 1 << 2
+	D3DKMT_ADAPTERTYPE_POST_DEVICE              D3DKMT_ADAPTERTYPE = 1 << 3
+	D3DKMT_ADAPTERTYPE_HYBRID_DISCRETE          D3DKMT_ADAPTERTYPE = 1 << 4
+	D3DKMT_ADAPTERTYPE_HYBRID_INTEGRATED        D3DKMT_ADAPTERTYPE = 1 << 5
+	D3DKMT_ADAPTERTYPE_INDIRECT_DISPLAY_DEVICE  D3DKMT_ADAPTERTYPE = 1 << 6
+	D3DKMT_ADAPTERTYPE_PARAVIRTUALIZED          D3DKMT_ADAPTERTYPE = 1 << 7
+	D3DKMT_ADAPTERTYPE_ACG_SUPPORTED            D3DKMT_ADAPTERTYPE = 1 << 8
+	D3DKMT_ADAPTERTYPE_SET_TIMINGS_FROM_VIDPN   D3DKMT_ADAPTERTYPE = 1 << 9
+	D3DKMT_ADAPTERTYPE_DETACHABLE               D3DKMT_ADAPTERTYPE = 1 << 10
+	D3DKMT_ADAPTERTYPE_COMPUTE_ONLY             D3DKMT_ADAPTERTYPE = 1 << 11
+	D3DKMT_ADAPTERTYPE_PROTOTYPE                D3DKMT_ADAPTERTYPE = 1 << 12
+	D3DKMT_ADAPTERTYPE_RUNTIME_POWER_MANAGEMENT D3DKMT_ADAPTERTYPE = 1 << 13
+)
