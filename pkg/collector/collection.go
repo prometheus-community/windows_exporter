@@ -280,14 +280,7 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 
 		// errors.ErrUnsupported marks a collector whose subsystem is not
 		// available on this host, e.g. a Windows feature that is not installed.
-		if errors.Is(err, errors.ErrUnsupported) ||
-			errors.Is(err, pdh.ErrNoData) ||
-			errors.Is(err, winregistry.ErrNotExist) ||
-			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
-			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
+		if expectedBuildError(err) {
 			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector",
 				slog.Any("err", err),
 			)
@@ -410,4 +403,32 @@ func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
 
 func (c *Collection) GetStartTime() gotime.Time {
 	return c.startTime
+}
+
+// expectedBuildError tolerates an error tree only if every independent cause is
+// an expected initialization failure for an optional Windows subsystem.
+func expectedBuildError(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		causes := joined.Unwrap()
+		for _, cause := range causes {
+			if !expectedBuildError(cause) {
+				return false
+			}
+		}
+
+		return len(causes) != 0
+	}
+
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return expectedBuildError(wrapped.Unwrap())
+	}
+
+	return errors.Is(err, errors.ErrUnsupported) ||
+		errors.Is(err, pdh.ErrNoData) ||
+		errors.Is(err, winregistry.ErrNotExist) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_CLASS)
 }

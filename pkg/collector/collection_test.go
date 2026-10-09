@@ -72,6 +72,10 @@ func TestCollectionBuildAndClose(t *testing.T) {
 		{name: "optional counter missing", buildErr: pdh.ErrNoData},
 		{name: "unsupported on this host", buildErr: fmt.Errorf("feature missing: %w", errors.ErrUnsupported)},
 		{name: "close failure", closeErr: closeFailure},
+		{name: "all expected joined errors", buildErr: errors.Join(errors.ErrUnsupported, pdh.ErrNoData)},
+		{name: "joined fatal error", buildErr: errors.Join(errors.ErrUnsupported, buildFailure), wantBuildErr: buildFailure},
+		{name: "nested fatal error", buildErr: errors.Join(pdh.ErrNoData, fmt.Errorf("nested: %w", errors.Join(errors.ErrUnsupported, buildFailure))), wantBuildErr: buildFailure},
+		{name: "multiple wrapped fatal error", buildErr: fmt.Errorf("%w and %w", errors.ErrUnsupported, buildFailure), wantBuildErr: buildFailure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
