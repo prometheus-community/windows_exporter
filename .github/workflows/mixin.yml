@@ -53,6 +53,9 @@ jobs:
         if: steps.tools-cache.outputs.cache-hit != 'true'
         run: make tools
 
+      - name: Build dashboard and check generated changes
+        run: make check-dashboards
+
       - name: Lint and test rules
         run: |
           make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"

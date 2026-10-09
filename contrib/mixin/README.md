@@ -13,7 +13,7 @@ and [pint](https://github.com/cloudflare/pint) tools:
 cd contrib/mixin
 make tools
 export PATH="$(go env GOPATH)/bin:$PATH"
-make generate
+make rules
 ```
 
 Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
@@ -201,14 +201,34 @@ Fork users should override `runbookURLPattern` to match their published URL.
 It is a Grafana v2 dashboard with tabs and needs Grafana 13 or later. See the
 [dashboard documentation](../../dashboard/README.md) for its content.
 
-The dashboard is built with [grafonnet](https://github.com/grafana/grafonnet),
+The dashboard uses additive builders with [grafonnet](https://github.com/grafana/grafonnet),
 pinned in `jsonnetfile.json`:
 
-- `dashboards/windows-exporter.libsonnet` defines the tabs, panels and queries.
-- `lib/dashboard.libsonnet` wraps grafonnet panel options and queries into v2
-  panels, and lays them out in tabs, rows and grids.
+- `dashboards/windows-exporter.libsonnet` composes the dashboard, with one source
+  file per tab for its panels, queries, rows, and grid positions.
+- `dashboards/builders.libsonnet` uses Grafonnet's native `apps.dashboard.v2`
+  builders for the dashboard and layout and wraps its Prometheus query builders
+  into the v2 panel/query-group schema.
+- `dashboards/styles.libsonnet` shares the visualization defaults; individual
+  panels add their differences using `withDefaults`, `withOptions`, and
+  `withOverrides`. Explicit nulls are preserved and arrays are replaced whole.
+- `dashboards/variables.libsonnet` and `dashboards/annotations.libsonnet` use
+  native Grafonnet v2 builders for variables and annotations.
 - `lib/manifest.libsonnet` renders JSON with the four-space indentation of the
   committed file.
+
+For example, a panel can be built with:
+
+```jsonnet
+local b = import 'dashboards/builders.libsonnet';
+
+b.panel.new(200, 'CPU usage', 'timeseries')
++ b.panel.withQueries([
+  b.query.new('windows:cpu_usage:ratio{instance="$instance"}')
+  + b.query.withLegendFormat('CPU'),
+])
++ b.panel.withDefaults({ unit: 'percentunit', min: 0, max: 1 })
+```
 
 Regenerate the committed file after changing the dashboard source:
 
@@ -217,7 +237,15 @@ make dashboard
 ```
 
 This runs `jb install` and writes `../../dashboard/windows-exporter-dashboard.json`.
-The dashboard uses its own variables and does not read `_config`.
+`make dashboards` is an alias. `make generate` builds both the rules and the
+dashboard, while `make rules` builds only the rules. The same commands work
+inside WSL with the Go tool binaries on `PATH`.
+
+The checked-in JSON remains the reference for the rendered dashboard, including
+queries, IDs, variables, annotations, transformations, and tab/row layout.
+`make check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
+any drift. CI runs that check before the mixin tests. The dashboard uses its own
+variables and does not read `_config`.
 
 ## Validate
 

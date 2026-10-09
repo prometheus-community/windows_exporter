@@ -48,8 +48,9 @@ Click a hostname in the Fleet tab to open that host in the Overview tab.
 
 Don't edit the JSON file by hand. It is generated from Jsonnet with [grafonnet](https://github.com/grafana/grafonnet) as part of the [windows_exporter mixin](../contrib/mixin):
 
-- [dashboards/windows-exporter.libsonnet](../contrib/mixin/dashboards/windows-exporter.libsonnet) defines the tabs, panels and queries.
-- [lib/dashboard.libsonnet](../contrib/mixin/lib/dashboard.libsonnet) holds the panel and layout helpers.
+- [dashboards/windows-exporter.libsonnet](../contrib/mixin/dashboards/windows-exporter.libsonnet) composes the dashboard from one file per tab.
+- [dashboards/builders.libsonnet](../contrib/mixin/dashboards/builders.libsonnet) holds the panel, query, and layout builders.
+- [dashboards/styles.libsonnet](../contrib/mixin/dashboards/styles.libsonnet) shares the visualization defaults.
 
 The generator writes the v2 schema directly, so it needs neither Grafana nor Prometheus.
 Install the pinned tools and regenerate the file in `contrib/mixin`:
@@ -63,6 +64,7 @@ make dashboard
 
 `make dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboard.
 `make lint` fails if the committed JSON file differs from the generated one.
+`make check-dashboards` rebuilds it and runs `git diff --exit-code`, as CI does before the mixin tests.
 Check new or changed queries in Grafana before you open a pull request, for example by importing the file into a local Grafana 13.
 
 ![Screenshot of the Fleet tab.](dashboard-fleet.png)
