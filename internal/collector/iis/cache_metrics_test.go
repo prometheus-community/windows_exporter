@@ -133,3 +133,8 @@ func (f cacheFixture[T]) Collect(dst *[]T) error {
 }
 
 func (f cacheFixture[T]) Close() {}
+
+func TestCloseBeforeCacheProviderInitialization(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, New(nil).Close())
+}
