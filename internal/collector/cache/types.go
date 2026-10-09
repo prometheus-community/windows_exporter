@@ -29,7 +29,7 @@ type perfDataCounterValues struct {
 	CopyReadsTotal              float64 `perfdata:"Copy Reads/sec"`
 	DataFlushesTotal            float64 `perfdata:"Data Flushes/sec"`
 	DataFlushPagesTotal         float64 `perfdata:"Data Flush Pages/sec"`
-	DataMapHitsPercent          float64 `perfdata:"Data Map Hits %"`
+	DataMapHitsTotal            float64 `perfdata:"Data Map Hits %"`
 	DataMapPinsTotal            float64 `perfdata:"Data Map Pins/sec"`
 	DataMapsTotal               float64 `perfdata:"Data Maps/sec"`
 	DirtyPages                  float64 `perfdata:"Dirty Pages"`
