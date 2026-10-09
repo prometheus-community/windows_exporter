@@ -174,7 +174,7 @@ func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Lo
 	var regHandler http.Handler
 	if c.exporterMetricsRegistry != nil {
 		regHandler = promhttp.HandlerFor(
-			prometheus.Gatherers{c.exporterMetricsRegistry, reg},
+			mergedGatherer{first: c.exporterMetricsRegistry, second: reg},
 			promhttp.HandlerOpts{
 				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:     promhttp.ContinueOnError,

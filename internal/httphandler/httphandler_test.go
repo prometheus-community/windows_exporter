@@ -115,6 +115,61 @@ func TestMetricsHTTPHandlerCollectorStatus(t *testing.T) {
 	}
 }
 
+// TestMetricsHTTPHandlerNameCollision checks a collector metric that has the name of an exporter metric,
+// like a textfile metric named go_goroutines.
+func TestMetricsHTTPHandlerNameCollision(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		options  *httphandler.Options
+		included []string
+		excluded []string
+	}{
+		{
+			name: "exporter metrics",
+			// The collector metric has another help text, so it is dropped and the other metrics are kept.
+			included: []string{"# HELP go_goroutines Number of goroutines that currently exist.", "windows_test_first 42", "windows_exporter_build_info"},
+			excluded: []string{"go_goroutines 7", "Collector goroutines"},
+		},
+		{
+			name:     "disable exporter metrics",
+			options:  &httphandler.Options{DisableExporterMetrics: true, TimeoutMargin: 0.5},
+			included: []string{"# HELP go_goroutines Collector goroutines", "go_goroutines 7", "windows_test_first 42", "windows_exporter_build_info"},
+			excluded: []string{"Number of goroutines that currently exist."},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			collection := collector.New(collector.Map{
+				"first":     &testCollector{name: "first"},
+				"collision": &collisionCollector{},
+			})
+			handler := httphandler.New(slog.New(slog.DiscardHandler), collection, tc.options)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", nil))
+
+			require.Equal(t, http.StatusOK, response.Code)
+
+			for _, value := range tc.included {
+				require.Contains(t, response.Body.String(), value)
+			}
+
+			for _, value := range tc.excluded {
+				require.NotContains(t, response.Body.String(), value)
+			}
+
+			if tc.options == nil {
+				// The gathering error of the first scrape is counted like before.
+				response = httptest.NewRecorder()
+				handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", nil))
+				require.Contains(t, response.Body.String(), `promhttp_metric_handler_errors_total{cause="gathering"} 1`)
+			}
+		})
+	}
+}
+
 func TestMetricsHTTPHandlerScrapeTimeout(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -259,6 +314,18 @@ func (c *testCollector) Collect(ch chan<- prometheus.Metric, _ time.Duration) er
 	}
 
 	ch <- prometheus.MustNewConstMetric(prometheus.NewDesc("windows_test_"+c.name, "Test metric", nil, nil), prometheus.GaugeValue, 42)
+
+	return nil
+}
+
+// collisionCollector emits a metric with the name of a Go runtime metric.
+type collisionCollector struct{}
+
+func (c *collisionCollector) GetName() string                           { return "collision" }
+func (c *collisionCollector) Build(_ *slog.Logger, _ *mi.Session) error { return nil }
+func (c *collisionCollector) Close() error                              { return nil }
+func (c *collisionCollector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	ch <- prometheus.MustNewConstMetric(prometheus.NewDesc("go_goroutines", "Collector goroutines", nil, nil), prometheus.GaugeValue, 7)
 
 	return nil
 }
