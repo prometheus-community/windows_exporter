@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/dhcpsapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -59,7 +60,7 @@ type Collector struct {
 
 	logger *slog.Logger
 
-	perfDataCollector *pdh.Collector[perfDataCounterValues]
+	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	acksTotal                                        *prometheus.Desc
@@ -143,7 +144,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) && c.perfDataCollector != nil {
 		c.perfDataCollector.Close()
 	}
 
