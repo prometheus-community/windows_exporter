@@ -52,7 +52,7 @@ func TestInitialize(t *testing.T) {
 }
 
 func TestBSTR(t *testing.T) {
-	for _, value := range []string{"", "windows_exporter", "before\x00after", "Unicode \U0001F600"} {
+	for _, value := range []string{"", "windows_exporter", "before\x00after", "Unicode \U0001F600", "Grüße"} {
 		t.Run(value, func(t *testing.T) {
 			str, err := newBSTR(value)
 			require.NoError(t, err)
