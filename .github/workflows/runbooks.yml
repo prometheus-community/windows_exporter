@@ -60,21 +60,13 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Cache Jsonnet tools
-        id: jsonnet-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Install and cache pinned mixin tools
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          path: |
-            ~/go/bin/jsonnet
-            ~/go/bin/jsonnetfmt
-          key: ${{ runner.os }}-${{ runner.arch }}-runbooks-jsonnet-${{ hashFiles('contrib/mixin/Makefile', 'go.mod') }}
-
-      - name: Install Jsonnet tools
-        if: steps.jsonnet-cache.outputs.cache-hit != 'true'
-        run: make -C contrib/mixin jsonnet-tools
+          working_directory: contrib/mixin
 
       - name: Check alert runbook coverage
-        run: make -C contrib/mixin check-runbooks
+        run: mise -C contrib/mixin run check-runbooks
 
       - name: Set up Pages
         id: pages

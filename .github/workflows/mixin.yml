@@ -42,20 +42,13 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Cache mixin tools
-        id: tools-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Install and cache pinned mixin tools
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-${{ runner.arch }}-mixin-tools-${{ hashFiles('contrib/mixin/Makefile', 'go.mod') }}
-
-      - name: Install pinned tools
-        if: steps.tools-cache.outputs.cache-hit != 'true'
-        run: make tools
+          working_directory: contrib/mixin
 
       - name: Build dashboard and check generated changes
-        run: make check-dashboards
+        run: mise run check-dashboards
 
       - name: Lint dashboard and test rules
-        run: |
-          make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"
+        run: mise run test
