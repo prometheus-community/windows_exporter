@@ -23,10 +23,44 @@ local summary(dashboard) =
     for tab in tabs
   };
 
-{
+local only(enabled) = function(collectors) all(false)(collectors) + { os: true } + enabled;
+local exporter = ['Summary', 'Scrape', 'Collectors', 'Process and Go runtime'];
+
+local results = {
   all: summary(render(all(true))),
   defaults: summary(render(function(collectors) collectors)),
-  none: summary(render(all(false))),
-  smbClientOnly: summary(render(function(collectors) all(false)(collectors) + { smbclient: true })),
-  diskWithoutDiskdrive: summary(render(function(collectors) all(false)(collectors) + { logical_disk: true, physical_disk: true })).Disk,
-}
+  osOnly: summary(render(only({}))),
+  smbClientOnly: summary(render(only({ smbclient: true }))),
+  diskWithoutDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true }))).Disk,
+  diskWithDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true, diskdrive: true }))).Disk,
+  // A collectors object given without +: enables only the listed collectors.
+  replaced: summary(render(function(_) { os: true, cpu: true })),
+};
+
+local expect(name, want) =
+  assert results[name] == want : name + ': got ' + std.manifestJson(results[name]);
+  true;
+
+assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
+assert expect('defaults', {
+  CPU: ['Summary', 'Utilization', 'Scheduling', 'System calls and frequency'],
+  Disk: ['Summary', 'Volumes', 'Volume I/O', 'Physical disks'],
+  Exporter: exporter,
+  Fleet: ['Hosts', 'Utilization', 'Throughput and errors'],
+  Memory: ['Summary', 'Physical memory and commit', 'Paging and kernel memory'],
+  Network: ['Summary', 'Interfaces'],
+  Overview: ['Summary', 'CPU and memory', 'Storage and network'],
+  Services: ['Summary', 'State'],
+});
+assert expect('osOnly', { Exporter: exporter, Fleet: ['Hosts'], Overview: ['Summary'] });
+assert expect('smbClientOnly', { Exporter: exporter, Fleet: ['Hosts'], Overview: ['Summary'], SMB: ['Summary', 'Client shares'] });
+assert expect('diskWithoutDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Physical disks']);
+assert expect('diskWithDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Drives', 'Physical disks']);
+assert expect('replaced', {
+  CPU: ['Summary', 'Utilization', 'System calls and frequency'],
+  Exporter: exporter,
+  Fleet: ['Hosts', 'Utilization'],
+  Overview: ['Summary', 'CPU and memory'],
+});
+
+results

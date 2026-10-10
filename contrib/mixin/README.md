@@ -266,8 +266,10 @@ names, such as `cpu`, `physical_disk`, `diskdrive`, `smb` or `update`. The
 dashboard renders only the tabs, rows, panels and variables of enabled
 collectors, so a tab for a collector you do not run does not appear. The
 defaults match the exporter's default collectors; `time` follows `enableTime`.
-An unknown collector name fails the build. Enable optional collectors on top of
-the defaults:
+The `os` collector is required, because the variables select hosts through
+`windows_os_hostname`. An unknown collector name fails the build. Enable
+optional collectors on top of the defaults with `collectors+:`; replacing the
+object with `collectors:` enables only the listed collectors:
 
 ```jsonnet
 (import 'mixin.libsonnet') {
@@ -277,7 +279,9 @@ the defaults:
 }.grafanaDashboards['windows-exporter.json']
 ```
 
-The committed sample dashboard enables every collector. Tab sources are
+The committed sample dashboard enables every collector. The Fleet hosts table
+always queries the default collectors; its columns stay empty for collectors
+that are turned off. Tab sources are
 functions of `on(collector)`; return `null` instead of a row, a `[id, width,
 height]` panel or a stat ID to leave it out. Panels that no row places are not
 rendered, and tabs without rows are dropped. `tests/dashboard.test.jsonnet`

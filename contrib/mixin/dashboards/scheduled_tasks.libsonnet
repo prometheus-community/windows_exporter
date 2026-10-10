@@ -3,6 +3,8 @@ local metric(name, labels='') = 'windows_scheduled_task_' + name + '{job=~"$job"
 // Disabled tasks do not run, so their results and missed runs need no attention.
 local enabled(expr) = expr + ' and on (task) ' + metric('state', 'state!="disabled"') + ' == 1';
 local requirement = ' Requires the scheduled_task collector, which is not enabled by default.';
+// Counts fall back to 0 only while the collector reports tasks, so a missing collector shows no data.
+local orZero = ' or (0 * count(' + metric('state') + '))';
 local table(id, title, description, queries, columns, unit='short') =
   b.panel.new(id, title, 'table')
   + b.panel.withDescription(description + requirement)
@@ -57,11 +59,11 @@ function(on)
     ]),
     [
       b.stat(190, 'Tasks', 'Number of registered tasks that match the collector include and exclude filters.' + requirement, 'count(count by (task) (' + metric('state') + '))'),
-      b.stat(191, 'Running', 'Tasks that are running now.' + requirement, 'sum(' + metric('state', 'state="running"') + ') or vector(0)'),
-      b.stat(192, 'Disabled', 'Tasks that are disabled and do not run.' + requirement, 'sum(' + metric('state', 'state="disabled"') + ') or vector(0)'),
-      b.stat(193, 'Unknown code', 'Enabled tasks whose last result code has no named status. This is usually a non-zero exit code of the task or a Task Scheduler error, so check the task history.' + requirement, 'count(' + enabled(metric('last_result_status', 'status="unknown"') + ' == 1') + ') or vector(0)', steps=[{ color: 'green', value: null }, { color: 'orange', value: 1 }]),
-      b.stat(194, 'Missed runs', 'Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep.' + requirement, 'count(' + enabled(metric('missed_runs') + ' > 0') + ') or vector(0)'),
-      b.stat(195, 'Never run', 'Tasks that have not run since they were registered.' + requirement, 'sum(' + metric('last_result_status', 'status="has_not_run"') + ') or vector(0)'),
+      b.stat(191, 'Running', 'Tasks that are running now.' + requirement, 'sum(' + metric('state', 'state="running"') + ')' + orZero),
+      b.stat(192, 'Disabled', 'Tasks that are disabled and do not run.' + requirement, 'sum(' + metric('state', 'state="disabled"') + ')' + orZero),
+      b.stat(193, 'Unknown code', 'Enabled tasks whose last result code has no named status. This is usually a non-zero exit code of the task or a Task Scheduler error, so check the task history.' + requirement, 'count(' + enabled(metric('last_result_status', 'status="unknown"') + ' == 1') + ')' + orZero, steps=[{ color: 'green', value: null }, { color: 'orange', value: 1 }]),
+      b.stat(194, 'Missed runs', 'Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep.' + requirement, 'count(' + enabled(metric('missed_runs') + ' > 0') + ')' + orZero),
+      b.stat(195, 'Never run', 'Tasks that have not run since they were registered.' + requirement, 'sum(' + metric('last_result_status', 'status="has_not_run"') + ')' + orZero),
 
       table(196, 'Tasks with an unknown result code', 'Enabled tasks whose last result code has no named status, usually a non-zero exit code of the task or a Task Scheduler error.', [
         { refId: 'A', expr: 'max by (task) (' + enabled(metric('last_result_status', 'status="unknown"') + ' == 1') + ')' },

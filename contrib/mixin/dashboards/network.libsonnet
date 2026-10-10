@@ -20,7 +20,7 @@ function(on)
       b.stat(181, 'Errors', 'Packets per second that were discarded or had errors, inbound and outbound, summed over the selected interfaces.', std.join(' + ', [sumRate(nic(name)) for name in ['packets_received_errors_total', 'packets_received_discarded_total', 'packets_outbound_errors_total', 'packets_outbound_discarded_total']]), 'pps', steps=b.levels(1, 10))
       + b.panel.withDefaults({ min: 0 }),
       b.stat(182, 'TCP sessions', 'TCP connections in the established or close-wait state, IPv4 and IPv6. Requires the tcp collector.', 'sum(' + tcp('connections_established') + ')', 'short'),
-      b.stat(183, 'Retransmits', 'Retransmitted segments as a share of sent segments. A rate that stays above a few percent points to packet loss. Requires the tcp collector.', '(' + sumRate(tcp('segments_retransmitted_total')) + ' / (' + sumRate(tcp('segments_sent_total')) + ' > 0)) or vector(0)', 'percentunit', steps=b.levels(0.01, 0.05))
+      b.stat(183, 'Retransmits', 'Retransmitted segments as a share of sent segments. A rate that stays above a few percent points to packet loss. Requires the tcp collector.', '(' + sumRate(tcp('segments_retransmitted_total')) + ' / (' + sumRate(tcp('segments_sent_total')) + ' > 0)) or (0 * ' + sumRate(tcp('segments_sent_total')) + ')', 'percentunit', steps=b.levels(0.01, 0.05))
       + b.panel.withDefaults({ decimals: 2, min: 0 }),
 
       b.panel.new(45, 'Network throughput', 'timeseries')

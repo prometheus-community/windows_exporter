@@ -6,9 +6,12 @@ function(config)
   local known = std.objectFields((import '../config.libsonnet')._config.collectors);
   local unknown = std.setDiff(std.objectFields(config.collectors), known);
   assert std.length(unknown) == 0 : 'Unknown collectors in _config.collectors: ' + std.join(', ', unknown);
+  // A collector missing from a replaced collectors object counts as disabled.
   local on(collector) =
     assert std.member(known, collector) : 'Unknown collector ' + collector;
-    config.collectors[collector];
+    std.get(config.collectors, collector, false);
+  // All variables select hosts through windows_os_hostname.
+  assert on('os') : 'The dashboard requires the os collector';
   local tabs = [
     tab
     for tab in [
@@ -78,7 +81,7 @@ function(config)
     hideTimepicker: false,
     to: 'now',
   })
-  + dashboard.spec.withAnnotations(import 'annotations.libsonnet')
+  + dashboard.spec.withAnnotations((import 'annotations.libsonnet')(on))
   + dashboard.spec.withVariables((import 'variables.libsonnet')(on))
   + dashboard.spec.withElements(std.foldl(function(elements, tab) elements + tab.elements, tabs, {}))
   + dashboard.spec.withLayout(b.tabs([tab.layout for tab in tabs]))

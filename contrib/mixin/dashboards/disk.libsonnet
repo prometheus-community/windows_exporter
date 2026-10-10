@@ -33,13 +33,12 @@ function(on)
         if on('physical_disk') then 200 else if on('logical_disk') then 173,
         if on('logical_disk') then 174,
         if on('logical_disk') then 175,
+        if on('logical_disk') then 176,
         if on('logical_disk') then 177,
-        // Six stats fit the row: drive health replaces IOPS when diskdrive is enabled.
-        if on('diskdrive') then 201 else if on('logical_disk') then 176,
       ]),
       if on('logical_disk') then b.row('Volumes', b.flow([[37, 24, 7], [38, 12, 8], [39, 12, 8]])),
       if on('logical_disk') then b.row('Volume I/O', b.flow([[40, 12, 8], [41, 12, 8], [42, 12, 8], [43, 12, 8]])),
-      if on('diskdrive') then b.row('Drives', b.flow([[202, 24, 6]])),
+      if on('diskdrive') then b.row('Drives', b.flow([[201, 4, 6], [202, 20, 6]])),
       if on('physical_disk') then b.row('Physical disks', b.flow([[203, 12, 8], [204, 12, 8], [205, 12, 8], [206, 12, 8], [207, 12, 8], [208, 12, 8]])),
     ]),
     [
@@ -50,7 +49,7 @@ function(on)
       b.stat(174, 'Read', 'Bytes read per second, summed over the selected volumes.', sumRate('read_bytes_total'), 'Bps'),
       b.stat(175, 'Write', 'Bytes written per second, summed over the selected volumes.', sumRate('write_bytes_total'), 'Bps'),
       b.stat(176, 'IOPS', 'Read and write operations per second, summed over the selected volumes.', sumRate('reads_total') + ' + ' + sumRate('writes_total'), 'iops'),
-      b.stat(177, 'Latency', 'Average time per read or write operation over the selected volumes. 0 when there is no I/O.', '((' + sumRate('read_seconds_total') + ' + ' + sumRate('write_seconds_total') + ') / ((' + sumRate('reads_total') + ' + ' + sumRate('writes_total') + ') > 0)) or vector(0)', 's', steps=b.levels(0.02, 0.05)),
+      b.stat(177, 'Latency', 'Average time per read or write operation over the selected volumes. 0 when there is no I/O.', '((' + sumRate('read_seconds_total') + ' + ' + sumRate('write_seconds_total') + ') / ((' + sumRate('reads_total') + ' + ' + sumRate('writes_total') + ') > 0)) or (0 * ' + sumRate('reads_total') + ')', 's', steps=b.levels(0.02, 0.05)),
 
       b.panel.new(37, 'Volumes', 'table')
       + b.panel.withDescription('Label, physical disk number, file system, size, available space and used percentage of each selected logical volume. Windows free-space counters can lag by 10 to 15 minutes; use trends rather than treating a single sample as immediate confirmation of reclaimed space.')
@@ -371,7 +370,7 @@ function(on)
 
       b.stat(200, 'Busiest disk', 'Busy time of the busiest physical disk. Requires the physical_disk collector.', 'max(1 - clamp_max(' + physicalRate('idle_seconds_total') + ', 1))', 'percentunit', steps=b.levels(0.8, 0.9))
       + b.panel.withDefaults({ decimals: 1, max: 1, min: 0 }),
-      b.stat(201, 'Drives not OK', 'Drives whose operational status is not OK. Requires the diskdrive collector.', 'count(' + drive('status', ', status!="OK"') + ' == 1) or vector(0)', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(201, 'Drives not OK', 'Drives whose operational status is not OK. Requires the diskdrive collector.', 'count(' + drive('status', ', status!="OK"') + ' == 1) or (0 * count(' + drive('info') + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
 
       b.joinedTable(202, 'Drives', 'Model, size, partitions and operational status of each drive. Requires the diskdrive collector.', 'disk', [
         'max by (disk, model) (' + drive('info') + ')',

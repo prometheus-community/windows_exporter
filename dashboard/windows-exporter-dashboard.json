@@ -7553,6 +7553,91 @@
                     }
                 }
             },
+            "panel-176": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])) + sum(rate(windows_logical_disk_writes_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Read and write operations per second, summed over the selected volumes.",
+                    "id": 176,
+                    "links": [],
+                    "title": "IOPS",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "iops"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
             "panel-177": {
                 "kind": "Panel",
                 "spec": {
@@ -7572,7 +7657,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "((sum(rate(windows_logical_disk_read_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])) + sum(rate(windows_logical_disk_write_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]))) / ((sum(rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])) + sum(rate(windows_logical_disk_writes_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]))) > 0)) or vector(0)",
+                                                "expr": "((sum(rate(windows_logical_disk_read_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])) + sum(rate(windows_logical_disk_write_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]))) / ((sum(rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])) + sum(rate(windows_logical_disk_writes_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]))) > 0)) or (0 * sum(rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -8226,7 +8311,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(sum(rate(windows_tcp_segments_retransmitted_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / (sum(rate(windows_tcp_segments_sent_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0)) or vector(0)",
+                                                "expr": "(sum(rate(windows_tcp_segments_retransmitted_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / (sum(rate(windows_tcp_segments_sent_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0)) or (0 * sum(rate(windows_tcp_segments_sent_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9110,7 +9195,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state=\"running\"}) or vector(0)",
+                                                "expr": "sum(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state=\"running\"}) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9195,7 +9280,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state=\"disabled\"}) or vector(0)",
+                                                "expr": "sum(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state=\"disabled\"}) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9280,7 +9365,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_scheduled_task_last_result_status{job=~\"$job\", instance=\"$instance\", status=\"unknown\"} == 1 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or vector(0)",
+                                                "expr": "count(windows_scheduled_task_last_result_status{job=~\"$job\", instance=\"$instance\", status=\"unknown\"} == 1 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9368,7 +9453,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_scheduled_task_missed_runs{job=~\"$job\", instance=\"$instance\"} > 0 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or vector(0)",
+                                                "expr": "count(windows_scheduled_task_missed_runs{job=~\"$job\", instance=\"$instance\"} > 0 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9453,7 +9538,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_scheduled_task_last_result_status{job=~\"$job\", instance=\"$instance\", status=\"has_not_run\"}) or vector(0)",
+                                                "expr": "sum(windows_scheduled_task_last_result_status{job=~\"$job\", instance=\"$instance\", status=\"has_not_run\"}) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -11285,7 +11370,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\", status!=\"OK\"}, \"disk\", \"$1\", \"name\", \"PHYSICALDRIVE(\\\\d+)\") == 1) or vector(0)",
+                                                "expr": "count(label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\", status!=\"OK\"}, \"disk\", \"$1\", \"name\", \"PHYSICALDRIVE(\\\\d+)\") == 1) or (0 * count(label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"name\", \"PHYSICALDRIVE(\\\\d+)\")))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12565,7 +12650,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or vector(0)",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12650,7 +12735,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or vector(0)",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12738,7 +12823,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or vector(0)",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12759,94 +12844,6 @@
                     "id": 212,
                     "links": [],
                     "title": "Important",
-                    "vizConfig": {
-                        "group": "stat",
-                        "kind": "VizConfig",
-                        "spec": {
-                            "fieldConfig": {
-                                "defaults": {
-                                    "color": {
-                                        "mode": "thresholds"
-                                    },
-                                    "thresholds": {
-                                        "mode": "absolute",
-                                        "steps": [
-                                            {
-                                                "color": "green",
-                                                "value": null
-                                            },
-                                            {
-                                                "color": "orange",
-                                                "value": 1
-                                            }
-                                        ]
-                                    },
-                                    "unit": "short"
-                                },
-                                "overrides": []
-                            },
-                            "options": {
-                                "colorMode": "value",
-                                "graphMode": "area",
-                                "justifyMode": "auto",
-                                "orientation": "auto",
-                                "percentChangeColorMode": "standard",
-                                "reduceOptions": {
-                                    "calcs": [
-                                        "lastNotNull"
-                                    ],
-                                    "fields": "",
-                                    "values": false
-                                },
-                                "showPercentChange": false,
-                                "textMode": "auto",
-                                "wideLayout": true
-                            }
-                        },
-                        "version": ""
-                    }
-                }
-            },
-            "panel-213": {
-                "kind": "Panel",
-                "spec": {
-                    "data": {
-                        "kind": "QueryGroup",
-                        "spec": {
-                            "queries": [
-                                {
-                                    "kind": "PanelQuery",
-                                    "spec": {
-                                        "hidden": false,
-                                        "query": {
-                                            "datasource": {
-                                                "name": "${datasource}"
-                                            },
-                                            "group": "prometheus",
-                                            "kind": "DataQuery",
-                                            "spec": {
-                                                "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", category=\"Security Updates\"}) or vector(0)",
-                                                "instant": false,
-                                                "legendFormat": "__auto",
-                                                "range": true
-                                            },
-                                            "version": "v0"
-                                        },
-                                        "refId": "A"
-                                    }
-                                }
-                            ],
-                            "queryOptions": {
-                                "maxDataPoints": 100
-                            },
-                            "transformations": []
-                        }
-                    },
-                    "description": "Pending updates in the Security Updates category. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
-                    "id": 213,
-                    "links": [],
-                    "title": "Security",
                     "vizConfig": {
                         "group": "stat",
                         "kind": "VizConfig",
@@ -12974,7 +12971,7 @@
                                 "percentChangeColorMode": "standard",
                                 "reduceOptions": {
                                     "calcs": [
-                                        "lastNotNull"
+                                        "last"
                                     ],
                                     "fields": "",
                                     "values": false
@@ -13066,7 +13063,7 @@
                                 "percentChangeColorMode": "standard",
                                 "reduceOptions": {
                                     "calcs": [
-                                        "lastNotNull"
+                                        "last"
                                     ],
                                     "fields": "",
                                     "values": false
@@ -13099,7 +13096,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (title, category, severity) (windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"} * on (id, revision) group_right windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) * 1000",
+                                                "expr": "max by (title, category, severity) ((windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"} * on (id, revision) group_right windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or on (id, revision) (0 * windows_update_pending_info{job=~\"$job\", instance=\"$instance\"})) * 1000",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -13140,7 +13137,7 @@
                             ]
                         }
                     },
-                    "description": "Pending updates with their category, security severity and publish date. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
+                    "description": "Pending updates with their category, security severity and publish date. Category names follow the Windows display language. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
                     "id": 216,
                     "links": [],
                     "title": "Pending updates",
@@ -13162,6 +13159,17 @@
                                         "inspect": false,
                                         "minWidth": 60
                                     },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "0": {
+                                                    "index": 0,
+                                                    "text": "unknown"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -13969,7 +13977,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(sum(rate(windows_smbclient_request_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / (sum(rate(windows_smbclient_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0)) or vector(0)",
+                                                "expr": "(sum(rate(windows_smbclient_request_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / (sum(rate(windows_smbclient_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0)) or (0 * sum(rate(windows_smbclient_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -25612,7 +25620,7 @@
                                                                 "spec": {
                                                                     "element": {
                                                                         "kind": "ElementReference",
-                                                                        "name": "panel-177"
+                                                                        "name": "panel-176"
                                                                     },
                                                                     "height": 4,
                                                                     "width": 4,
@@ -25625,7 +25633,7 @@
                                                                 "spec": {
                                                                     "element": {
                                                                         "kind": "ElementReference",
-                                                                        "name": "panel-201"
+                                                                        "name": "panel-177"
                                                                     },
                                                                     "height": 4,
                                                                     "width": 4,
@@ -25771,11 +25779,24 @@
                                                                 "spec": {
                                                                     "element": {
                                                                         "kind": "ElementReference",
+                                                                        "name": "panel-201"
+                                                                    },
+                                                                    "height": 6,
+                                                                    "width": 4,
+                                                                    "x": 0,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
                                                                         "name": "panel-202"
                                                                     },
                                                                     "height": 6,
-                                                                    "width": 24,
-                                                                    "x": 0,
+                                                                    "width": 20,
+                                                                    "x": 4,
                                                                     "y": 0
                                                                 }
                                                             }
@@ -27028,7 +27049,7 @@
                                                                         "name": "panel-210"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 4,
+                                                                    "width": 5,
                                                                     "x": 0,
                                                                     "y": 0
                                                                 }
@@ -27041,8 +27062,8 @@
                                                                         "name": "panel-211"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 4,
-                                                                    "x": 4,
+                                                                    "width": 5,
+                                                                    "x": 5,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -27054,21 +27075,8 @@
                                                                         "name": "panel-212"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 4,
-                                                                    "x": 8,
-                                                                    "y": 0
-                                                                }
-                                                            },
-                                                            {
-                                                                "kind": "GridLayoutItem",
-                                                                "spec": {
-                                                                    "element": {
-                                                                        "kind": "ElementReference",
-                                                                        "name": "panel-213"
-                                                                    },
-                                                                    "height": 4,
-                                                                    "width": 4,
-                                                                    "x": 12,
+                                                                    "width": 5,
+                                                                    "x": 10,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -27080,8 +27088,8 @@
                                                                         "name": "panel-214"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 4,
-                                                                    "x": 16,
+                                                                    "width": 5,
+                                                                    "x": 15,
                                                                     "y": 0
                                                                 }
                                                             },

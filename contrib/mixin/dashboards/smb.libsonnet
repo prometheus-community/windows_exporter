@@ -29,7 +29,7 @@ function(on)
       b.stat(221, 'Connections', 'Client connections (tree connects) to the shares of this SMB server.' + serverRequirement, 'sum(' + server('tree_connect_count') + ')'),
       b.stat(222, 'Server traffic', 'Bytes sent and received per second by the shares of this SMB server.' + serverRequirement, 'sum(' + serverRate('received_bytes_total') + ') + sum(' + serverRate('sent_bytes_total') + ')', 'Bps'),
       b.stat(223, 'Client traffic', 'Bytes read and written per second by this host on remote SMB shares.' + clientRequirement, 'sum(' + clientRate('data_bytes_total') + ')', 'Bps'),
-      b.stat(224, 'Client latency', 'Average time per request of this host on remote SMB shares. 0 when there are no requests.' + clientRequirement, '(sum(' + clientRate('request_seconds_total') + ') / (sum(' + clientRate('requests_total') + ') > 0)) or vector(0)', 's', steps=b.levels(0.02, 0.05)),
+      b.stat(224, 'Client latency', 'Average time per request of this host on remote SMB shares. 0 when there are no requests.' + clientRequirement, '(sum(' + clientRate('request_seconds_total') + ') / (sum(' + clientRate('requests_total') + ') > 0)) or (0 * sum(' + clientRate('requests_total') + '))', 's', steps=b.levels(0.02, 0.05)),
       b.stat(225, 'Credit stalls', 'Requests per second delayed because the server granted too few SMB credits. Sustained stalls limit throughput.' + clientRequirement, 'sum(' + clientRate('stalls_total') + ')', 'ops', steps=[{ color: 'green', value: null }, { color: 'orange', value: 1 }]),
 
       b.graph(226, 'Share traffic', 'Bytes sent and received per second per share. Received bytes are drawn below the axis.' + serverRequirement, 'Bps', [
