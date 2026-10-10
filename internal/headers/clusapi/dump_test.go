@@ -32,9 +32,15 @@ import (
 )
 
 const (
-	resourceGetROPrivateProperties = 0x0100007d
-	resourceGetPrivateProperties   = 0x01000081
+	resourceGetROPrivateProperties    = 0x0100007d
+	resourceGetPrivateProperties      = 0x01000081
+	resourceTypeGetROCommonProperties = 0x02000055
+	resourceTypeGetCommonProperties   = 0x02000059
+	resourceTypeGetPrivateProperties  = 0x02000081
 )
+
+//nolint:gochecknoglobals
+var resourceTypeControl = dll.NewProc("ClusterResourceTypeControl")
 
 // TestDumpPropertyLists logs raw property lists from a live cluster as hex, so
 // parser fixtures can be built from real cluster service output. Set
@@ -71,6 +77,35 @@ func TestDumpPropertyLists(t *testing.T) {
 			return size, nil
 		})
 		logPropertyList(t, fmt.Sprintf("cluster %#x", code), data, err)
+	}
+
+	// Resource type lists carry EXPAND_SZ values such as DllName, which the
+	// cluster service returns as an EXPAND_SZ and EXPANDED_SZ value pair.
+	for _, typeName := range []string{"Generic Service", "IP Address"} {
+		typePtr, err := windows.UTF16PtrFromString(typeName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, code := range []uint32{resourceTypeGetROCommonProperties, resourceTypeGetCommonProperties, resourceTypeGetPrivateProperties} {
+			data, err := controlBuffer(deadline, 0, func(buffer []byte) (uint32, error) {
+				var (
+					size    uint32
+					pointer *byte
+				)
+				if len(buffer) != 0 {
+					pointer = &buffer[0]
+				}
+
+				status, _, _ := resourceTypeControl.Call(cluster, uintptr(unsafe.Pointer(typePtr)), 0, uintptr(code), 0, 0, uintptr(unsafe.Pointer(pointer)), uintptr(len(buffer)), uintptr(unsafe.Pointer(&size)))
+				if status != 0 {
+					return size, windows.Errno(status)
+				}
+
+				return size, nil
+			})
+			logPropertyList(t, fmt.Sprintf("resource type %q %#x", typeName, code), data, err)
+		}
 	}
 
 	enum, _, err := openEnum.Call(cluster, 4)
