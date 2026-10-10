@@ -171,15 +171,9 @@ func parsePartitionInfoEx(data []byte) (Partition, error) {
 		return Partition{}, fmt.Errorf("partition information has %d bytes, want at least %d", len(data), partitionInfoExSize)
 	}
 
-	deviceName, err := decodeFixedString(data[partitionDeviceNameOffset:partitionVolumeLabelOffset])
-	if err != nil {
-		return Partition{}, fmt.Errorf("partition device name: %w", err)
-	}
-
-	volumeLabel, err := decodeFixedString(data[partitionVolumeLabelOffset : partitionVolumeLabelOffset+260*2])
-	if err != nil {
-		return Partition{}, fmt.Errorf("partition volume label: %w", err)
-	}
+	// Fixed-size WCHAR arrays decode up to their first NUL, like WMI strings.
+	deviceName := decodeString(data[partitionDeviceNameOffset:partitionVolumeLabelOffset])
+	volumeLabel := decodeString(data[partitionVolumeLabelOffset : partitionVolumeLabelOffset+260*2])
 
 	guid := data[partitionVolumeGUIDOffset:partitionInfoExSize]
 
@@ -195,12 +189,6 @@ func parsePartitionInfoEx(data []byte) (Partition, error) {
 		TotalBytes: binary.LittleEndian.Uint64(data[partitionTotalSizeOffset:]),
 		FreeBytes:  binary.LittleEndian.Uint64(data[partitionFreeSizeOffset:]),
 	}, nil
-}
-
-// decodeFixedString decodes a WCHAR array of fixed size up to its first NUL,
-// replacing invalid UTF-16 like the strings WMI returned.
-func decodeFixedString(data []byte) (string, error) {
-	return decodeString(data), nil
 }
 
 // Value is one entry of a CLUSPROP value list.

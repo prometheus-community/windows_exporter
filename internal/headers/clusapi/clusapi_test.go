@@ -64,6 +64,7 @@ func TestControlBufferPresized(t *testing.T) {
 
 	data, err := controlBuffer(time.Time{}, 8, func(buffer []byte) (uint32, error) {
 		calls++
+
 		if len(buffer) != 8 {
 			t.Fatalf("buffer = %d", len(buffer))
 		}
@@ -186,7 +187,6 @@ func TestStateBuffersGrowthAndBitPatterns(t *testing.T) {
 	if err != nil || state != 0x80000000 || node != "N" || group != "G" || calls != 2 {
 		t.Fatalf("state=%d node=%s group=%s calls=%d err=%v", state, node, group, calls, err)
 	}
-
 }
 
 // WMI published ClusterResourceStateUnknown with the other resource properties,

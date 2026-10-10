@@ -167,8 +167,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 			return resources, resultErr
 		}
 
-		var invalid invalidEnumEntryError
-		if errors.As(err, &invalid) {
+		if _, ok := errors.AsType[invalidEnumEntryError](err); ok {
 			// One malformed entry must not hide the resources after it.
 			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterEnum index %d: %w", index, err))
 
