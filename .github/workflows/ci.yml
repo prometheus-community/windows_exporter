@@ -635,7 +635,7 @@ jobs:
 
       - name: Setup MSCluster
         id: setup-mscluster
-        # The Go test requires the cluster and virtual disk.
+        # The Go tests require the cluster and its resource fixtures.
         background: true
         shell: powershell
         run: |
@@ -659,6 +659,24 @@ jobs:
 
           Import-Module FailoverClusters
 
+          # A private network lets an IP Address resource come online without
+          # adding addresses to the runner's primary adapter.
+          $networkSwitch = "CIClusterSwitch"
+          $networkAddress = "198.51.100.0"
+          Start-Service vmms
+          if ($null -eq (Get-VMSwitch -Name $networkSwitch -ErrorAction SilentlyContinue)) {
+              New-VMSwitch -Name $networkSwitch -SwitchType Internal | Out-Null
+          }
+
+          $adapter = Get-NetAdapter -Name "vEthernet ($networkSwitch)"
+          if ($null -eq (Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -IPAddress "198.51.100.1" -ErrorAction SilentlyContinue)) {
+              New-NetIPAddress -InterfaceIndex $adapter.ifIndex -IPAddress "198.51.100.1" -PrefixLength 24 | Out-Null
+          }
+
+          # A Cluster Name needs a static address on a routed client network and a
+          # DNS registration; the DHCP-only runner network provides neither. Keep
+          # the cluster without an administrative access point and add workload
+          # resources instead.
           $cluster = Get-Cluster -ErrorAction SilentlyContinue
           if ($null -eq $cluster) {
               New-Cluster `
@@ -669,9 +687,108 @@ jobs:
                   -Force | Out-Null
           }
 
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+              $network = Get-ClusterNetwork | Where-Object Address -EQ $networkAddress
+              if ($null -ne $network) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  Get-ClusterNetwork | Format-Table Name, State, Role, Address
+                  throw "Cluster network $networkAddress did not appear"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
+
+          # Networks without a default gateway default to cluster-only traffic,
+          # which cannot host IP Address resources. 3 = ClusterAndClient.
+          $network.Role = 3
+
+          # Resource fixtures for the resource and resourcegroup sub-collectors:
+          #   CIResources: an online Generic Service that depends on an online IP
+          #   Address, plus an IP Address that stays offline.
+          #   CIFailedResources: a Generic Service whose binary is missing.
+          if ($null -eq (Get-ClusterGroup -Name "CIResources" -ErrorAction SilentlyContinue)) {
+              Add-ClusterGroup -Name "CIResources" | Out-Null
+
+              Add-ClusterResource -Name "CI IP Address" -Group "CIResources" -ResourceType "IP Address" |
+                  Set-ClusterParameter -Multiple @{
+                      Address    = "198.51.100.10"
+                      SubnetMask = "255.255.255.0"
+                      Network    = $network.Name
+                      EnableDhcp = 0
+                  }
+
+              Add-ClusterResource -Name "CI Offline IP Address" -Group "CIResources" -ResourceType "IP Address" |
+                  Set-ClusterParameter -Multiple @{
+                      Address    = "198.51.100.11"
+                      SubnetMask = "255.255.255.0"
+                      Network    = $network.Name
+                      EnableDhcp = 0
+                  }
+
+              # Windows Event Collector is unused on the runner and stays running.
+              Add-ClusterResource -Name "CI Generic Service" -Group "CIResources" -ResourceType "Generic Service" |
+                  Set-ClusterParameter -Name ServiceName -Value "Wecsvc"
+              Add-ClusterResourceDependency -Resource "CI Generic Service" -Provider "CI IP Address" | Out-Null
+          }
+
+          if ($null -eq (Get-ClusterGroup -Name "CIFailedResources" -ErrorAction SilentlyContinue)) {
+              New-Service `
+                  -Name "WindowsExporterCIFailing" `
+                  -BinaryPathName "$env:SystemRoot\System32\windows-exporter-ci-missing.exe" `
+                  -StartupType Manual | Out-Null
+
+              Add-ClusterGroup -Name "CIFailedResources" | Out-Null
+              $failing = Add-ClusterResource -Name "CI Failed Service" -Group "CIFailedResources" -ResourceType "Generic Service"
+              $failing | Set-ClusterParameter -Name ServiceName -Value "WindowsExporterCIFailing"
+              # 0 = ClusterResourceDontRestart: keep the resource failed.
+              $failing.RestartAction = 0
+          }
+
+          Start-ClusterResource -Name "CI Generic Service" -Wait 60 | Out-Null
+
+          try {
+              Start-ClusterResource -Name "CI Failed Service" -Wait 60 | Out-Null
+          }
+          catch {
+              Write-Host "CI Failed Service failed to start as expected: $_"
+          }
+
+          $expected = @{
+              "CI IP Address"         = "Online"
+              "CI Generic Service"    = "Online"
+              "CI Offline IP Address" = "Offline"
+              "CI Failed Service"     = "Failed"
+          }
+
+          $deadline = (Get-Date).AddMinutes(1)
+          do {
+              $resources = @(Get-ClusterResource)
+              $mismatched = @($expected.GetEnumerator() | Where-Object {
+                  $name = $_.Key
+                  "$(($resources | Where-Object Name -EQ $name).State)" -ne $_.Value
+              })
+
+              if ($mismatched.Count -eq 0) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  $resources | Format-Table Name, State, OwnerGroup, ResourceType
+                  throw "Cluster resources did not reach their expected states: $($mismatched.Key -join ', ')"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
+
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
+          Get-ClusterGroup | Format-Table Name, State, OwnerNode, GroupType
+          Get-ClusterResource | Format-Table Name, State, OwnerGroup, ResourceType
 
       - name: Prepare container runtime
         shell: pwsh
@@ -1494,6 +1611,9 @@ jobs:
       - name: Go tests
         id: go-tests
         shell: pwsh
+        env:
+          # Temporary: log raw ClusAPI property lists for parser fixtures.
+          WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP: "1"
         run: |
           go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
               ForEach-Object {

@@ -114,9 +114,10 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 // unsupportedBuild returns true for errors that indicate a collector's WMI
 // class or PDH counter is not present on this system. MI_RESULT_INVALID_CLASS
 // is only accepted here (Build path) so that a mistyped class in production
-// code still fails Collect.
+// code still fails Collect. Native collectors report a missing role, such as
+// an unconfigured failover cluster, with errors.ErrUnsupported.
 func unsupportedBuild(err error) bool {
-	return errors.Is(err, mi.MI_RESULT_INVALID_CLASS) || unsupportedCollect(err)
+	return errors.Is(err, mi.MI_RESULT_INVALID_CLASS) || errors.Is(err, errors.ErrUnsupported) || unsupportedCollect(err)
 }
 
 // unsupportedCollect returns true for Collect-path errors that indicate a
