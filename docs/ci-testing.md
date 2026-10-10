@@ -22,8 +22,7 @@ when setup is missing or collection fails instead of skipping. Fixture assertion
 check known instances, including the active RDP user's session and SQL database.
 RemoteFX is required when both network and graphics instances are available.
 
-Each Windows job publishes a feature table in its Actions summary and a
-`windows-test-results-<OS>` artifact containing `feature-summary.md`, structured
-Go test events, readable test output, and setup diagnostics. The table distinguishes
-required fixtures, unavailable collectors, and empty optional instance groups.
-This records Windows feature availability rather than Go statement coverage.
+Each Windows job uploads a `windows-test-results-<OS>` artifact containing the
+Go test events (`test-results.jsonl`) and setup diagnostics. Unavailable
+optional collectors show up as skipped `TestCollector` tests with the reason in
+their output.

@@ -1516,28 +1516,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
 
       - name: Go tests
-        id: go-tests
         shell: pwsh
-        run: |
-          ./tools/run-go-tests.ps1 -BinaryDirectory (Join-Path $env:RUNNER_TEMP "go-tests") -Timeout 10m
-          $testExitCode = $LASTEXITCODE
-          "exit_code=$testExitCode" | Add-Content $env:GITHUB_OUTPUT
-          exit $testExitCode
-
-      - name: Summarize Windows feature tests
-        if: ${{ always() }}
-        shell: pwsh
-        env:
-          TEST_EXIT_CODE: ${{ steps.go-tests.outputs.exit_code || '1' }}
-        run: |
-          Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
-          # CBS.log names the files that make role installation request a restart.
-          Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
-          ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
+        run: ./tools/run-go-tests.ps1 -BinaryDirectory (Join-Path $env:RUNNER_TEMP "go-tests") -Timeout 10m
 
       - name: Smoke test exporter
         shell: pwsh
         run: ./tools/end-to-end-test.ps1
+
+      - name: Collect Windows setup logs
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
+          # CBS.log names the files that make role installation request a restart.
+          Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
 
       - name: Upload test logs
         if: ${{ always() }}
@@ -1545,9 +1537,7 @@ jobs:
         with:
           name: windows-test-results-${{ matrix.os }}
           path: |
-            test-output.txt
             test-results.jsonl
-            feature-summary.md
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
             ${{ runner.temp }}/sql-server-summary.txt
