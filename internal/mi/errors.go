@@ -20,6 +20,7 @@ package mi
 import "errors"
 
 var (
-	ErrNotInitialized    = errors.New("not initialized")
-	ErrInvalidEntityType = errors.New("invalid entity type")
+	ErrNotInitialized     = errors.New("not initialized")
+	ErrInvalidEntityType  = errors.New("invalid entity type")
+	ErrInvalidElementName = errors.New("invalid element name")
 )

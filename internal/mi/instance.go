@@ -88,14 +88,41 @@ func (instance *Instance) Delete() error {
 	return nil
 }
 
-func (instance *Instance) GetElement(elementName string) (*Element, error) {
+// ElementName is the UTF-16 name of an instance element.
+type ElementName *uint16
+
+func NewElementName(elementName string) (ElementName, error) {
+	return windows.UTF16PtrFromString(elementName)
+}
+
+// GetElement gets the element with the given name. To read the same element
+// from many instances, convert the name once with [NewElementName] and use
+// [Instance.GetElementByName].
+func (instance *Instance) GetElement(elementName string) (Element, error) {
 	if instance == nil || instance.ft == nil {
-		return nil, ErrNotInitialized
+		return Element{}, ErrNotInitialized
 	}
 
-	elementNameUTF16, err := windows.UTF16PtrFromString(elementName)
+	elementNameUTF16, err := NewElementName(elementName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert element name %s to UTF-16: %w", elementName, err)
+		return Element{}, fmt.Errorf("failed to convert element name %s to UTF-16: %w", elementName, err)
+	}
+
+	return instance.GetElementByName(elementNameUTF16)
+}
+
+// GetElementByName gets the element with the given name. Strings and arrays
+// in the returned element point into the instance and are only valid while
+// the instance is.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_instance_getelement
+func (instance *Instance) GetElementByName(elementName ElementName) (Element, error) {
+	if instance == nil || instance.ft == nil {
+		return Element{}, ErrNotInitialized
+	}
+
+	if elementName == nil {
+		return Element{}, ErrInvalidElementName
 	}
 
 	// MI_Value is a union sized to its largest member. On 64-bit MI_Datetime is
@@ -113,7 +140,7 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 	r0, _, _ := syscall.SyscallN(
 		instance.ft.GetElement,
 		uintptr(unsafe.Pointer(instance)),
-		uintptr(unsafe.Pointer(elementNameUTF16)),
+		uintptr(unsafe.Pointer(elementName)),
 		uintptr(unsafe.Pointer(&valueBuf)),
 		uintptr(unsafe.Pointer(&valueType)),
 		uintptr(unsafe.Pointer(&flags)),
@@ -121,10 +148,10 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 	)
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return nil, result
+		return Element{}, result
 	}
 
-	return &Element{
+	return Element{
 		value:     uintptr(valueBuf[0]),
 		arrayLen:  uint32(valueBuf[1]),
 		valueType: valueType,

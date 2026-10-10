@@ -183,6 +183,7 @@ func (application *Application) NewSession(options *DestinationOptions) (*Sessio
 		return nil, fmt.Errorf("failed to set timeout: %w", err)
 	}
 
+	session.application = application
 	session.defaultOperationOptions = defaultOperationOptions
 
 	return session, nil
