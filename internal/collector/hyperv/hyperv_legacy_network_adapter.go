@@ -106,7 +106,7 @@ func (c *Collector) collectLegacyNetworkAdapter(ch chan<- prometheus.Metric) err
 	for _, data := range c.perfDataObjectLegacyNetworkAdapter {
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesDropped,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.LegacyNetworkAdapterBytesDropped,
 			data.Name,
 		)

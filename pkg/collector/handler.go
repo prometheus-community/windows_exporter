@@ -30,7 +30,7 @@ import (
 var _ prometheus.Collector = (*Handler)(nil)
 
 // scrapeSlot admits one scrape at a time, across all collections.
-// We are expose metrics directly from the memory region of the Win32 API.
+// We expose metrics directly from the memory region of the Win32 API.
 // We should not allow more than one request at a time.
 //
 //nolint:gochecknoglobals

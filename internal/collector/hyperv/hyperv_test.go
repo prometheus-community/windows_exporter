@@ -75,6 +75,29 @@ func TestCollectorVirtualStorageDeviceLatency(t *testing.T) {
 	}
 }
 
+// TestCollectorLegacyNetworkAdapter checks that the legacy network adapter
+// metrics are published with the counter type documented in
+// docs/collector.hyperv.md; bytes_dropped_total used to be published as a
+// gauge. The CI fixture VM carries a legacy network adapter.
+func TestCollectorLegacyNetworkAdapter(t *testing.T) {
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"legacy_network_adapter"}})
+
+	for _, name := range []string{
+		"windows_hyperv_legacy_network_adapter_bytes_dropped_total",
+		"windows_hyperv_legacy_network_adapter_bytes_received_total",
+		"windows_hyperv_legacy_network_adapter_bytes_sent_total",
+		"windows_hyperv_legacy_network_adapter_frames_dropped_total",
+		"windows_hyperv_legacy_network_adapter_frames_received_total",
+		"windows_hyperv_legacy_network_adapter_frames_sent_total",
+	} {
+		testutils.RequireFixtureMetric(t, metrics, hyperv.Name, name, nil)
+
+		if family, ok := metrics[name]; ok {
+			require.Equal(t, dto.MetricType_COUNTER, family.GetType(), name)
+		}
+	}
+}
+
 // TestCloseReleasesQuery ensures Close releases the PDH queries of the sub-collectors.
 func TestCloseReleasesQuery(t *testing.T) {
 	t.Parallel()
