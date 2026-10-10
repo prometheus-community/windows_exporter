@@ -427,6 +427,8 @@ type collectState struct {
 
 	// valid records for every row and counter whether the counter had a valid value.
 	valid []bool
+
+	names instanceNameCache
 }
 
 // collect replaces the content of dst with one sample.
@@ -443,15 +445,7 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 
 	*dst = (*dst)[:0:0]
 
-	rows := rowSet[T]{
-		c:           c,
-		dst:         dst,
-		index:       map[instanceKey]int{},
-		nameCache:   map[string]string{},
-		occurrences: map[string]int{},
-		seen:        map[string]int{},
-		valid:       state.valid[:0],
-	}
+	rows := newRowSet(c, dst, state)
 
 	for counterIndex := range c.counters {
 		for _, instance := range c.counters[counterIndex].Instances {
@@ -571,7 +565,7 @@ type rowSet[T any] struct {
 	c         *Collector[T]
 	dst       *[]T
 	index     map[instanceKey]int
-	nameCache map[string]string
+	nameCache *instanceNameCache
 	// occurrences includes invalid items to reserve all literal names and keep occurrence positions.
 	occurrences map[string]int
 	// seen counts names in the current counter array and is cleared between arrays.
@@ -580,11 +574,25 @@ type rowSet[T any] struct {
 	valid []bool
 }
 
+func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] {
+	state.names.startSample()
+
+	return rowSet[T]{
+		c:           c,
+		dst:         dst,
+		index:       map[instanceKey]int{},
+		nameCache:   &state.names,
+		occurrences: map[string]int{},
+		seen:        map[string]int{},
+		valid:       state.valid[:0],
+	}
+}
+
 // row returns the index of the row for the instance named by szName,
 // appending the row if needed. ok is false if the item has no valid data or
 // its instance is not collected.
 func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, bool) {
-	instanceName := decodeInstanceName(r.nameCache, szName)
+	instanceName := r.nameCache.decode(szName)
 	if instanceName == "" || instanceName == "*" {
 		instanceName = InstanceEmpty
 	}
@@ -694,6 +702,7 @@ func (r *rowSet[T]) nameDuplicates() {
 // required. Without partial rows, such rows are removed. Otherwise, the
 // missing values are set to NaN.
 func (r *rowSet[T]) finish() {
+	r.nameCache.removeUnseen()
 	r.nameDuplicates()
 
 	rows := *r.dst
@@ -781,11 +790,32 @@ func formatCounterPath(object, instance, counterName string) string {
 	return counterPath
 }
 
-// decodeInstanceName returns the instance name p points to.
-// Decoded names are cached by their raw UTF-16 content and not by p, because p points
-// into the item buffer, which is overwritten by every Get*CounterArray call. With explicit
-// instances, every call writes its single name at the same address.
-func decodeInstanceName(cache map[string]string, p *uint16) string {
+// instanceNameCache maps the raw UTF-16 content of instance names to their decoded names.
+// Names are cached by content and not by pointer, because the pointers point into the item
+// buffer, which is overwritten by every Get*CounterArray call. With explicit instances, every
+// call writes its single name at the same address.
+//
+// The cache is kept between samples, so a name is decoded once while its instance exists.
+// Names that were not seen in a completed sample are removed, because instance names that
+// contain process IDs, like those of GPU Engine, change all the time.
+type instanceNameCache struct {
+	names  map[string]*cachedInstanceName
+	sample uint64
+}
+
+type cachedInstanceName struct {
+	name string
+	// sample is the last sample that contained the name.
+	sample uint64
+}
+
+// startSample starts a new sample.
+func (cache *instanceNameCache) startSample() {
+	cache.sample++
+}
+
+// decode returns the instance name p points to.
+func (cache *instanceNameCache) decode(p *uint16) string {
 	if p == nil {
 		return ""
 	}
@@ -798,14 +828,30 @@ func decodeInstanceName(cache map[string]string, p *uint16) string {
 	raw := unsafe.Slice((*byte)(unsafe.Pointer(p)), n*2)
 
 	// The compiler does not allocate for the string conversion in a map lookup.
-	if name, ok := cache[string(raw)]; ok {
-		return name
+	if cached, ok := cache.names[string(raw)]; ok {
+		cached.sample = cache.sample
+
+		return cached.name
+	}
+
+	if cache.names == nil {
+		cache.names = map[string]*cachedInstanceName{}
 	}
 
 	name := windows.UTF16ToString(unsafe.Slice(p, n))
-	cache[string(raw)] = name
+	cache.names[string(raw)] = &cachedInstanceName{name: name, sample: cache.sample}
 
 	return name
+}
+
+// removeUnseen removes the names that the current sample did not contain.
+// It must only be called once all items of the sample were decoded.
+func (cache *instanceNameCache) removeUnseen() {
+	for raw, cached := range cache.names {
+		if cached.sample != cache.sample {
+			delete(cache.names, raw)
+		}
+	}
 }
 
 func isKnownCounterDataError(err error) bool {

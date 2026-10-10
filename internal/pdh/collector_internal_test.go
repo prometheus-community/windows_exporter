@@ -73,14 +73,7 @@ func fillRows(t *testing.T, c *Collector[rowSetValues]) []rowSetValues {
 
 	var dst []rowSetValues
 
-	rows := rowSet[rowSetValues]{
-		c:           c,
-		dst:         &dst,
-		index:       map[instanceKey]int{},
-		nameCache:   map[string]string{},
-		occurrences: map[string]int{},
-		seen:        map[string]int{},
-	}
+	rows := newRowSet(c, &dst, &collectState{})
 
 	for _, name := range []string{"complete", "partial"} {
 		row, ok := rows.row(&c.counters[0], windows.StringToUTF16Ptr(name), CstatusValidData)
@@ -233,14 +226,7 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 
 					var dst []rowSetValues
 
-					rows := rowSet[rowSetValues]{
-						c:           c,
-						dst:         &dst,
-						index:       map[instanceKey]int{},
-						nameCache:   map[string]string{},
-						occurrences: map[string]int{},
-						seen:        map[string]int{},
-					}
+					rows := newRowSet(c, &dst, &collectState{})
 
 					addDuplicateTestItems(
 						&rows,
@@ -419,4 +405,38 @@ func TestCollectRecoversPanic(t *testing.T) {
 
 	require.NoError(t, c.Collect(&dst))
 	require.NotEmpty(t, dst)
+}
+
+func TestInstanceNameCache(t *testing.T) {
+	t.Parallel()
+
+	var cache instanceNameCache
+
+	// PDH writes the names of every counter array into the same buffer.
+	buf := make([]uint16, 8)
+	write := func(name string) *uint16 {
+		copy(buf, windows.StringToUTF16(name))
+
+		return &buf[0]
+	}
+
+	cache.startSample()
+
+	first := cache.decode(write("a"))
+	require.Equal(t, "a", first)
+	require.Equal(t, "bb", cache.decode(write("bb")))
+	require.Empty(t, cache.decode(nil))
+
+	cache.removeUnseen()
+	require.Len(t, cache.names, 2)
+
+	cache.startSample()
+
+	second := cache.decode(write("a"))
+	require.Equal(t, "a", second)
+	require.Same(t, unsafe.StringData(first), unsafe.StringData(second), "name decoded again")
+
+	cache.removeUnseen()
+	require.Len(t, cache.names, 1, "name of a vanished instance kept")
+	require.Contains(t, cache.names, "a\x00", "keyed by the UTF-16LE content")
 }
