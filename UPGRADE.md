@@ -10,6 +10,8 @@ Most installations need no changes. Go through the checklist below and read the 
 | Applies to you if…                                                                              | Action                                                                  | Section                                                           |
 |-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|-------------------------------------------------------------------|
 | You enable the `filetime` collector                                                             | Switch to the `file` collector                                          | [filetime collector removed](#filetime-collector-removed)         |
+| You enable the `thermalzone` collector                                                          | Switch to a `performancecounter` object                                 | [thermalzone collector removed](#thermalzone-collector-removed)   |
+| You call the `/version` endpoint                                                                | Use `windows_exporter_build_info` instead                               | [/version endpoint removed](#version-endpoint-removed)            |
 | You use a configuration file, or set `--process.priority` or `--process.memory-limit`           | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
 | You use the `process` collector                                                                 | Remove `counter-version`, check the `owner` label                       | [process collector](#process-collector)                           |
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
@@ -54,6 +56,47 @@ collector:
       - 'C:\logs\*.log'
 ```
 
+## thermalzone collector removed
+
+The deprecated `thermalzone` collector was removed. Listing it in `--collectors.enabled` stops the exporter with `unknown collector thermalzone`.
+Read the same Windows counters with the `performancecounter` collector instead:
+
+```yaml
+collectors:
+  enabled: "[defaults],performancecounter"
+collector:
+  performancecounter:
+    objects: |-
+      - name: thermalzone
+        object: "Thermal Zone Information"
+        instances: ["*"]
+        instance_label: name
+        type: formatted
+        counters:
+          - name: "Temperature"
+            type: "gauge"
+            metric: windows_thermalzone_temperature_kelvin
+          - name: "% Passive Limit"
+            type: "gauge"
+            metric: windows_thermalzone_percent_passive_limit
+          - name: "Throttle Reasons"
+            type: "gauge"
+            metric: windows_thermalzone_throttle_reasons
+```
+
+`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `instance`, which collides with the target label that Prometheus adds.
+
+`windows_thermalzone_percent_passive_limit` and `windows_thermalzone_throttle_reasons` keep their names.
+The temperature is exported in Kelvin, because `performancecounter` doesn't convert units. Replace `windows_thermalzone_temperature_celsius` in queries with:
+
+```promql
+windows_thermalzone_temperature_kelvin - 273.15
+```
+
+## /version endpoint removed
+
+The `/version` HTTP endpoint was removed and returns `404`. The same information is in the `windows_exporter_build_info` metric, and `windows_exporter.exe --version` prints it on the command line.
+
 ## Stricter configuration validation
 
 windows_exporter 0.32 rejects configuration it used to ignore. The exporter stops at startup with an error that names the problem, instead of running with a setting silently dropped.
@@ -72,7 +115,7 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
 
   The key `scrape_interval` was accepted by 0.31 but had no effect. It now fails validation.
 
-Two settings were removed and stop the exporter at startup if they are still set: `--collector.process.counter-version` (see [process collector](#process-collector)) and `--collector.container.containerd-state-dir` (see [container collector](#container-collector)). The same applies to their configuration file keys.
+Removed settings stop the exporter at startup if they are still set: `--collector.process.counter-version` (see [process collector](#process-collector)), `--collector.container.containerd-state-dir` (see [container collector](#container-collector)) and the collector names `filetime` and `thermalzone` in `--collectors.enabled`. The same applies to their configuration file keys.
 
 New in the configuration file:
 
@@ -184,9 +227,12 @@ Changed type, same name:
 | `windows_iis_server_output_cache_memory_bytes`, `windows_iis_worker_output_cache_memory_bytes`       | counter | gauge   |
 | `windows_iis_server_output_cache_active_flushed_items`, `windows_iis_worker_output_cache_active_flushed_items` | counter | gauge   |
 | `windows_cache_copy_read_hits_total`                                   | gauge   | counter |
+| `windows_udp_datagram_received_total`                                  | gauge   | counter |
+| `windows_hyperv_legacy_network_adapter_bytes_dropped_total`            | gauge   | counter |
 
 The IIS values are current occupancy, so query them directly instead of with `rate()`.
 If Prometheus scrapes with OpenMetrics, the IIS metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
+The cache, UDP and Hyper-V metrics already end in `_total`, so only their type metadata changes; `rate()` queries keep working.
 
 Label changes on existing metrics:
 
@@ -271,6 +317,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
 - `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
 - New field in `collector.Config`: `StorageSpaces`.
+- `collector.Config.ThermalZone` was removed together with the `thermalzone` collector.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.
 - `Collection.Close` now releases all collector resources, including PDH queries and worker goroutines. Call it when you discard a collection, for example on a configuration reload.
 - Views created by `Collection.WithCollectors` no longer own the collectors. Their `Close` does nothing; close the original `Collection`.
