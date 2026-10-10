@@ -242,7 +242,6 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 			{"RestartThreshold", c.resourceRestartThreshold},
 			{"RetryPeriodOnFailure", c.resourceRetryPeriodOnFailure},
 			{"State", c.resourceState},
-			{"Subclass", c.resourceSubClass},
 		}
 		for _, field := range fields {
 			value, exists := resource.Values[field.name]
@@ -254,6 +253,12 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 
 			ch <- prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, float64(value), resource.Type, resource.OwnerGroup, resource.Name)
 		}
+
+		// MSCluster_Resource.Subclass is NULL for every resource (seen on
+		// Windows Server 2022, also for IP Address resources whose class
+		// information carries CLUS_RESSUBCLASS_NETWORK_INTERNET_PROTOCOL), so
+		// the WMI collector always published 0. Keep that series unchanged.
+		ch <- prometheus.MustNewConstMetric(c.resourceSubClass, prometheus.GaugeValue, 0, resource.Type, resource.OwnerGroup, resource.Name)
 
 		for _, nodeName := range nodeNames {
 			value := 0.0

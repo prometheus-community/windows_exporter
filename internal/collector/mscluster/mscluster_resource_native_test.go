@@ -133,7 +133,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 	}
 
 	expected := map[string]float64{
-		"characteristics": 1, "deadlock_timeout": 2, "embedded_failure_action": 3, "flags": 4, "is_alive_poll_interval": 4294967295, "looks_alive_poll_interval": 6, "monitor_process_id": 7, "pending_timeout": 8, "resource_class": 1, "restart_action": 10, "restart_delay": 11, "restart_period": 12, "restart_threshold": 13, "retry_period_on_failure": 14, "state": 4294967295, "subclass": 2147483648,
+		"characteristics": 1, "deadlock_timeout": 2, "embedded_failure_action": 3, "flags": 4, "is_alive_poll_interval": 4294967295, "looks_alive_poll_interval": 6, "monitor_process_id": 7, "pending_timeout": 8, "resource_class": 1, "restart_action": 10, "restart_delay": 11, "restart_period": 12, "restart_threshold": 13, "retry_period_on_failure": 14, "state": 4294967295, "subclass": 0,
 	}
 
 	if len(families) != 17 {
