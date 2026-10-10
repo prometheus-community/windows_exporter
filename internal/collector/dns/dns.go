@@ -322,7 +322,7 @@ func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
 	c.miQuery = query
 
 	var stats []Statistic
-	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, 0); err != nil {
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, mi.BuildQueryTimeout); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
 

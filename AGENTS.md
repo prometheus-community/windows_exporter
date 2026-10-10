@@ -95,6 +95,8 @@ exercised a live Windows role.
   the original `Collection` owns collectors and MI resources. A timed-out call
   may still be running: prevent overlap, drain late metrics and do not free its
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
+  `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
+  never `0` (no MI timeout), so one stalled provider cannot block startup.
 - Release resources after partial initialization and on error paths. A non-nil
   PDH collector returned with an error still belongs to the caller and must be
   closed. Sub-collector cleanup closures must read the initialized field when

@@ -772,6 +772,35 @@ func Test_MI_QueryTimeout(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// Test_MI_Session_QueryTimeout checks that the timeout passed to Session.Query,
+// e.g. mi.BuildQueryTimeout, reaches MI and surfaces as the native result.
+func Test_MI_Session_QueryTimeout(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NoError(t, destinationOptions.SetLocale(mi.LocaleEnglish))
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	query, err := mi.NewQuery("select * from win32_process")
+	require.NoError(t, err)
+
+	var processes []win32Process
+
+	err = session.Query(&processes, mi.NamespaceRootCIMv2, query, time.Millisecond)
+	require.ErrorIs(t, err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT)
+
+	processes = nil
+
+	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, mi.BuildQueryTimeout))
+	require.NotEmpty(t, processes)
+}
+
 func Test_MI_Query_Uint16Array(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)

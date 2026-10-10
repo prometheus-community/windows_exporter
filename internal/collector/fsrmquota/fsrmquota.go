@@ -94,7 +94,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.buildDescriptors()
 
 	var dst []msftFSRMQuota
-	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery, 0); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery, mi.BuildQueryTimeout); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
