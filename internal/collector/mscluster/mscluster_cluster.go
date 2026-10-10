@@ -678,12 +678,11 @@ func (c *Collector) buildClusterDescriptors() {
 }
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var deadline time.Time
-	if maxScrapeDuration > 0 {
-		deadline = time.Now().Add(maxScrapeDuration)
+	if c.clusterSource == nil {
+		return errNotBuilt(subCollectorCluster)
 	}
 
-	cluster, resultErr := c.clusterSource.Properties(deadline)
+	cluster, resultErr := callSource(maxScrapeDuration, c.clusterSource.Properties)
 
 	return c.publishCluster(ch, cluster, osversion.Build(), resultErr)
 }

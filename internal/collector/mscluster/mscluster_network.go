@@ -103,12 +103,11 @@ func (c *Collector) buildNetworkDescriptors() {
 // Collect sends the metric values for each metric
 // to the provided prometheus metric channel.
 func (c *Collector) collectNetwork(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var deadline time.Time
-	if maxScrapeDuration > 0 {
-		deadline = time.Now().Add(maxScrapeDuration)
+	if c.networkSource == nil {
+		return errNotBuilt(subCollectorNetwork)
 	}
 
-	networks, resultErr := c.networkSource.Networks(deadline)
+	networks, resultErr := callSource(maxScrapeDuration, c.networkSource.Networks)
 
 	return c.publishNetworks(ch, networks, resultErr)
 }

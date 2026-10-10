@@ -130,7 +130,9 @@ func (c *Collector) Close() error {
 }
 
 // closeSources releases the ClusAPI sources. A source whose Close fails is
-// retained so a later Close or Build can retry releasing its handle.
+// dropped as well: the clusapi.Cluster has already released its handle, and a
+// later Build must be able to create new sources (Grafana Alloy rebuilds
+// collectors in place).
 func (c *Collector) closeSources() error {
 	var errs []error
 
@@ -141,8 +143,6 @@ func (c *Collector) closeSources() error {
 
 		if err := source.Close(); err != nil {
 			errs = append(errs, err)
-
-			return
 		}
 
 		release()
@@ -156,6 +156,63 @@ func (c *Collector) closeSources() error {
 	closeSource(c.sharedVolumesSource, func() { c.sharedVolumesSource = nil })
 
 	return errors.Join(errs...)
+}
+
+// errNotBuilt reports a sub-collector without a source, for example when a
+// library consumer calls Collect after a failed Build.
+func errNotBuilt(name string) error {
+	return fmt.Errorf("%s collector is not built", name)
+}
+
+// callSource runs a ClusAPI read in its own goroutine and waits at most for
+// the scrape budget. ClusAPI RPCs cannot be cancelled: a read that outlives
+// the budget keeps running, and its source refuses new reads with
+// clusapi.ErrBusy until the RPC returns. Returning here keeps one stuck
+// sub-collector from holding Collect, and with it every other sub-collector.
+// Late results are dropped; the read never writes to the metric channel.
+//
+//nolint:ireturn // T is the concrete result type of each source.
+func callSource[T any](budget time.Duration, read func(deadline time.Time) (T, error)) (T, error) {
+	var deadline time.Time
+	if budget > 0 {
+		deadline = time.Now().Add(budget)
+	}
+
+	type result struct {
+		value T
+		err   error
+	}
+
+	done := make(chan result, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				done <- result{err: fmt.Errorf("panic in ClusAPI read: %v", r)}
+			}
+		}()
+
+		value, err := read(deadline)
+		done <- result{value: value, err: err}
+	}()
+
+	if budget <= 0 {
+		r := <-done
+
+		return r.value, r.err
+	}
+
+	timer := time.NewTimer(budget)
+	defer timer.Stop()
+
+	select {
+	case r := <-done:
+		return r.value, r.err
+	case <-timer.C:
+		var zero T
+
+		return zero, fmt.Errorf("ClusAPI read did not return within %s: %w", budget, context.DeadlineExceeded)
+	}
 }
 
 // remainingBudget returns the part of the scrape budget that is left for a
@@ -177,12 +234,11 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.lifecycleMu.Lock()
 	defer c.lifecycleMu.Unlock()
 
-	if err := c.closeSources(); err != nil {
-		return err
-	}
+	// A failed close is reported, but the old sources are dropped and rebuilt.
+	closeErr := c.closeSources()
 
 	if len(c.config.CollectorsEnabled) == 0 {
-		return nil
+		return closeErr
 	}
 
 	subCollectors := []string{
@@ -196,14 +252,14 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	for _, name := range c.config.CollectorsEnabled {
 		if !slices.Contains(subCollectors, name) {
-			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
+			return errors.Join(closeErr, fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
 				strings.Join(subCollectors, ", "),
-			)
+			))
 		}
 	}
 
 	if miSession == nil && slices.ContainsFunc(c.config.CollectorsEnabled, func(name string) bool { return !slices.Contains(nativeSubCollectors, name) }) {
-		return errors.New("miSession is nil")
+		return errors.Join(closeErr, errors.New("miSession is nil"))
 	}
 
 	c.miSession = miSession
@@ -250,7 +306,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		errs = append(errs, c.closeSources())
 	}
 
-	return errors.Join(errs...)
+	return errors.Join(append(errs, closeErr)...)
 }
 
 // Collect sends the metric values for each metric

@@ -177,12 +177,11 @@ func (c *Collector) buildNodeDescriptors() {
 // to the provided prometheus Metric channel. It returns the node names that
 // the resource and resource group subcollectors use for owner_node.
 func (c *Collector) collectNode(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) ([]string, error) {
-	var deadline time.Time
-	if maxScrapeDuration > 0 {
-		deadline = time.Now().Add(maxScrapeDuration)
+	if c.nodeSource == nil {
+		return nil, errNotBuilt(subCollectorNode)
 	}
 
-	nodes, resultErr := c.nodeSource.Nodes(deadline)
+	nodes, resultErr := callSource(maxScrapeDuration, c.nodeSource.Nodes)
 
 	return c.publishNodes(ch, nodes, osversion.Build(), resultErr)
 }

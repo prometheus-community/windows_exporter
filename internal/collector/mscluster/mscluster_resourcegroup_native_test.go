@@ -304,7 +304,9 @@ func TestResourceGroupRepeatedBuildClosesOldSources(t *testing.T) {
 	}
 }
 
-func TestCloseSourcesRetainsFailedSource(t *testing.T) {
+// clusapi.Cluster releases its handle even when CloseCluster fails, so the
+// collector drops the source too and a later Build can create a new one.
+func TestCloseSourcesDropsFailedSource(t *testing.T) {
 	closeErr := errors.New("close failed")
 	resources, groups := &resourceFixtureSource{}, &objectFixtureSource{closeErr: closeErr}
 	c := New(&Config{CollectorsEnabled: []string{subCollectorResourceGroup}})
@@ -314,14 +316,12 @@ func TestCloseSourcesRetainsFailedSource(t *testing.T) {
 		t.Fatalf("lost close error: %v", err)
 	}
 
-	if c.resourceSource != nil || c.resourceGroupSource == nil {
-		t.Fatal("successful source retained or failed source dropped")
+	if c.resourceSource != nil || c.resourceGroupSource != nil {
+		t.Fatal("source retained after Close")
 	}
 
-	groups.closeErr = nil
-
-	if err := c.Close(); err != nil || c.resourceGroupSource != nil || groups.closeCount != 2 {
-		t.Fatalf("retry close: err=%v count=%d", err, groups.closeCount)
+	if err := c.Close(); err != nil || groups.closeCount != 1 {
+		t.Fatalf("second close: err=%v count=%d", err, groups.closeCount)
 	}
 }
 

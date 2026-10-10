@@ -91,12 +91,11 @@ func (c *Collector) buildSharedVolumesDescriptors() {
 }
 
 func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var deadline time.Time
-	if maxScrapeDuration > 0 {
-		deadline = time.Now().Add(maxScrapeDuration)
+	if c.sharedVolumesSource == nil {
+		return errNotBuilt(subCollectorSharedVolumes)
 	}
 
-	partitions, resultErr := c.sharedVolumesSource.DiskPartitions(deadline)
+	partitions, resultErr := callSource(maxScrapeDuration, c.sharedVolumesSource.DiskPartitions)
 
 	return c.publishSharedVolumes(ch, partitions, resultErr)
 }

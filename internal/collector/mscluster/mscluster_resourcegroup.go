@@ -176,12 +176,11 @@ func (c *Collector) buildResourceGroupDescriptors() {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration, nodeNames []string) error {
-	var deadline time.Time
-	if maxScrapeDuration > 0 {
-		deadline = time.Now().Add(maxScrapeDuration)
+	if c.resourceGroupSource == nil {
+		return errNotBuilt(subCollectorResourceGroup)
 	}
 
-	groups, resultErr := c.resourceGroupSource.Groups(deadline)
+	groups, resultErr := callSource(maxScrapeDuration, c.resourceGroupSource.Groups)
 
 	return c.publishResourceGroups(ch, groups, nodeNames, osversion.Build(), resultErr)
 }
