@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrSecurity() {
+func (c *Collector) describeClrSecurity() {
 	c.numberLinkTimeChecks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrSecurity+"_link_time_checks_total"),
 		"Displays the total number of link-time code access security checks since the application started.",
@@ -54,21 +52,28 @@ func (c *Collector) buildClrSecurity() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrSecurity() error {
+	c.describeClrSecurity()
 
-	Frequency_PerfTime           uint64 `mi:"Frequency_PerfTime"`
-	NumberLinkTimeChecks         uint32 `mi:"NumberLinkTimeChecks"`
-	PercentTimeinRTchecks        uint32 `mi:"PercentTimeinRTchecks"`
-	PercentTimeSigAuthenticating uint64 `mi:"PercentTimeSigAuthenticating"`
-	StackWalkDepth               uint32 `mi:"StackWalkDepth"`
-	TotalRuntimeChecks           uint32 `mi:"TotalRuntimeChecks"`
+	var err error
+
+	c.perfClrSecurity, err = newPerfCollector[perfDataClrSecurity](c.logger, ".NET CLR Security")
+
+	return err
 }
 
-func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRSecurity
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRSecurity")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrSecurity struct {
+	Name                  string
+	NumberLinkTimeChecks  float64 `perfdata:"# Link Time Checks"`
+	PercentTimeinRTchecks float64 `perfdata:"% Time in RT checks"`
+	StackWalkDepth        float64 `perfdata:"Stack Walk Depth"`
+	TotalRuntimeChecks    float64 `perfdata:"Total Runtime Checks"`
+}
+
+func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrSecurity
+	if err := c.perfClrSecurity.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Security: %w", err)
 	}
 
 	for _, process := range dst {
@@ -86,7 +91,7 @@ func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, maxScrapeDur
 		ch <- prometheus.MustNewConstMetric(
 			c.timeInRTChecks,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinRTchecks)/float64(process.Frequency_PerfTime),
+			float64(process.PercentTimeinRTchecks)/c.perfFrequency,
 			process.Name,
 		)
 

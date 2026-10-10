@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrLocksAndThreads() {
+func (c *Collector) describeClrLocksAndThreads() {
 	c.currentQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLocksAndThreads+"_current_queue_length"),
 		"Displays the total number of threads that are currently waiting to acquire a managed lock in the application.",
@@ -72,25 +70,31 @@ func (c *Collector) buildClrLocksAndThreads() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrLocksAndThreads() error {
+	c.describeClrLocksAndThreads()
 
-	ContentionRatePersec             uint32 `mi:"ContentionRatePersec"`
-	CurrentQueueLength               uint32 `mi:"CurrentQueueLength"`
-	NumberofcurrentlogicalThreads    uint32 `mi:"NumberofcurrentlogicalThreads"`
-	NumberofcurrentphysicalThreads   uint32 `mi:"NumberofcurrentphysicalThreads"`
-	Numberofcurrentrecognizedthreads uint32 `mi:"Numberofcurrentrecognizedthreads"`
-	Numberoftotalrecognizedthreads   uint32 `mi:"Numberoftotalrecognizedthreads"`
-	QueueLengthPeak                  uint32 `mi:"QueueLengthPeak"`
-	QueueLengthPersec                uint32 `mi:"QueueLengthPersec"`
-	RateOfRecognizedThreadsPersec    uint32 `mi:"RateOfRecognizedThreadsPersec"`
-	TotalNumberofContentions         uint32 `mi:"TotalNumberofContentions"`
+	var err error
+
+	c.perfClrLocksAndThreads, err = newPerfCollector[perfDataClrLocksAndThreads](c.logger, ".NET CLR LocksAndThreads")
+
+	return err
 }
 
-func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrLocksAndThreads struct {
+	Name                             string
+	CurrentQueueLength               float64 `perfdata:"Current Queue Length"`
+	NumberofcurrentlogicalThreads    float64 `perfdata:"# of current logical Threads"`
+	NumberofcurrentphysicalThreads   float64 `perfdata:"# of current physical Threads"`
+	Numberofcurrentrecognizedthreads float64 `perfdata:"# of current recognized threads"`
+	Numberoftotalrecognizedthreads   float64 `perfdata:"# of total recognized threads"`
+	QueueLengthPeak                  float64 `perfdata:"Queue Length Peak"`
+	TotalNumberofContentions         float64 `perfdata:"Total # of Contentions"`
+}
+
+func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrLocksAndThreads
+	if err := c.perfClrLocksAndThreads.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR LocksAndThreads: %w", err)
 	}
 
 	for _, process := range dst {

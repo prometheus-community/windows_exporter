@@ -22,13 +22,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrMemory() {
+func (c *Collector) describeClrMemory() {
 	c.allocatedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_allocated_bytes_total"),
 		"Displays the total number of bytes allocated on the garbage collection heap.",
@@ -103,44 +101,44 @@ func (c *Collector) buildClrMemory() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrMemory() error {
+	c.describeClrMemory()
 
-	AllocatedBytesPersec      uint64 `mi:"AllocatedBytesPersec"`
-	FinalizationSurvivors     uint64 `mi:"FinalizationSurvivors"`
-	Frequency_PerfTime        uint64 `mi:"Frequency_PerfTime"`
-	Gen0heapsize              uint64 `mi:"Gen0heapsize"`
-	Gen0PromotedBytesPerSec   uint64 `mi:"Gen0PromotedBytesPersec"`
-	Gen1heapsize              uint64 `mi:"Gen1heapsize"`
-	Gen1PromotedBytesPerSec   uint64 `mi:"Gen1PromotedBytesPersec"`
-	Gen2heapsize              uint64 `mi:"Gen2heapsize"`
-	LargeObjectHeapsize       uint64 `mi:"LargeObjectHeapsize"`
-	NumberBytesinallHeaps     uint64 `mi:"NumberBytesinallHeaps"`
-	NumberGCHandles           uint64 `mi:"NumberGCHandles"`
-	NumberGen0Collections     uint64 `mi:"NumberGen0Collections"`
-	NumberGen1Collections     uint64 `mi:"NumberGen1Collections"`
-	NumberGen2Collections     uint64 `mi:"NumberGen2Collections"`
-	NumberInducedGC           uint64 `mi:"NumberInducedGC"`
-	NumberofPinnedObjects     uint64 `mi:"NumberofPinnedObjects"`
-	NumberofSinkBlocksinuse   uint64 `mi:"NumberofSinkBlocksinuse"`
-	NumberTotalcommittedBytes uint64 `mi:"NumberTotalcommittedBytes"`
-	NumberTotalreservedBytes  uint64 `mi:"NumberTotalreservedBytes"`
-	// PercentTimeinGC has countertype=PERF_RAW_FRACTION.
-	// Formula: (100 * CounterValue) / BaseValue
-	// By docs https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/scripting-articles/ms974615(v=msdn.10)#perf_raw_fraction
-	PercentTimeinGC uint32 `mi:"PercentTimeinGC"`
-	// BaseValue is just a "magic" number used to make the calculation come out right.
-	PercentTimeinGC_base               uint32 `mi:"PercentTimeinGC_base"`
-	ProcessID                          uint64 `mi:"ProcessID"`
-	PromotedFinalizationMemoryfromGen0 uint64 `mi:"PromotedFinalizationMemoryfromGen0"`
-	PromotedMemoryfromGen0             uint64 `mi:"PromotedMemoryfromGen0"`
-	PromotedMemoryfromGen1             uint64 `mi:"PromotedMemoryfromGen1"`
+	var err error
+
+	c.perfClrMemory, err = newPerfCollector[perfDataClrMemory](c.logger, ".NET CLR Memory")
+
+	return err
 }
 
-func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRMemory")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrMemory struct {
+	Name                      string
+	AllocatedBytesPersec      float64 `perfdata:"Allocated Bytes/sec"`
+	FinalizationSurvivors     float64 `perfdata:"Finalization Survivors"`
+	Gen0PromotedBytesPerSec   float64 `perfdata:"Gen 0 Promoted Bytes/Sec"`
+	Gen0heapsize              float64 `perfdata:"Gen 0 heap size"`
+	Gen1PromotedBytesPerSec   float64 `perfdata:"Gen 1 Promoted Bytes/Sec"`
+	Gen1heapsize              float64 `perfdata:"Gen 1 heap size"`
+	Gen2heapsize              float64 `perfdata:"Gen 2 heap size"`
+	LargeObjectHeapsize       float64 `perfdata:"Large Object Heap size"`
+	NumberGCHandles           float64 `perfdata:"# GC Handles"`
+	NumberGen0Collections     float64 `perfdata:"# Gen 0 Collections"`
+	NumberGen1Collections     float64 `perfdata:"# Gen 1 Collections"`
+	NumberGen2Collections     float64 `perfdata:"# Gen 2 Collections"`
+	NumberInducedGC           float64 `perfdata:"# Induced GC"`
+	NumberTotalcommittedBytes float64 `perfdata:"# Total committed Bytes"`
+	NumberTotalreservedBytes  float64 `perfdata:"# Total reserved Bytes"`
+	NumberofPinnedObjects     float64 `perfdata:"# of Pinned Objects"`
+	NumberofSinkBlocksinuse   float64 `perfdata:"# of Sink Blocks in use"`
+	PercentTimeinGC           float64 `perfdata:"% Time in GC"`
+	PercentTimeinGC_base      float64 `perfdata:"% Time in GC,secondvalue"`
+	ProcessID                 float64 `perfdata:"Process ID"`
+}
+
+func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrMemory
+	if err := c.perfClrMemory.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Memory: %w", err)
 	}
 
 	for _, process := range dst {
@@ -153,7 +151,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.CounterValue,
 			float64(process.AllocatedBytesPersec),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -161,7 +159,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.FinalizationSurvivors),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -169,7 +167,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.Gen0heapsize),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen0",
 		)
 
@@ -178,7 +176,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.Gen0PromotedBytesPerSec),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen0",
 		)
 
@@ -187,7 +185,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.Gen1heapsize),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen1",
 		)
 
@@ -196,7 +194,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.Gen1PromotedBytesPerSec),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen1",
 		)
 
@@ -205,7 +203,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.Gen2heapsize),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen2",
 		)
 
@@ -214,7 +212,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.LargeObjectHeapsize),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"LOH",
 		)
 
@@ -223,7 +221,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.NumberGCHandles),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -231,7 +229,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.CounterValue,
 			float64(process.NumberGen0Collections),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen0",
 		)
 
@@ -240,7 +238,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.CounterValue,
 			float64(process.NumberGen1Collections),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen1",
 		)
 
@@ -249,7 +247,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.CounterValue,
 			float64(process.NumberGen2Collections),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 			"Gen2",
 		)
 
@@ -258,7 +256,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.CounterValue,
 			float64(process.NumberInducedGC),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -266,7 +264,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.NumberofPinnedObjects),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -274,7 +272,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.NumberofSinkBlocksinuse),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -282,7 +280,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.NumberTotalcommittedBytes),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -290,15 +288,19 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, maxScrapeDurat
 			prometheus.GaugeValue,
 			float64(process.NumberTotalreservedBytes),
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
+
+		if process.PercentTimeinGC_base <= 0 {
+			continue
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeInGC,
 			prometheus.GaugeValue,
-			float64(100*process.PercentTimeinGC)/float64(process.PercentTimeinGC_base),
+			100*process.PercentTimeinGC/process.PercentTimeinGC_base,
 			process.Name,
-			strconv.FormatUint(process.ProcessID, 10),
+			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 	}
 

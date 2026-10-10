@@ -25,12 +25,20 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
+
+type perfCollector[T any] interface {
+	Collect(dst *[]T) error
+	Close()
+}
 
 const Name = "netframework"
 
@@ -63,10 +71,20 @@ const (
 	collectorClrSecurity        = "clrsecurity"
 )
 
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRExceptions metrics.
+// A Collector collects .NET Framework performance counters.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
+	config                 Config
+	logger                 *slog.Logger
+	perfFrequency          float64
+	closeFns               []func()
+	perfClrExceptions      perfCollector[perfDataClrExceptions]
+	perfClrInterop         perfCollector[perfDataClrInterop]
+	perfClrJIT             perfCollector[perfDataClrJIT]
+	perfClrLoading         perfCollector[perfDataClrLoading]
+	perfClrLocksAndThreads perfCollector[perfDataClrLocksAndThreads]
+	perfClrMemory          perfCollector[perfDataClrMemory]
+	perfClrRemoting        perfCollector[perfDataClrRemoting]
+	perfClrSecurity        perfCollector[perfDataClrSecurity]
 
 	collectorFns []func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
 
@@ -179,58 +197,111 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	for _, closeFn := range c.closeFns {
+		closeFn()
+	}
+
+	c.closeFns = nil
+	c.collectorFns = nil
+
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
 
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
+	c.logger = logger
+	if slices.Contains(c.config.CollectorsEnabled, collectorClrJIT) || slices.Contains(c.config.CollectorsEnabled, collectorClrSecurity) {
+		var frequency int64
 
-	c.miSession = miSession
+		ret, _, err := windows.NewLazySystemDLL("kernel32.dll").NewProc("QueryPerformanceFrequency").Call(uintptr(unsafe.Pointer(&frequency)))
+		if ret == 0 || frequency <= 0 {
+			return fmt.Errorf("QueryPerformanceFrequency: %w", err)
+		}
+
+		c.perfFrequency = float64(frequency)
+	}
 
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error, 0, len(c.config.CollectorsEnabled))
 
 	subCollectors := map[string]struct {
-		build   func()
+		build   func() error
 		collect func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
 		close   func()
 	}{
 		collectorClrExceptions: {
 			build:   c.buildClrExceptions,
 			collect: c.collectClrExceptions,
+			close: func() {
+				if c.perfClrExceptions != nil {
+					c.perfClrExceptions.Close()
+				}
+			},
 		},
 		collectorClrJIT: {
 			build:   c.buildClrJIT,
 			collect: c.collectClrJIT,
+			close: func() {
+				if c.perfClrJIT != nil {
+					c.perfClrJIT.Close()
+				}
+			},
 		},
 		collectorClrLoading: {
 			build:   c.buildClrLoading,
 			collect: c.collectClrLoading,
+			close: func() {
+				if c.perfClrLoading != nil {
+					c.perfClrLoading.Close()
+				}
+			},
 		},
 		collectorClrInterop: {
 			build:   c.buildClrInterop,
 			collect: c.collectClrInterop,
+			close: func() {
+				if c.perfClrInterop != nil {
+					c.perfClrInterop.Close()
+				}
+			},
 		},
 		collectorClrLocksAndThreads: {
 			build:   c.buildClrLocksAndThreads,
 			collect: c.collectClrLocksAndThreads,
+			close: func() {
+				if c.perfClrLocksAndThreads != nil {
+					c.perfClrLocksAndThreads.Close()
+				}
+			},
 		},
 		collectorClrMemory: {
 			build:   c.buildClrMemory,
 			collect: c.collectClrMemory,
+			close: func() {
+				if c.perfClrMemory != nil {
+					c.perfClrMemory.Close()
+				}
+			},
 		},
 		collectorClrRemoting: {
 			build:   c.buildClrRemoting,
 			collect: c.collectClrRemoting,
+			close: func() {
+				if c.perfClrRemoting != nil {
+					c.perfClrRemoting.Close()
+				}
+			},
 		},
 		collectorClrSecurity: {
 			build:   c.buildClrSecurity,
 			collect: c.collectClrSecurity,
+			close: func() {
+				if c.perfClrSecurity != nil {
+					c.perfClrSecurity.Close()
+				}
+			},
 		},
 	}
 
@@ -247,7 +318,12 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	}
 
 	for _, name := range collectorsEnabled {
-		subCollectors[name].build()
+		c.closeFns = append(c.closeFns, subCollectors[name].close)
+		if err := subCollectors[name].build(); err != nil {
+			_ = c.Close()
+
+			return fmt.Errorf("failed to build %s: %w", name, err)
+		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
 	}
@@ -268,3 +344,55 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 	return g.Wait()
 }
+
+// newPerfCollector retains ownership of partially initialized PDH queries.
+// Missing objects are optional; missing individual counters remain errors.
+func newPerfCollector[T any](logger *slog.Logger, object string) (perfCollector[T], error) {
+	c, err := pdh.NewCollector[T](logger, pdh.CounterTypeRaw, object, pdh.InstancesAll)
+	if err == nil {
+		return c, nil
+	}
+
+	if c != nil {
+		c.Close()
+	}
+
+	if onlyMissingObject(err) {
+		return unavailablePerfCollector[T]{}, nil
+	}
+
+	return nil, err
+}
+
+func onlyMissingObject(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		children := joined.Unwrap()
+		if len(children) == 0 {
+			return false
+		}
+
+		for _, child := range children {
+			if !onlyMissingObject(child) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return onlyMissingObject(wrapped.Unwrap())
+	}
+
+	return errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject))
+}
+
+type unavailablePerfCollector[T any] struct{}
+
+func (unavailablePerfCollector[T]) Collect(dst *[]T) error {
+	*dst = nil
+
+	return pdh.ErrNoData
+}
+
+func (unavailablePerfCollector[T]) Close() {}
