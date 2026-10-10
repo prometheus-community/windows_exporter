@@ -162,6 +162,9 @@ func (s *Session) GetApplication() (*Application, error) {
 }
 
 // QueryInstances queries for a set of instances based on a query expression.
+// The results are read synchronously with [Operation.GetInstance]. Prefer
+// [Session.Query] or [Session.QueryFunc], which receive them through callbacks;
+// the synchronous path leaks WMI client handles under parallel load.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_queryinstances
 func (s *Session) QueryInstances(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
@@ -391,13 +394,9 @@ func (s *Session) QueryUnmarshal[T any](dst *[]T,
 		return err
 	}
 
-	operation := s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpression)
-
-	defer func() {
-		_ = operation.Close()
-	}()
-
-	return operation.unmarshal(dst, fields, true)
+	return s.query(flags, operationOptions, namespaceName, queryDialect, queryExpression, func(instance *Instance) error {
+		return appendInstance(dst, instance, fields, true)
+	})
 }
 
 // Query queries for a set of instances based on a query expression.
@@ -420,9 +419,18 @@ func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpressio
 // order. It is meant for queries whose result shape is only known at runtime,
 // where [Session.Query] cannot unmarshal into a struct.
 //
-// The instance, and every element read from it, is owned by the operation and
-// only valid until fn returns. If fn returns an error, the query is cancelled
-// and that error is returned.
+// The instance passed to fn, and every element read from it, is only valid
+// until fn returns. If fn returns an error, the query is cancelled and that
+// error is returned.
+//
+// fn runs on the calling goroutine, for a copy of each instance: MI delivers
+// the instances to a callback on one of its threads, which copies them and
+// returns right away. A panic in fn cancels the query and propagates to the
+// caller once MI has finished the operation.
+//
+// MI does not wait for fn. With a slow fn, copies of the remaining result set
+// queue up in native memory, and the query timeout does not stop fn; check a
+// deadline in fn where that matters.
 func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
 	if s == nil || s.ft == nil {
 		return ErrNotInitialized
@@ -440,31 +448,14 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}()
 	}
 
-	operation := s.queryInstances(OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+	query := newCopyQuery(fn)
 
-	// Close cancels the operation if fn aborted it early.
-	defer func() {
-		_ = operation.Close()
-	}()
+	query.start(s, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
 
-	for {
-		instance, moreResults, err := operation.GetInstance()
-		if err != nil {
-			return fmt.Errorf("failed to get instance: %w", err)
-		}
+	// close cancels the operation if fn aborted it early or panicked.
+	defer query.close()
 
-		if instance == nil {
-			return nil
-		}
-
-		if err := fn(instance); err != nil {
-			return err
-		}
-
-		if !moreResults {
-			return nil
-		}
-	}
+	return query.wait()
 }
 
 // newOperationOptions creates operation options carrying queryTimeout. A zero
