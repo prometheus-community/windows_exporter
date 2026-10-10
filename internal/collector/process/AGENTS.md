@@ -19,8 +19,9 @@ deprecated and ignored; keep the field for library users such as Grafana Alloy.
 - Read the snapshot buffer with bounds checks against the returned length, and
   keep it 8-byte aligned (`[]uint64` backing array).
 
-To check value parity after changes, compare the snapshot against
-`registry.NewCollector` for `Process` by PID in a temporary test, including
+To check value parity after changes, compare the snapshot against the `Process`
+counter set by PID in a temporary test, for example with
+`pdh.NewCollector(..., pdh.CounterTypeRaw, "Process", pdh.InstancesAll)`, including
 processes with names like `a.b.exe` and `tool.scr`. Run it as a standard user
 too: neither data source needs administrator rights.
 
