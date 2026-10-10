@@ -21,13 +21,17 @@ Rules for the callback path:
 - Recover panics in callbacks; they must not unwind into MI. Never block a
   callback on a goroutine that may have stopped serving it.
 - MI reports parameter errors from within `MI_Session_QueryInstances`; the
-  runtime runs that callback on the calling goroutine.
+  runtime runs that callback on the calling goroutine. Never run caller code
+  such as the `QueryFunc` handler inside a callback: a panic cannot reach the
+  caller there and `runtime.Goexit` is fatal.
 - While waiting for callbacks, keep a timer pending. Otherwise the runtime can
   declare a false deadlock (golang/go#55015, still open in Go 1.27);
   `Test_MI_Query_DeadlockDetector` reproduces it. Do not use a goroutine that
   sleeps forever.
 - Guard shared callback state with a mutex: results of one operation may
-  arrive on different MI threads, which the race detector cannot order.
+  arrive on different MI threads. `-race` cannot reveal a missing lock there,
+  because the runtime treats every callback as synchronized with every native
+  call.
 
 Run `CGO_ENABLED=1 go test -race` (gcc from w64devkit) and a
 `-gcflags=all=-d=checkptr` run for changes in this package.

@@ -18,8 +18,10 @@
 package mi_test
 
 import (
+	"errors"
+	"runtime"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
@@ -220,36 +222,65 @@ func Benchmark_MI_QueryFunc_GetElement_Sync(b *testing.B) {
 }
 
 // Benchmark_MI_Parallel_StoragePool runs parallel queries against a slow
-// provider and reports the handle count growth per 1000 queries.
+// provider and reports the handle count growth per 1000 queries. Both modes
+// use the session's default operation options.
 func Benchmark_MI_Parallel_StoragePool(b *testing.B) {
 	for _, mode := range []string{"Async", "Sync"} {
 		b.Run(mode, func(b *testing.B) {
 			session := newTestSession(b)
 			query := storagePoolQuery(b, session)
 
+			queryOnce := func() error {
+				var pools []msftStoragePool
+
+				if mode == "Async" {
+					return session.Query(&pools, mi.NamespaceRootStorage, query, -1)
+				}
+
+				operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootStorage, mi.QueryDialectWQL,
+					"SELECT FriendlyName FROM MSFT_StoragePool")
+				if err != nil {
+					return err
+				}
+
+				err = operation.Unmarshal(&pools)
+
+				return errors.Join(err, operation.Close())
+			}
+
+			// Grow the MI and Go thread pools before the handle baseline.
+			var wg sync.WaitGroup
+
+			for range 2 * runtime.GOMAXPROCS(0) {
+				wg.Go(func() {
+					for range 4 {
+						if err := queryOnce(); err != nil {
+							b.Error(err)
+						}
+					}
+				})
+			}
+
+			wg.Wait()
+
 			start, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
 			require.NoError(b, err)
 
 			b.ReportAllocs()
 			b.SetParallelism(2)
+			b.ResetTimer()
 
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					var pools []msftStoragePool
+					if err := queryOnce(); err != nil {
+						b.Error(err)
 
-					if mode == "Async" {
-						require.NoError(b, session.Query(&pools, mi.NamespaceRootStorage, query, 4*time.Second))
-
-						continue
+						return
 					}
-
-					operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootStorage, mi.QueryDialectWQL,
-						"SELECT FriendlyName FROM MSFT_StoragePool")
-					require.NoError(b, err)
-					require.NoError(b, operation.Unmarshal(&pools))
-					require.NoError(b, operation.Close())
 				}
 			})
+
+			b.StopTimer()
 
 			end, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
 			require.NoError(b, err)

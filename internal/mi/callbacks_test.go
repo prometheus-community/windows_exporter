@@ -52,8 +52,12 @@ func newTestSession(tb testing.TB) *mi.Session {
 	return session
 }
 
+// storagePoolQueryTimeout is generous: the storage provider is slow, and CI
+// runs several test binaries at once. The tests check handles, not latency.
+const storagePoolQueryTimeout = 30 * time.Second
+
 // storagePoolQuery returns the MSFT_StoragePool query, or skips if the storage
-// provider is not available.
+// provider is not installed. Other errors fail the test.
 func storagePoolQuery(tb testing.TB, session *mi.Session) mi.Query {
 	tb.Helper()
 
@@ -62,9 +66,12 @@ func storagePoolQuery(tb testing.TB, session *mi.Session) mi.Query {
 
 	var pools []msftStoragePool
 
-	if err := session.Query(&pools, mi.NamespaceRootStorage, query, 30*time.Second); err != nil {
+	err = session.Query(&pools, mi.NamespaceRootStorage, query, storagePoolQueryTimeout)
+	if errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) || errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
 		tb.Skipf("MSFT_StoragePool is not available: %v", err)
 	}
+
+	require.NoError(tb, err)
 
 	return query
 }
@@ -94,14 +101,14 @@ func Test_MI_ParallelQuery_HandleGrowth(t *testing.T) {
 					if i%2 == 0 {
 						var pools []msftStoragePool
 
-						if err := session.Query(&pools, mi.NamespaceRootStorage, query, 4*time.Second); err != nil {
+						if err := session.Query(&pools, mi.NamespaceRootStorage, query, storagePoolQueryTimeout); err != nil {
 							t.Error(err)
 						}
 
 						continue
 					}
 
-					err := session.QueryFunc(mi.NamespaceRootStorage, query, 4*time.Second, func(*mi.Instance) error {
+					err := session.QueryFunc(mi.NamespaceRootStorage, query, storagePoolQueryTimeout, func(*mi.Instance) error {
 						return nil
 					})
 					if err != nil {
@@ -163,6 +170,20 @@ func Test_MI_QueryFunc_Panic(t *testing.T) {
 
 	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 5*time.Second))
 	require.NotEmpty(t, processes)
+}
+
+// Test_MI_QueryFunc_Timeout checks that a timeout reaches QueryFunc as the
+// native MI result.
+func Test_MI_QueryFunc_Timeout(t *testing.T) {
+	session := newTestSession(t)
+
+	query, err := mi.NewQuery("SELECT * FROM Win32_Process")
+	require.NoError(t, err)
+
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, time.Millisecond, func(*mi.Instance) error {
+		return nil
+	})
+	require.ErrorIs(t, err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT)
 }
 
 // Test_MI_QueryFunc_Nested runs a query from within fn, which runs on the

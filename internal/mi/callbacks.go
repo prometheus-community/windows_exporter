@@ -99,6 +99,33 @@ var instanceResultCallback = sync.OnceValue(func() uintptr {
 // that check. The interval does not bound the query; MI timeouts do.
 const deadlockGuardInterval = time.Minute
 
+// guardTimers holds stopped deadlock guard timers for reuse.
+//
+//nolint:gochecknoglobals
+var guardTimers = sync.Pool{
+	New: func() any {
+		timer := time.NewTimer(deadlockGuardInterval)
+		timer.Stop()
+
+		return timer
+	},
+}
+
+// newGuardTimer returns a running deadlock guard timer. Return it with
+// releaseGuardTimer.
+func newGuardTimer() *time.Timer {
+	timer := guardTimers.Get().(*time.Timer) //nolint:forcetypeassert
+	timer.Reset(deadlockGuardInterval)
+
+	return timer
+}
+
+func releaseGuardTimer(timer *time.Timer) {
+	// Since Go 1.23, a stopped timer delivers no stale value after Reset.
+	timer.Stop()
+	guardTimers.Put(timer)
+}
+
 var (
 	// errQueryAborted is returned to an instance callback when the waiting
 	// goroutine stopped handling instances, e.g. because its handler panicked.
@@ -106,7 +133,23 @@ var (
 
 	// errStopQuery cancels a query without an error.
 	errStopQuery = errors.New("stop query")
+
+	// errInlineInstance fails a [Session.QueryFunc] query whose instance MI
+	// delivers from within MI_Session_QueryInstances. MI only reports
+	// parameter errors that way.
+	errInlineInstance = errors.New("MI delivered an instance from within MI_Session_QueryInstances")
 )
+
+// callbackPanicError reports a panic recovered in an MI callback. The value
+// is formatted by Error, outside the callback, because formatting can panic
+// as well.
+type callbackPanicError struct {
+	value any
+}
+
+func (e *callbackPanicError) Error() string {
+	return fmt.Sprintf("panic in MI instance callback: %v", e.value)
+}
 
 // asyncQuery is the state of one MI_Session_QueryInstances operation that
 // delivers its results to instanceResultCallback. It is pinned while MI may
@@ -136,12 +179,15 @@ type asyncQuery struct {
 	// cancelRequested asks the waiting goroutine to cancel the operation.
 	cancelRequested chan struct{}
 	// done is closed by the final callback. MI does not use the query any
-	// more afterward, and err is final.
-	done chan struct{}
+	// more afterward, and err is final. finished guards against closing it
+	// twice, which would panic into MI.
+	done     chan struct{}
+	finished atomic.Bool
 
 	// mu serializes the callbacks. MI delivers the results of an operation
-	// one at a time, but possibly on different threads; mu makes that order
-	// visible to the Go memory model.
+	// one at a time, but possibly on different threads, and its own ordering
+	// is invisible to Go. The race detector cannot point out a missing lock
+	// here: it treats every callback as synchronized with every native call.
 	mu  sync.Mutex
 	err error
 }
@@ -217,13 +263,13 @@ func (q *asyncQuery) instanceResult(instance *Instance, moreResults bool, result
 	defer func() {
 		// A panic must not unwind into MI. It fails the query instead.
 		if r := recover(); r != nil {
-			q.fail(fmt.Errorf("panic in MI instance callback: %v", r))
+			q.fail(&callbackPanicError{value: r})
 		}
 
 		q.mu.Unlock()
 
 		// The final result is the last call MI makes with this context.
-		if !moreResults {
+		if !moreResults && q.finished.CompareAndSwap(false, true) {
 			close(q.done)
 		}
 	}()
@@ -266,9 +312,11 @@ func (q *asyncQuery) fail(err error) {
 // handler has returned.
 func (q *asyncQuery) handOver(instance *Instance) error {
 	// A callback from within MI_Session_QueryInstances runs on the goroutine
-	// that would have to receive the instance, so it calls handler itself.
+	// that would have to receive the instance, so a hand-over would deadlock.
+	// Calling handler here would run it inside native frames, where a panic
+	// cannot reach the caller and runtime.Goexit is fatal.
 	if thread := q.startThread.Load(); thread != 0 && thread == windows.GetCurrentThreadId() {
-		return q.handler(instance)
+		return errInlineInstance
 	}
 
 	select {
@@ -285,8 +333,8 @@ func (q *asyncQuery) handOver(instance *Instance) error {
 // cancels the operation when a callback asks for it, and runs the handler of
 // a hand-over query.
 func (q *asyncQuery) wait() error {
-	guard := time.NewTimer(deadlockGuardInterval)
-	defer guard.Stop()
+	guard := newGuardTimer()
+	defer releaseGuardTimer(guard)
 
 	for {
 		select {
@@ -332,8 +380,8 @@ func (q *asyncQuery) close() {
 	default:
 		_ = q.operation.Cancel()
 
-		guard := time.NewTimer(deadlockGuardInterval)
-		defer guard.Stop()
+		guard := newGuardTimer()
+		defer releaseGuardTimer(guard)
 
 		// A callback may have started a hand-over before aborted was closed.
 		for finished := false; !finished; {
