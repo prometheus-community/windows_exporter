@@ -6,7 +6,7 @@ It works on standalone hosts as well as on failover clusters using Storage Space
 |||
 -|-
 Metric name prefix  | `storage_spaces`
-Classes             | [`MSFT_StoragePool`](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-storagepool),[`MSFT_VirtualDisk`](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-virtualdisk)
+Classes             | [`MSFT_StoragePool`](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-storagepool), [`MSFT_VirtualDisk`](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-virtualdisk)
 Enabled by default? | No
 
 ## Flags
@@ -20,25 +20,25 @@ Matching is case-sensitive.
 
 ### Pool
 
-| Name                                                        | Description                                                                                                           | Type  | Labels                           |
-|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-------|----------------------------------|
-| `windows_storage_spaces_pool_info`                          | Storage pool information (value is always 1)                                                                          | gauge | `name`, `unique_id`              |
-| `windows_storage_spaces_pool_health_status`                 | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                   | gauge | `name`, `unique_id`              |
-| `windows_storage_spaces_pool_size_bytes`                    | Total size of the storage pool in bytes                                                                               | gauge | `name`, `unique_id`              |
-| `windows_storage_spaces_pool_allocated_size_bytes`          | Allocated size of the storage pool in bytes                                                                           | gauge | `name`, `unique_id`              |
-| `windows_storage_spaces_pool_operational_status`            | Operational status codes reported for the storage pool (one series per status value)                                  | gauge | `name`, `unique_id`, `status`    |
+| Name                                                             | Description                                                                                                          | Type  | Labels                           |
+|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|-------|----------------------------------|
+| `windows_storage_spaces_pool_info`                               | Storage pool information (value is always 1)                                                                         | gauge | `name`, `unique_id`              |
+| `windows_storage_spaces_pool_health_status`                      | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                  | gauge | `name`, `unique_id`              |
+| `windows_storage_spaces_pool_size_bytes`                         | Total size of the storage pool in bytes                                                                              | gauge | `name`, `unique_id`              |
+| `windows_storage_spaces_pool_allocated_size_bytes`               | Allocated size of the storage pool in bytes                                                                          | gauge | `name`, `unique_id`              |
+| `windows_storage_spaces_pool_operational_status`                 | Operational status codes reported for the storage pool (one series per status value)                                 | gauge | `name`, `unique_id`, `status`    |
 | `windows_storage_spaces_pool_thin_provisioning_alert_thresholds` | Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold) | gauge | `name`, `unique_id`, `threshold` |
 
 ### Virtual Disk
 
-| Name                                                        | Description                                                                                                           | Type  | Labels              |
-|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-------|---------------------|
-| `windows_storage_spaces_virtual_disk_info`                  | Virtual disk information (value is always 1)                                                                          | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_health_status`         | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                   | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_size_bytes`            | Total size of the virtual disk in bytes                                                                               | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_allocated_size_bytes`  | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_footprint_on_pool_bytes` | Physical storage consumed by the virtual disk on the storage pool in bytes                                          | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_storage_efficiency_percent` | Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100)                                            | gauge | `name`, `unique_id` |
+| Name                                                             | Description                                                                                                            | Type  | Labels              |
+|------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-------|---------------------|
+| `windows_storage_spaces_virtual_disk_info`                       | Virtual disk information (value is always 1)                                                                           | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_health_status`              | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                    | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_size_bytes`                 | Total size of the virtual disk in bytes                                                                                | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_allocated_size_bytes`       | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_footprint_on_pool_bytes`    | Physical storage consumed by the virtual disk on the storage pool in bytes                                             | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_storage_efficiency_percent` | Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100), omitted while FootprintOnPool is 0              | gauge | `name`, `unique_id` |
 
 ### Example metric
 
