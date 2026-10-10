@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"slices"
 	"strings"
@@ -49,7 +50,7 @@ const (
 // nativeSubCollectors read through ClusAPI and do not need an MI session.
 //
 //nolint:gochecknoglobals
-var nativeSubCollectors = []string{subCollectorResource, subCollectorResourceGroup}
+var nativeSubCollectors = []string{subCollectorNode, subCollectorResource, subCollectorResourceGroup}
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"enabled"`
@@ -139,21 +140,23 @@ func (c *Collector) Close() error {
 func (c *Collector) closeSources() error {
 	var errs []error
 
-	if c.resourceSource != nil {
-		if err := c.resourceSource.Close(); err != nil {
-			errs = append(errs, err)
-		} else {
-			c.resourceSource = nil
+	closeSource := func(source io.Closer, release func()) {
+		if source == nil {
+			return
 		}
+
+		if err := source.Close(); err != nil {
+			errs = append(errs, err)
+
+			return
+		}
+
+		release()
 	}
 
-	if c.resourceGroupSource != nil {
-		if err := c.resourceGroupSource.Close(); err != nil {
-			errs = append(errs, err)
-		} else {
-			c.resourceGroupSource = nil
-		}
-	}
+	closeSource(c.nodeSource, func() { c.nodeSource = nil })
+	closeSource(c.resourceSource, func() { c.resourceSource = nil })
+	closeSource(c.resourceGroupSource, func() { c.resourceGroupSource = nil })
 
 	return errors.Join(errs...)
 }

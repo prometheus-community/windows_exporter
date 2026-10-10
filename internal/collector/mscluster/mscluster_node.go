@@ -18,10 +18,9 @@
 package mscluster
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,8 +28,13 @@ import (
 
 const nameNode = Name + "_node"
 
+type nodeSource interface {
+	Nodes(deadline time.Time) ([]clusapi.Object, error)
+	Close() error
+}
+
 type collectorNode struct {
-	nodeMIQuery mi.Query
+	nodeSource nodeSource
 
 	nodeBuildNumber           *prometheus.Desc
 	nodeCharacteristics       *prometheus.Desc
@@ -48,7 +52,8 @@ type collectorNode struct {
 	nodeStatusInformation     *prometheus.Desc
 }
 
-// msClusterNode represents the MSCluster_Node WMI class
+// msClusterNode represents the MSCluster_Node WMI class. The collector reads
+// ClusAPI; the parity test compares against this WMI model.
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-node
 type msClusterNode struct {
 	Name string `mi:"Name"`
@@ -70,20 +75,18 @@ type msClusterNode struct {
 }
 
 func (c *Collector) buildNode() error {
-	buildNumber := osversion.Build()
-
-	wmiSelect := "BuildNumber,Characteristics,DynamicWeight,Flags,MajorVersion,MinorVersion,NeedsPreventQuorum,NodeDrainStatus,NodeHighestVersion,NodeLowestVersion,NodeWeight,State,StatusInformation"
-	if buildNumber >= osversion.LTSC2022 {
-		wmiSelect += ",DetectedCloudPlatform"
-	}
-
-	nodeMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Node", wmiSelect))
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.nodeMIQuery = nodeMIQuery
+	c.nodeSource = source
+	c.buildNodeDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildNodeDescriptors() {
 	c.nodeBuildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "build_number"),
 		"Provides access to the node's BuildNumber property.",
@@ -168,128 +171,52 @@ func (c *Collector) buildNode() error {
 		[]string{"name"},
 		nil,
 	)
-
-	var dst []msClusterNode
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 // Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
+// to the provided prometheus Metric channel. It returns the node names that
+// the resource and resource group subcollectors use for owner_node.
 func (c *Collector) collectNode(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) ([]string, error) {
-	var dst []msClusterNode
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, maxScrapeDuration); err != nil {
-		return nil, fmt.Errorf("WMI query failed: %w", err)
+	var deadline time.Time
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	nodeNames := make([]string, 0, len(dst))
+	nodes, resultErr := c.nodeSource.Nodes(deadline)
 
-	for _, v := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeBuildNumber,
-			prometheus.GaugeValue,
-			float64(v.BuildNumber),
-			v.Name,
-		)
+	return c.publishNodes(ch, nodes, osversion.Build(), resultErr)
+}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeCharacteristics,
-			prometheus.GaugeValue,
-			float64(v.Characteristics),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeDetectedCloudPlatform,
-			prometheus.GaugeValue,
-			float64(v.DetectedCloudPlatform),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeDynamicWeight,
-			prometheus.GaugeValue,
-			float64(v.DynamicWeight),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeFlags,
-			prometheus.GaugeValue,
-			float64(v.Flags),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeMajorVersion,
-			prometheus.GaugeValue,
-			float64(v.MajorVersion),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeMinorVersion,
-			prometheus.GaugeValue,
-			float64(v.MinorVersion),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeNeedsPreventQuorum,
-			prometheus.GaugeValue,
-			float64(v.NeedsPreventQuorum),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeNodeDrainStatus,
-			prometheus.GaugeValue,
-			float64(v.NodeDrainStatus),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeNodeHighestVersion,
-			prometheus.GaugeValue,
-			float64(v.NodeHighestVersion),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeNodeLowestVersion,
-			prometheus.GaugeValue,
-			float64(v.NodeLowestVersion),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeNodeWeight,
-			prometheus.GaugeValue,
-			float64(v.NodeWeight),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeState,
-			prometheus.GaugeValue,
-			float64(v.State),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.nodeStatusInformation,
-			prometheus.GaugeValue,
-			float64(v.StatusInformation),
-			v.Name,
-		)
-
-		nodeNames = append(nodeNames, v.Name)
+func (c *Collector) publishNodes(ch chan<- prometheus.Metric, nodes []clusapi.Object, build uint16, resultErr error) ([]string, error) {
+	fields := []objectField{
+		{name: "BuildNumber", desc: c.nodeBuildNumber},
+		{name: "Characteristics", desc: c.nodeCharacteristics},
+		// The previous WMI query selected DetectedCloudPlatform only on Windows
+		// Server 2022 and newer and published 0 on older builds.
+		{name: "DetectedCloudPlatform", desc: c.nodeDetectedCloudPlatform, minBuild: osversion.LTSC2022, zeroBeforeMinBuild: true},
+		{name: "DynamicWeight", desc: c.nodeDynamicWeight},
+		{name: "Flags", desc: c.nodeFlags},
+		{name: "MajorVersion", desc: c.nodeMajorVersion},
+		{name: "MinorVersion", desc: c.nodeMinorVersion},
+		{name: "NeedsPreventQuorum", desc: c.nodeNeedsPreventQuorum},
+		{name: "NodeDrainStatus", desc: c.nodeNodeDrainStatus},
+		{name: "NodeHighestVersion", desc: c.nodeNodeHighestVersion},
+		{name: "NodeLowestVersion", desc: c.nodeNodeLowestVersion},
+		{name: "NodeWeight", desc: c.nodeNodeWeight},
+		{name: "State", desc: c.nodeState},
+		{name: "StatusInformation", desc: c.nodeStatusInformation, minBuild: osversion.LTSC2016},
 	}
 
-	return nodeNames, nil
+	nodeNames := make([]string, 0, len(nodes))
+
+	for _, node := range nodes {
+		if node.Name == "" {
+			continue
+		}
+
+		resultErr = publishObjectFields(ch, "node", node, fields, build, resultErr)
+		nodeNames = append(nodeNames, node.Name)
+	}
+
+	return nodeNames, resultErr
 }

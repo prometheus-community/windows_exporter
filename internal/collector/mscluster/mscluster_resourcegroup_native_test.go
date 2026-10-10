@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -49,6 +50,10 @@ func (s *objectFixtureSource) objectsWithDeadline() ([]clusapi.Object, error) {
 }
 
 func (s *objectFixtureSource) Groups(time.Time) ([]clusapi.Object, error) {
+	return s.objectsWithDeadline()
+}
+
+func (s *objectFixtureSource) Nodes(time.Time) ([]clusapi.Object, error) {
 	return s.objectsWithDeadline()
 }
 
@@ -103,7 +108,7 @@ func resourceGroupFixture() clusapi.Object {
 	}}
 }
 
-func gatherResourceGroups(t *testing.T, groups []clusapi.Object, inputErr error, require2016 bool, nodeNames ...string) (map[string]*dto.MetricFamily, error) {
+func gatherResourceGroups(t *testing.T, groups []clusapi.Object, inputErr error, build uint16, nodeNames ...string) (map[string]*dto.MetricFamily, error) {
 	t.Helper()
 
 	c := New(&Config{CollectorsEnabled: []string{subCollectorResourceGroup}})
@@ -114,12 +119,12 @@ func gatherResourceGroups(t *testing.T, groups []clusapi.Object, inputErr error,
 	}
 
 	return gatherPublished(t, func(ch chan<- prometheus.Metric) error {
-		return c.publishResourceGroups(ch, groups, nodeNames, require2016, inputErr)
+		return c.publishResourceGroups(ch, groups, nodeNames, build, inputErr)
 	})
 }
 
 func TestResourceGroupNativeMetricContract(t *testing.T) {
-	families, err := gatherResourceGroups(t, []clusapi.Object{resourceGroupFixture()}, nil, true)
+	families, err := gatherResourceGroups(t, []clusapi.Object{resourceGroupFixture()}, nil, osversion.LTSC2022)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +184,7 @@ func TestResourceGroupPartialResultsAndJoinedErrors(t *testing.T) {
 
 	group.OwnerNodeValid = false
 
-	families, err := gatherResourceGroups(t, []clusapi.Object{group, {}}, errors.Join(first, second), true)
+	families, err := gatherResourceGroups(t, []clusapi.Object{group, {}}, errors.Join(first, second), osversion.LTSC2022)
 	if !errors.Is(err, first) || !errors.Is(err, second) {
 		t.Fatalf("lost joined cause: %v", err)
 	}
@@ -208,7 +213,7 @@ func TestResourceGroupServer2016FieldsOnOlderBuilds(t *testing.T) {
 	delete(group.Values, "ColdStartSetting")
 	delete(group.Values, "ResiliencyPeriod")
 
-	families, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, false)
+	families, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, osversion.LTSC2016-1)
 	if err != nil {
 		t.Fatalf("missing Windows Server 2016 fields failed an older build: %v", err)
 	}
@@ -217,7 +222,7 @@ func TestResourceGroupServer2016FieldsOnOlderBuilds(t *testing.T) {
 		t.Fatalf("families = %d", len(families))
 	}
 
-	if _, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, true); err == nil {
+	if _, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, osversion.LTSC2022); err == nil {
 		t.Fatal("missing Windows Server 2016 fields were ignored on a newer build")
 	}
 }
@@ -226,7 +231,7 @@ func TestResourceGroupOwnerNameCasePreserved(t *testing.T) {
 	group := resourceGroupFixture()
 	group.OwnerNode = "NODEB"
 
-	families, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, true)
+	families, err := gatherResourceGroups(t, []clusapi.Object{group}, nil, osversion.LTSC2022)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +339,7 @@ func TestResourceGroupLargeClusterGather(t *testing.T) {
 		groups[index].Name = fmt.Sprintf("group-%d", index)
 	}
 
-	families, err := gatherResourceGroups(t, groups, nil, true)
+	families, err := gatherResourceGroups(t, groups, nil, osversion.LTSC2022)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +366,7 @@ func BenchmarkResourceGroupPublication(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		if err := c.publishResourceGroups(ch, groups, []string{"nodeA", "nodeB"}, true, nil); err != nil {
+		if err := c.publishResourceGroups(ch, groups, []string{"nodeA", "nodeB"}, osversion.LTSC2022, nil); err != nil {
 			b.Fatal(err)
 		}
 
