@@ -12,7 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collector.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
 
 ## Metrics
 
@@ -127,7 +127,8 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 
 | Name                                                                 | Description                                                            | Type    | Labels         |
 |----------------------------------------------------------------------|------------------------------------------------------------------------|---------|----------------|
-| `windows_hyperv_hypervisor_logical_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest, idle) | counter | `core`.`state` |
+| `windows_hyperv_hypervisor_logical_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest, idle) | counter | `core`,`state` |
+| `windows_hyperv_hypervisor_logical_processor_total_run_time_total`   | Time that processor spent                                              | counter | `core`         |
 | `windows_hyperv_hypervisor_logical_processor_context_switches_total` | The rate of virtual processor context switches on the processor.       | counter | `core`         |
 
 ### Hyper-V Hypervisor Root Partition
@@ -161,7 +162,8 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 
 | Name                                                                      | Description                                                                                                       | Type    | Labels         |
 |---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|---------|----------------|
-| `windows_hyperv_hypervisor_root_virtual_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote, total)                   | counter | `core`.`state` |
+| `windows_hyperv_hypervisor_root_virtual_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                          | counter | `core`,`state` |
+| `windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total`   | Time that processor spent                                                                                         | counter | `core`         |
 | `windows_hyperv_hypervisor_root_virtual_cpu_wait_time_per_dispatch_total` | The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor | counter | `core`         |
 
 
@@ -256,6 +258,8 @@ Example alert:
 | `windows_hyperv_hypervisor_virtual_processor_mode_time_total`                  | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                           | counter | `vm`, `core`, `state` |
 | `windows_hyperv_hypervisor_virtual_processor_run_time_total`                   | Time that processor spent                                                                                          | counter | `vm`, `core`          |
 | `windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total` | The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor. | counter | `vm`, `core`          |
+| `windows_hyperv_hypervisor_virtual_processor_time_total`                       | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_mode_time_total`. Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote) | counter | `vm`, `core`, `state` |
+| `windows_hyperv_hypervisor_virtual_processor_total_run_time_total`             | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_run_time_total`. Time that processor spent        | counter | `vm`, `core`          |
 
 ### Hyper-V Virtual Network Adapter
 
@@ -272,7 +276,7 @@ Example alert:
 
 | Name                                                  | Description                                  | Type    | Labels                         |
 |-------------------------------------------------------|----------------------------------------------|---------|--------------------------------|
-| `windows_hyperv_virtual_network_adapter_drop_reasons` | Hyper-V Virtual Network Adapter Drop Reasons | counter | `adapter`,`direction`,`reason` |
+| `windows_hyperv_virtual_network_adapter_drop_reasons` | Hyper-V Virtual Network Adapter Drop Reasons | counter | `adapter`,`reason`,`direction` |
 
 ### Hyper-V Virtual SMB
 
@@ -340,7 +344,7 @@ Example alert:
 | `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total` | Represents the total IO transfer latency on the underlying storage subsystem for this virtual device.                                                 | counter | `device` |
 | `windows_hyperv_virtual_storage_device_lower_queue_length`             | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.  | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_lower_latency_seconds`          | **Deprecated:** use `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below. | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_io_quota_replenishment_rate`    | Represents the IO quota replenishment rate for this virtual device.                                                                                   | gauge   | `device` |
+| `windows_hyperv_io_quota_replenishment_rate`                           | Represents the IO quota replenishment rate for this virtual device.                                                                                   | gauge   | `device` |
 
 #### Deprecated latency and queue length metrics
 
@@ -403,7 +407,7 @@ Example alert:
 
 | Name                                                 | Description                                           | Type  | Labels |
 |------------------------------------------------------|-------------------------------------------------------|-------|--------|
-| `windows_hyperv_virtual_machine_health_total_count` | Represents the number of virtual machines with health | gauge | None   |
+| `windows_hyperv_virtual_machine_health_total_count` | Represents the number of virtual machines with health | gauge | `state` |
 
 
 ### Example metric
@@ -420,7 +424,7 @@ Percent of physical CPU resources used by all VMs (on all monitored hosts)
 ```
 Percent of physical CPU resources by the hosts themselves (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_time_total{state="total"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
+(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
 ```
 Percent of physical CPU resources by the hypervisor (on all monitored hosts)
 ```

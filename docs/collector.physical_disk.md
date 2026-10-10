@@ -5,19 +5,19 @@ The physical_disk collector exposes metrics about physical disks
 |||
 -|-
 Metric name prefix  | `physical_disk`
-Data source         | Perflib
-Counters             | `physicalDisk` ([`Win32_PerfRawData_PerfDisk_physicalDisk`](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)))
+Data source         | Performance Data
+Counters            | `PhysicalDisk`
 Enabled by default? | Yes
 
 ## Flags
 
 ### `--collector.physical_disk.disk-include`
 
-If given, a disk needs to match the include regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to match the include regexp in order for the corresponding disk metrics to be reported. Default: `.+`
 
 ### `--collector.physical_disk.disk-exclude`
 
-If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported. Default: empty
 
 ## Metrics
 
@@ -36,10 +36,6 @@ If given, a disk needs to *not* match the exclude regexp in order for the corres
 | windows_physical_disk_write_latency_seconds_total      | The average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)        | Counter | disk   |
 | windows_physical_disk_read_write_latency_seconds_total | The time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)                 | Counter | disk   |
 
-
-### Warning about size metrics
-The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
-This is the same behavior as the windows performance counters.
 
 ### Example metric
 Query the rate of write operations to a disk

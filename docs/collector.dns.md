@@ -6,10 +6,10 @@ The dns collector exposes metrics about the DNS server
 -|-|-
 Metric name prefix  | `dns` |
 Classes             | [`Win32_PerfRawData_DNS_DNS`](https://technet.microsoft.com/en-us/library/cc977686.aspx) |
-Enabled by default | Yes |
-Metric name prefix (error stats) | `windows_dns` |
+Enabled by default? | No |
+Metric name prefix (error stats) | `dns` |
 Classes             | [`MicrosoftDNS_Statistic`](https://learn.microsoft.com/en-us/windows/win32/dns/dns-wmi-provider-overview) |
-Enabled by default (error stats)? | Yes |
+Enabled by default (error stats)? | No |
 
 ## Flags
 
@@ -21,29 +21,29 @@ Name | Description
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_dns_zone_transfer_requests_received_total` | _Not yet documented_ | counter | `qtype`
-`windows_dns_zone_transfer_requests_sent_total` | _Not yet documented_ | counter | `qtype`
-`windows_dns_zone_transfer_response_received_total` | _Not yet documented_ | counter | `qtype`
-`windows_dns_zone_transfer_success_received_total` | _Not yet documented_ | counter | `qtype`, `protocol`
-`windows_dns_zone_transfer_success_sent_total` | _Not yet documented_ | counter | `qtype`
-`windows_dns_zone_transfer_failures_total` | _Not yet documented_ | counter | None
-`windows_dns_memory_used_bytes_total` | _Not yet documented_ | gauge | `area`
-`windows_dns_dynamic_updates_queued` | _Not yet documented_ | gauge | None
-`windows_dns_dynamic_updates_received_total` | _Not yet documented_ | counter | `operation`
-`windows_dns_dynamic_updates_failures_total` | _Not yet documented_ | counter | `reason`
-`windows_dns_notify_received_total` | _Not yet documented_ | counter | None
-`windows_dns_notify_sent_total` | _Not yet documented_ | counter | None
-`windows_dns_secure_update_failures_total` | _Not yet documented_ | counter | None
-`windows_dns_secure_update_received_total` | _Not yet documented_ | counter | None
-`windows_dns_queries_total` | _Not yet documented_ | counter | `protocol`
-`windows_dns_responses_total` | _Not yet documented_ | counter | `protocol`
-`windows_dns_recursive_queries_total` | _Not yet documented_ | counter | None
-`windows_dns_recursive_query_failures_total` | _Not yet documented_ | counter | None
-`windows_dns_recursive_query_send_timeouts_total` | _Not yet documented_ | counter | None
-`windows_dns_wins_queries_total` | _Not yet documented_ | counter | `direction`
-`windows_dns_wins_responses_total` | _Not yet documented_ | counter | `direction`
-`windows_dns_unmatched_responses_total` | _Not yet documented_ | counter | None
-`windows_dns_error_stats_total` | DNS error statistics from MicrosoftDNS_Statistic | counter | `name`, `collection_name`, `dns_server`
+`windows_dns_zone_transfer_requests_received_total` | Number of zone transfer requests (AXFR/IXFR) received by the master DNS server | counter | `qtype`
+`windows_dns_zone_transfer_requests_sent_total` | Number of zone transfer requests (AXFR/IXFR) sent by the secondary DNS server | counter | `qtype`
+`windows_dns_zone_transfer_response_received_total` | Number of zone transfer responses (AXFR/IXFR) received by the secondary DNS server | counter | `qtype`
+`windows_dns_zone_transfer_success_received_total` | Number of successful zone transfers (AXFR/IXFR) received by the secondary DNS server | counter | `qtype`, `protocol`
+`windows_dns_zone_transfer_success_sent_total` | Number of successful zone transfers (AXFR/IXFR) of the master DNS server | counter | `qtype`
+`windows_dns_zone_transfer_failures_total` | Number of failed zone transfers of the master DNS server | counter | None
+`windows_dns_memory_used_bytes` | Current memory used by DNS server | gauge | `area`
+`windows_dns_dynamic_updates_queued` | Number of dynamic updates queued by the DNS server | gauge | None
+`windows_dns_dynamic_updates_received_total` | Number of secure update requests received by the DNS server | counter | `operation`
+`windows_dns_dynamic_updates_failures_total` | Number of dynamic updates which timed out or were rejected by the DNS server | counter | `reason`
+`windows_dns_notify_received_total` | Number of notifies received by the secondary DNS server | counter | None
+`windows_dns_notify_sent_total` | Number of notifies sent by the master DNS server | counter | None
+`windows_dns_secure_update_failures_total` | Number of secure updates that failed on the DNS server | counter | None
+`windows_dns_secure_update_received_total` | Number of secure update requests received by the DNS server | counter | None
+`windows_dns_queries_total` | Number of queries received by DNS server | counter | `protocol`
+`windows_dns_responses_total` | Number of responses sent by DNS server | counter | `protocol`
+`windows_dns_recursive_queries_total` | Number of recursive queries received by DNS server | counter | None
+`windows_dns_recursive_query_failures_total` | Number of recursive query failures | counter | None
+`windows_dns_recursive_query_send_timeouts_total` | Number of recursive query sending timeouts | counter | None
+`windows_dns_wins_queries_total` | Number of WINS lookup requests received by the server | counter | `direction`
+`windows_dns_wins_responses_total` | Number of WINS lookup responses sent by the server | counter | `direction`
+`windows_dns_unmatched_responses_total` | Number of response packets received by the DNS server that do not match any outstanding remote query | counter | None
+`windows_dns_wmi_stats_total` | DNS WMI statistics from MicrosoftDNS_Statistic | counter | `name`, `collection_name`, `dns_server`
 
 ### Sub-collectors
 

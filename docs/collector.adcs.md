@@ -18,19 +18,19 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-|requests_total|Total certificate requests processed|counter|`cert_template`|
-|request_processing_time_seconds|Last time elapsed for certificate requests|gauge|`cert_template`|
-|retrievals_total|Last time elapsed for certificate requests|counter|`cert_template`|
-|retrievals_processing_time_seconds|Last time elapsed for certificate retrieval request|gauge|`cert_template`|
-|failed_requests_total|Total failed certificate requests processed|counter|`cert_template`|
-|issued_requests_total|Total issued certificate requests processed|counter|`cert_template`|
-|pending_requests_total|Total pending certificate requests processed|counter|`cert_template`|
-|request_cryptographic_signing_time_seconds|Last time elapsed for signing operation request|gauge|`cert_template`|
-|request_policy_module_processing_time_seconds|Last time elapsed for policy module processing request|gauge|`cert_template`|
-|challenge_responses_total|Total certificate challenge responses processed|counter|`cert_template`|
-|challenge_response_processing_time_seconds|Last time elapsed for challenge response|gauge|`cert_template`|
-|signed_certificate_timestamp_lists_total|Total Signed Certificate Timestamp Lists processed|counter|`cert_template`|
-|signed_certificate_timestamp_list_processing_time_seconds|Last time elapsed for Signed Certificate Timestamp List|gauge|`cert_template`|
+`windows_adcs_requests_total` | Total certificate requests processed | counter | `cert_template`
+`windows_adcs_request_processing_time_seconds` | Last time elapsed for certificate requests | gauge | `cert_template`
+`windows_adcs_retrievals_total` | Total certificate retrieval requests processed | counter | `cert_template`
+`windows_adcs_retrievals_processing_time_seconds` | Last time elapsed for certificate retrieval request | gauge | `cert_template`
+`windows_adcs_failed_requests_total` | Total failed certificate requests processed | counter | `cert_template`
+`windows_adcs_issued_requests_total` | Total issued certificate requests processed | counter | `cert_template`
+`windows_adcs_pending_requests_total` | Total pending certificate requests processed | counter | `cert_template`
+`windows_adcs_request_cryptographic_signing_time_seconds` | Last time elapsed for signing operation request | gauge | `cert_template`
+`windows_adcs_request_policy_module_processing_time_seconds` | Last time elapsed for policy module processing request | gauge | `cert_template`
+`windows_adcs_challenge_responses_total` | Total certificate challenge responses processed | counter | `cert_template`
+`windows_adcs_challenge_response_processing_time_seconds` | Last time elapsed for challenge response | gauge | `cert_template`
+`windows_adcs_signed_certificate_timestamp_lists_total` | Total Signed Certificate Timestamp Lists processed | counter | `cert_template`
+`windows_adcs_signed_certificate_timestamp_list_processing_time_seconds` | Last time elapsed for Signed Certificate Timestamp List | gauge | `cert_template`
 
 ### Example metric
 ```

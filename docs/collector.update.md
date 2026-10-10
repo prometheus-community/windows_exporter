@@ -18,17 +18,21 @@ The Windows Update service is responsible for managing the installation of updat
 Whether to search for updates online. If set to `false` via `--no-collector.update.online`, the collector will only list updates that are already found by the Windows Update service.
 Set to `true` via `--collector.update.online` to search for updates online, which will take longer to complete.
 
+Default: `false`
+
 ### `--collector.update.scrape-interval`
 Define the interval of scraping Windows Update information
 
+Default: `6h0m0s`
+
 ## Metrics
 
-| Name                                           | Description                                                      | Type  | Labels                        |
-|------------------------------------------------|------------------------------------------------------------------|-------|-------------------------------|
-| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `category`,`severity`,`title` |
-| `windows_update_pending_published_timestamp`   | Expose last published timestamp for a single pending update item | gauge | `title`                       |
-| `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API      | gauge |                               |
-| `windows_update_scrape_timestamp_seconds`      | Timestamp of the last scrape                                     | gauge |                               |
+| Name                                           | Description                                                      | Type  | Labels                                        |
+|------------------------------------------------|------------------------------------------------------------------|-------|-----------------------------------------------|
+| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `id`,`revision`,`category`,`severity`,`title` |
+| `windows_update_pending_published_timestamp`   | Expose last published timestamp for a single pending update item | gauge | `id`,`revision`                               |
+| `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API      | gauge |                                               |
+| `windows_update_scrape_timestamp_seconds`      | Timestamp of the last scrape                                     | gauge |                                               |
 
 ### Example metrics
 ```

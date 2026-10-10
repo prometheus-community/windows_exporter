@@ -15,7 +15,7 @@ One or multiple directories containing the files to be ingested.
 
 E.G. `--collector.textfile.directories="C:\MyDir1,C:\MyDir2"`
 
-Default value: `C:\Program Files\windows_exporter\textfile_inputs`
+Default value: the `textfile_inputs` directory next to the windows_exporter executable (for a default installation: `C:\Program Files\windows_exporter\textfile_inputs`)
 
 Required: No
 

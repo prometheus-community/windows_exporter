@@ -13,7 +13,7 @@ The performancecounter collector exposes any configured metric.
 
 ### `--collector.performancecounter.objects`
 
-Objects is a list of objects to collect metrics from. The value takes the form of a JSON array of strings.
+Objects is a list of objects to collect metrics from. The value takes the form of a JSON array of objects.
 YAML is supported.
 
 The collector supports only English-named counter. Localized counter-names aren’t supported.
@@ -159,6 +159,12 @@ This will return only for the instances C:, D: and E: where relevant. To get all
 
 Some Objects like `Memory` do not have instances to select from at all. In this case, the `instances` key can be omitted.
 
+#### instance_label
+
+The name of the label that holds the instance name. Optional and defaults to `instance`.
+
+The label is only added if `instances` is set.
+
 #### counters
 
 List of counters to collect from the object. See the counters sub-schema for more information.
@@ -263,6 +269,15 @@ collector:
 The perfdata collector returns metrics based on the user configuration.
 The metrics are named based on the object name and the counter name.
 The instance name is added as a label to the metric.
+
+In addition, the collector exposes the following metrics for each configured object:
+
+| Name | Description | Type | Labels |
+| --- | --- | --- | --- |
+| `windows_performancecounter_collector_success` | Whether a performancecounter child collector was successful. | gauge | `collector` |
+| `windows_performancecounter_collector_duration_seconds` | Duration of an performancecounter child collection. | gauge | `collector` |
+
+The `collector` label contains the configured object `name`.
 
 # Examples
 
