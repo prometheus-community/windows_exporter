@@ -33,4 +33,17 @@ func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, mscluster.New, nil)
 	testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_virtualdisk_size_bytes", prometheus.Labels{"name": "CIVirtualDisk"})
 	testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_storagepool_size_bytes", prometheus.Labels{"name": "GitHubActions"})
+
+	// Resource fixtures from the CI cluster setup cover each resource state.
+	for name, state := range map[string]float64{
+		"CI IP Address":         2, // Online
+		"CI Generic Service":    2, // Online
+		"CI Offline IP Address": 3, // Offline
+		"CI Failed Service":     4, // Failed
+	} {
+		metric := testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_resource_state", prometheus.Labels{"name": name})
+		if metric != nil && metric.GetGauge().GetValue() != state {
+			t.Errorf("resource %q state = %v, want %v", name, metric.GetGauge().GetValue(), state)
+		}
+	}
 }

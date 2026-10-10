@@ -34,7 +34,7 @@ import (
 // This parity test runs against the CI failover-cluster fixture. Optional local
 // hosts may lack the role; fixture-required hosts must never skip native failures.
 func TestResourceNativeWMIParity(t *testing.T) {
-	native, session := resourceComparisonSources(t)
+	native, session, required := resourceComparisonSources(t)
 
 	query, err := mi.NewQuery("SELECT Name,Type,OwnerGroup,OwnerNode,Characteristics,DeadlockTimeout,EmbeddedFailureAction,Flags,IsAlivePollInterval,LooksAlivePollInterval,MonitorProcessId,PendingTimeout,ResourceClass,RestartAction,RestartDelay,RestartPeriod,RestartThreshold,RetryPeriodOnFailure,State,Subclass FROM MSCluster_Resource")
 	if err != nil {
@@ -51,10 +51,14 @@ func TestResourceNativeWMIParity(t *testing.T) {
 
 	t.Logf("WMI resource query duration: %s", time.Since(start))
 
-	// The CI cluster is created with -NoStorage and without an administrative
-	// access point, so it has no resources. Empty sources must still agree.
+	// The CI cluster provisions online, offline and failed resources. Comparing
+	// two empty sets proves nothing, so the fixture must provide resources.
 	if len(rows) == 0 {
-		t.Log("cluster fixture has no resources; comparing empty sources")
+		if required {
+			t.Fatal("cluster resource fixture has no resources")
+		}
+
+		t.Log("cluster has no resources; comparing empty sources")
 	}
 
 	expected := make([]clusapi.Resource, 0, len(rows))
@@ -121,7 +125,7 @@ func TestResourceNativeWMIParity(t *testing.T) {
 }
 
 // Resource source comparisons require a live cluster; missing CI fixtures fail.
-func resourceComparisonSources(tb testing.TB) (*clusapi.Cluster, *mi.Session) {
+func resourceComparisonSources(tb testing.TB) (*clusapi.Cluster, *mi.Session, bool) {
 	tb.Helper()
 
 	required := slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), Name)
@@ -163,11 +167,11 @@ func resourceComparisonSources(tb testing.TB) (*clusapi.Cluster, *mi.Session) {
 		}
 	})
 
-	return native, session
+	return native, session, required
 }
 
 func BenchmarkResourceSources(b *testing.B) {
-	native, session := resourceComparisonSources(b)
+	native, session, _ := resourceComparisonSources(b)
 
 	query, err := mi.NewQuery("SELECT Name,Type,OwnerGroup,OwnerNode,Characteristics,DeadlockTimeout,EmbeddedFailureAction,Flags,IsAlivePollInterval,LooksAlivePollInterval,MonitorProcessId,PendingTimeout,ResourceClass,RestartAction,RestartDelay,RestartPeriod,RestartThreshold,RetryPeriodOnFailure,State,Subclass FROM MSCluster_Resource")
 	if err != nil {
