@@ -8,7 +8,8 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The Processes, GPU, Hyper-V and Time tabs and the TCP and UDP rows of the Network tab need the `process`, `gpu`, `hyperv`, `time`, `tcp` and `udp` collectors, which are not enabled by default.
+  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs, the TCP and UDP rows of the Network tab and the Drives row of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `tcp`, `udp` and `diskdrive` collectors, which are not enabled by default.
+  The sample shows every tab; build the dashboard from the [mixin](../contrib/mixin#collectors) with your collectors to hide the others.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
 
@@ -37,16 +38,24 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | Overview | Summary of the selected host: operating system, uptime, CPUs, memory, commit charge, volumes, disk and network throughput.                                          |
 | CPU      | Utilization by mode and per core, processor queue length, context switches, interrupts, processes, threads, system calls and the effective CPU frequency.           |
 | Memory   | Used and available physical memory, commit charge, hard page faults, kernel pools and the system cache.                                                             |
-| Disk     | Volume size and free space, usage, busy time, throughput, IOPS, latency and queue length.                                                                           |
+| Disk     | Volume label, disk, file system, size and free space, usage, busy time, throughput, IOPS, latency and queue length; drive model, size, partitions and status; busy time, throughput, IOPS, latency, queue length and split I/O per physical disk, labelled with the drive model when `diskdrive` is enabled. |
 | Network  | Throughput, utilization, packets, errors and discards per interface; TCP connection states and rates, segments and retransmissions; UDP datagrams and errors.       |
+| SMB      | Open files, connections, traffic, requests and opened files per share this host serves; traffic, requests, latency, queue length, credit stalls and metadata requests per remote share this host uses. |
 | Services | Running, pending and disabled services, automatic services that are not running, and services that started or stopped in the time range.                            |
 | Processes | CPU usage, working set, private bytes, I/O throughput and operations, threads, handles and page faults per process, labelled with name and PID.                  |
+| Scheduled tasks | Task count, running, disabled and never-run tasks, enabled tasks with an unknown result code or missed runs, tasks that ran in the time range, and all tasks with state, last result and missed runs. |
+| Updates  | Pending updates by severity and category, the oldest pending update, the time since the last Windows Update check, a list of pending updates and the query duration. |
 | GPU      | Utilization by engine type, memory capacity, commitment and locality, temperature, fans, power, clocks, and top processes by GPU utilization and memory.                                                                   |
 | Hyper-V  | VM count and health, Hyper-V WMI health, host CPU time, CPU and memory per VM, virtual disks, virtual switches and VM network adapters.                             |
 | Time     | Time zone, clock sync source, NTP time sources, clock offset and NTP round-trip delay.                                                                              |
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |
 
 Click a hostname in the Fleet tab to open that host in the Overview tab.
+
+Each per-host tab starts with a row of current values, each with a sparkline
+of the time range behind it. Green, orange and red show health against fixed
+thresholds; values without a meaningful threshold, like throughput or counts,
+stay in the text color.
 
 The Processes tab starts with totals for all selected processes: process count,
 threads, handles, CPU usage across the host, private working set and private bytes.

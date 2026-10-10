@@ -215,6 +215,12 @@ pinned in `jsonnetfile.json`:
 - `dashboards/builders.libsonnet` uses Grafonnet's native `apps.dashboard.v2`
   builders for the dashboard and layout and wraps its Prometheus query builders
   into the v2 panel/query-group schema.
+- Each tab is a list of rows. `b.flow` places `[id, width, height]` panels left
+  to right and wraps at 24 columns, so rows need no hand-written coordinates.
+- `b.stat` builds the current values in the first row of each per-host tab
+  (`b.summary`), with a sparkline of the time range behind each value. Only
+  threshold steps (`b.levels(warn, crit)`) add color, so green, orange and red
+  always mean health; informational values keep the text color.
 - `dashboards/styles.libsonnet` shares the visualization defaults; individual
   panels add their differences using `withDefaults`, `withOptions`, and
   `withOverrides`. Explicit nulls are preserved and arrays are replaced whole.
@@ -251,7 +257,31 @@ The checked-in JSON remains the reference for the rendered dashboard, including
 queries, IDs, variables, annotations, transformations, and tab/row layout.
 `mise run check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
 any drift. CI runs that check before the mixin tests. The dashboard uses its own
-variables and does not read `_config`.
+variables for selectors; from `_config` it reads only `collectors`.
+
+### Collectors
+
+`_config.collectors` lists the windows_exporter collectors by their exporter
+names, such as `cpu`, `physical_disk`, `diskdrive`, `smb` or `update`. The
+dashboard renders only the tabs, rows, panels and variables of enabled
+collectors, so a tab for a collector you do not run does not appear. The
+defaults match the exporter's default collectors; `time` follows `enableTime`.
+An unknown collector name fails the build. Enable optional collectors on top of
+the defaults:
+
+```jsonnet
+(import 'mixin.libsonnet') {
+  _config+:: {
+    collectors+: { diskdrive: true, process: true, scheduled_task: true, update: true },
+  },
+}.grafanaDashboards['windows-exporter.json']
+```
+
+The committed sample dashboard enables every collector. Tab sources are
+functions of `on(collector)`; return `null` instead of a row, a `[id, width,
+height]` panel or a stat ID to leave it out. Panels that no row places are not
+rendered, and tabs without rows are dropped. `tests/dashboard.test.jsonnet`
+renders several collector selections and checks the layout.
 
 ## Validate
 

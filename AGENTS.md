@@ -168,6 +168,10 @@ Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
 Edit the Jsonnet/Grafonnet source under `contrib/mixin/dashboards`, including its
 tab modules and shared builders, and regenerate
 `dashboard/windows-exporter-dashboard.json`. Do not hand-edit generated JSON.
+Gate every tab, row, panel and variable on the collectors it queries with
+`on('<collector>')` (names from `_config.collectors`), and run
+`jsonnet -J vendor tests/dashboard.test.jsonnet` to check the layout for several
+collector selections.
 
 From `contrib/mixin`, install the pinned tools with `make tools`, ensure they
 are on `PATH`, then run `make fmt`, `make generate`, `make check-dashboards` and
