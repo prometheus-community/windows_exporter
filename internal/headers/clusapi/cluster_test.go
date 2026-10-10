@@ -66,11 +66,6 @@ func TestQuorumBuffersInvalid(t *testing.T) {
 		"oversized_growth": func([]uint16, []uint16) (uint32, uint32, uint32, error) {
 			return 0, maxBufferSize, 0, windows.ERROR_MORE_DATA
 		},
-		"surrogate": func(resource, _ []uint16) (uint32, uint32, uint32, error) {
-			resource[0] = 0xd800
-
-			return 0, 1, 0, nil
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, _, err := quorumBuffers(time.Time{}, call); err == nil {
@@ -79,7 +74,17 @@ func TestQuorumBuffersInvalid(t *testing.T) {
 		})
 	}
 
-	_, _, err := quorumBuffers(time.Time{}, func([]uint16, []uint16) (uint32, uint32, uint32, error) {
+	// Names decode like WMI strings: invalid UTF-16 becomes U+FFFD.
+	name, _, err := quorumBuffers(time.Time{}, func(resource, _ []uint16) (uint32, uint32, uint32, error) {
+		resource[0] = 0xd800
+
+		return 0, 1, 0, nil
+	})
+	if err != nil || name != "�" {
+		t.Fatalf("surrogate: name=%q err=%v", name, err)
+	}
+
+	_, _, err = quorumBuffers(time.Time{}, func([]uint16, []uint16) (uint32, uint32, uint32, error) {
 		return 0, 0, 0, windows.ERROR_ACCESS_DENIED
 	})
 	if !errors.Is(err, windows.ERROR_ACCESS_DENIED) {

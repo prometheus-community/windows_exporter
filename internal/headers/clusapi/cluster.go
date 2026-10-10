@@ -155,7 +155,7 @@ func (c *Cluster) resourceClass(name string, deadline time.Time) (_ uint32, resu
 		}
 	}()
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, deadline)
+	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
 	if err != nil {
 		return 0, fmt.Errorf("class information: %w", err)
 	}
@@ -254,9 +254,7 @@ func quorumBuffers(deadline time.Time, call func([]uint16, []uint16) (uint32, ui
 			}
 		}
 
-		name, err := decodeUnits(units)
-
-		return name, logSize, err
+		return decodeUnits(units), logSize, nil
 	}
 
 	return "", 0, errors.New("quorum resource buffers did not stabilize")

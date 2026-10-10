@@ -22,22 +22,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
 const nameSharedVolumes = Name + "_shared_volumes"
 
+type sharedVolumesSource interface {
+	DiskPartitions(deadline time.Time) ([]clusapi.Partition, error)
+	Close() error
+}
+
 type collectorSharedVolumes struct {
-	sharedVolumesMIQuery mi.Query
+	sharedVolumesSource sharedVolumesSource
 
 	sharedVolumesInfo      *prometheus.Desc
 	sharedVolumesTotalSize *prometheus.Desc
 	sharedVolumesFreeSpace *prometheus.Desc
 }
 
-// msClusterDiskPartition represents the MSCluster_DiskPartition WMI class
+// msClusterDiskPartition represents the MSCluster_DiskPartition WMI class. The
+// collector reads ClusAPI; the parity test compares against this WMI model.
+// TotalSize and FreeSpace are megabytes.
 type msClusterDiskPartition struct {
 	Name       string `mi:"Name"`
 	Path       string `mi:"Path"`
@@ -48,13 +56,18 @@ type msClusterDiskPartition struct {
 }
 
 func (c *Collector) buildSharedVolumes() error {
-	sharedVolumesMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel, VolumeGuid FROM MSCluster_DiskPartition")
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.sharedVolumesMIQuery = sharedVolumesMIQuery
+	c.sharedVolumesSource = source
+	c.buildSharedVolumesDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildSharedVolumesDescriptors() {
 	c.sharedVolumesInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "info"),
 		"Cluster Shared Volumes information (value is always 1)",
@@ -75,49 +88,57 @@ func (c *Collector) buildSharedVolumes() error {
 		[]string{"name", "volume_guid"},
 		nil,
 	)
-
-	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	var deadline time.Time
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	for _, partition := range dst {
-		volume := strings.TrimRight(partition.Volume, " ")
+	partitions, resultErr := c.sharedVolumesSource.DiskPartitions(deadline)
+
+	return c.publishSharedVolumes(ch, partitions, resultErr)
+}
+
+func (c *Collector) publishSharedVolumes(ch chan<- prometheus.Metric, partitions []clusapi.Partition, resultErr error) error {
+	for _, partition := range partitions {
+		volume := strings.TrimRight(partition.VolumeLabel, " ")
+		volumeGUID := formatVolumeGUID(partition.VolumeGUID)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.sharedVolumesInfo,
 			prometheus.GaugeValue,
 			1.0,
 			volume,
-			partition.Path,
-			partition.VolumeGuid,
+			partition.DeviceName,
+			volumeGUID,
 		)
 
+		// MSCluster_DiskPartition reports whole megabytes; keep that resolution.
 		ch <- prometheus.MustNewConstMetric(
 			c.sharedVolumesTotalSize,
 			prometheus.GaugeValue,
-			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
+			float64(partition.TotalBytes>>20)*1024*1024,
 			volume,
-			partition.VolumeGuid,
+			volumeGUID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.sharedVolumesFreeSpace,
 			prometheus.GaugeValue,
-			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
+			float64(partition.FreeBytes>>20)*1024*1024,
 			volume,
-			partition.VolumeGuid,
+			volumeGUID,
 		)
 	}
 
-	return nil
+	return resultErr
+}
+
+// formatVolumeGUID matches MSCluster_DiskPartition.VolumeGuid: lower case,
+// without braces.
+func formatVolumeGUID(guid windows.GUID) string {
+	return fmt.Sprintf("%08x-%04x-%04x-%x-%x",
+		guid.Data1, guid.Data2, guid.Data3, guid.Data4[:2], guid.Data4[2:])
 }
