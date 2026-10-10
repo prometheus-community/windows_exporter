@@ -20,6 +20,7 @@ package scheduled_task
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -219,4 +220,14 @@ func TestWalkTaskFoldersPanic(t *testing.T) {
 		require.Equal(t, []string{"/T0"}, taskPaths(tasks))
 		require.Equal(t, int32(1), released.Load())
 	})
+}
+
+func TestTaskFolderWorkers(t *testing.T) {
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(0))
+
+	// Hosts with fewer than eight logical CPUs read serially.
+	for procs, want := range map[int]int{1: 1, 2: 1, 4: 1, 7: 1, 8: 2, 12: 3, 16: 4, 64: 4} {
+		runtime.GOMAXPROCS(procs)
+		require.Equal(t, want, taskFolderWorkers(), "GOMAXPROCS=%d", procs)
+	}
 }

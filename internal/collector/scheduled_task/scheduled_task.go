@@ -295,18 +295,66 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 // errTasksSkipped accompanies readable tasks when some tasks or folders could not be read.
 var errTasksSkipped = errors.New("tasks skipped")
 
-// taskFolderWorkers is the number of folders read concurrently. Almost all of
-// a scrape is spent waiting for the Task Scheduler service, which answers
-// requests from several connections in parallel.
-const taskFolderWorkers = 4
+// maxTaskFolderWorkers is the most folders read concurrently.
+const maxTaskFolderWorkers = 4
+
+// taskFolderWorkers returns the number of folders read concurrently. A scrape
+// is mostly CPU time of the Task Scheduler service. Concurrent reads shorten
+// the scrape, but cost the service more CPU time in total (about 40% more with
+// four workers), so hosts with fewer than eight logical CPUs read serially.
+func taskFolderWorkers() int {
+	return min(maxTaskFolderWorkers, max(1, runtime.GOMAXPROCS(0)/4))
+}
 
 // getScheduledTasks returns the tasks whose slash-separated paths pass include.
-// Folders are read concurrently, but tasks are returned in the order of a
-// depth-first walk, as if the folders had been read one after another.
+// With several workers, folders are read concurrently, but tasks are returned
+// in the same depth-first order as when they are read serially.
 func getScheduledTasks(include func(path string) bool) (ScheduledTasks, error) {
-	return walkTaskFolders(taskFolderWorkers, func() (taskFolderReader, func(), error) {
+	workers := taskFolderWorkers()
+	if workers == 1 {
+		return getScheduledTasksSerially(include)
+	}
+
+	return walkTaskFolders(workers, func() (taskFolderReader, func(), error) {
 		return newTaskFolderReader(include)
 	})
+}
+
+// getScheduledTasksSerially reads all folders on the calling goroutine.
+func getScheduledTasksSerially(include func(path string) bool) (ScheduledTasks, error) {
+	// COM initialization and every interface call stay on the same OS thread.
+	runtime.LockOSThread()
+
+	defer runtime.UnlockOSThread()
+
+	if err := ole.Initialize(); err != nil {
+		return nil, err
+	}
+
+	defer ole.Uninitialize()
+
+	service, err := taskschd.NewTaskService()
+	if err != nil {
+		return nil, fmt.Errorf("create Task Scheduler service: %w", err)
+	}
+	defer service.Release()
+
+	if err := service.Connect(); err != nil {
+		return nil, fmt.Errorf("connect Task Scheduler service: %w", err)
+	}
+
+	root, err := service.Folder(`\`)
+	if err != nil {
+		return nil, fmt.Errorf("get root task folder: %w", err)
+	}
+	defer root.Release()
+
+	tasks := ScheduledTasks{}
+	if err := fetchTasksRecursively(root, `\`, include, &tasks); err != nil {
+		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
+	}
+
+	return tasks, nil
 }
 
 // taskFolderReader opens the folder at path and reads it. An error means the
@@ -435,6 +483,41 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) b
 		}
 
 		*scheduledTasks = append(*scheduledTasks, parsedTask)
+	}
+
+	return errors.Join(errs...)
+}
+
+// fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
+func fetchTasksRecursively(
+	folder *taskschd.TaskFolder, folderPath string, include func(path string) bool, scheduledTasks *ScheduledTasks,
+) error {
+	errs := []error{}
+	if err := fetchTasksInFolder(folder, include, scheduledTasks); err != nil {
+		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
+	}
+
+	folders, err := folder.Folders()
+	if err != nil {
+		return errors.Join(append(errs, fmt.Errorf("folder %s: get sub folders: %w", folderPath, err))...)
+	}
+	defer folders.Release()
+
+	for subfolder, err := range folders.All() {
+		if err != nil {
+			errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
+
+			continue
+		}
+
+		subfolderPath := folderPath
+		if path, err := subfolder.Path(); err == nil {
+			subfolderPath = path
+		}
+
+		if err := fetchTasksRecursively(subfolder, subfolderPath, include, scheduledTasks); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)

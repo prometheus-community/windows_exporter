@@ -67,6 +67,34 @@ func TestFetchTasksInFolderPartialCollection(t *testing.T) {
 	}
 }
 
+func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
+	var tasksReleased, foldersReleased, collectionsReleased int
+
+	children := make([]*ole.Object, 0, 2)
+
+	for _, state := range []int32{1, 3} {
+		tasks, _ := fakeTaskCollection([]*ole.Object{fakeScheduledTask(state, &tasksReleased)}, false, &collectionsReleased)
+		folders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+		child := fakeTaskFolder("", tasks, folders, &foldersReleased)
+		children = append(children, &child.Object)
+	}
+
+	folders, attempted := fakeTaskCollection([]*ole.Object{children[0], nil, children[1]}, false, &collectionsReleased)
+	emptyTasks, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+	root := fakeTaskFolder("", emptyTasks, folders, nil)
+	tasks := ScheduledTasks{}
+
+	err := fetchTasksRecursively(root, `\`, includeAllTasks, &tasks)
+	require.ErrorIs(t, err, ole.HRESULT(0x80070005))
+	require.Equal(t, []int64{1, 2, 3}, *attempted)
+	require.Len(t, tasks, 2)
+	require.Equal(t, TaskState(1), tasks[0].State)
+	require.Equal(t, TaskState(3), tasks[1].State)
+	require.Equal(t, 2, tasksReleased)
+	require.Equal(t, 2, foldersReleased)
+	require.Equal(t, 6, collectionsReleased)
+}
+
 func TestReadTaskFolderPartialFolderCollection(t *testing.T) {
 	var tasksReleased, foldersReleased, collectionsReleased int
 
