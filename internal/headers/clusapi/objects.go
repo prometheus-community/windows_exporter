@@ -34,14 +34,16 @@ const (
 	enumNode     = 0x01
 	enumResource = 0x04
 	enumGroup    = 0x08
+	enumNetwork  = 0x10
 )
 
 // CLUS_OBJECT_* identifiers and CLCTL_* operations. A CLUSCTL_* control code is
 // (object << 24) | operation, for example CLUSCTL_GROUP_GET_FLAGS = 0x03000009.
 // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/mscs/control-code-architecture
 const (
-	objectGroup = 3
-	objectNode  = 4
+	objectGroup   = 3
+	objectNode    = 4
+	objectNetwork = 5
 
 	ctlGetCharacteristics    = 0x05
 	ctlGetFlags              = 0x09
@@ -65,6 +67,11 @@ var (
 	closeNode   = dll.NewProc("CloseClusterNode")
 	nodeControl = dll.NewProc("ClusterNodeControl")
 	nodeState   = dll.NewProc("GetClusterNodeState")
+
+	openNetwork    = dll.NewProc("OpenClusterNetworkEx")
+	closeNetwork   = dll.NewProc("CloseClusterNetwork")
+	networkControl = dll.NewProc("ClusterNetworkControl")
+	networkState   = dll.NewProc("GetClusterNetworkState")
 )
 
 // Object is a cluster group, node or network. Values contains the 32-bit
@@ -110,6 +117,22 @@ var nodeAPI = objectAPI{
 	close:    closeNode,
 	control:  nodeControl,
 	state:    simpleState(nodeState),
+}
+
+//nolint:gochecknoglobals
+var networkAPI = objectAPI{
+	kind:     "network",
+	enumType: enumNetwork,
+	object:   objectNetwork,
+	open:     openNetwork,
+	close:    closeNetwork,
+	control:  networkControl,
+	state:    simpleState(networkState),
+}
+
+// Networks reads every cluster network; see Groups for the result contract.
+func (c *Cluster) Networks(deadline time.Time) ([]Object, error) {
+	return c.objects(&networkAPI, deadline)
 }
 
 // Nodes reads every cluster node; see Groups for the result contract.
