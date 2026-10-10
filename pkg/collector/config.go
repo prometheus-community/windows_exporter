@@ -63,7 +63,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
@@ -117,7 +116,6 @@ type Config struct {
 	TCP                tcp.Config                `yaml:"tcp"`
 	TerminalServices   terminal_services.Config  `yaml:"terminal_services"`
 	Textfile           textfile.Config           `yaml:"textfile"`
-	ThermalZone        thermalzone.Config        `yaml:"thermalzone"`
 	Time               time.Config               `yaml:"time"`
 	UDP                udp.Config                `yaml:"udp"`
 	Update             update.Config             `yaml:"update"`
@@ -175,7 +173,6 @@ var ConfigDefaults = Config{
 	TCP:                tcp.ConfigDefaults,
 	TerminalServices:   terminal_services.ConfigDefaults,
 	Textfile:           textfile.ConfigDefaults,
-	ThermalZone:        thermalzone.ConfigDefaults,
 	Time:               time.ConfigDefaults,
 	UDP:                udp.ConfigDefaults,
 	Update:             update.ConfigDefaults,
