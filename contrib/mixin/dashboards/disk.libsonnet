@@ -10,6 +10,23 @@ local physicalByDisk(on, expr) =
   if on('diskdrive')
   then '(' + expr + ') * on (disk) group_left (model) max by (disk, model) (' + drive('info') + ') or on (disk) (' + expr + ')'
   else expr;
+local spaces(name, labels='') = 'windows_storage_spaces_' + name + '{job=~"$job", instance="$instance"' + labels + '}';
+// Windows reports the primordial pool of unpooled disks next to the concrete pools; only pool_info labels it.
+local concretePools = spaces('pool_info', ', primordial="false"');
+local pool(name) = '(' + spaces('pool_' + name) + ' * on (job, instance, unique_id) group_left () ' + concretePools + ')';
+local health = {
+  matcher: { id: 'byName', options: 'Health' },
+  properties: [
+    { id: 'mappings', value: [{ type: 'value', options: {
+      '0': { color: 'green', index: 0, text: 'Healthy' },
+      '1': { color: 'orange', index: 1, text: 'Warning' },
+      '2': { color: 'red', index: 2, text: 'Unhealthy' },
+      '5': { color: 'text', index: 3, text: 'Unknown' },
+    } }] },
+    { id: 'custom.cellOptions', value: { type: 'color-text' } },
+  ],
+};
+local bytes(columns) = [{ matcher: { id: 'byName', options: column }, properties: [{ id: 'unit', value: 'bytes' }] } for column in columns];
 local physicalGraph(on, id, title, description, queries, unit) =
   b.panel.new(id, title, 'timeseries')
   + b.panel.withDescription(description + ' Requires the physical_disk collector; the diskdrive collector adds drive models.')
@@ -40,6 +57,7 @@ function(on)
       if on('logical_disk') then b.row('Volume I/O', b.flow([[40, 12, 8], [41, 12, 8], [42, 12, 8], [43, 12, 8]])),
       if on('diskdrive') then b.row('Drives', b.flow([[201, 4, 6], [202, 20, 6]])),
       if on('physical_disk') then b.row('Physical disks', b.flow([[203, 12, 8], [204, 12, 8], [205, 12, 8], [206, 12, 8], [207, 12, 8], [208, 12, 8]])),
+      if on('storage_spaces') then b.row('Storage Spaces', b.flow([[240, 5, 6], [241, 5, 6], [242, 14, 6], [243, 24, 6], [244, 12, 8], [245, 12, 8]])),
     ]),
     [
       b.stat(172, 'Fullest volume', 'Used space of the fullest selected volume. Free-space counters can lag by 10 to 15 minutes.', 'max(1 - ' + metric('free_bytes') + ' / ' + metric('size_bytes') + ')', 'percentunit', steps=b.levels(0.8, 0.9))
@@ -396,5 +414,44 @@ function(on)
       physicalGraph(on, 206, 'Disk latency', 'Average time per read and write operation of each physical disk. Reads are drawn below the axis.', [['A', physicalRate('write_latency_seconds_total') + ' / (' + physicalRate('writes_total') + ' > 0)', ' write'], ['B', physicalRate('read_latency_seconds_total') + ' / (' + physicalRate('reads_total') + ' > 0)', ' read']], 's'),
       physicalGraph(on, 207, 'Disk queue length', 'Requests outstanding on each physical disk at the time of the scrape. A queue that stays high while latency rises indicates a disk bottleneck.', [['A', physical('requests_queued'), '']], 'short'),
       physicalGraph(on, 208, 'Split I/O', 'I/O requests per second that Windows split into multiple requests, because of a fragmented volume or a request too large for a single I/O.', [['A', physicalRate('split_ios_total'), '']], 'iops'),
+
+      b.stat(240, 'Pools not OK', 'Storage pools whose health status is not Healthy, excluding the primordial pool. Requires the storage_spaces collector.', 'count(' + pool('health_status') + ' != 0) or (0 * count(' + concretePools + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(241, 'Virtual disks not OK', 'Virtual disks whose health status is not Healthy. Requires the storage_spaces collector with its virtual_disk subcollector.', 'count(' + spaces('virtual_disk_health_status') + ' != 0) or (0 * count(' + spaces('virtual_disk_info') + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+
+      b.joinedTable(242, 'Storage pools', 'Health, size, allocated capacity and used share of each storage pool, excluding the primordial pool of unpooled disks. Requires the storage_spaces collector.', 'name', [
+        'max by (name) (' + pool('health_status') + ')',
+        'max by (name) (' + pool('size_bytes') + ')',
+        'max by (name) (' + pool('allocated_size_bytes') + ')',
+        'max by (name) (100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes') + ')',
+      ], [['name', 'Pool'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Used']], [
+        health,
+        {
+          matcher: { id: 'byName', options: 'Used' },
+          properties: [
+            { id: 'unit', value: 'percent' },
+            { id: 'min', value: 0 },
+            { id: 'max', value: 100 },
+            { id: 'decimals', value: 1 },
+            { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(80, 90) } },
+            { id: 'color', value: { mode: 'thresholds' } },
+            { id: 'custom.cellOptions', value: { mode: 'basic', type: 'gauge', valueDisplayMode: 'text' } },
+          ],
+        },
+      ] + bytes(['Size', 'Allocated'])),
+
+      b.joinedTable(243, 'Virtual disks', 'Health, size, allocated capacity, pool footprint and storage efficiency (allocated size per pool footprint) of each virtual disk. Mirrors and parity lower the efficiency. Requires the storage_spaces collector with its virtual_disk subcollector.', 'name', [
+        'max by (name) (' + spaces('virtual_disk_health_status') + ')',
+        'max by (name) (' + spaces('virtual_disk_size_bytes') + ')',
+        'max by (name) (' + spaces('virtual_disk_allocated_size_bytes') + ')',
+        'max by (name) (' + spaces('virtual_disk_footprint_on_pool_bytes') + ')',
+        'max by (name) (' + spaces('virtual_disk_storage_efficiency_percent') + ')',
+      ], [['name', 'Virtual disk'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Footprint'], ['Value #E', 'Efficiency']], [
+        health,
+        { matcher: { id: 'byName', options: 'Efficiency' }, properties: [{ id: 'unit', value: 'percent' }, { id: 'decimals', value: 1 }] },
+      ] + bytes(['Size', 'Allocated', 'Footprint'])),
+
+      b.graph(244, 'Pool usage', 'Allocated share of each storage pool, excluding the primordial pool. A full pool cannot extend thin-provisioned virtual disks, which then fail writes.', 'percent', [['100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes'), '{{name}}']])
+      + b.panel.withDefaults({ max: 100, custom: { thresholdsStyle: { mode: 'dashed' } }, thresholds: { steps: b.levels(80, 90) } }),
+      b.graph(245, 'Virtual disk footprint', 'Pool capacity consumed by each virtual disk, including resiliency copies.', 'bytes', [[spaces('virtual_disk_footprint_on_pool_bytes'), '{{name}}']]),
     ]
   )

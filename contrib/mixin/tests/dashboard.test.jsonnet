@@ -33,6 +33,7 @@ local results = {
   smbClientOnly: summary(render(only({ smbclient: true }))),
   diskWithoutDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true }))).Disk,
   diskWithDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true, diskdrive: true }))).Disk,
+  storageSpacesOnly: summary(render(only({ storage_spaces: true }))).Disk,
   // A collectors object given without +: enables only the listed collectors.
   replaced: summary(render(function(_) { os: true, cpu: true })),
 };
@@ -56,6 +57,7 @@ assert expect('osOnly', { Exporter: exporter, Fleet: ['Summary', 'Hosts'], Overv
 assert expect('smbClientOnly', { Exporter: exporter, Fleet: ['Summary', 'Hosts'], Overview: ['Summary'], SMB: ['Summary', 'Client shares'] });
 assert expect('diskWithoutDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Physical disks']);
 assert expect('diskWithDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Drives', 'Physical disks']);
+assert expect('storageSpacesOnly', ['Storage Spaces']);
 assert expect('replaced', {
   CPU: ['Summary', 'Utilization', 'System calls and frequency'],
   Exporter: exporter,
