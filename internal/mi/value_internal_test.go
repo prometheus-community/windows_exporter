@@ -221,3 +221,21 @@ func TestElementGetValueStringArray(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, got)
 }
+
+// TestValueType_Size guards the MI_Type out-parameter of MI_Instance_GetElement,
+// which the native side writes as a 32-bit enum.
+func TestValueType_Size(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, uintptr(4), unsafe.Sizeof(ValueType(0)))
+}
+
+func TestElement_GetValue_Null(t *testing.T) {
+	t.Parallel()
+
+	for _, valueType := range []ValueType{ValueTypeUINT32, ValueTypeSTRING, ValueTypeDATETIME} {
+		value, err := newElement(valueType, [5]uint64{42}, flagNull).GetValue()
+		require.NoError(t, err)
+		require.Nil(t, value)
+	}
+}

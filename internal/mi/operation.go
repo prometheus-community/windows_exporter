@@ -92,18 +92,6 @@ type OperationOptionsFT struct {
 	GetInterval        uintptr
 }
 
-type OperationCallbacks[T any] struct {
-	CallbackContext         *T
-	PromptUser              uintptr
-	WriteError              uintptr
-	WriteMessage            uintptr
-	WriteProgress           uintptr
-	InstanceResult          uintptr
-	IndicationResult        uintptr
-	ClassResult             uintptr
-	StreamedParameterResult uintptr
-}
-
 // Close closes an operation handle.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_operation_close
