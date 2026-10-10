@@ -145,9 +145,8 @@ func TestCollectorWorkerProcessCommandLine(t *testing.T) {
 		CounterVersion:      1,
 	})
 
-	if _, ok := families["windows_process_info"]; !ok {
-		t.Skip("the Process counter set has no w3wp instance")
-	}
+	// The process snapshot includes suspended processes.
+	require.Contains(t, families, "windows_process_info", "no w3wp process in the process snapshot")
 
 	for _, metric := range families["windows_process_info"].GetMetric() {
 		labels := make(map[string]string)
