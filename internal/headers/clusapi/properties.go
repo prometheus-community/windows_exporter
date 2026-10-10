@@ -122,8 +122,14 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 		properties[name] = values
 	}
 
+	// Lists returned by the cluster service end with a CLUSPROP_SYNTAX_ENDMARK
+	// after the last value list. Accept that terminator, reject anything else.
+	if len(data) == 4 && binary.LittleEndian.Uint32(data) == 0 {
+		data = data[4:]
+	}
+
 	if len(data) != 0 {
-		return nil, errors.New("trailing property list data")
+		return nil, fmt.Errorf("%d bytes of trailing property list data starting with % x", len(data), data[:min(len(data), 16)])
 	}
 
 	return properties, nil

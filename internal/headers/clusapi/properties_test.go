@@ -93,10 +93,39 @@ func TestParsePropertiesInvalid(t *testing.T) {
 	if _, err := ParseProperties(append(testPropertyList(), 0)); err == nil {
 		t.Fatal("accepted trailing data")
 	}
+
+	for _, trailing := range [][]byte{{0, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0}, {0, 0, 0}} {
+		if _, err := ParseProperties(append(testPropertyList(), trailing...)); err == nil {
+			t.Fatalf("accepted trailing data % x", trailing)
+		}
+	}
+}
+
+// The cluster service terminates the whole list with CLUSPROP_SYNTAX_ENDMARK.
+func TestParsePropertiesListEndmark(t *testing.T) {
+	data := binary.LittleEndian.AppendUint32(testPropertyList(), 0)
+
+	properties, err := ParseProperties(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if value, err := properties["NodeWeight"][0].DWORD(); err != nil || value != ^uint32(0) {
+		t.Fatalf("value = %d, err = %v", value, err)
+	}
+
+	if _, err := ParseProperties(binary.LittleEndian.AppendUint32(nil, 0)); err != nil {
+		t.Fatalf("empty list: %v", err)
+	}
+
+	if _, err := ParseProperties(binary.LittleEndian.AppendUint32(binary.LittleEndian.AppendUint32(nil, 0), 0)); err != nil {
+		t.Fatalf("empty list with endmark: %v", err)
+	}
 }
 
 func FuzzParseProperties(f *testing.F) {
 	f.Add(testPropertyList())
+	f.Add(binary.LittleEndian.AppendUint32(testPropertyList(), 0))
 	f.Add([]byte{0, 0, 0, 0})
 	f.Fuzz(func(t *testing.T, data []byte) { _, _ = ParseProperties(data) })
 }
