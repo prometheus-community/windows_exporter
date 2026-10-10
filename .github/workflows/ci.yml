@@ -1611,9 +1611,6 @@ jobs:
       - name: Go tests
         id: go-tests
         shell: pwsh
-        env:
-          # Temporary: log raw ClusAPI property lists for parser fixtures.
-          WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP: "1"
         run: |
           go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
               ForEach-Object {
