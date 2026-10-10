@@ -65,6 +65,13 @@ go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
 go test ./...
 ```
 
+Release builds apply a `go build -overlay` from
+[`tools/go-overlay`](tools/go-overlay/main.go) that removes the 32 MiB FIPS
+140-3 entropy buffer Go links into every binary (golang/go#81956). It is pinned
+to the checksum of the patched standard library file, so a Go update that
+changes that file fails the build job until the overlay is refreshed or, once Go
+fixes the issue, removed. Plain `go build` and `make build` do not apply it.
+
 For collector or concurrency changes, also run the affected packages natively
 on Windows with `go test -race -count=1 -timeout=10m <packages>`. Add regression
 tests for behavior changes and benchmarks for performance improvements. Check

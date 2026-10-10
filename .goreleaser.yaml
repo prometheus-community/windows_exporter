@@ -2,6 +2,12 @@
 
 version: 2
 
+before:
+  hooks:
+    # Removes the 32 MiB FIPS 140-3 entropy buffer that Go 1.26+ links into
+    # every binary. See tools/go-overlay/main.go.
+    - go run ./tools/go-overlay generate .go-overlay
+
 builds:
   - id: windows_exporter
     main: ./cmd/windows_exporter
@@ -16,6 +22,7 @@ builds:
       - CGO_ENABLED=0
     flags:
       - -trimpath
+      - -overlay=.go-overlay/overlay.json
     tags:
       - trimpath
     ldflags:
