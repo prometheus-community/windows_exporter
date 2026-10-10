@@ -592,11 +592,15 @@ jobs:
       - name: Wait for downloads
         wait: [download-mssql, install-freerdp, download-container-prereqs]
 
-      # Install every Windows feature in one foreground step. Steps that register
-      # services, such as SQL Server setup, New-Cluster, and containerd, start only
-      # afterwards: changing service configuration during the install aborts its
-      # registry transaction, and the rollback then requires a restart.
+      # Install every Windows feature in one step. Steps that register services,
+      # such as SQL Server setup, New-Cluster, and containerd, start only after
+      # "Wait for Windows features": changing service configuration during the
+      # install aborts its registry transaction, and the rollback then requires
+      # a restart.
       - name: Install Windows features
+        id: install-windows-features
+        # Setting up Go and building the tests register no services, so they overlap the install.
+        background: true
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -648,6 +652,9 @@ jobs:
           ./tools/build-go-tests.ps1 -OutputDirectory (Join-Path $env:RUNNER_TEMP "go-tests")
           go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Wait for Windows features
+        wait: [install-windows-features]
 
       - name: Setup SQL Server Express
         id: setup-mssql
