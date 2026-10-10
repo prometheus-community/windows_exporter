@@ -15821,7 +15821,7 @@
                     "description": "Storage pools whose health status is not Healthy, excluding the primordial pool. Requires the storage_spaces collector.",
                     "id": 240,
                     "links": [],
-                    "title": "Pools not healthy",
+                    "title": "Pools not OK",
                     "vizConfig": {
                         "group": "stat",
                         "kind": "VizConfig",
@@ -15909,7 +15909,7 @@
                     "description": "Virtual disks whose health status is not Healthy. Requires the storage_spaces collector with its virtual_disk subcollector.",
                     "id": 241,
                     "links": [],
-                    "title": "Virtual disks not healthy",
+                    "title": "Virtual disks not OK",
                     "vizConfig": {
                         "group": "stat",
                         "kind": "VizConfig",
@@ -27819,8 +27819,8 @@
                                                                         "kind": "ElementReference",
                                                                         "name": "panel-240"
                                                                     },
-                                                                    "height": 7,
-                                                                    "width": 4,
+                                                                    "height": 6,
+                                                                    "width": 5,
                                                                     "x": 0,
                                                                     "y": 0
                                                                 }
@@ -27832,9 +27832,9 @@
                                                                         "kind": "ElementReference",
                                                                         "name": "panel-241"
                                                                     },
-                                                                    "height": 7,
-                                                                    "width": 4,
-                                                                    "x": 4,
+                                                                    "height": 6,
+                                                                    "width": 5,
+                                                                    "x": 5,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -27845,9 +27845,9 @@
                                                                         "kind": "ElementReference",
                                                                         "name": "panel-242"
                                                                     },
-                                                                    "height": 7,
-                                                                    "width": 16,
-                                                                    "x": 8,
+                                                                    "height": 6,
+                                                                    "width": 14,
+                                                                    "x": 10,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -27858,10 +27858,10 @@
                                                                         "kind": "ElementReference",
                                                                         "name": "panel-243"
                                                                     },
-                                                                    "height": 7,
+                                                                    "height": 6,
                                                                     "width": 24,
                                                                     "x": 0,
-                                                                    "y": 7
+                                                                    "y": 6
                                                                 }
                                                             },
                                                             {
@@ -27874,7 +27874,7 @@
                                                                     "height": 8,
                                                                     "width": 12,
                                                                     "x": 0,
-                                                                    "y": 14
+                                                                    "y": 12
                                                                 }
                                                             },
                                                             {
@@ -27887,7 +27887,7 @@
                                                                     "height": 8,
                                                                     "width": 12,
                                                                     "x": 12,
-                                                                    "y": 14
+                                                                    "y": 12
                                                                 }
                                                             }
                                                         ]

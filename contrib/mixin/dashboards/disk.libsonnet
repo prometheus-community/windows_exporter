@@ -57,7 +57,7 @@ function(on)
       if on('logical_disk') then b.row('Volume I/O', b.flow([[40, 12, 8], [41, 12, 8], [42, 12, 8], [43, 12, 8]])),
       if on('diskdrive') then b.row('Drives', b.flow([[201, 4, 6], [202, 20, 6]])),
       if on('physical_disk') then b.row('Physical disks', b.flow([[203, 12, 8], [204, 12, 8], [205, 12, 8], [206, 12, 8], [207, 12, 8], [208, 12, 8]])),
-      if on('storage_spaces') then b.row('Storage Spaces', b.flow([[240, 4, 7], [241, 4, 7], [242, 16, 7], [243, 24, 7], [244, 12, 8], [245, 12, 8]])),
+      if on('storage_spaces') then b.row('Storage Spaces', b.flow([[240, 5, 6], [241, 5, 6], [242, 14, 6], [243, 24, 6], [244, 12, 8], [245, 12, 8]])),
     ]),
     [
       b.stat(172, 'Fullest volume', 'Used space of the fullest selected volume. Free-space counters can lag by 10 to 15 minutes.', 'max(1 - ' + metric('free_bytes') + ' / ' + metric('size_bytes') + ')', 'percentunit', steps=b.levels(0.8, 0.9))
@@ -415,8 +415,8 @@ function(on)
       physicalGraph(on, 207, 'Disk queue length', 'Requests outstanding on each physical disk at the time of the scrape. A queue that stays high while latency rises indicates a disk bottleneck.', [['A', physical('requests_queued'), '']], 'short'),
       physicalGraph(on, 208, 'Split I/O', 'I/O requests per second that Windows split into multiple requests, because of a fragmented volume or a request too large for a single I/O.', [['A', physicalRate('split_ios_total'), '']], 'iops'),
 
-      b.stat(240, 'Pools not healthy', 'Storage pools whose health status is not Healthy, excluding the primordial pool. Requires the storage_spaces collector.', 'count(' + pool('health_status') + ' != 0) or (0 * count(' + concretePools + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
-      b.stat(241, 'Virtual disks not healthy', 'Virtual disks whose health status is not Healthy. Requires the storage_spaces collector with its virtual_disk subcollector.', 'count(' + spaces('virtual_disk_health_status') + ' != 0) or (0 * count(' + spaces('virtual_disk_info') + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(240, 'Pools not OK', 'Storage pools whose health status is not Healthy, excluding the primordial pool. Requires the storage_spaces collector.', 'count(' + pool('health_status') + ' != 0) or (0 * count(' + concretePools + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(241, 'Virtual disks not OK', 'Virtual disks whose health status is not Healthy. Requires the storage_spaces collector with its virtual_disk subcollector.', 'count(' + spaces('virtual_disk_health_status') + ' != 0) or (0 * count(' + spaces('virtual_disk_info') + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
 
       b.joinedTable(242, 'Storage pools', 'Health, size, allocated capacity and used share of each storage pool, excluding the primordial pool of unpooled disks. Requires the storage_spaces collector.', 'name', [
         'max by (name) (' + pool('health_status') + ')',
