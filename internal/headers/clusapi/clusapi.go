@@ -164,6 +164,14 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 			return resources, resultErr
 		}
 
+		var invalid invalidEnumEntryError
+		if errors.As(err, &invalid) {
+			// One malformed entry must not hide the resources after it.
+			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterEnum index %d: %w", index, err))
+
+			continue
+		}
+
 		if err != nil {
 			return resources, errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
 		}
@@ -172,7 +180,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 		resources = append(resources, resource)
 
 		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: %w", name, err))
+			resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: %w", name.name, err))
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -181,12 +189,25 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 	}
 }
 
-func enumName(enum uintptr, index uint32, deadline time.Time) (string, error) {
+// invalidEnumEntryError reports a ClusterEnum entry that violates the API
+// contract. Enumeration continues with the next index.
+type invalidEnumEntryError string
+
+func (e invalidEnumEntryError) Error() string { return string(e) }
+
+// resourceName keeps the NUL-terminated native name for opening the resource
+// next to the decoded label value.
+type resourceName struct {
+	units []uint16
+	name  string
+}
+
+func enumName(enum uintptr, index uint32, deadline time.Time) (resourceName, error) {
 	buffer := make([]uint16, 256)
 
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
-			return "", err
+			return resourceName{}, err
 		}
 
 		length := uint32(len(buffer))
@@ -196,7 +217,7 @@ func enumName(enum uintptr, index uint32, deadline time.Time) (string, error) {
 		status, _, _ := nextEnum.Call(enum, uintptr(index), uintptr(unsafe.Pointer(&objectType)), uintptr(unsafe.Pointer(&buffer[0])), uintptr(unsafe.Pointer(&length)))
 		if windows.Errno(status) == windows.ERROR_MORE_DATA {
 			if length >= maxBufferSize/2 || int(length)+1 <= len(buffer) {
-				return "", errors.New("invalid ClusterEnum buffer size")
+				return resourceName{}, errors.New("invalid ClusterEnum buffer size")
 			}
 
 			buffer = make([]uint16, int(length)+1)
@@ -205,31 +226,29 @@ func enumName(enum uintptr, index uint32, deadline time.Time) (string, error) {
 		}
 
 		if status != 0 {
-			return "", windows.Errno(status)
+			return resourceName{}, windows.Errno(status)
 		}
 
-		if objectType != 4 || length >= uint32(len(buffer)) || buffer[length] != 0 {
-			return "", errors.New("invalid ClusterEnum resource name")
+		if objectType != 4 || length >= uint32(len(buffer)) {
+			return resourceName{}, invalidEnumEntryError(fmt.Sprintf("invalid ClusterEnum entry: type %d, length %d", objectType, length))
 		}
 
-		return decodeUnits(buffer[:length])
+		units := make([]uint16, length+1)
+		copy(units, buffer[:length])
+
+		return resourceName{units: units, name: decodeUnits(buffer[:length])}, nil
 	}
 
-	return "", errors.New("ClusterEnum buffer did not stabilize")
+	return resourceName{}, errors.New("ClusterEnum buffer did not stabilize")
 }
 
-func (c *Cluster) readResource(name string, deadline time.Time) (_ Resource, resultErr error) {
-	resource := Resource{Name: name, Values: make(map[string]uint32)}
+func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resource, resultErr error) {
+	resource := Resource{Name: name.name, Values: make(map[string]uint32)}
 	if err := checkDeadline(deadline); err != nil {
 		return resource, err
 	}
 
-	namePtr, err := windows.UTF16PtrFromString(name)
-	if err != nil {
-		return resource, err
-	}
-
-	handle, _, err := openResource.Call(c.handle, uintptr(unsafe.Pointer(namePtr)), windows.GENERIC_READ, 0)
+	handle, _, err := openResource.Call(c.handle, uintptr(unsafe.Pointer(&name.units[0])), windows.GENERIC_READ, 0)
 	if handle == 0 {
 		return resource, fmt.Errorf("OpenClusterResourceEx: %w", err)
 	}
@@ -312,10 +331,7 @@ func (c *Cluster) readResource(name string, deadline time.Time) (_ Resource, res
 		return resource, errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
 	}
 
-	resource.Type, err = decodeString(data)
-	if err != nil {
-		return resource, errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
-	}
+	resource.Type = decodeString(data)
 
 	state, owner, group, err := readResourceState(handle, deadline)
 	if err != nil {
@@ -399,18 +415,11 @@ func stateBuffers(deadline time.Time, call func([]uint16, []uint16) (uint32, uin
 			return state, "", "", err
 		}
 
-		if uint64(nodeLength) >= uint64(len(node)) || uint64(groupLength) >= uint64(len(group)) || node[nodeLength] != 0 || group[groupLength] != 0 {
+		if uint64(nodeLength) >= uint64(len(node)) || uint64(groupLength) >= uint64(len(group)) {
 			return 0, "", "", errors.New("invalid resource state names")
 		}
 
-		nodeName, err := decodeUnits(node[:nodeLength])
-		if err != nil {
-			return 0, "", "", err
-		}
-
-		groupName, err := decodeUnits(group[:groupLength])
-
-		return state, nodeName, groupName, err
+		return state, decodeUnits(node[:nodeLength]), decodeUnits(group[:groupLength]), nil
 	}
 
 	return 0, "", "", errors.New("resource state buffers did not stabilize")

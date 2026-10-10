@@ -74,8 +74,6 @@ func TestParsePropertiesInvalid(t *testing.T) {
 		"count":        func(data []byte) { binary.LittleEndian.PutUint32(data, ^uint32(0)) },
 		"syntax":       func(data []byte) { binary.LittleEndian.PutUint32(data[4:], propertyValue|formatString) },
 		"length":       func(data []byte) { binary.LittleEndian.PutUint32(data[8:], ^uint32(0)) },
-		"termination":  func(data []byte) { data[32] = 1 },
-		"surrogate":    func(data []byte) { binary.LittleEndian.PutUint16(data[12:], 0xd800) },
 		"dword_length": func(data []byte) { binary.LittleEndian.PutUint32(data[40:], 3) },
 		"endmark":      func(data []byte) { binary.LittleEndian.PutUint32(data[len(data)-4:], propertyValue) },
 	}
@@ -90,14 +88,71 @@ func TestParsePropertiesInvalid(t *testing.T) {
 		})
 	}
 
-	if _, err := ParseProperties(append(testPropertyList(), 0)); err == nil {
-		t.Fatal("accepted trailing data")
-	}
-
-	for _, trailing := range [][]byte{{0, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0}, {0, 0, 0}} {
+	for _, trailing := range [][]byte{{1}, {1, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0x80}} {
 		if _, err := ParseProperties(append(testPropertyList(), trailing...)); err == nil {
 			t.Fatalf("accepted trailing data % x", trailing)
 		}
+	}
+}
+
+// Bounds safety does not depend on the trailer, so any zero padding is accepted.
+func TestParsePropertiesZeroTrailer(t *testing.T) {
+	for _, trailing := range [][]byte{{0}, {0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}} {
+		properties, err := ParseProperties(append(testPropertyList(), trailing...))
+		if err != nil {
+			t.Fatalf("rejected zero trailer % x: %v", trailing, err)
+		}
+
+		if _, exists := properties["NodeWeight"]; !exists {
+			t.Fatalf("lost property with zero trailer % x", trailing)
+		}
+	}
+}
+
+// String contents are not validated while parsing. They decode like WMI strings:
+// up to the first NUL, with invalid UTF-16 replaced by U+FFFD.
+func TestParsePropertiesLenientStrings(t *testing.T) {
+	data := testPropertyList()
+	binary.LittleEndian.PutUint16(data[12:], 0xd800)
+
+	properties, err := ParseProperties(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, exists := properties["�odeWeight"]; !exists {
+		t.Fatalf("unpaired surrogate was not replaced: %v", properties)
+	}
+
+	data = testPropertyList()
+	binary.LittleEndian.PutUint16(data[20:], 0)
+
+	properties, err = ParseProperties(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, exists := properties["Node"]; !exists {
+		t.Fatalf("embedded NUL did not end the name: %v", properties)
+	}
+
+	for _, tc := range []struct {
+		value Property
+		want  string
+	}{
+		{Property{Format: formatString, Data: []byte{'a', 0, 0, 0}}, "a"},
+		{Property{Format: formatExpandString, Data: []byte{'a', 0, 0, 0xd8, 'b', 0}}, "a�b"},
+		{Property{Format: formatExpandedString, Data: []byte{'a', 0, 'b'}}, "a"},
+		{Property{Format: formatString, Data: nil}, ""},
+	} {
+		got, err := tc.value.String()
+		if err != nil || got != tc.want {
+			t.Errorf("String(% x) = %q, %v, want %q", tc.value.Data, got, err, tc.want)
+		}
+	}
+
+	if _, err := (Property{Format: formatDWORD, Data: make([]byte, 4)}).String(); err == nil {
+		t.Fatal("decoded DWORD as string")
 	}
 }
 

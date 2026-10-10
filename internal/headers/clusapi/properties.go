@@ -23,10 +23,12 @@ import (
 )
 
 const (
-	propertyName  = 0x00040003
-	propertyValue = 0x00010000
-	formatDWORD   = 2
-	formatString  = 3
+	propertyName         = 0x00040003
+	propertyValue        = 0x00010000
+	formatDWORD          = 2
+	formatString         = 3
+	formatExpandString   = 4
+	formatExpandedString = 8
 )
 
 // Property is a single CLUSPROP_LIST_VALUE. Values retain their native format;
@@ -44,8 +46,21 @@ func (p Property) DWORD() (uint32, error) {
 	return binary.LittleEndian.Uint32(p.Data), nil
 }
 
+// String decodes an SZ, EXPAND_SZ or EXPANDED_SZ value like WMI does: the value
+// ends at the first NUL and invalid UTF-16 is replaced with U+FFFD.
+func (p Property) String() (string, error) {
+	switch p.Format {
+	case formatString, formatExpandString, formatExpandedString:
+		return decodeString(p.Data), nil
+	default:
+		return "", fmt.Errorf("expected string, format %d", p.Format)
+	}
+}
+
 // ParseProperties decodes CLUSPROP_LIST without casting untrusted bytes to native
 // structs. Headers and payloads are DWORD aligned; cbLength is measured in bytes.
+// Only the structure is validated: string contents are decoded when used, so one
+// unusual value does not discard the whole list.
 // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/mscs/property-lists
 func ParseProperties(data []byte) (map[string][]Property, error) {
 	if len(data) < 4 {
@@ -59,7 +74,7 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 		return nil, errors.New("property count exceeds buffer")
 	}
 
-	properties := make(map[string][]Property)
+	properties := make(map[string][]Property, count)
 
 	for range count {
 		if len(data) < 8 || binary.LittleEndian.Uint32(data) != propertyName {
@@ -71,15 +86,7 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 			return nil, err
 		}
 
-		name, err := decodeString(nameBytes)
-		if err != nil {
-			return nil, fmt.Errorf("invalid property name: %w", err)
-		}
-
-		if _, exists := properties[name]; exists {
-			return nil, fmt.Errorf("duplicate property %q", name)
-		}
-
+		name := decodeString(nameBytes)
 		data = rest
 		values := make([]Property, 0, 1)
 
@@ -109,27 +116,22 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 				return nil, fmt.Errorf("invalid DWORD length for %q", name)
 			}
 
-			if format == formatString {
-				if _, err := decodeString(payload); err != nil {
-					return nil, fmt.Errorf("property %q: %w", name, err)
-				}
-			}
-
 			values = append(values, Property{Format: format, Data: payload})
 			data = rest
 		}
 
-		properties[name] = values
+		// Keep the first occurrence; a repeated name does not affect the structure.
+		if _, exists := properties[name]; !exists {
+			properties[name] = values
+		}
 	}
 
 	// Lists returned by the cluster service end with a CLUSPROP_SYNTAX_ENDMARK
-	// after the last value list. Accept that terminator, reject anything else.
-	if len(data) == 4 && binary.LittleEndian.Uint32(data) == 0 {
-		data = data[4:]
-	}
-
-	if len(data) != 0 {
-		return nil, fmt.Errorf("%d bytes of trailing property list data starting with % x", len(data), data[:min(len(data), 16)])
+	// after the last value list. Accept zero padding, reject anything else.
+	for _, b := range data {
+		if b != 0 {
+			return nil, fmt.Errorf("%d bytes of trailing property list data starting with % x", len(data), data[:min(len(data), 16)])
+		}
 	}
 
 	return properties, nil
@@ -150,39 +152,26 @@ func propertyPayload(data []byte) ([]byte, []byte, error) {
 	return data[8 : 8+length], data[8+aligned:], nil
 }
 
-func decodeString(data []byte) (string, error) {
-	if len(data) < 2 || len(data)%2 != 0 {
-		return "", errors.New("invalid UTF-16 length")
-	}
-
+// decodeString decodes little-endian UTF-16 bytes. A trailing odd byte is ignored.
+func decodeString(data []byte) string {
 	units := make([]uint16, len(data)/2)
 	for i := range units {
 		units[i] = binary.LittleEndian.Uint16(data[i*2:])
 	}
 
-	if units[len(units)-1] != 0 {
-		return "", errors.New("UTF-16 string is not terminated")
-	}
-
-	return decodeUnits(units[:len(units)-1])
+	return decodeUnits(units)
 }
 
-func decodeUnits(units []uint16) (string, error) {
-	for i := 0; i < len(units); i++ {
-		u := units[i]
-		if u == 0 {
-			return "", errors.New("embedded UTF-16 terminator")
-		}
+// decodeUnits ends the string at the first NUL and replaces invalid UTF-16 with
+// U+FFFD, matching the strings WMI returned for the same names.
+func decodeUnits(units []uint16) string {
+	for i, unit := range units {
+		if unit == 0 {
+			units = units[:i]
 
-		if u >= 0xd800 && u <= 0xdbff {
-			i++
-			if i == len(units) || units[i] < 0xdc00 || units[i] > 0xdfff {
-				return "", errors.New("unpaired UTF-16 high surrogate")
-			}
-		} else if u >= 0xdc00 && u <= 0xdfff {
-			return "", errors.New("unpaired UTF-16 low surrogate")
+			break
 		}
 	}
 
-	return string(utf16.Decode(units)), nil
+	return string(utf16.Decode(units))
 }
