@@ -37,6 +37,11 @@ type Session struct {
 	reserved2 uintptr
 	ft        *SessionFT
 
+	// Go-only state after the MI_Session fields, which MI never writes past.
+	//
+	// application created the session and outlives it, so per-query
+	// operation options are created without MI_Session_GetApplication.
+	application             *Application
 	defaultOperationOptions *OperationOptions
 }
 
@@ -202,7 +207,7 @@ func (s *Session) queryInstances(flags OperationFlags, operationOptions *Operati
 // instead of being silently left at its zero value.
 func unmarshalInstance(instance *Instance, fields []miField, structValue reflect.Value, skipMissing bool) error {
 	for _, f := range fields {
-		element, err := instance.GetElement(f.tag)
+		element, err := instance.GetElementByName(f.name)
 		if err != nil {
 			if skipMissing && errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
 				continue
@@ -211,7 +216,7 @@ func unmarshalInstance(instance *Instance, fields []miField, structValue reflect
 			return fmt.Errorf("failed to get element %s: %w", f.tag, err)
 		}
 
-		if err := setField(f.tag, structValue.Field(f.index), element); err != nil {
+		if err := setField(f.tag, structValue.Field(f.index), &element); err != nil {
 			return err
 		}
 	}
@@ -461,12 +466,7 @@ func (s *Session) newOperationOptions(queryTimeout time.Duration) (*OperationOpt
 		return nil, nil //nolint:nilnil
 	}
 
-	app, err := s.GetApplication()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get application: %w", err)
-	}
-
-	operationOptions, err := app.NewOperationOptions()
+	operationOptions, err := s.application.NewOperationOptions()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation options: %w", err)
 	}

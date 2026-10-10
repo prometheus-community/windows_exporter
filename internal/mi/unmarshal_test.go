@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 // newField returns a settable reflect.Value holding the zero value of T.
@@ -112,7 +113,34 @@ func TestPrepareUnmarshal(t *testing.T) {
 		fields, err := prepareUnmarshal(&dst)
 		require.NoError(t, err)
 		require.Empty(t, dst)
-		require.Equal(t, []miField{{index: 0, tag: "Name"}, {index: 2, tag: "ProcessId"}}, fields)
+		require.Len(t, fields, 2)
+		require.Equal(t, 0, fields[0].index)
+		require.Equal(t, "Name", fields[0].tag)
+		require.Equal(t, "Name", windows.UTF16PtrToString(fields[0].name))
+		require.Equal(t, 2, fields[1].index)
+		require.Equal(t, "ProcessId", fields[1].tag)
+		require.Equal(t, "ProcessId", windows.UTF16PtrToString(fields[1].name))
+	})
+
+	t.Run("fields_are_cached", func(t *testing.T) {
+		t.Parallel()
+
+		first, err := prepareUnmarshal(new([]row))
+		require.NoError(t, err)
+
+		second, err := prepareUnmarshal(new([]row))
+		require.NoError(t, err)
+
+		require.Same(t, &first[0], &second[0])
+	})
+
+	t.Run("tag_with_nul", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := prepareUnmarshal(new([]struct {
+			Name string `mi:"Na\x00me"`
+		}))
+		require.Error(t, err)
 	})
 
 	t.Run("nil_pointer", func(t *testing.T) {

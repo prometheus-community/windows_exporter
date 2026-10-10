@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -232,7 +233,14 @@ func (o *Operation) Unmarshal[T any](dst *[]T) error {
 type miField struct {
 	index int
 	tag   string
+	name  ElementName
 }
+
+// miFieldsCache maps a struct type to its []miField. Collectors query the same
+// types on every scrape, so the tags are parsed and converted to UTF-16 once.
+//
+//nolint:gochecknoglobals
+var miFieldsCache sync.Map
 
 // prepareUnmarshal checks that dst is non-nil and T is a struct, resets *dst to empty
 // and returns the `mi`-tagged fields of T. Callers run it before starting a query,
@@ -254,8 +262,14 @@ func prepareUnmarshal[T any](dst *[]T) ([]miField, error) {
 
 // miFieldsOf returns the fields of T that carry an `mi` tag.
 // It returns ErrInvalidEntityType if T is not a struct.
+// The returned slice is shared and must not be modified.
 func miFieldsOf[T any]() ([]miField, error) {
 	structType := reflect.TypeFor[T]()
+
+	if fields, ok := miFieldsCache.Load(structType); ok {
+		return fields.([]miField), nil //nolint:forcetypeassert
+	}
+
 	if structType.Kind() != reflect.Struct {
 		return nil, ErrInvalidEntityType
 	}
@@ -263,10 +277,20 @@ func miFieldsOf[T any]() ([]miField, error) {
 	fields := make([]miField, 0, structType.NumField())
 
 	for i := range structType.NumField() {
-		if miTag := structType.Field(i).Tag.Get("mi"); miTag != "" {
-			fields = append(fields, miField{index: i, tag: miTag})
+		miTag := structType.Field(i).Tag.Get("mi")
+		if miTag == "" {
+			continue
 		}
+
+		name, err := NewElementName(miTag)
+		if err != nil {
+			return nil, fmt.Errorf("invalid mi tag %q: %w", miTag, err)
+		}
+
+		fields = append(fields, miField{index: i, tag: miTag, name: name})
 	}
+
+	miFieldsCache.Store(structType, fields)
 
 	return fields, nil
 }
