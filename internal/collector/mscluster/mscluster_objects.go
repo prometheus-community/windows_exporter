@@ -51,6 +51,10 @@ type objectField struct {
 	// MinBuild is the first Windows build that has the property.
 	minBuild uint16
 	older    beforeMinBuild
+	// Absent, if set, is published when the cluster service does not report
+	// the property on any build. It reproduces a value that the WMI provider
+	// synthesized; see the cluster field list for each case.
+	absent *uint32
 }
 
 // publishObjectFields publishes the fields of one object with its name as the
@@ -64,6 +68,8 @@ func publishObjectFields(ch chan<- prometheus.Metric, kind string, object clusap
 		case older && field.older == neverPublish:
 			continue
 		case exists:
+		case field.absent != nil:
+			raw = *field.absent
 		case older && field.older == zeroIfMissing:
 			raw = 0
 		case older:

@@ -698,6 +698,14 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		ws2022 = osversion.LTSC2022
 	)
 
+	// The WMI provider reports properties that the cluster service no longer
+	// has (documented as obsolete or unsupported, or removed in newer
+	// releases) as NULL, which the previous collector published as 0. It
+	// reports MaxNumberOfNodes as the 64 node limit of Windows Server failover
+	// clusters. Both were confirmed against MSCluster_Cluster on Windows Server
+	// 2022.
+	zero, maxNodes := new(uint32(0)), new(uint32(64))
+
 	fields := []objectField{
 		{name: "AddEvictDelay", desc: c.clusterAddEvictDelay},
 		{name: "AdminAccessPoint", desc: c.clusterAdminAccessPoint},
@@ -707,8 +715,8 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "BackupInProgress", desc: c.clusterBackupInProgress},
 		{name: "BlockCacheSize", desc: c.clusterBlockCacheSize},
 		{name: "ClusSvcHangTimeout", desc: c.clusterClusSvcHangTimeout},
-		{name: "ClusSvcRegroupOpeningTimeout", desc: c.clusterClusSvcRegroupOpeningTimeout},
-		{name: "ClusSvcRegroupPruningTimeout", desc: c.clusterClusSvcRegroupPruningTimeout},
+		{name: "ClusSvcRegroupOpeningTimeout", desc: c.clusterClusSvcRegroupOpeningTimeout, absent: zero},
+		{name: "ClusSvcRegroupPruningTimeout", desc: c.clusterClusSvcRegroupPruningTimeout, absent: zero},
 		{name: "ClusSvcRegroupStageTimeout", desc: c.clusterClusSvcRegroupStageTimeout},
 		{name: "ClusSvcRegroupTickInMilliseconds", desc: c.clusterClusSvcRegroupTickInMilliseconds},
 		{name: "ClusterEnforcedAntiAffinity", desc: c.clusterClusterEnforcedAntiAffinity},
@@ -724,13 +732,13 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "CsvBalancer", desc: c.clusterCsvBalancer},
 		{name: "DatabaseReadWriteMode", desc: c.clusterDatabaseReadWriteMode},
 		{name: "DefaultNetworkRole", desc: c.clusterDefaultNetworkRole},
-		{name: "DisableGroupPreferredOwnerRandomization", desc: c.clusterDisableGroupPreferredOwnerRandomization},
+		{name: "DisableGroupPreferredOwnerRandomization", desc: c.clusterDisableGroupPreferredOwnerRandomization, absent: zero},
 		{name: "DrainOnShutdown", desc: c.clusterDrainOnShutdown},
 		{name: "DynamicQuorumEnabled", desc: c.clusterDynamicQuorumEnabled},
 		{name: "EnableSharedVolumes", desc: c.clusterEnableSharedVolumes},
 		{name: "FixQuorum", desc: c.clusterFixQuorum},
-		{name: "GracePeriodEnabled", desc: c.clusterGracePeriodEnabled, minBuild: ws2016},
-		{name: "GracePeriodTimeout", desc: c.clusterGracePeriodTimeout, minBuild: ws2016},
+		{name: "GracePeriodEnabled", desc: c.clusterGracePeriodEnabled, minBuild: ws2016, absent: zero},
+		{name: "GracePeriodTimeout", desc: c.clusterGracePeriodTimeout, minBuild: ws2016, absent: zero},
 		{name: "GroupDependencyTimeout", desc: c.clusterGroupDependencyTimeout, minBuild: ws2016},
 		{name: "HangRecoveryAction", desc: c.clusterHangRecoveryAction},
 		{name: "IgnorePersistentStateOnStartup", desc: c.clusterIgnorePersistentStateOnStartup},
@@ -746,14 +754,14 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "QuarantineDuration", desc: c.clusterQuarantineDuration, minBuild: ws2016},
 		{name: "QuarantineThreshold", desc: c.clusterQuarantineThreshold, minBuild: ws2016},
 		{name: "QuorumArbitrationTimeMax", desc: c.clusterQuorumArbitrationTimeMax},
-		{name: "QuorumArbitrationTimeMin", desc: c.clusterQuorumArbitrationTimeMin},
+		{name: "QuorumArbitrationTimeMin", desc: c.clusterQuorumArbitrationTimeMin, absent: zero},
 		{name: "QuorumLogFileSize", desc: c.clusterQuorumLogFileSize},
 		{name: "QuorumTypeValue", desc: c.clusterQuorumTypeValue},
 		{name: "RequestReplyTimeout", desc: c.clusterRequestReplyTimeout},
 		{name: "ResiliencyDefaultPeriod", desc: c.clusterResiliencyDefaultPeriod, minBuild: ws2016},
 		{name: "ResiliencyLevel", desc: c.clusterResiliencyLevel, minBuild: ws2016},
-		{name: "ResourceDllDeadlockPeriod", desc: c.clusterResourceDllDeadlockPeriod},
-		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved},
+		{name: "ResourceDllDeadlockPeriod", desc: c.clusterResourceDllDeadlockPeriod, absent: zero},
+		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved, absent: zero},
 		{name: "RouteHistoryLength", desc: c.clusterRouteHistoryLength},
 		{name: "S2DBusTypes", desc: c.clusterS2DBusTypes, minBuild: ws2016},
 		{name: "S2DCacheDesiredState", desc: c.clusterS2DCacheDesiredState, minBuild: ws2016},
@@ -775,7 +783,7 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "DetectManagedEvents", desc: c.clusterDetectManagedEvents, minBuild: ws2022, older: neverPublish},
 		{name: "DetectManagedEventsThreshold", desc: c.clusterDetectManagedEventsThreshold, minBuild: ws2022, older: neverPublish},
 		{name: "SecurityLevelForStorage", desc: c.clusterSecurityLevelForStorage, minBuild: ws2022, older: neverPublish},
-		{name: "MaxNumberOfNodes", desc: c.clusterMaxNumberOfNodes, minBuild: ws2022, older: neverPublish},
+		{name: "MaxNumberOfNodes", desc: c.clusterMaxNumberOfNodes, minBuild: ws2022, older: neverPublish, absent: maxNodes},
 		{name: "DetectedCloudPlatform", desc: c.clusterDetectedCloudPlatform, minBuild: ws2022, older: neverPublish},
 	}
 
