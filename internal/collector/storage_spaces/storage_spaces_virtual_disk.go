@@ -104,7 +104,7 @@ func (c *Collector) buildVirtualDisk() error {
 
 	var dst []msftVirtualDisk
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, 0); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, mi.BuildQueryTimeout); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

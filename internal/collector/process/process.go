@@ -322,7 +322,7 @@ func (c *Collector) buildWorkerProcessWMI(miSession *mi.Session) error {
 
 	var workerProcesses []WorkerProcess
 
-	if err = miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, 0); err != nil {
+	if err = miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, mi.BuildQueryTimeout); err != nil {
 		c.logger.LogAttrs(context.Background(), slog.LevelDebug,
 			`root\WebAdministration isn't available, reading IIS application pool names from the w3wp command line only`,
 			slog.Any("err", err),

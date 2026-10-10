@@ -107,7 +107,7 @@ func (c *Collector) buildStoragePool() error {
 
 	var dst []msftStoragePool
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.storagePoolMIQuery, 0); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.storagePoolMIQuery, mi.BuildQueryTimeout); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

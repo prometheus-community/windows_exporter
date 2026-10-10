@@ -29,6 +29,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// BuildQueryTimeout bounds the probe queries collectors run in Build. Build
+// has no scrape budget, and a zero timeout sets no MI timeout, so a stalled
+// provider would otherwise block startup. A timed-out query fails with
+// MI_RESULT_INVALID_OPERATION_TIMEOUT. MI ignores timeouts below 1ms.
+const BuildQueryTimeout = 30 * time.Second
+
 // Session represents a session.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/ns-mi-mi_session

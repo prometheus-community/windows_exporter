@@ -76,6 +76,9 @@ func TestCollectionBuildAndClose(t *testing.T) {
 		{name: "joined fatal error", buildErr: errors.Join(errors.ErrUnsupported, buildFailure), wantBuildErr: buildFailure},
 		{name: "nested fatal error", buildErr: errors.Join(pdh.ErrNoData, fmt.Errorf("nested: %w", errors.Join(errors.ErrUnsupported, buildFailure))), wantBuildErr: buildFailure},
 		{name: "multiple wrapped fatal error", buildErr: fmt.Errorf("%w and %w", errors.ErrUnsupported, buildFailure), wantBuildErr: buildFailure},
+		// The error chain of a Build probe query that hit mi.BuildQueryTimeout.
+		{name: "MI probe query timeout", buildErr: fmt.Errorf("failed to query: %w", fmt.Errorf("instance result: %w", mi.MI_RESULT_INVALID_OPERATION_TIMEOUT))},
+		{name: "MI probe query timeout joined with fatal error", buildErr: errors.Join(mi.MI_RESULT_INVALID_OPERATION_TIMEOUT, buildFailure), wantBuildErr: buildFailure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
