@@ -27,13 +27,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// workerProcessName is the perflib instance name of IIS worker processes (w3wp.exe).
+// workerProcessName is the process name of IIS worker processes (w3wp.exe).
 const workerProcessName = "w3wp"
 
 // errNoAppPoolArgument reports a w3wp command line without a non-empty -ap argument.
 var errNoAppPoolArgument = errors.New("command line has no -ap argument")
 
-// isWorkerProcess reports whether the perflib process name (without instance suffix) is an IIS worker process.
+// isWorkerProcess reports whether the process name is an IIS worker process.
 func isWorkerProcess(name string) bool {
 	return strings.EqualFold(name, workerProcessName)
 }

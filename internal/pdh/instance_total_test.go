@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
-	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
 	"github.com/stretchr/testify/require"
 )
 
@@ -78,30 +77,22 @@ func TestTotalSuffixProcess(t *testing.T) {
 		ID   float64 `perfdata:"ID Process"`
 	}
 
-	legacy, err := registry.NewCollector[processValues]("Process", pdh.InstancesAll)
+	collector, err := pdh.NewCollector[processValues](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", []string{"worker_Total"})
 	require.NoError(t, err)
-	t.Cleanup(legacy.Close)
+	t.Cleanup(collector.Close)
 
-	modern, err := pdh.NewCollector[processValues](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", []string{"worker_Total"})
-	require.NoError(t, err)
-	t.Cleanup(modern.Close)
+	require.Eventually(t, func() bool {
+		var rows []processValues
+		if collector.Collect(&rows) != nil {
+			return false
+		}
 
-	for name, collect := range map[string]func(*[]processValues) error{"registry": legacy.Collect, "explicit PDH": modern.Collect} {
-		t.Run(name, func(t *testing.T) {
-			require.Eventually(t, func() bool {
-				var rows []processValues
-				if collect(&rows) != nil {
-					return false
-				}
+		for _, row := range rows {
+			if row.ID == float64(child.Process.Pid) && row.Name == "worker_Total" {
+				return true
+			}
+		}
 
-				for _, row := range rows {
-					if row.ID == float64(child.Process.Pid) && row.Name == "worker_Total" {
-						return true
-					}
-				}
-
-				return false
-			}, time.Second*5, time.Millisecond*100)
-		})
-	}
+		return false
+	}, time.Second*5, time.Millisecond*100)
 }

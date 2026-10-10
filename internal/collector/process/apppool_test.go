@@ -370,7 +370,6 @@ func TestBuildCloseWorkerProcess(t *testing.T) {
 		ProcessInclude:      regexp.MustCompile(`^(?:w3wp)$`),
 		ProcessExclude:      types.RegExpEmpty,
 		EnableWorkerProcess: true,
-		CounterVersion:      1,
 	})
 
 	logger := slog.New(slog.DiscardHandler)
