@@ -18,10 +18,9 @@
 package mscluster
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,8 +28,13 @@ import (
 
 const nameCluster = Name + "_cluster"
 
+type clusterSource interface {
+	Properties(deadline time.Time) (clusapi.Object, error)
+	Close() error
+}
+
 type collectorCluster struct {
-	clusterMIQuery mi.Query
+	clusterSource clusterSource
 
 	clusterAddEvictDelay                           *prometheus.Desc
 	clusterAdminAccessPoint                        *prometheus.Desc
@@ -111,7 +115,8 @@ type collectorCluster struct {
 	clusterWitnessRestartInterval                  *prometheus.Desc
 }
 
-// msClusterCluster represents the MSCluster_Cluster WMI class
+// msClusterCluster represents the MSCluster_Cluster WMI class. The collector
+// reads ClusAPI; the parity test compares against this WMI model.
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-cluster
 type msClusterCluster struct {
 	Name string `mi:"Name"`
@@ -196,20 +201,18 @@ type msClusterCluster struct {
 }
 
 func (c *Collector) buildCluster() error {
-	buildNumber := osversion.Build()
-
-	wmiSelect := "AddEvictDelay,AdminAccessPoint,AutoAssignNodeSite,AutoBalancerLevel,AutoBalancerMode,BackupInProgress,BlockCacheSize,ClusSvcHangTimeout,ClusSvcRegroupOpeningTimeout,ClusSvcRegroupPruningTimeout,ClusSvcRegroupStageTimeout,ClusSvcRegroupTickInMilliseconds,ClusterEnforcedAntiAffinity,ClusterFunctionalLevel,ClusterGroupWaitDelay,ClusterLogLevel,ClusterLogSize,ClusterUpgradeVersion,CrossSiteDelay,CrossSiteThreshold,CrossSubnetDelay,CrossSubnetThreshold,CsvBalancer,DatabaseReadWriteMode,DefaultNetworkRole,DisableGroupPreferredOwnerRandomization,DrainOnShutdown,DynamicQuorumEnabled,EnableSharedVolumes,FixQuorum,GracePeriodEnabled,GracePeriodTimeout,GroupDependencyTimeout,HangRecoveryAction,IgnorePersistentStateOnStartup,LogResourceControls,LowerQuorumPriorityNodeId,MessageBufferLength,MinimumNeverPreemptPriority,MinimumPreemptorPriority,NetftIPSecEnabled,PlacementOptions,PlumbAllCrossSubnetRoutes,PreventQuorum,QuarantineDuration,QuarantineThreshold,QuorumArbitrationTimeMax,QuorumArbitrationTimeMin,QuorumLogFileSize,QuorumTypeValue,RequestReplyTimeout,ResiliencyDefaultPeriod,ResiliencyLevel,ResourceDllDeadlockPeriod,RootMemoryReserved,RouteHistoryLength,S2DBusTypes,S2DCacheDesiredState,S2DCacheFlashReservePercent,S2DCachePageSizeKBytes,S2DEnabled,S2DIOLatencyThreshold,S2DOptimizations,SameSubnetDelay,SameSubnetThreshold,SecurityLevel,SharedVolumeVssWriterOperationTimeout,ShutdownTimeoutInMinutes,UseClientAccessNetworksForSharedVolumes,WitnessDatabaseWriteTimeout,WitnessDynamicWeight,WitnessRestartInterval"
-	if buildNumber >= osversion.LTSC2022 {
-		wmiSelect += ",DetectManagedEvents,SecurityLevelForStorage,MaxNumberOfNodes,DetectManagedEventsThreshold,DetectedCloudPlatform"
-	}
-
-	clusterMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Cluster", wmiSelect))
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.clusterMIQuery = clusterMIQuery
+	c.clusterSource = source
+	c.buildClusterDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildClusterDescriptors() {
 	c.clusterAddEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay"),
 		"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
@@ -672,563 +675,109 @@ func (c *Collector) buildCluster() error {
 		[]string{"name"},
 		nil,
 	)
-
-	var dst []msClusterCluster
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.clusterMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []msClusterCluster
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.clusterMIQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	var deadline time.Time
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	for _, v := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterAddEvictDelay,
-			prometheus.GaugeValue,
-			float64(v.AddEvictDelay),
-			v.Name,
-		)
+	cluster, resultErr := c.clusterSource.Properties(deadline)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterAdminAccessPoint,
-			prometheus.GaugeValue,
-			float64(v.AdminAccessPoint),
-			v.Name,
-		)
+	return c.publishCluster(ch, cluster, osversion.Build(), resultErr)
+}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterAutoAssignNodeSite,
-			prometheus.GaugeValue,
-			float64(v.AutoAssignNodeSite),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterAutoBalancerLevel,
-			prometheus.GaugeValue,
-			float64(v.AutoBalancerLevel),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterAutoBalancerMode,
-			prometheus.GaugeValue,
-			float64(v.AutoBalancerMode),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterBackupInProgress,
-			prometheus.GaugeValue,
-			float64(v.BackupInProgress),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterBlockCacheSize,
-			prometheus.GaugeValue,
-			float64(v.BlockCacheSize),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusSvcHangTimeout,
-			prometheus.GaugeValue,
-			float64(v.ClusSvcHangTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusSvcRegroupOpeningTimeout,
-			prometheus.GaugeValue,
-			float64(v.ClusSvcRegroupOpeningTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusSvcRegroupPruningTimeout,
-			prometheus.GaugeValue,
-			float64(v.ClusSvcRegroupPruningTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusSvcRegroupStageTimeout,
-			prometheus.GaugeValue,
-			float64(v.ClusSvcRegroupStageTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusSvcRegroupTickInMilliseconds,
-			prometheus.GaugeValue,
-			float64(v.ClusSvcRegroupTickInMilliseconds),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterEnforcedAntiAffinity,
-			prometheus.GaugeValue,
-			float64(v.ClusterEnforcedAntiAffinity),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterFunctionalLevel,
-			prometheus.GaugeValue,
-			float64(v.ClusterFunctionalLevel),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterGroupWaitDelay,
-			prometheus.GaugeValue,
-			float64(v.ClusterGroupWaitDelay),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterLogLevel,
-			prometheus.GaugeValue,
-			float64(v.ClusterLogLevel),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterLogSize,
-			prometheus.GaugeValue,
-			float64(v.ClusterLogSize),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterClusterUpgradeVersion,
-			prometheus.GaugeValue,
-			float64(v.ClusterUpgradeVersion),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterCrossSiteDelay,
-			prometheus.GaugeValue,
-			float64(v.CrossSiteDelay),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterCrossSiteThreshold,
-			prometheus.GaugeValue,
-			float64(v.CrossSiteThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterCrossSubnetDelay,
-			prometheus.GaugeValue,
-			float64(v.CrossSubnetDelay),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterCrossSubnetThreshold,
-			prometheus.GaugeValue,
-			float64(v.CrossSubnetThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterCsvBalancer,
-			prometheus.GaugeValue,
-			float64(v.CsvBalancer),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDatabaseReadWriteMode,
-			prometheus.GaugeValue,
-			float64(v.DatabaseReadWriteMode),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDefaultNetworkRole,
-			prometheus.GaugeValue,
-			float64(v.DefaultNetworkRole),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDisableGroupPreferredOwnerRandomization,
-			prometheus.GaugeValue,
-			float64(v.DisableGroupPreferredOwnerRandomization),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDrainOnShutdown,
-			prometheus.GaugeValue,
-			float64(v.DrainOnShutdown),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDynamicQuorumEnabled,
-			prometheus.GaugeValue,
-			float64(v.DynamicQuorumEnabled),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterEnableSharedVolumes,
-			prometheus.GaugeValue,
-			float64(v.EnableSharedVolumes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterFixQuorum,
-			prometheus.GaugeValue,
-			float64(v.FixQuorum),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterGracePeriodEnabled,
-			prometheus.GaugeValue,
-			float64(v.GracePeriodEnabled),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterGracePeriodTimeout,
-			prometheus.GaugeValue,
-			float64(v.GracePeriodTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterGroupDependencyTimeout,
-			prometheus.GaugeValue,
-			float64(v.GroupDependencyTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterHangRecoveryAction,
-			prometheus.GaugeValue,
-			float64(v.HangRecoveryAction),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterIgnorePersistentStateOnStartup,
-			prometheus.GaugeValue,
-			float64(v.IgnorePersistentStateOnStartup),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterLogResourceControls,
-			prometheus.GaugeValue,
-			float64(v.LogResourceControls),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterLowerQuorumPriorityNodeId,
-			prometheus.GaugeValue,
-			float64(v.LowerQuorumPriorityNodeId),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterMessageBufferLength,
-			prometheus.GaugeValue,
-			float64(v.MessageBufferLength),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterMinimumNeverPreemptPriority,
-			prometheus.GaugeValue,
-			float64(v.MinimumNeverPreemptPriority),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterMinimumPreemptorPriority,
-			prometheus.GaugeValue,
-			float64(v.MinimumPreemptorPriority),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterNetftIPSecEnabled,
-			prometheus.GaugeValue,
-			float64(v.NetftIPSecEnabled),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterPlacementOptions,
-			prometheus.GaugeValue,
-			float64(v.PlacementOptions),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterPlumbAllCrossSubnetRoutes,
-			prometheus.GaugeValue,
-			float64(v.PlumbAllCrossSubnetRoutes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterPreventQuorum,
-			prometheus.GaugeValue,
-			float64(v.PreventQuorum),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuarantineDuration,
-			prometheus.GaugeValue,
-			float64(v.QuarantineDuration),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuarantineThreshold,
-			prometheus.GaugeValue,
-			float64(v.QuarantineThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuorumArbitrationTimeMax,
-			prometheus.GaugeValue,
-			float64(v.QuorumArbitrationTimeMax),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuorumArbitrationTimeMin,
-			prometheus.GaugeValue,
-			float64(v.QuorumArbitrationTimeMin),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuorumLogFileSize,
-			prometheus.GaugeValue,
-			float64(v.QuorumLogFileSize),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterQuorumTypeValue,
-			prometheus.GaugeValue,
-			float64(v.QuorumTypeValue),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterRequestReplyTimeout,
-			prometheus.GaugeValue,
-			float64(v.RequestReplyTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterResiliencyDefaultPeriod,
-			prometheus.GaugeValue,
-			float64(v.ResiliencyDefaultPeriod),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterResiliencyLevel,
-			prometheus.GaugeValue,
-			float64(v.ResiliencyLevel),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterResourceDllDeadlockPeriod,
-			prometheus.GaugeValue,
-			float64(v.ResourceDllDeadlockPeriod),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterRootMemoryReserved,
-			prometheus.GaugeValue,
-			float64(v.RootMemoryReserved),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterRouteHistoryLength,
-			prometheus.GaugeValue,
-			float64(v.RouteHistoryLength),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DBusTypes,
-			prometheus.GaugeValue,
-			float64(v.S2DBusTypes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DCacheDesiredState,
-			prometheus.GaugeValue,
-			float64(v.S2DCacheDesiredState),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DCacheFlashReservePercent,
-			prometheus.GaugeValue,
-			float64(v.S2DCacheFlashReservePercent),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DCachePageSizeKBytes,
-			prometheus.GaugeValue,
-			float64(v.S2DCachePageSizeKBytes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DEnabled,
-			prometheus.GaugeValue,
-			float64(v.S2DEnabled),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DIOLatencyThreshold,
-			prometheus.GaugeValue,
-			float64(v.S2DIOLatencyThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterS2DOptimizations,
-			prometheus.GaugeValue,
-			float64(v.S2DOptimizations),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterSameSubnetDelay,
-			prometheus.GaugeValue,
-			float64(v.SameSubnetDelay),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterSameSubnetThreshold,
-			prometheus.GaugeValue,
-			float64(v.SameSubnetThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterSecurityLevel,
-			prometheus.GaugeValue,
-			float64(v.SecurityLevel),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterSharedVolumeVssWriterOperationTimeout,
-			prometheus.GaugeValue,
-			float64(v.SharedVolumeVssWriterOperationTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterShutdownTimeoutInMinutes,
-			prometheus.GaugeValue,
-			float64(v.ShutdownTimeoutInMinutes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterUseClientAccessNetworksForSharedVolumes,
-			prometheus.GaugeValue,
-			float64(v.UseClientAccessNetworksForSharedVolumes),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterWitnessDatabaseWriteTimeout,
-			prometheus.GaugeValue,
-			float64(v.WitnessDatabaseWriteTimeout),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterWitnessDynamicWeight,
-			prometheus.GaugeValue,
-			float64(v.WitnessDynamicWeight),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterWitnessRestartInterval,
-			prometheus.GaugeValue,
-			float64(v.WitnessRestartInterval),
-			v.Name,
-		)
-
-		if osversion.Build() >= osversion.LTSC2022 {
-			ch <- prometheus.MustNewConstMetric(
-				c.clusterDetectManagedEvents,
-				prometheus.GaugeValue,
-				float64(v.DetectManagedEvents),
-				v.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.clusterDetectManagedEventsThreshold,
-				prometheus.GaugeValue,
-				float64(v.DetectManagedEventsThreshold),
-				v.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.clusterSecurityLevelForStorage,
-				prometheus.GaugeValue,
-				float64(v.SecurityLevelForStorage),
-				v.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.clusterMaxNumberOfNodes,
-				prometheus.GaugeValue,
-				float64(v.MaxNumberOfNodes),
-				v.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.clusterDetectedCloudPlatform,
-				prometheus.GaugeValue,
-				float64(v.DetectedCloudPlatform),
-				v.Name,
-			)
-		}
+func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.Object, build uint16, resultErr error) error {
+	if cluster.Name == "" {
+		return resultErr
 	}
 
-	return nil
+	const (
+		ws2016 = osversion.LTSC2016
+		ws2022 = osversion.LTSC2022
+	)
+
+	fields := []objectField{
+		{name: "AddEvictDelay", desc: c.clusterAddEvictDelay},
+		{name: "AdminAccessPoint", desc: c.clusterAdminAccessPoint},
+		{name: "AutoAssignNodeSite", desc: c.clusterAutoAssignNodeSite},
+		{name: "AutoBalancerLevel", desc: c.clusterAutoBalancerLevel, minBuild: ws2016},
+		{name: "AutoBalancerMode", desc: c.clusterAutoBalancerMode, minBuild: ws2016},
+		{name: "BackupInProgress", desc: c.clusterBackupInProgress},
+		{name: "BlockCacheSize", desc: c.clusterBlockCacheSize},
+		{name: "ClusSvcHangTimeout", desc: c.clusterClusSvcHangTimeout},
+		{name: "ClusSvcRegroupOpeningTimeout", desc: c.clusterClusSvcRegroupOpeningTimeout},
+		{name: "ClusSvcRegroupPruningTimeout", desc: c.clusterClusSvcRegroupPruningTimeout},
+		{name: "ClusSvcRegroupStageTimeout", desc: c.clusterClusSvcRegroupStageTimeout},
+		{name: "ClusSvcRegroupTickInMilliseconds", desc: c.clusterClusSvcRegroupTickInMilliseconds},
+		{name: "ClusterEnforcedAntiAffinity", desc: c.clusterClusterEnforcedAntiAffinity},
+		{name: "ClusterFunctionalLevel", desc: c.clusterClusterFunctionalLevel, minBuild: ws2016},
+		{name: "ClusterGroupWaitDelay", desc: c.clusterClusterGroupWaitDelay},
+		{name: "ClusterLogLevel", desc: c.clusterClusterLogLevel},
+		{name: "ClusterLogSize", desc: c.clusterClusterLogSize},
+		{name: "ClusterUpgradeVersion", desc: c.clusterClusterUpgradeVersion, minBuild: ws2016},
+		{name: "CrossSiteDelay", desc: c.clusterCrossSiteDelay, minBuild: ws2016},
+		{name: "CrossSiteThreshold", desc: c.clusterCrossSiteThreshold, minBuild: ws2016},
+		{name: "CrossSubnetDelay", desc: c.clusterCrossSubnetDelay},
+		{name: "CrossSubnetThreshold", desc: c.clusterCrossSubnetThreshold},
+		{name: "CsvBalancer", desc: c.clusterCsvBalancer},
+		{name: "DatabaseReadWriteMode", desc: c.clusterDatabaseReadWriteMode},
+		{name: "DefaultNetworkRole", desc: c.clusterDefaultNetworkRole},
+		{name: "DisableGroupPreferredOwnerRandomization", desc: c.clusterDisableGroupPreferredOwnerRandomization},
+		{name: "DrainOnShutdown", desc: c.clusterDrainOnShutdown},
+		{name: "DynamicQuorumEnabled", desc: c.clusterDynamicQuorumEnabled},
+		{name: "EnableSharedVolumes", desc: c.clusterEnableSharedVolumes},
+		{name: "FixQuorum", desc: c.clusterFixQuorum},
+		{name: "GracePeriodEnabled", desc: c.clusterGracePeriodEnabled, minBuild: ws2016},
+		{name: "GracePeriodTimeout", desc: c.clusterGracePeriodTimeout, minBuild: ws2016},
+		{name: "GroupDependencyTimeout", desc: c.clusterGroupDependencyTimeout, minBuild: ws2016},
+		{name: "HangRecoveryAction", desc: c.clusterHangRecoveryAction},
+		{name: "IgnorePersistentStateOnStartup", desc: c.clusterIgnorePersistentStateOnStartup},
+		{name: "LogResourceControls", desc: c.clusterLogResourceControls},
+		{name: "LowerQuorumPriorityNodeId", desc: c.clusterLowerQuorumPriorityNodeId},
+		{name: "MessageBufferLength", desc: c.clusterMessageBufferLength},
+		{name: "MinimumNeverPreemptPriority", desc: c.clusterMinimumNeverPreemptPriority},
+		{name: "MinimumPreemptorPriority", desc: c.clusterMinimumPreemptorPriority},
+		{name: "NetftIPSecEnabled", desc: c.clusterNetftIPSecEnabled},
+		{name: "PlacementOptions", desc: c.clusterPlacementOptions, minBuild: ws2016},
+		{name: "PlumbAllCrossSubnetRoutes", desc: c.clusterPlumbAllCrossSubnetRoutes},
+		{name: "PreventQuorum", desc: c.clusterPreventQuorum},
+		{name: "QuarantineDuration", desc: c.clusterQuarantineDuration, minBuild: ws2016},
+		{name: "QuarantineThreshold", desc: c.clusterQuarantineThreshold, minBuild: ws2016},
+		{name: "QuorumArbitrationTimeMax", desc: c.clusterQuorumArbitrationTimeMax},
+		{name: "QuorumArbitrationTimeMin", desc: c.clusterQuorumArbitrationTimeMin},
+		{name: "QuorumLogFileSize", desc: c.clusterQuorumLogFileSize},
+		{name: "QuorumTypeValue", desc: c.clusterQuorumTypeValue},
+		{name: "RequestReplyTimeout", desc: c.clusterRequestReplyTimeout},
+		{name: "ResiliencyDefaultPeriod", desc: c.clusterResiliencyDefaultPeriod, minBuild: ws2016},
+		{name: "ResiliencyLevel", desc: c.clusterResiliencyLevel, minBuild: ws2016},
+		{name: "ResourceDllDeadlockPeriod", desc: c.clusterResourceDllDeadlockPeriod},
+		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved},
+		{name: "RouteHistoryLength", desc: c.clusterRouteHistoryLength},
+		{name: "S2DBusTypes", desc: c.clusterS2DBusTypes, minBuild: ws2016},
+		{name: "S2DCacheDesiredState", desc: c.clusterS2DCacheDesiredState, minBuild: ws2016},
+		{name: "S2DCacheFlashReservePercent", desc: c.clusterS2DCacheFlashReservePercent, minBuild: ws2016},
+		{name: "S2DCachePageSizeKBytes", desc: c.clusterS2DCachePageSizeKBytes, minBuild: ws2016},
+		{name: "S2DEnabled", desc: c.clusterS2DEnabled, minBuild: ws2016},
+		{name: "S2DIOLatencyThreshold", desc: c.clusterS2DIOLatencyThreshold, minBuild: ws2016},
+		{name: "S2DOptimizations", desc: c.clusterS2DOptimizations, minBuild: ws2016},
+		{name: "SameSubnetDelay", desc: c.clusterSameSubnetDelay},
+		{name: "SameSubnetThreshold", desc: c.clusterSameSubnetThreshold},
+		{name: "SecurityLevel", desc: c.clusterSecurityLevel},
+		{name: "SharedVolumeVssWriterOperationTimeout", desc: c.clusterSharedVolumeVssWriterOperationTimeout},
+		{name: "ShutdownTimeoutInMinutes", desc: c.clusterShutdownTimeoutInMinutes},
+		{name: "UseClientAccessNetworksForSharedVolumes", desc: c.clusterUseClientAccessNetworksForSharedVolumes},
+		{name: "WitnessDatabaseWriteTimeout", desc: c.clusterWitnessDatabaseWriteTimeout},
+		{name: "WitnessDynamicWeight", desc: c.clusterWitnessDynamicWeight},
+		{name: "WitnessRestartInterval", desc: c.clusterWitnessRestartInterval},
+		// These were published only on Windows Server 2022 and newer.
+		{name: "DetectManagedEvents", desc: c.clusterDetectManagedEvents, minBuild: ws2022, older: neverPublish},
+		{name: "DetectManagedEventsThreshold", desc: c.clusterDetectManagedEventsThreshold, minBuild: ws2022, older: neverPublish},
+		{name: "SecurityLevelForStorage", desc: c.clusterSecurityLevelForStorage, minBuild: ws2022, older: neverPublish},
+		{name: "MaxNumberOfNodes", desc: c.clusterMaxNumberOfNodes, minBuild: ws2022, older: neverPublish},
+		{name: "DetectedCloudPlatform", desc: c.clusterDetectedCloudPlatform, minBuild: ws2022, older: neverPublish},
+	}
+
+	return publishObjectFields(ch, "cluster", cluster, fields, build, resultErr)
 }

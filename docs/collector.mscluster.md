@@ -1,17 +1,17 @@
 # mscluster_cluster collector
 
-The collector exposes Windows failover cluster metrics. The `network`, `node`, `resource` and `resourcegroup` subcollectors read through the read-only Windows Cluster API (ClusAPI); the other subcollectors retain their existing WMI sources. Metric names, types, labels and units are unchanged.
+The collector exposes Windows failover cluster metrics. The `cluster`, `network`, `node`, `resource` and `resourcegroup` subcollectors read through the read-only Windows Cluster API (ClusAPI); the other subcollectors retain their existing WMI sources. Metric names, types, labels and units are unchanged.
 
 Each ClusAPI subcollector opens its cluster handle on its first scrape so a transient cluster-service failure is reported during collection. ClusAPI calls cannot be cancelled while they are running. The subcollectors check the remaining scrape budget before starting each native call; an outstanding call must finish before its cluster handle can be closed.
 
-If a property of a network, node, resource or group cannot be read, its sample is omitted and the scrape reports an error; valid properties and other objects are retained. Invalid resource identities are not published. Missing native values are not substituted with zero.
+If a property of the cluster or of a network, node, resource or group cannot be read, its sample is omitted and the scrape reports an error; valid properties and other objects are retained. Invalid resource identities are not published. Missing native values are not substituted with zero.
 
-The ClusAPI functions in use are available since Windows Server 2008 R2. The `cold_start_setting` and `resiliency_period` group properties and the `status_information` node property exist since Windows Server 2016; on older versions these samples are omitted without an error. As before, `mscluster_node_detected_cloud_platform` is 0 before Windows Server 2022 unless the node reports the property.
+The ClusAPI functions in use are available since Windows Server 2008 R2. The `cold_start_setting` and `resiliency_period` group properties and the `status_information` node property exist since Windows Server 2016; on older versions these samples are omitted without an error. Cluster properties that Microsoft documents as added in Windows Server 2016 (for example `s2d_enabled` or `cluster_functional_level`) are omitted the same way. As before, `mscluster_node_detected_cloud_platform` is 0 before Windows Server 2022 unless the node reports the property, and the cluster metrics `detect_managed_events`, `detect_managed_events_threshold`, `security_level_for_storage`, `max_number_of_nodes` and `detected_cloud_platform` are published only on Windows Server 2022 and newer.
 
 |||
 -|-
 Metric name prefix  | `mscluster`
-WMI classes         | `MSCluster_Cluster`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`,`MSFT_StoragePool`
+WMI classes         | `MSCluster_DiskPartition`,`MSFT_VirtualDisk`,`MSFT_StoragePool`
 Enabled by default? | No
 
 ## Flags
