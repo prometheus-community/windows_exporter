@@ -30,7 +30,10 @@ their runtime behavior.
   sources. [`dashboard`](dashboard) contains the generated Grafana dashboard;
   [`docs/runbooks`](docs/runbooks) documents the alerts.
 - [`installer`](installer), [`kubernetes`](kubernetes) and [`tools`](tools): MSI
-  packaging, deployment examples, CI fixtures and end-to-end helpers.
+  packaging, deployment examples, CI fixtures and end-to-end helpers. The CI
+  package job validates installer changes with
+  [`tools/test-installer.ps1`](tools/test-installer.ps1), which installs the
+  service for real. Never run it on a developer machine.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as

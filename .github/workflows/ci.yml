@@ -236,6 +236,44 @@ jobs:
           CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
           CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
 
+      # The runner is a disposable machine, so the MSI can be installed for real:
+      # upgrade from the latest release, repair, uninstall and a fresh install,
+      # with an independent windows_exporter.exe that must survive.
+      - name: Test installer
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+          $Executable = "output\windows_exporter-$Version-amd64.exe"
+          $Msi = "output\windows_exporter-$Version-amd64.msi"
+
+          $PreviousVersion = (gh release view --repo prometheus-community/windows_exporter --json tagName --jq .tagName) -replace '^v', ''
+          if ($LASTEXITCODE -ne 0 -or -not $PreviousVersion) {
+            throw "Could not determine the latest release"
+          }
+
+          # Builds between tags carry the version of an older tag, so installing
+          # them over the latest release would be a downgrade. Package the same
+          # executable with a higher version for the upgrade test.
+          $UpgradeMsi = $Msi
+          $MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
+          if ([Version]$MsiVersion -le [Version]$PreviousVersion) {
+            .\installer\build.ps1 -PathToExecutable $Executable -Version 99.0.0 -Arch amd64
+            $UpgradeMsi = Join-Path $env:RUNNER_TEMP 'windows_exporter-99.0.0-amd64.msi'
+            Move-Item installer\windows_exporter-99.0.0-amd64.msi $UpgradeMsi
+          }
+
+          .\tools\test-installer.ps1 -Msi $Msi -UpgradeMsi $UpgradeMsi -Executable $Executable -PreviousVersion $PreviousVersion
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload installer test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installer-test-logs
+          path: ${{ runner.temp }}\installer-test\*.log
+          if-no-files-found: ignore
+
       - name: Generate checksums
         run: |
           $ErrorActionPreference = "Stop"
