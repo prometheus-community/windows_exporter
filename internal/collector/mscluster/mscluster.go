@@ -44,6 +44,11 @@ const (
 	subCollectorSharedVolumes = "shared_volumes"
 )
 
+// nativeSubCollectors read through ClusAPI and do not need an MI session.
+//
+//nolint:gochecknoglobals
+var nativeSubCollectors = []string{subCollectorResource, subCollectorResourceGroup}
+
 type Config struct {
 	CollectorsEnabled []string `yaml:"enabled"`
 }
@@ -120,28 +125,53 @@ func (c *Collector) Close() error {
 	c.lifecycleMu.Lock()
 	defer c.lifecycleMu.Unlock()
 
-	return c.closeResource()
+	return c.closeSources()
 }
 
-func (c *Collector) closeResource() error {
-	if c.resourceSource == nil {
-		return nil
+// closeSources releases the ClusAPI sources. A source whose Close fails is
+// retained so a later Close or Build can retry releasing its handle.
+func (c *Collector) closeSources() error {
+	var errs []error
+
+	if c.resourceSource != nil {
+		if err := c.resourceSource.Close(); err != nil {
+			errs = append(errs, err)
+		} else {
+			c.resourceSource = nil
+		}
 	}
 
-	if err := c.resourceSource.Close(); err != nil {
-		return err
+	if c.resourceGroupSource != nil {
+		if err := c.resourceGroupSource.Close(); err != nil {
+			errs = append(errs, err)
+		} else {
+			c.resourceGroupSource = nil
+		}
 	}
 
-	c.resourceSource = nil
+	return errors.Join(errs...)
+}
 
-	return nil
+// remainingBudget returns the part of the scrape budget that is left for a
+// sub-collector started after another one. Zero means no limit.
+func remainingBudget(maxScrapeDuration time.Duration, scrapeStarted time.Time) (time.Duration, error) {
+	if maxScrapeDuration <= 0 {
+		return maxScrapeDuration, nil
+	}
+
+	budget := maxScrapeDuration - time.Since(scrapeStarted)
+	if budget <= 0 {
+		return 0, context.DeadlineExceeded
+	}
+
+	return budget, nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.lifecycleMu.Lock()
 	defer c.lifecycleMu.Unlock()
 
-	if err := c.closeResource(); err != nil {
+	if err := c.closeSources(); err != nil {
 		return err
 	}
 
@@ -166,7 +196,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if miSession == nil && slices.ContainsFunc(c.config.CollectorsEnabled, func(name string) bool { return name != subCollectorResource }) {
+	if miSession == nil && slices.ContainsFunc(c.config.CollectorsEnabled, func(name string) bool { return !slices.Contains(nativeSubCollectors, name) }) {
 		return errors.New("miSession is nil")
 	}
 
@@ -211,7 +241,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	}
 
 	if len(errs) != 0 {
-		errs = append(errs, c.closeResource())
+		errs = append(errs, c.closeSources())
 	}
 
 	return errors.Join(errs...)
@@ -267,12 +297,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
 			g.Go(func() error {
-				budget := maxScrapeDuration
-				if budget > 0 {
-					budget -= time.Since(scrapeStarted)
-					if budget <= 0 {
-						return fmt.Errorf("failed to collect resource metrics: %w", context.DeadlineExceeded)
-					}
+				budget, err := remainingBudget(maxScrapeDuration, scrapeStarted)
+				if err != nil {
+					return fmt.Errorf("failed to collect resource metrics: %w", err)
 				}
 
 				if err := c.collectResource(ch, budget, nodeNames); err != nil {
@@ -285,7 +312,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
 			g.Go(func() error {
-				if err := c.collectResourceGroup(ch, maxScrapeDuration, nodeNames); err != nil {
+				budget, err := remainingBudget(maxScrapeDuration, scrapeStarted)
+				if err != nil {
+					return fmt.Errorf("failed to collect resource group metrics: %w", err)
+				}
+
+				if err := c.collectResourceGroup(ch, budget, nodeNames); err != nil {
 					return fmt.Errorf("failed to collect resource group metrics: %w", err)
 				}
 

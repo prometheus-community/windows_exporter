@@ -28,6 +28,7 @@ const (
 	formatDWORD          = 2
 	formatString         = 3
 	formatExpandString   = 4
+	formatLong           = 7
 	formatExpandedString = 8
 )
 
@@ -55,6 +56,16 @@ func (p Property) String() (string, error) {
 	default:
 		return "", fmt.Errorf("expected string, format %d", p.Format)
 	}
+}
+
+// Value32 returns the bit pattern of a DWORD or LONG value. Callers decide the
+// signedness, matching the WMI type of the property they publish.
+func (p Property) Value32() (uint32, error) {
+	if (p.Format != formatDWORD && p.Format != formatLong) || len(p.Data) != 4 {
+		return 0, fmt.Errorf("expected DWORD or LONG, format %d, length %d", p.Format, len(p.Data))
+	}
+
+	return binary.LittleEndian.Uint32(p.Data), nil
 }
 
 // ParseProperties decodes CLUSPROP_LIST without casting untrusted bytes to native
@@ -112,7 +123,7 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 			}
 
 			format := uint16(syntax)
-			if format == formatDWORD && len(payload) != 4 {
+			if (format == formatDWORD || format == formatLong) && len(payload) != 4 {
 				return nil, fmt.Errorf("invalid DWORD length for %q", name)
 			}
 

@@ -150,7 +150,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 		return nil, err
 	}
 
-	enum, _, err := openEnum.Call(c.handle, 4) // CLUSTER_ENUM_RESOURCE
+	enum, _, err := openEnum.Call(c.handle, enumResource)
 	if enum == 0 {
 		return nil, fmt.Errorf("ClusterOpenEnum: %w", err)
 	}
@@ -162,7 +162,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 	}()
 
 	for index := uint32(0); ; index++ {
-		name, err := enumName(enum, index, deadline)
+		name, err := enumName(enum, index, enumResource, deadline)
 		if errors.Is(err, windows.ERROR_NO_MORE_ITEMS) {
 			return resources, resultErr
 		}
@@ -205,7 +205,7 @@ type resourceName struct {
 	name  string
 }
 
-func enumName(enum uintptr, index uint32, deadline time.Time) (resourceName, error) {
+func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (resourceName, error) {
 	buffer := make([]uint16, 256)
 
 	for range 16 {
@@ -232,7 +232,7 @@ func enumName(enum uintptr, index uint32, deadline time.Time) (resourceName, err
 			return resourceName{}, windows.Errno(status)
 		}
 
-		if objectType != 4 || length >= uint32(len(buffer)) {
+		if objectType != enumType || length >= uint32(len(buffer)) {
 			return resourceName{}, invalidEnumEntryError(fmt.Sprintf("invalid ClusterEnum entry: type %d, length %d", objectType, length))
 		}
 
