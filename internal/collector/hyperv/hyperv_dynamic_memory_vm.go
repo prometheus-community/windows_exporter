@@ -19,6 +19,7 @@ package hyperv
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -88,7 +89,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 	)
 	c.vmMemoryGuestVisiblePhysicalMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_guest_visible_physical_memory_bytes"),
-		"Represents the amount of memory visible in the VM.'",
+		"Represents the amount of memory visible in the VM.",
 		[]string{"vm"},
 		nil,
 	)
@@ -139,18 +140,20 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, data := range c.perfDataObjectDynamicMemoryVM {
+		vmName := dynamicMemoryVMName(data.Name)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryAddedMemory,
 			prometheus.CounterValue,
 			utils.MBToBytes(data.VmMemoryAddedMemory),
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryCurrentPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryCurrentPressure),
-			data.Name,
+			vmName,
 		)
 
 		if osversion.Build() >= osversion.LTSC2022 {
@@ -158,7 +161,7 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 				c.vmMemoryGuestAvailableMemory,
 				prometheus.GaugeValue,
 				utils.MBToBytes(data.VmMemoryGuestAvailableMemory),
-				data.Name,
+				vmName,
 			)
 		}
 
@@ -166,51 +169,72 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 			c.vmMemoryGuestVisiblePhysicalMemory,
 			prometheus.GaugeValue,
 			utils.MBToBytes(data.VmMemoryGuestVisiblePhysicalMemory),
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMaximumPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryMaximumPressure),
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMemoryAddOperations,
 			prometheus.CounterValue,
 			data.VmMemoryMemoryAddOperations,
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMemoryRemoveOperations,
 			prometheus.CounterValue,
 			data.VmMemoryMemoryRemoveOperations,
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMinimumPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryMinimumPressure),
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryPhysicalMemory,
 			prometheus.GaugeValue,
 			utils.MBToBytes(data.VmMemoryPhysicalMemory),
-			data.Name,
+			vmName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryRemovedMemory,
 			prometheus.CounterValue,
 			utils.MBToBytes(data.VmMemoryRemovedMemory),
-			data.Name,
+			vmName,
 		)
 	}
 
 	return nil
+}
+
+// vmUnknown is the vm label value for Hyper-V Dynamic Memory VM instances
+// without a name.
+const vmUnknown = "(unknown)"
+
+// dynamicMemoryVMName returns the vm label value for a Hyper-V Dynamic Memory VM
+// instance. Windows reports an empty instance name for VMs managed by the Host
+// Compute Service, e.g. WSL 2, which pdh exposes as
+// pdh.InstanceEmpty. The occurrence suffix of duplicates is kept, so the
+// series stay unique.
+func dynamicMemoryVMName(name string) string {
+	if name == pdh.InstanceEmpty {
+		return vmUnknown
+	}
+
+	if suffix, ok := strings.CutPrefix(name, pdh.InstanceEmpty+"#"); ok {
+		return vmUnknown + "#" + suffix
+	}
+
+	return name
 }
