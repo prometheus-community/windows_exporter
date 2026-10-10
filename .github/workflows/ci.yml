@@ -1537,7 +1537,6 @@ jobs:
         with:
           name: windows-test-results-${{ matrix.os }}
           path: |
-            test-results.jsonl
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
             ${{ runner.temp }}/sql-server-summary.txt
