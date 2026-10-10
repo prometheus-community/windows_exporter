@@ -19,6 +19,7 @@ package process
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -29,14 +30,15 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
 type processWorkerRequest struct {
 	ch                       chan<- prometheus.Metric
 	name                     string
+	appPoolName              string
 	performanceCounterValues perfDataCounterValues
 	waitGroup                *sync.WaitGroup
-	workerProcesses          []WorkerProcess
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
@@ -45,16 +47,9 @@ func (c *Collector) collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		return fmt.Errorf("failed to collect metrics: %w", err)
 	}
 
-	err = nil
+	requests := make([]processWorkerRequest, 0, len(c.perfDataObject))
 
-	var workerProcesses []WorkerProcess
-	if c.config.EnableWorkerProcess {
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, maxScrapeDuration); err != nil {
-			err = fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
-		}
-	}
-
-	wg := &sync.WaitGroup{}
+	var workerProcessIDs []uint32
 
 	for _, process := range c.perfDataObject {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
@@ -77,20 +72,111 @@ func (c *Collector) collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 			continue
 		}
 
-		wg.Add(1)
+		if c.config.EnableWorkerProcess && isWorkerProcess(name) {
+			workerProcessIDs = append(workerProcessIDs, uint32(process.ProcessID))
+		}
 
-		c.workerCh <- processWorkerRequest{
+		requests = append(requests, processWorkerRequest{
 			ch:                       ch,
 			name:                     name,
 			performanceCounterValues: process,
-			workerProcesses:          workerProcesses,
-			waitGroup:                wg,
-		}
+		})
+	}
+
+	var appPools map[uint32]string
+
+	if len(workerProcessIDs) > 0 {
+		appPools, err = resolveAppPools(c.logger, workerProcessIDs, workerProcessAppPool, c.workerProcessWMIQuery(maxScrapeDuration))
+	}
+
+	wg := &sync.WaitGroup{}
+
+	for _, req := range requests {
+		req.appPoolName = appPools[uint32(req.performanceCounterValues.ProcessID)]
+		req.waitGroup = wg
+
+		wg.Add(1)
+
+		c.workerCh <- req
 	}
 
 	wg.Wait()
 
 	return err
+}
+
+// workerProcessWMIQuery returns the root\WebAdministration query, or nil if it was unavailable during Build.
+func (c *Collector) workerProcessWMIQuery(maxScrapeDuration time.Duration) func() ([]WorkerProcess, error) {
+	miSession, miQuery := c.miSession, c.workerProcessMIQueryQuery
+	if miSession == nil {
+		return nil
+	}
+
+	return func() ([]WorkerProcess, error) {
+		var workerProcesses []WorkerProcess
+
+		err := miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, maxScrapeDuration)
+
+		return workerProcesses, err
+	}
+}
+
+// resolveAppPools maps IIS worker process IDs to application pool names.
+//
+// The command line of the worker process is the primary source: it needs no
+// optional feature and no WMI round trip. WMI is queried at most once, for the
+// worker processes whose command line couldn't be read or has no -ap argument,
+// and only if queryWMI isn't nil. Unresolved processes have no entry.
+func resolveAppPools(
+	logger *slog.Logger,
+	pids []uint32,
+	readCommandLine func(pid uint32) (string, error),
+	queryWMI func() ([]WorkerProcess, error),
+) (map[uint32]string, error) {
+	appPools := make(map[uint32]string, len(pids))
+
+	var unresolved []uint32
+
+	for _, pid := range pids {
+		appPool, err := readCommandLine(pid)
+		if err == nil {
+			appPools[pid] = appPool
+
+			continue
+		}
+
+		logger.LogAttrs(context.Background(), slog.LevelDebug, "Failed to read the IIS application pool from the worker process command line",
+			slog.Uint64("pid", uint64(pid)),
+			slog.Any("err", err),
+		)
+
+		// OpenProcess fails with ERROR_INVALID_PARAMETER for processes that exited after the
+		// performance counter snapshot. WAS no longer reports them either.
+		if !errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+			unresolved = append(unresolved, pid)
+		}
+	}
+
+	if len(unresolved) == 0 || queryWMI == nil {
+		return appPools, nil
+	}
+
+	workerProcesses, err := queryWMI()
+	if err != nil {
+		return appPools, fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
+	}
+
+	for _, pid := range unresolved {
+		for _, wp := range workerProcesses {
+			if wp.ProcessId == uint64(pid) && wp.AppPoolName != "" {
+				appPools[pid] = wp.AppPoolName
+
+				break
+			}
+		}
+	}
+
+	return appPools, nil
 }
 
 func (c *Collector) collectWorker(requests <-chan processWorkerRequest) {
@@ -115,14 +201,8 @@ func (c *Collector) collectWorker(requests <-chan processWorkerRequest) {
 			pid := uint64(data.ProcessID)
 			parentPID := strconv.FormatUint(uint64(data.CreatingProcessID), 10)
 
-			if c.config.EnableWorkerProcess {
-				for _, wp := range req.workerProcesses {
-					if wp.ProcessId == pid {
-						name = strings.Join([]string{name, wp.AppPoolName}, "_")
-
-						break
-					}
-				}
+			if req.appPoolName != "" {
+				name = name + "_" + req.appPoolName
 			}
 
 			cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))

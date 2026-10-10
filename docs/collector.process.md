@@ -33,7 +33,8 @@ metrics.
 
 ### `--collector.process.iis`
 
-Enables IIS process name queries. IIS process names are combined with their app pool name to form the `process` label.
+Appends the IIS application pool name to the process name of IIS worker processes (`w3wp`) to form the `process` label.
+See [IIS worker processes](#iis-worker-processes).
 
 Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Just plain parameter without `true`.
 
@@ -63,11 +64,21 @@ To specify multiple names, use the pipe `|` character:
 ```
 This will match all processes named `firefox`, `FIREFOX` or `chrome` .
 
-## IIS Worker processes
+## IIS worker processes
 
-The process collector also queries the `root\\WebAdministration` WMI namespace to check for running IIS workers. If it successfully retrieves a list from this namespace, it will append the name of the worker's application pool to the corresponding process. include/exclude matching occurs before this name is appended, so you don't have to take this name in consideration when writing your expression.
+With `--collector.process.iis`, the collector appends the application pool name to the name of each IIS worker process (`w3wp`).
+Include and exclude matching happens before the name is appended, so your expressions don't need to account for it.
 
-Note that this specific feature **only works** if the [IIS Management Scripts and Tools](https://learn.microsoft.com/en-us/iis/manage/scripting/managing-sites-with-the-iis-wmi-provider) are installed. If they are not installed then all worker processes return as just `w3wp`.
+The collector reads the application pool from the `-ap` argument of the worker process command line.
+The Windows Process Activation Service (WAS) starts every worker process with this argument.
+Reading the command line needs Windows Server 2012 R2 or later, and access to the worker process.
+The exporter running as `LocalSystem` has that access.
+
+If the command line can't be read or has no `-ap` argument, the collector falls back to the `WorkerProcess` class in the `root\WebAdministration` WMI namespace.
+That namespace needs the optional [IIS Management Scripts and Tools](https://learn.microsoft.com/iis/manage/scripting/managing-sites-with-the-iis-wmi-provider) feature (`Web-Scripting-Tools`).
+The collector doesn't query WMI while every command line has an application pool.
+
+A worker process whose application pool isn't known from either source keeps the name `w3wp`.
 
 ### Example
 
