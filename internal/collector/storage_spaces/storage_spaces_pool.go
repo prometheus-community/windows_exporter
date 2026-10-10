@@ -44,6 +44,7 @@ type collectorStoragePool struct {
 type msftStoragePool struct {
 	FriendlyName  string `mi:"FriendlyName"`
 	UniqueId      string `mi:"UniqueId"`
+	IsPrimordial  bool   `mi:"IsPrimordial"`
 	HealthStatus  uint16 `mi:"HealthStatus"`
 	Size          uint64 `mi:"Size"`
 	AllocatedSize uint64 `mi:"AllocatedSize"`
@@ -53,7 +54,7 @@ type msftStoragePool struct {
 }
 
 func (c *Collector) buildStoragePool() error {
-	wmiSelect := "FriendlyName,UniqueId,HealthStatus,Size,AllocatedSize,OperationalStatus,ThinProvisioningAlertThresholds"
+	wmiSelect := "FriendlyName,UniqueId,IsPrimordial,HealthStatus,Size,AllocatedSize,OperationalStatus,ThinProvisioningAlertThresholds"
 
 	storagePoolMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSFT_StoragePool", wmiSelect))
 	if err != nil {
@@ -64,8 +65,8 @@ func (c *Collector) buildStoragePool() error {
 
 	c.storagePoolInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "info"),
-		"Storage pool information (value is always 1)",
-		[]string{"name", "unique_id"},
+		"Storage pool information (value is always 1). primordial is true for the built-in primordial pool",
+		[]string{"name", "unique_id", "primordial"},
 		nil,
 	)
 
@@ -127,6 +128,7 @@ func (c *Collector) collectStoragePool(ch chan<- prometheus.Metric, maxScrapeDur
 			1.0,
 			pool.FriendlyName,
 			pool.UniqueId,
+			strconv.FormatBool(pool.IsPrimordial),
 		)
 
 		ch <- prometheus.MustNewConstMetric(

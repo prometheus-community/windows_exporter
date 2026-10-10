@@ -36,7 +36,7 @@ func TestCollector(t *testing.T) {
 	pool := prometheus.Labels{"name": "GitHubActions"}
 	virtualDisk := prometheus.Labels{"name": "CIVirtualDisk"}
 
-	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_pool_info", pool)
+	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_pool_info", prometheus.Labels{"name": "GitHubActions", "primordial": "false"})
 	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_virtual_disk_info", virtualDisk)
 
 	for _, tc := range []struct {
@@ -65,5 +65,19 @@ func TestCollector(t *testing.T) {
 		value := metric.GetGauge().GetValue()
 		require.Greater(t, value, 0.0)
 		require.LessOrEqual(t, value, 100.0)
+	}
+
+	// Every pool, including the built-in primordial pool, must carry a boolean primordial label.
+	for _, metric := range metrics["windows_storage_spaces_pool_info"].GetMetric() {
+		var primordial []string
+
+		for _, label := range metric.GetLabel() {
+			if label.GetName() == "primordial" {
+				primordial = append(primordial, label.GetValue())
+			}
+		}
+
+		require.Len(t, primordial, 1, "pool info metric %s", metric)
+		require.Contains(t, []string{"true", "false"}, primordial[0], "pool info metric %s", metric)
 	}
 }
