@@ -18,11 +18,14 @@
 package scheduled_task
 
 import (
+	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
 )
 
@@ -219,4 +222,168 @@ func (c taskMetricCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c taskMetricCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collector.collectMetrics(ch, c.tasks)
+}
+
+func TestCollectMetricsCache(t *testing.T) {
+	t.Parallel()
+
+	tasks := ScheduledTasks{
+		{Path: "/Unchanged", State: TASK_STATE_READY, MissedRunsCount: 1, LastTaskResult: SCHED_S_SUCCESS},
+		{Path: "/StateChanges", State: TASK_STATE_READY, LastTaskResult: SCHED_S_SUCCESS},
+		{Path: "/ResultChanges", State: TASK_STATE_READY, LastTaskResult: SCHED_S_TASK_HAS_NOT_RUN},
+		{Path: "/MissedRunsChange", State: TASK_STATE_READY, LastTaskResult: 1},
+		{Path: "/Deleted", State: TASK_STATE_DISABLED, LastTaskResult: SCHED_S_TASK_DISABLED},
+	}
+
+	changed := ScheduledTasks{
+		tasks[0],
+		{Path: "/StateChanges", State: TASK_STATE_RUNNING, LastTaskResult: SCHED_S_SUCCESS},
+		{Path: "/ResultChanges", State: TASK_STATE_READY, LastTaskResult: SCHED_S_SUCCESS},
+		{Path: "/MissedRunsChange", State: TASK_STATE_READY, MissedRunsCount: 2, LastTaskResult: 1},
+		{Path: "/Added", State: TASK_STATE_QUEUED, LastTaskResult: SCHED_S_TASK_QUEUED},
+	}
+
+	c := New(nil)
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	var previous map[string][]prometheus.Metric
+
+	for i, scrape := range []ScheduledTasks{tasks, tasks, changed, changed} {
+		// Collect once outside the registry, which calls Collect for Describe too.
+		collected := make(chan prometheus.Metric, len(scrape)*19)
+		c.collectMetrics(collected, scrape)
+		close(collected)
+
+		var sent []prometheus.Metric
+		for metric := range collected {
+			sent = append(sent, metric)
+		}
+
+		cached := exposition(t, func(ch chan<- prometheus.Metric) {
+			for _, metric := range sent {
+				ch <- metric
+			}
+		})
+
+		uncached := exposition(t, func(ch chan<- prometheus.Metric) {
+			for _, task := range scrape {
+				for _, metric := range c.taskMetrics(task) {
+					ch <- metric
+				}
+			}
+		})
+
+		require.Equal(t, uncached, cached, "scrape %d", i)
+
+		// Unchanged tasks send the metrics of the previous scrape again.
+		current := make(map[string][]prometheus.Metric, len(scrape))
+
+		for _, task := range scrape {
+			n := 19
+			if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
+				n = 17
+			}
+
+			current[task.Path], sent = sent[:n], sent[n:]
+
+			// Scrapes 1 and 3 repeat the previous one, scrape 2 changes all tasks but /Unchanged.
+			old, ok := previous[task.Path]
+			wantReused := ok && (i%2 == 1 || task.Path == "/Unchanged")
+			require.Equal(t, wantReused, ok && old[0] == current[task.Path][0], "scrape %d task %s", i, task.Path)
+		}
+
+		require.Empty(t, sent)
+
+		previous = current
+	}
+
+	// Deleted tasks are dropped from the cache.
+	scrape := c.metricCache.Begin()
+	_, ok := scrape.Load("/Deleted", taskValues{state: TASK_STATE_DISABLED, lastTaskResult: SCHED_S_TASK_DISABLED})
+	require.False(t, ok)
+	_, ok = scrape.Load("/Added", taskValues{state: TASK_STATE_QUEUED, lastTaskResult: SCHED_S_TASK_QUEUED})
+	require.True(t, ok)
+
+	// Build creates new descriptors, so the cache must not return metrics built from the old ones.
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	scrape = c.metricCache.Begin()
+	_, ok = scrape.Load("/Added", taskValues{state: TASK_STATE_QUEUED, lastTaskResult: SCHED_S_TASK_QUEUED})
+	require.False(t, ok)
+}
+
+// exposition gathers the metrics sent by collect and returns them in the text format.
+func exposition(t *testing.T, collect func(ch chan<- prometheus.Metric)) string {
+	t.Helper()
+
+	registry := prometheus.NewPedanticRegistry()
+	require.NoError(t, registry.Register(collectorFunc(collect)))
+
+	families, err := registry.Gather()
+	require.NoError(t, err)
+
+	var text strings.Builder
+
+	for _, family := range families {
+		_, err := expfmt.MetricFamilyToText(&text, family)
+		require.NoError(t, err)
+	}
+
+	return text.String()
+}
+
+type collectorFunc func(ch chan<- prometheus.Metric)
+
+func (f collectorFunc) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(f, ch)
+}
+
+func (f collectorFunc) Collect(ch chan<- prometheus.Metric) {
+	f(ch)
+}
+
+// BenchmarkCollectMetrics measures building and sending the metrics of 265
+// tasks, roughly the number of tasks on a Windows 11 workstation. With a warm
+// cache the task values did not change since the last scrape; with a cold cache
+// every metric is built again.
+func BenchmarkCollectMetrics(b *testing.B) {
+	for _, warm := range []bool{true, false} {
+		b.Run(fmt.Sprintf("warm=%t", warm), func(b *testing.B) {
+			c := New(nil)
+			require.NoError(b, c.Build(slog.New(slog.DiscardHandler), nil))
+
+			tasks := benchmarkTasks(265)
+			ch := make(chan prometheus.Metric, len(tasks)*19)
+
+			b.ReportAllocs()
+
+			for b.Loop() {
+				if !warm {
+					c.metricCache.Reset()
+				}
+
+				c.collectMetrics(ch, tasks)
+
+				for len(ch) > 0 {
+					<-ch
+				}
+			}
+		})
+	}
+}
+
+func benchmarkTasks(n int) ScheduledTasks {
+	results := []TaskResult{SCHED_S_SUCCESS, SCHED_S_TASK_READY, SCHED_S_TASK_HAS_NOT_RUN, 1}
+	tasks := make(ScheduledTasks, n)
+
+	for i := range tasks {
+		tasks[i] = ScheduledTask{
+			Path:            fmt.Sprintf("/Microsoft/Windows/Folder%d/Task%d", i/4, i),
+			State:           TaskState(i % 5),
+			MissedRunsCount: float64(i % 3),
+			LastTaskResult:  results[i%len(results)],
+		}
+	}
+
+	return tasks
 }
