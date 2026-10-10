@@ -6,7 +6,7 @@ step builds every test binary and the exporter with
 [`tools/build-go-tests.ps1`](../tools/build-go-tests.ps1); linking the race test
 binaries would otherwise take minutes after provisioning.
 [`tools/run-go-tests.ps1`](../tools/run-go-tests.ps1) then runs the binaries in
-parallel through `go tool test2json`, each in its package directory, producing
+parallel through `test2json`, each in its package directory, producing
 the same events as `go test -json ./...`. Collector tests validate the metrics
 from those workloads. A final exporter smoke check starts the binary, requests
 `/metrics` once, and checks for a nonempty HTTP 200 response.

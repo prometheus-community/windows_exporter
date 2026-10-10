@@ -44,6 +44,11 @@ foreach ($package in $clashing) {
     if ($LASTEXITCODE -ne 0) { throw "go test -c $($package.ImportPath) failed with exit code $LASTEXITCODE" }
 }
 
+# Go does not ship test2json prebuilt; `go tool test2json` would build it on
+# first use in every parallel runner.
+go build -o (Join-Path $OutputDirectory 'test2json.exe') cmd/test2json
+if ($LASTEXITCODE -ne 0) { throw "go build cmd/test2json failed with exit code $LASTEXITCODE" }
+
 $packages | Select-Object ImportPath, Dir, Binary |
     ConvertTo-Json -AsArray |
     Set-Content -Encoding utf8 (Join-Path $OutputDirectory 'manifest.json')

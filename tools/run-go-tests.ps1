@@ -21,12 +21,13 @@ $runs = $manifest | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
     $package = $_
     $timeout = $using:Timeout
     $binary = Join-Path $using:BinaryDirectory $package.Binary
+    $test2json = Join-Path $using:BinaryDirectory 'test2json.exe'
     $log = Join-Path $using:logDirectory "$($package.Binary).jsonl"
 
     # Native commands start in the runspace location, so tests see their
     # package directory as the working directory, as with `go test`.
     Set-Location $package.Dir
-    $events = & go tool test2json -t -p $package.ImportPath $binary `
+    $events = & $test2json -t -p $package.ImportPath $binary `
         '-test.v=test2json' "-test.timeout=$timeout" 2>&1 |
         ForEach-Object { $_.ToString() }
     $exitCode = $LASTEXITCODE
