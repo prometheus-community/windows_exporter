@@ -64,6 +64,8 @@ type Collector struct {
 
 	logger *slog.Logger
 
+	// miSession is set when root\WebAdministration answered during Build. It's
+	// the fallback for worker processes whose command line can't be read.
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
@@ -133,7 +135,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.process.iis",
-		"Enable IIS collectWorker process name queries. May cause the collector to leak memory.",
+		"Append the IIS application pool name to the process name of IIS worker processes (w3wp).",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
 	app.Flag(
@@ -182,6 +184,9 @@ func (c *Collector) Close() error {
 		c.workerCh = nil
 		c.workerWG.Wait()
 	}
+
+	// The session belongs to the caller of Build.
+	c.miSession = nil
 
 	return nil
 }
@@ -329,27 +334,46 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	c.miSession = nil
+
 	if c.config.EnableWorkerProcess {
-		if miSession == nil {
-			return errors.New("miSession is nil")
-		}
-
-		miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
-		if err != nil {
-			return fmt.Errorf("failed to create WMI query: %w", err)
-		}
-
-		c.workerProcessMIQueryQuery = miQuery
-		c.miSession = miSession
-
-		var workerProcesses []WorkerProcess
-
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, 0); err != nil {
-			c.config.EnableWorkerProcess = false
-
-			return fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
+		if err := c.buildWorkerProcessWMI(miSession); err != nil {
+			return err
 		}
 	}
+
+	return nil
+}
+
+// buildWorkerProcessWMI enables the root\WebAdministration fallback for application pool names
+// if the IIS WMI provider is installed. Without it, only the w3wp command line is used.
+func (c *Collector) buildWorkerProcessWMI(miSession *mi.Session) error {
+	if miSession == nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelDebug,
+			"No MI session, reading IIS application pool names from the w3wp command line only",
+		)
+
+		return nil
+	}
+
+	miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	var workerProcesses []WorkerProcess
+
+	if err = miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, 0); err != nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelDebug,
+			`root\WebAdministration isn't available, reading IIS application pool names from the w3wp command line only`,
+			slog.Any("err", err),
+		)
+
+		return nil
+	}
+
+	c.workerProcessMIQueryQuery = miQuery
+	c.miSession = miSession
 
 	return nil
 }
