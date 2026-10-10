@@ -17,6 +17,13 @@ Express, IIS, SMTP, MSMQ, NPS, FSRM, SMB, DNS, DHCP, a workgroup failover
 cluster, printer and storage fixtures, unlocked and locked BitLocker volumes,
 and an authenticated RDP session.
 
+The failover cluster has no administrative access point: the DHCP-only runner
+network cannot host a Cluster Name. An internal Hyper-V switch provides a private
+client network for its resource fixtures. The `CIResources` group contains an
+online Generic Service that depends on an online IP Address, plus an offline IP
+Address. The `CIFailedResources` group contains a Generic Service whose binary is
+missing, so it stays failed. Native and WMI parity tests require these resources.
+
 `WINDOWS_EXPORTER_TEST_COLLECTORS` lists required collectors. Their tests fail
 when setup is missing or collection fails instead of skipping. Fixture assertions
 check known instances, including the active RDP user's session and SQL database.

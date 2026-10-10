@@ -18,18 +18,22 @@
 package mscluster
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameNetwork = Name + "_network"
 
+type networkSource interface {
+	Networks(deadline time.Time) ([]clusapi.Object, error)
+	Close() error
+}
+
 type collectorNetwork struct {
-	networkMIQuery mi.Query
+	networkSource networkSource
 
 	networkCharacteristics *prometheus.Desc
 	networkFlags           *prometheus.Desc
@@ -38,7 +42,8 @@ type collectorNetwork struct {
 	networkState           *prometheus.Desc
 }
 
-// msClusterNetwork represents the MSCluster_Network WMI class
+// msClusterNetwork represents the MSCluster_Network WMI class. The collector
+// reads ClusAPI; the parity test compares against this WMI model.
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
 type msClusterNetwork struct {
 	Name string `mi:"Name"`
@@ -51,13 +56,18 @@ type msClusterNetwork struct {
 }
 
 func (c *Collector) buildNetwork() error {
-	networkMIQuery, err := mi.NewQuery("SELECT Characteristics,Flags,Metric,Role,State FROM MSCluster_Network")
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.networkMIQuery = networkMIQuery
+	c.networkSource = source
+	c.buildNetworkDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildNetworkDescriptors() {
 	c.networkCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "characteristics"),
 		"Provides the characteristics of the network.",
@@ -88,61 +98,38 @@ func (c *Collector) buildNetwork() error {
 		[]string{"name"},
 		nil,
 	)
-
-	var dst []msClusterNetwork
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus metric channel.
 func (c *Collector) collectNetwork(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []msClusterNetwork
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if c.networkSource == nil {
+		return errNotBuilt(subCollectorNetwork)
 	}
 
-	for _, v := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.networkCharacteristics,
-			prometheus.GaugeValue,
-			float64(v.Characteristics),
-			v.Name,
-		)
+	networks, resultErr := callSource(maxScrapeDuration, c.networkSource.Networks)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.networkFlags,
-			prometheus.GaugeValue,
-			float64(v.Flags),
-			v.Name,
-		)
+	return c.publishNetworks(ch, networks, resultErr)
+}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.networkMetric,
-			prometheus.GaugeValue,
-			float64(v.Metric),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.networkRole,
-			prometheus.GaugeValue,
-			float64(v.Role),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.networkState,
-			prometheus.GaugeValue,
-			float64(v.State),
-			v.Name,
-		)
+func (c *Collector) publishNetworks(ch chan<- prometheus.Metric, networks []clusapi.Object, resultErr error) error {
+	fields := []objectField{
+		{name: "Characteristics", desc: c.networkCharacteristics},
+		{name: "Flags", desc: c.networkFlags},
+		{name: "Metric", desc: c.networkMetric},
+		{name: "Role", desc: c.networkRole},
+		{name: "State", desc: c.networkState},
 	}
 
-	return nil
+	for _, network := range networks {
+		if network.Name == "" {
+			continue
+		}
+
+		// All network properties exist since Windows Server 2012, so the
+		// build does not matter.
+		resultErr = publishObjectFields(ch, "network", network, fields, 0, resultErr)
+	}
+
+	return resultErr
 }
