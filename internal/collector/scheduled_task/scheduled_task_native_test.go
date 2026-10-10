@@ -43,7 +43,7 @@ func TestFetchTasksInFolderPartialCollection(t *testing.T) {
 
 			items := []*ole.Object{fakeScheduledTask(1, &released), nil, fakeScheduledTask(3, &released)}
 			collection, attempted := fakeTaskCollection(items, tc.countError, &collectionsReleased)
-			folder := fakeTaskFolder(collection, nil, nil)
+			folder := fakeTaskFolder("", collection, nil, nil)
 			tasks := ScheduledTasks{}
 
 			err := fetchTasksInFolder(folder, includeAllTasks, &tasks)
@@ -67,32 +67,29 @@ func TestFetchTasksInFolderPartialCollection(t *testing.T) {
 	}
 }
 
-func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
+func TestReadTaskFolderPartialFolderCollection(t *testing.T) {
 	var tasksReleased, foldersReleased, collectionsReleased int
 
 	children := make([]*ole.Object, 0, 2)
 
-	for _, state := range []int32{1, 3} {
-		tasks, _ := fakeTaskCollection([]*ole.Object{fakeScheduledTask(state, &tasksReleased)}, false, &collectionsReleased)
-		folders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
-		child := fakeTaskFolder(tasks, folders, &foldersReleased)
+	for _, path := range []string{`\A`, `\B`} {
+		child := fakeTaskFolder(path, nil, nil, &foldersReleased)
 		children = append(children, &child.Object)
 	}
 
 	folders, attempted := fakeTaskCollection([]*ole.Object{children[0], nil, children[1]}, false, &collectionsReleased)
-	emptyTasks, _ := fakeTaskCollection(nil, false, &collectionsReleased)
-	root := fakeTaskFolder(emptyTasks, folders, nil)
-	tasks := ScheduledTasks{}
+	tasks, _ := fakeTaskCollection([]*ole.Object{fakeScheduledTask(2, &tasksReleased)}, false, &collectionsReleased)
+	root := fakeTaskFolder(`\`, tasks, folders, nil)
 
-	err := fetchTasksRecursively(root, `\`, includeAllTasks, &tasks)
-	require.ErrorIs(t, err, ole.HRESULT(0x80070005))
+	contents := readTaskFolder(root, includeAllTasks)
+	require.ErrorIs(t, contents.err, ole.HRESULT(0x80070005))
 	require.Equal(t, []int64{1, 2, 3}, *attempted)
-	require.Len(t, tasks, 2)
-	require.Equal(t, TaskState(1), tasks[0].State)
-	require.Equal(t, TaskState(3), tasks[1].State)
-	require.Equal(t, 2, tasksReleased)
+	require.Equal(t, []string{`\A`, `\B`}, contents.subfolders)
+	require.Len(t, contents.tasks, 1)
+	require.Equal(t, TaskState(2), contents.tasks[0].State)
+	require.Equal(t, 1, tasksReleased)
 	require.Equal(t, 2, foldersReleased)
-	require.Equal(t, 6, collectionsReleased)
+	require.Equal(t, 2, collectionsReleased)
 }
 
 func TestFetchTasksFilters(t *testing.T) {
@@ -138,7 +135,7 @@ func TestFetchTasksFilters(t *testing.T) {
 			collection, _ := fakeTaskCollection(items, false, &collectionsReleased)
 			tasks := ScheduledTasks{}
 
-			err := fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), New(tc.config).includeTask, &tasks)
+			err := fetchTasksInFolder(fakeTaskFolder("", collection, nil, nil), New(tc.config).includeTask, &tasks)
 			require.NoError(t, err)
 			require.Equal(t, len(fakes), released)
 
@@ -210,7 +207,7 @@ func TestFetchTasksInFolderReadsPublishedProperties(t *testing.T) {
 	)
 	tasks := ScheduledTasks{}
 
-	require.NoError(t, fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), includeAllTasks, &tasks))
+	require.NoError(t, fetchTasksInFolder(fakeTaskFolder("", collection, nil, nil), includeAllTasks, &tasks))
 	require.Equal(t, ScheduledTasks{
 		{Path: "/Folder/Ran", State: TASK_STATE_READY, LastTaskResult: 1, MissedRunsCount: 2},
 		{Path: "/NotRun", State: TASK_STATE_DISABLED, LastTaskResult: SCHED_S_TASK_HAS_NOT_RUN},
@@ -274,7 +271,7 @@ func fakeTaskCollection(items []*ole.Object, countError bool, released *int) (*o
 	return &ole.Object{VTable: &methods[0]}, &attempted
 }
 
-func fakeTaskFolder(tasks, folders *ole.Object, released *int) *taskschd.TaskFolder {
+func fakeTaskFolder(path string, tasks, folders *ole.Object, released *int) *taskschd.TaskFolder {
 	var methods [15]uintptr
 
 	methods[2] = windows.NewCallback(func(uintptr) uintptr {
@@ -286,6 +283,15 @@ func fakeTaskFolder(tasks, folders *ole.Object, released *int) *taskschd.TaskFol
 	})
 	methods[8] = windows.NewCallback(func(_ uintptr, out *uintptr) uintptr {
 		*out = 0 // A null BSTR is a valid empty string.
+
+		if path == "" {
+			return 0
+		}
+
+		*out, _, _ = sysAllocString.Call(uintptr(unsafe.Pointer(windows.StringToUTF16Ptr(path))))
+		if *out == 0 {
+			return 0x8007000e // E_OUTOFMEMORY
+		}
 
 		return 0
 	})

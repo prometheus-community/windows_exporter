@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -294,41 +295,115 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 // errTasksSkipped accompanies readable tasks when some tasks or folders could not be read.
 var errTasksSkipped = errors.New("tasks skipped")
 
+// taskFolderWorkers is the number of folders read concurrently. Almost all of
+// a scrape is spent waiting for the Task Scheduler service, which answers
+// requests from several connections in parallel.
+const taskFolderWorkers = 4
+
 // getScheduledTasks returns the tasks whose slash-separated paths pass include.
+// Folders are read concurrently, but tasks are returned in the order of a
+// depth-first walk, as if the folders had been read one after another.
 func getScheduledTasks(include func(path string) bool) (ScheduledTasks, error) {
+	return walkTaskFolders(taskFolderWorkers, func() (taskFolderReader, func(), error) {
+		return newTaskFolderReader(include)
+	})
+}
+
+// taskFolderReader opens the folder at path and reads it. An error means the
+// folder could not be opened; errors reading its tasks and subfolders are
+// reported in taskFolderContents.
+type taskFolderReader func(path string) (taskFolderContents, error)
+
+type taskFolderContents struct {
+	tasks      ScheduledTasks
+	subfolders []string
+	err        error
+}
+
+// newTaskFolderReader connects to the Task Scheduler service on the calling
+// goroutine's OS thread. The returned reader must be used, and release called,
+// on the same goroutine.
+func newTaskFolderReader(include func(path string) bool) (taskFolderReader, func(), error) {
 	// COM initialization and every interface call stay on the same OS thread.
 	runtime.LockOSThread()
 
-	defer runtime.UnlockOSThread()
-
 	if err := ole.Initialize(); err != nil {
-		return nil, err
-	}
+		runtime.UnlockOSThread()
 
-	defer ole.Uninitialize()
+		return nil, nil, err
+	}
 
 	service, err := taskschd.NewTaskService()
 	if err != nil {
-		return nil, fmt.Errorf("create Task Scheduler service: %w", err)
+		ole.Uninitialize()
+		runtime.UnlockOSThread()
+
+		return nil, nil, fmt.Errorf("create Task Scheduler service: %w", err)
 	}
-	defer service.Release()
+
+	release := func() {
+		service.Release()
+		ole.Uninitialize()
+		runtime.UnlockOSThread()
+	}
 
 	if err := service.Connect(); err != nil {
-		return nil, fmt.Errorf("connect Task Scheduler service: %w", err)
+		release()
+
+		return nil, nil, fmt.Errorf("connect Task Scheduler service: %w", err)
 	}
 
-	root, err := service.Folder(`\`)
+	read := func(path string) (taskFolderContents, error) {
+		folder, err := service.Folder(path)
+		if err != nil {
+			return taskFolderContents{}, err
+		}
+		defer folder.Release()
+
+		return readTaskFolder(folder, include), nil
+	}
+
+	return read, release, nil
+}
+
+// readTaskFolder reads the tasks and the subfolder paths of a folder, and
+// reports errors after reading the remaining tasks and subfolders.
+func readTaskFolder(folder *taskschd.TaskFolder, include func(path string) bool) taskFolderContents {
+	var contents taskFolderContents
+
+	errs := []error{}
+	if err := fetchTasksInFolder(folder, include, &contents.tasks); err != nil {
+		errs = append(errs, err)
+	}
+
+	folders, err := folder.Folders()
 	if err != nil {
-		return nil, fmt.Errorf("get root task folder: %w", err)
-	}
-	defer root.Release()
+		contents.err = errors.Join(append(errs, fmt.Errorf("get sub folders: %w", err))...)
 
-	tasks := ScheduledTasks{}
-	if err := fetchTasksRecursively(root, `\`, include, &tasks); err != nil {
-		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
+		return contents
+	}
+	defer folders.Release()
+
+	for subfolder, err := range folders.All() {
+		if err != nil {
+			errs = append(errs, fmt.Errorf("enumerate sub folders: %w", err))
+
+			continue
+		}
+
+		path, err := subfolder.Path()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("get sub folder path: %w", err))
+
+			continue
+		}
+
+		contents.subfolders = append(contents.subfolders, path)
 	}
 
-	return tasks, nil
+	contents.err = errors.Join(errs...)
+
+	return contents
 }
 
 // fetchTasksInFolder appends readable tasks and reports errors after reading the remaining tasks.
@@ -365,39 +440,162 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) b
 	return errors.Join(errs...)
 }
 
-// fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
-func fetchTasksRecursively(
-	folder *taskschd.TaskFolder, folderPath string, include func(path string) bool, scheduledTasks *ScheduledTasks,
-) error {
+// taskFolderNode is a folder of the walk. Only the worker reading the folder
+// writes its fields, before its subfolders are queued.
+type taskFolderNode struct {
+	path     string
+	read     bool
+	openErr  error
+	contents taskFolderContents
+	children []*taskFolderNode
+}
+
+// taskFolderQueue holds the folders waiting for a worker.
+type taskFolderQueue struct {
+	mu    sync.Mutex
+	ready sync.Cond
+	queue []*taskFolderNode
+	// pending counts the folders that are queued or being read.
+	pending int
+}
+
+// walkTaskFolders reads the folder tree from the root folder with up to
+// workers goroutines. newReader runs on each worker goroutine. Workers that
+// fail to start don't take part; their errors are returned only if no worker
+// read the root folder.
+func walkTaskFolders(workers int, newReader func() (taskFolderReader, func(), error)) (ScheduledTasks, error) {
+	root := &taskFolderNode{path: `\`}
+	queue := &taskFolderQueue{queue: []*taskFolderNode{root}, pending: 1}
+	queue.ready.L = &queue.mu
+
+	startErrs := make([]error, workers)
+
+	var wg sync.WaitGroup
+
+	for i := range workers {
+		wg.Go(func() {
+			startErrs[i] = queue.work(newReader)
+		})
+	}
+
+	wg.Wait()
+
+	if !root.read {
+		return nil, errors.Join(startErrs...)
+	}
+
+	if root.openErr != nil {
+		return nil, fmt.Errorf("get root task folder: %w", root.openErr)
+	}
+
+	tasks := ScheduledTasks{}
 	errs := []error{}
-	if err := fetchTasksInFolder(folder, include, scheduledTasks); err != nil {
-		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
+
+	root.collect(&tasks, &errs)
+
+	if err := errors.Join(errs...); err != nil {
+		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
 	}
 
-	folders, err := folder.Folders()
+	return tasks, nil
+}
+
+// work reads queued folders until all folders are read. A panic stops only
+// this worker; the folder it was reading is reported as failed.
+func (q *taskFolderQueue) work(newReader func() (taskFolderReader, func(), error)) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in task folder worker: %v", r)
+		}
+	}()
+
+	read, release, err := newReader()
 	if err != nil {
-		return errors.Join(append(errs, fmt.Errorf("folder %s: get sub folders: %w", folderPath, err))...)
+		return err
 	}
-	defer folders.Release()
+	defer release()
 
-	for subfolder, err := range folders.All() {
-		if err != nil {
-			errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
-
-			continue
+	for {
+		node := q.next()
+		if node == nil {
+			return nil
 		}
 
-		subfolderPath := folderPath
-		if path, err := subfolder.Path(); err == nil {
-			subfolderPath = path
-		}
-
-		if err := fetchTasksRecursively(subfolder, subfolderPath, include, scheduledTasks); err != nil {
-			errs = append(errs, err)
+		// After a panic, the state of this worker's COM objects is unknown.
+		if err := q.read(node, read); err != nil {
+			return err
 		}
 	}
+}
 
-	return errors.Join(errs...)
+// next returns the next folder to read, or nil when all folders are read.
+func (q *taskFolderQueue) next() *taskFolderNode {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	for len(q.queue) == 0 && q.pending > 0 {
+		q.ready.Wait()
+	}
+
+	if len(q.queue) == 0 {
+		return nil
+	}
+
+	node := q.queue[0]
+	q.queue = q.queue[1:]
+
+	return node
+}
+
+// read reads a folder and queues its subfolders. A panic in read is recorded
+// as the folder's error and returned.
+func (q *taskFolderQueue) read(node *taskFolderNode, read taskFolderReader) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+			node.openErr = err
+			node.children = nil
+		}
+
+		node.read = true
+
+		q.mu.Lock()
+		q.queue = append(q.queue, node.children...)
+		q.pending += len(node.children) - 1
+		q.mu.Unlock()
+		q.ready.Broadcast()
+	}()
+
+	node.contents, node.openErr = read(node.path)
+
+	node.children = make([]*taskFolderNode, 0, len(node.contents.subfolders))
+	for _, path := range node.contents.subfolders {
+		node.children = append(node.children, &taskFolderNode{path: path})
+	}
+
+	return nil
+}
+
+// collect appends the tasks and errors of the folder and its subfolders in depth-first order.
+func (n *taskFolderNode) collect(tasks *ScheduledTasks, errs *[]error) {
+	switch {
+	case !n.read:
+		*errs = append(*errs, fmt.Errorf("folder %s: not read", n.path))
+
+		return
+	case n.openErr != nil:
+		*errs = append(*errs, fmt.Errorf("folder %s: get folder: %w", n.path, n.openErr))
+
+		return
+	case n.contents.err != nil:
+		*errs = append(*errs, fmt.Errorf("folder %s: %w", n.path, n.contents.err))
+	}
+
+	*tasks = append(*tasks, n.contents.tasks...)
+
+	for _, child := range n.children {
+		child.collect(tasks, errs)
+	}
 }
 
 // parseTask reads a task that passes include and reports false for filtered
