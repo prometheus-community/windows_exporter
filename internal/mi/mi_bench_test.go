@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
@@ -288,6 +289,105 @@ func Benchmark_MI_Parallel_StoragePool(b *testing.B) {
 			require.NoError(b, err)
 
 			b.ReportMetric(float64(int64(end)-int64(start))*1000/float64(b.N), "handles/1k-queries")
+		})
+	}
+}
+
+// processCPU returns the CPU time of the process, including MI threads.
+func processCPU(tb testing.TB) time.Duration {
+	tb.Helper()
+
+	var creation, exit, kernel, user windows.Filetime
+
+	require.NoError(tb, windows.GetProcessTimes(windows.CurrentProcess(), &creation, &exit, &kernel, &user))
+
+	return time.Duration(kernel.Nanoseconds() + user.Nanoseconds())
+}
+
+// Benchmark_MI_ProcessCPU compares the process CPU time per query of the
+// callback paths with MI_Operation_GetInstance. GetProcessTimes counts in
+// 15.6ms steps, so run it with a fixed -benchtime of a few thousand queries.
+func Benchmark_MI_ProcessCPU(b *testing.B) {
+	const queryString = "SELECT Name, PercentProcessorTime FROM Win32_PerfRawData_PerfOS_Processor"
+
+	type processor struct {
+		Name                 string `mi:"Name"`
+		PercentProcessorTime uint64 `mi:"PercentProcessorTime"`
+	}
+
+	query, err := mi.NewQuery(queryString)
+	require.NoError(b, err)
+
+	name, err := mi.NewElementName("PercentProcessorTime")
+	require.NoError(b, err)
+
+	readSync := func(session *mi.Session, read func(*mi.Operation) error) error {
+		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, queryString)
+		if err != nil {
+			return err
+		}
+
+		return errors.Join(read(operation), operation.Close())
+	}
+
+	cases := []struct {
+		name  string
+		query func(*mi.Session) error
+	}{
+		{"Query/Async", func(session *mi.Session) error {
+			var processors []processor
+
+			return session.Query(&processors, mi.NamespaceRootCIMv2, query, -1)
+		}},
+		{"Query/Sync", func(session *mi.Session) error {
+			var processors []processor
+
+			return readSync(session, func(operation *mi.Operation) error { return operation.Unmarshal(&processors) })
+		}},
+		{"QueryFunc/Async", func(session *mi.Session) error {
+			return session.QueryFunc(mi.NamespaceRootCIMv2, query, -1, func(instance *mi.Instance) error {
+				_, err := instance.GetElementByName(name)
+
+				return err
+			})
+		}},
+		{"QueryFunc/Sync", func(session *mi.Session) error {
+			return readSync(session, func(operation *mi.Operation) error {
+				for {
+					instance, moreResults, err := operation.GetInstance()
+					if err != nil || instance == nil {
+						return err
+					}
+
+					if _, err := instance.GetElementByName(name); err != nil {
+						return err
+					}
+
+					if !moreResults {
+						return nil
+					}
+				}
+			})
+		}},
+	}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			session := newTestSession(b)
+
+			for range 20 {
+				require.NoError(b, tc.query(session))
+			}
+
+			b.ReportAllocs()
+
+			start := processCPU(b)
+
+			for b.Loop() {
+				require.NoError(b, tc.query(session))
+			}
+
+			b.ReportMetric(float64((processCPU(b)-start).Microseconds())/float64(b.N), "cpu-us/op")
 		})
 	}
 }
