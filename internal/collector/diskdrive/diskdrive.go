@@ -127,11 +127,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.miQuery = miQuery
 	c.miSession = miSession
 
-	var dst []diskDrive
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
+	// Win32_DiskDrive exists on every supported Windows version, so Build does not probe it.
+	// WMI can time out shortly after boot. A probe would disable the collector until restart,
+	// while a failing Collect only fails the affected scrapes.
 	return nil
 }
 
