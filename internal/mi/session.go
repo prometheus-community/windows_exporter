@@ -419,14 +419,18 @@ func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpressio
 // order. It is meant for queries whose result shape is only known at runtime,
 // where [Session.Query] cannot unmarshal into a struct.
 //
-// The instance, and every element read from it, is owned by the operation and
-// only valid until fn returns. If fn returns an error, the query is cancelled
-// and that error is returned.
+// The instance passed to fn, and every element read from it, is only valid
+// until fn returns. If fn returns an error, the query is cancelled and that
+// error is returned.
 //
 // fn runs on the calling goroutine, for a copy of each instance: MI delivers
 // the instances to a callback on one of its threads, which copies them and
 // returns right away. A panic in fn cancels the query and propagates to the
 // caller once MI has finished the operation.
+//
+// MI does not wait for fn. With a slow fn, copies of the remaining result set
+// queue up in native memory, and the query timeout does not stop fn; check a
+// deadline in fn where that matters.
 func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
 	if s == nil || s.ft == nil {
 		return ErrNotInitialized

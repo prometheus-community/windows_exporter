@@ -189,7 +189,7 @@ func Test_MI_QueryFunc_Timeout(t *testing.T) {
 }
 
 // Test_MI_QueryFunc_Nested runs a query from within fn, which runs on the
-// calling goroutine while MI waits for it.
+// calling goroutine. The instance passed to fn stays valid across it.
 func Test_MI_QueryFunc_Nested(t *testing.T) {
 	session := newTestSession(t)
 
