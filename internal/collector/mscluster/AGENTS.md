@@ -17,6 +17,12 @@
   (`setup-mscluster` in `.github/workflows/ci.yml`) is a single node without
   storage or administrative access point, so it has no resources and no
   cluster shared volumes. Parity tests must accept empty sets in that case.
+- Property lists returned by the cluster service end with an extra
+  `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
+  the documentation miss this. Validate parser changes against the CI cluster.
+- `clusapi.Open` reports an unconfigured cluster with `errors.ErrUnsupported`;
+  the shared collector test treats that as an unsupported role on hosts where
+  `mscluster` is not a required fixture.
 - Use `ClusterOpenEnum` and the `Open*Ex` functions (Windows Server 2008 R2+),
   not `ClusterOpenEnumEx` (Windows Server 2016+), to keep Windows Server
   2012 R2 support.

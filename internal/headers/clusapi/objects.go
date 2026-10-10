@@ -146,7 +146,7 @@ func (c *Cluster) Groups(deadline time.Time) ([]Object, error) {
 	return c.objects(&groupAPI, deadline)
 }
 
-func (c *Cluster) objects(api *objectAPI, deadline time.Time) (_ []Object, resultErr error) {
+func (c *Cluster) objects(api *objectAPI, deadline time.Time) ([]Object, error) {
 	for _, proc := range []*windows.LazyProc{openCluster, openEnum, nextEnum, closeEnum, api.open, api.close, api.control} {
 		if err := proc.Find(); err != nil {
 			return nil, fmt.Errorf("load ClusAPI: %w", err)
@@ -160,13 +160,29 @@ func (c *Cluster) objects(api *objectAPI, deadline time.Time) (_ []Object, resul
 		return nil, err
 	}
 
+	var objects []Object
+
+	err := c.enumerateLocked(api.enumType, api.kind, deadline, func(name string) error {
+		object, err := c.readObject(api, name, deadline)
+		objects = append(objects, object)
+
+		return err
+	})
+
+	return objects, err
+}
+
+// enumerateLocked calls visit for every object name of a CLUSTER_ENUM type.
+// Visit errors are joined per object; the walk stops at the deadline. The
+// caller holds c.mu and has opened the cluster handle.
+func (c *Cluster) enumerateLocked(enumType uint32, kind string, deadline time.Time, visit func(name string) error) (resultErr error) {
 	if err := checkDeadline(deadline); err != nil {
-		return nil, err
+		return err
 	}
 
-	enum, _, err := openEnum.Call(c.handle, uintptr(api.enumType))
+	enum, _, err := openEnum.Call(c.handle, uintptr(enumType))
 	if enum == 0 {
-		return nil, fmt.Errorf("ClusterOpenEnum: %w", err)
+		return fmt.Errorf("ClusterOpenEnum: %w", err)
 	}
 	defer func() {
 		status, _, _ := closeEnum.Call(enum)
@@ -175,27 +191,23 @@ func (c *Cluster) objects(api *objectAPI, deadline time.Time) (_ []Object, resul
 		}
 	}()
 
-	var objects []Object
-
 	for index := uint32(0); ; index++ {
-		name, err := enumName(enum, index, api.enumType, deadline)
+		name, err := enumName(enum, index, enumType, deadline)
 		if errors.Is(err, windows.ERROR_NO_MORE_ITEMS) {
-			return objects, resultErr
+			return resultErr
 		}
 
 		if err != nil {
-			return objects, errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
+			return errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
 		}
 
-		object, err := c.readObject(api, name, deadline)
-		objects = append(objects, object)
-
+		err = visit(name)
 		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("%s %q: %w", api.kind, name, err))
+			resultErr = errors.Join(resultErr, fmt.Errorf("%s %q: %w", kind, name, err))
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			return objects, resultErr
+			return resultErr
 		}
 	}
 }
