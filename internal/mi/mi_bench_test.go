@@ -19,9 +19,12 @@ package mi_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func Benchmark_MI_Query_Unmarshal(b *testing.B) {
@@ -159,5 +162,99 @@ func Benchmark_MI_QueryFunc_GetElementByName(b *testing.B) {
 			return nil
 		})
 		require.NoError(b, err)
+	}
+}
+
+// The Sync benchmarks read the same results with MI_Operation_GetInstance,
+// the path the high-level queries used before they switched to callbacks.
+
+func Benchmark_MI_Query_Unmarshal_Sync(b *testing.B) {
+	session := newTestSession(b)
+
+	b.ReportAllocs()
+
+	var processes []win32Process
+
+	for b.Loop() {
+		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+			"SELECT Name FROM Win32_Process WHERE Handle = 0 OR Handle = 4")
+		require.NoError(b, err)
+		require.NoError(b, operation.Unmarshal(&processes))
+		require.NoError(b, operation.Close())
+		require.Equal(b, []win32Process{{Name: "System Idle Process"}, {Name: "System"}}, processes)
+	}
+}
+
+func Benchmark_MI_QueryFunc_GetElement_Sync(b *testing.B) {
+	session := newTestSession(b)
+
+	properties := []string{"Name", "PercentIdleTime", "PercentProcessorTime", "InterruptsPersec"}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+			"SELECT Name, PercentIdleTime, PercentProcessorTime, InterruptsPersec FROM Win32_PerfRawData_PerfOS_Processor")
+		require.NoError(b, err)
+
+		for {
+			instance, moreResults, err := operation.GetInstance()
+			require.NoError(b, err)
+
+			if instance == nil {
+				break
+			}
+
+			for _, property := range properties {
+				_, err := instance.GetElement(property)
+				require.NoError(b, err)
+			}
+
+			if !moreResults {
+				break
+			}
+		}
+
+		require.NoError(b, operation.Close())
+	}
+}
+
+// Benchmark_MI_Parallel_StoragePool runs parallel queries against a slow
+// provider and reports the handle count growth per 1000 queries.
+func Benchmark_MI_Parallel_StoragePool(b *testing.B) {
+	for _, mode := range []string{"Async", "Sync"} {
+		b.Run(mode, func(b *testing.B) {
+			session := newTestSession(b)
+			query := storagePoolQuery(b, session)
+
+			start, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
+			require.NoError(b, err)
+
+			b.ReportAllocs()
+			b.SetParallelism(2)
+
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					var pools []msftStoragePool
+
+					if mode == "Async" {
+						require.NoError(b, session.Query(&pools, mi.NamespaceRootStorage, query, 4*time.Second))
+
+						continue
+					}
+
+					operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootStorage, mi.QueryDialectWQL,
+						"SELECT FriendlyName FROM MSFT_StoragePool")
+					require.NoError(b, err)
+					require.NoError(b, operation.Unmarshal(&pools))
+					require.NoError(b, operation.Close())
+				}
+			})
+
+			end, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
+			require.NoError(b, err)
+
+			b.ReportMetric(float64(int64(end)-int64(start))*1000/float64(b.N), "handles/1k-queries")
+		})
 	}
 }

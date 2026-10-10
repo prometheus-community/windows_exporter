@@ -114,6 +114,12 @@ func (o *Operation) Close() error {
 		}
 	}
 
+	return o.close()
+}
+
+// close calls MI_Operation_Close, which blocks until the final result has
+// been delivered.
+func (o *Operation) close() error {
 	r0, _, _ := syscall.SyscallN(o.ft.Close, uintptr(unsafe.Pointer(o)))
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
@@ -160,37 +166,11 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 		uintptr(unsafe.Pointer(&errorDetails)),
 	)
 
-	//nolint:nestif
 	if !errors.Is(instanceResult, MI_RESULT_OK) {
-		errorMessage := strings.TrimSpace(windows.UTF16PtrToString(errorMessageUTF16))
-
-		// We need a language neutral way to detect an operation timeout, because MI_RESULT_OPERATION_TIMED_OUT
-		// is not returned by the API, but instead we get MI_RESULT_INVALID_OPERATION_TIMEOUT with a specific error code
-		// in the error details.
-		if errorDetails != nil {
-			count, _ := errorDetails.GetElementCount()
-			if count != 0 {
-				errorCodeRaw, err := errorDetails.GetElement("error_Code")
-				if err == nil {
-					errorCodeValue, _ := errorCodeRaw.GetValue()
-
-					errorCode, ok := errorCodeValue.(uint32)
-					if ok && errorCode == 262148 {
-						instanceResult = MI_RESULT_INVALID_OPERATION_TIMEOUT
-						errorMessage = ""
-					}
-				}
-			}
-		}
-
-		if errorMessage != "" {
-			errorMessage = fmt.Sprintf(" (%s)", errorMessage)
-		}
-
 		// A failed result is always the final one.
 		o.completed = true
 
-		return nil, false, fmt.Errorf("instance result: %w%s", instanceResult, errorMessage)
+		return nil, false, instanceResultError(instanceResult, errorMessageUTF16, errorDetails)
 	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
@@ -202,6 +182,37 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 	}
 
 	return instance, moreResults == True, nil
+}
+
+// instanceResultError returns the error for a failed instance result.
+func instanceResultError(instanceResult ResultError, errorMessageUTF16 *uint16, errorDetails *Instance) error {
+	errorMessage := strings.TrimSpace(windows.UTF16PtrToString(errorMessageUTF16))
+
+	// We need a language neutral way to detect an operation timeout, because MI_RESULT_OPERATION_TIMED_OUT
+	// is not returned by the API, but instead we get MI_RESULT_INVALID_OPERATION_TIMEOUT with a specific error code
+	// in the error details.
+	//nolint:nestif
+	if errorDetails != nil {
+		count, _ := errorDetails.GetElementCount()
+		if count != 0 {
+			errorCodeRaw, err := errorDetails.GetElement("error_Code")
+			if err == nil {
+				errorCodeValue, _ := errorCodeRaw.GetValue()
+
+				errorCode, ok := errorCodeValue.(uint32)
+				if ok && errorCode == 262148 {
+					instanceResult = MI_RESULT_INVALID_OPERATION_TIMEOUT
+					errorMessage = ""
+				}
+			}
+		}
+	}
+
+	if errorMessage != "" {
+		errorMessage = fmt.Sprintf(" (%s)", errorMessage)
+	}
+
+	return fmt.Errorf("instance result: %w%s", instanceResult, errorMessage)
 }
 
 func (o *Operation) Unmarshal[T any](dst *[]T) error {
@@ -299,27 +310,42 @@ func (o *Operation) unmarshal[T any](dst *[]T, fields []miField, skipMissing boo
 			break
 		}
 
-		counter, err := instance.GetElementCount()
-		if err != nil {
-			return fmt.Errorf("failed to get element count: %w", err)
-		}
+		if err := appendInstance(dst, instance, fields, skipMissing); err != nil {
+			if errors.Is(err, errStopQuery) {
+				break
+			}
 
-		if counter == 0 {
-			break
-		}
-
-		var elem T
-
-		if err := unmarshalInstance(instance, fields, reflect.ValueOf(&elem).Elem(), skipMissing); err != nil {
 			return err
 		}
-
-		*dst = append(*dst, elem)
 
 		if !moreResults {
 			break
 		}
 	}
+
+	return nil
+}
+
+// appendInstance unmarshals instance and appends it to dst. An instance
+// without elements ends the result set; appendInstance then returns
+// errStopQuery.
+func appendInstance[T any](dst *[]T, instance *Instance, fields []miField, skipMissing bool) error {
+	counter, err := instance.GetElementCount()
+	if err != nil {
+		return fmt.Errorf("failed to get element count: %w", err)
+	}
+
+	if counter == 0 {
+		return errStopQuery
+	}
+
+	var elem T
+
+	if err := unmarshalInstance(instance, fields, reflect.ValueOf(&elem).Elem(), skipMissing); err != nil {
+		return err
+	}
+
+	*dst = append(*dst, elem)
 
 	return nil
 }

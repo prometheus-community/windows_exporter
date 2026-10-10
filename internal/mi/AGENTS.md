@@ -1,0 +1,33 @@
+# MI package guidance
+
+`Session.Query`, `QueryUnmarshal` and `QueryFunc` receive results through
+`MI_OperationCallbacks` ([`callbacks.go`](callbacks.go)). Do not move them back
+to the synchronous `MI_Operation_GetInstance` loop: when its result hand-over
+waits, e.g. for parallel queries or slow providers such as `MSFT_StoragePool`,
+the WMI client leaks Event handles (`miutils!RtlInterlockedCompareWait`).
+`Test_MI_ParallelQuery_HandleGrowth` guards this. `QueryInstances` and
+`Operation.GetInstance` remain as the synchronous low-level API for tests.
+
+Rules for the callback path:
+
+- Create native callbacks once (`sync.OnceValue`) and identify the query by
+  the callback context. `windows.NewCallback` never frees a callback and a
+  process can create only about 2000.
+- Keep the callback context and the `MI_OperationCallbacks` pinned until
+  `MI_Operation_Close` has returned.
+- Never call `Cancel` or `Close` from a callback. The goroutine that started
+  the query cancels on request and closes after the final callback
+  (`moreResults == MI_FALSE`).
+- Recover panics in callbacks; they must not unwind into MI. Never block a
+  callback on a goroutine that may have stopped serving it.
+- MI reports parameter errors from within `MI_Session_QueryInstances`; the
+  runtime runs that callback on the calling goroutine.
+- While waiting for callbacks, keep a timer pending. Otherwise the runtime can
+  declare a false deadlock (golang/go#55015, still open in Go 1.27);
+  `Test_MI_Query_DeadlockDetector` reproduces it. Do not use a goroutine that
+  sleeps forever.
+- Guard shared callback state with a mutex: results of one operation may
+  arrive on different MI threads, which the race detector cannot order.
+
+Run `CGO_ENABLED=1 go test -race` (gcc from w64devkit) and a
+`-gcflags=all=-d=checkptr` run for changes in this package.
