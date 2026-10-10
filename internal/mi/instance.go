@@ -74,6 +74,25 @@ type ClassDecl struct {
 	OwningClass uintptr
 }
 
+// clone returns a copy of the instance that stays valid until it is deleted.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_instance_clone
+func (instance *Instance) clone() (*Instance, error) {
+	if instance == nil || instance.ft == nil {
+		return nil, ErrNotInitialized
+	}
+
+	var clone *Instance
+
+	r0, _, _ := syscall.SyscallN(instance.ft.Clone, uintptr(unsafe.Pointer(instance)), uintptr(unsafe.Pointer(&clone)))
+
+	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+		return nil, result
+	}
+
+	return clone, nil
+}
+
 func (instance *Instance) Delete() error {
 	if instance == nil || instance.ft == nil {
 		return ErrNotInitialized

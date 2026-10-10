@@ -45,8 +45,8 @@ import (
 //     callback context, is pinned until the operation is closed.
 //   - It never calls into the operation. Cancel and Close are called by the
 //     goroutine that started the query, after the final callback for Close.
-//   - It recovers panics, which must not unwind into native code, and never
-//     blocks on a goroutine that stopped serving it.
+//   - It never runs caller code and never blocks on a goroutine. A panic in
+//     it is recovered, as it must not unwind into native code.
 //
 // MI reports some failures, e.g. invalid parameters, from within
 // MI_Session_QueryInstances. The runtime runs such a callback on the
@@ -126,19 +126,8 @@ func releaseGuardTimer(timer *time.Timer) {
 	guardTimers.Put(timer)
 }
 
-var (
-	// errQueryAborted is returned to an instance callback when the waiting
-	// goroutine stopped handling instances, e.g. because its handler panicked.
-	errQueryAborted = errors.New("query aborted")
-
-	// errStopQuery cancels a query without an error.
-	errStopQuery = errors.New("stop query")
-
-	// errInlineInstance fails a [Session.QueryFunc] query whose instance MI
-	// delivers from within MI_Session_QueryInstances. MI only reports
-	// parameter errors that way.
-	errInlineInstance = errors.New("MI delivered an instance from within MI_Session_QueryInstances")
-)
+// errStopQuery cancels a query without an error.
+var errStopQuery = errors.New("stop query")
 
 // callbackPanicError reports a panic recovered in an MI callback. The value
 // is formatted by Error, outside the callback, because formatting can panic
@@ -164,17 +153,18 @@ type asyncQuery struct {
 	// without an error.
 	onInstance func(*Instance) error
 
-	// handler is called for every instance on the waiting goroutine, which
-	// receives them on instances and replies on handled. aborted is closed
-	// when it stops doing so. All are nil unless created by newHandOverQuery.
-	handler   func(*Instance) error
-	instances chan *Instance
-	handled   chan error
-	aborted   chan struct{}
-
-	// startThread is the ID of the thread that runs MI_Session_QueryInstances
-	// while it runs, zero otherwise.
-	startThread atomic.Uint32
+	// handler is called on the waiting goroutine for copies of the instances,
+	// which the callbacks queue in pending and announce on queued. It is nil
+	// unless created by newCopyQuery. batch is reused for pending; only the
+	// waiting goroutine uses it.
+	handler func(*Instance) error
+	pending []*Instance
+	batch   []*Instance
+	queued  chan struct{}
+	// handlerErr is the error handler returned, if any. Only the waiting
+	// goroutine uses it. It takes precedence over err: the handler only sees
+	// instances that arrived before any failed result.
+	handlerErr error
 
 	// cancelRequested asks the waiting goroutine to cancel the operation.
 	cancelRequested chan struct{}
@@ -188,6 +178,7 @@ type asyncQuery struct {
 	// one at a time, but possibly on different threads, and its own ordering
 	// is invisible to Go. The race detector cannot point out a missing lock
 	// here: it treats every callback as synchronized with every native call.
+	// mu also guards pending against the waiting goroutine.
 	mu  sync.Mutex
 	err error
 }
@@ -201,16 +192,14 @@ func newAsyncQuery(onInstance func(*Instance) error) *asyncQuery {
 	}
 }
 
-// newHandOverQuery returns a query that calls handler for every instance on
-// the goroutine running [asyncQuery.wait]. The callback waits until handler
-// returns, so the instance stays valid without a copy.
-func newHandOverQuery(handler func(*Instance) error) *asyncQuery {
+// newCopyQuery returns a query that calls handler on the goroutine running
+// [asyncQuery.wait], for a copy of every instance. The callback queues the
+// copy and returns right away; the copy is deleted when handler returns.
+func newCopyQuery(handler func(*Instance) error) *asyncQuery {
 	query := newAsyncQuery(nil)
-	query.onInstance = query.handOver
+	query.onInstance = query.queueCopy
 	query.handler = handler
-	query.instances = make(chan *Instance)
-	query.handled = make(chan error)
-	query.aborted = make(chan struct{})
+	query.queued = make(chan struct{}, 1)
 
 	return query
 }
@@ -234,10 +223,6 @@ func (q *asyncQuery) start(session *Session, flags OperationFlags, operationOpti
 		operationOptions = session.defaultOperationOptions
 	}
 
-	// The thread ID identifies callbacks from within the call, see handOver.
-	runtime.LockOSThread()
-	q.startThread.Store(windows.GetCurrentThreadId())
-
 	_, _, _ = syscall.SyscallN(
 		session.ft.QueryInstances,
 		uintptr(unsafe.Pointer(session)),
@@ -249,9 +234,6 @@ func (q *asyncQuery) start(session *Session, flags OperationFlags, operationOpti
 		uintptr(unsafe.Pointer(&q.callbacks)),
 		uintptr(unsafe.Pointer(&q.operation)),
 	)
-
-	q.startThread.Store(0)
-	runtime.UnlockOSThread()
 }
 
 // instanceResult handles one MI_OperationCallback_Instance call.
@@ -308,30 +290,26 @@ func (q *asyncQuery) fail(err error) {
 	}
 }
 
-// handOver passes instance to the goroutine running wait and blocks until
-// handler has returned.
-func (q *asyncQuery) handOver(instance *Instance) error {
-	// A callback from within MI_Session_QueryInstances runs on the goroutine
-	// that would have to receive the instance, so a hand-over would deadlock.
-	// Calling handler here would run it inside native frames, where a panic
-	// cannot reach the caller and runtime.Goexit is fatal.
-	if thread := q.startThread.Load(); thread != 0 && thread == windows.GetCurrentThreadId() {
-		return errInlineInstance
+// queueCopy queues a copy of instance for the handler. q.mu must be held.
+func (q *asyncQuery) queueCopy(instance *Instance) error {
+	clone, err := instance.clone()
+	if err != nil {
+		return fmt.Errorf("failed to copy instance: %w", err)
 	}
+
+	q.pending = append(q.pending, clone)
 
 	select {
-	case q.instances <- instance:
-	case <-q.aborted:
-		return errQueryAborted
+	case q.queued <- struct{}{}:
+	default:
 	}
 
-	// Every instance received is answered, also if handler panics.
-	return <-q.handled
+	return nil
 }
 
 // wait blocks until the final callback and returns the query result. It
 // cancels the operation when a callback asks for it, and runs the handler of
-// a hand-over query.
+// a copy query.
 func (q *asyncQuery) wait() error {
 	guard := newGuardTimer()
 	defer releaseGuardTimer(guard)
@@ -339,6 +317,13 @@ func (q *asyncQuery) wait() error {
 	for {
 		select {
 		case <-q.done:
+			// Copies queued by the last callbacks.
+			q.handleQueued()
+
+			if q.handlerErr != nil {
+				return q.handlerErr
+			}
+
 			if errors.Is(q.err, errStopQuery) {
 				return nil
 			}
@@ -346,35 +331,72 @@ func (q *asyncQuery) wait() error {
 			return q.err
 		case <-q.cancelRequested:
 			_ = q.operation.Cancel()
-		case instance := <-q.instances:
-			q.handle(instance)
+		case <-q.queued:
+			q.handleQueued()
 		case <-guard.C:
 			guard.Reset(deadlockGuardInterval)
 		}
 	}
 }
 
-// handle runs handler for instance and replies to the callback waiting in
-// handOver, also if handler panics or exits the goroutine.
-func (q *asyncQuery) handle(instance *Instance) {
-	err := errQueryAborted
+// handleQueued calls handler for the queued copies and deletes them. After a
+// handler error, it only deletes them. If handler panics or exits the
+// goroutine, the copies it has not handled are deleted by close.
+func (q *asyncQuery) handleQueued() {
+	for {
+		q.mu.Lock()
+		batch := q.pending
+		q.pending, q.batch = q.batch, nil
+		q.mu.Unlock()
 
-	defer func() {
-		q.handled <- err
-	}()
+		if len(batch) == 0 {
+			q.batch = batch
 
-	err = q.handler(instance)
+			return
+		}
+
+		// Until handled, the copies stay in q.batch for close.
+		q.batch = batch
+
+		for i, instance := range batch {
+			if q.handlerErr == nil {
+				if err := q.handler(instance); err != nil {
+					q.handlerErr = err
+
+					// Stops the callbacks from copying further instances.
+					q.mu.Lock()
+					q.fail(err)
+					q.mu.Unlock()
+				}
+			}
+
+			_ = instance.Delete()
+			batch[i] = nil
+		}
+
+		q.batch = batch[:0]
+	}
+}
+
+// deleteQueued deletes the copies that were not handled. The callbacks must
+// have finished.
+func (q *asyncQuery) deleteQueued() {
+	for _, instances := range [][]*Instance{q.batch, q.pending} {
+		for _, instance := range instances {
+			if instance != nil {
+				_ = instance.Delete()
+			}
+		}
+	}
+
+	q.batch, q.pending = nil, nil
 }
 
 // close cancels the operation unless it has finished, waits for the final
-// callback, closes the operation and unpins the query. The goroutine that
-// started the query must call it, also when wait did not return because a
-// handler panicked.
+// callback, deletes unhandled copies, closes the operation and unpins the
+// query. The goroutine that started the query must call it, also when wait
+// did not return because a handler panicked.
 func (q *asyncQuery) close() {
-	if q.aborted != nil {
-		close(q.aborted)
-	}
-
 	select {
 	case <-q.done:
 	default:
@@ -383,18 +405,17 @@ func (q *asyncQuery) close() {
 		guard := newGuardTimer()
 		defer releaseGuardTimer(guard)
 
-		// A callback may have started a hand-over before aborted was closed.
 		for finished := false; !finished; {
 			select {
 			case <-q.done:
 				finished = true
-			case <-q.instances:
-				q.handled <- errQueryAborted
 			case <-guard.C:
 				guard.Reset(deadlockGuardInterval)
 			}
 		}
 	}
+
+	q.deleteQueued()
 
 	// MI_Operation_Close blocks until the final result has been delivered,
 	// which has happened.

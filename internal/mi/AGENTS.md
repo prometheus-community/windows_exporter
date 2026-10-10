@@ -18,8 +18,12 @@ Rules for the callback path:
 - Never call `Cancel` or `Close` from a callback. The goroutine that started
   the query cancels on request and closes after the final callback
   (`moreResults == MI_FALSE`).
-- Recover panics in callbacks; they must not unwind into MI. Never block a
-  callback on a goroutine that may have stopped serving it.
+- Recover panics in callbacks; they must not unwind into MI.
+- Never block a callback on a goroutine. `QueryFunc` copies each instance
+  (`MI_Instance_Clone`) in the callback and runs `fn` for the copies on the
+  calling goroutine. Handing the original over and waiting for `fn` costs two
+  thread wake-ups per instance, about 25% more process CPU than the copy
+  (`Benchmark_MI_ProcessCPU`).
 - MI reports parameter errors from within `MI_Session_QueryInstances`; the
   runtime runs that callback on the calling goroutine. Never run caller code
   such as the `QueryFunc` handler inside a callback: a panic cannot reach the

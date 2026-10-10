@@ -423,10 +423,10 @@ func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpressio
 // only valid until fn returns. If fn returns an error, the query is cancelled
 // and that error is returned.
 //
-// fn runs on the calling goroutine. MI delivers each instance to a callback
-// on one of its threads, which hands it over and waits until fn returns, so
-// the instance is not copied. A panic in fn cancels the query and propagates
-// to the caller once MI has finished the operation.
+// fn runs on the calling goroutine, for a copy of each instance: MI delivers
+// the instances to a callback on one of its threads, which copies them and
+// returns right away. A panic in fn cancels the query and propagates to the
+// caller once MI has finished the operation.
 func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
 	if s == nil || s.ft == nil {
 		return ErrNotInitialized
@@ -444,7 +444,7 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}()
 	}
 
-	query := newHandOverQuery(fn)
+	query := newCopyQuery(fn)
 
 	query.start(s, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
 
