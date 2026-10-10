@@ -69,15 +69,19 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
-	if s.defaultOperationOptions != nil {
-		_ = s.defaultOperationOptions.Delete()
-	}
-
+	// MI_Session_Close blocks until all operations of the session have
+	// completed. The default options are deleted afterwards, so a still
+	// running operation never uses freed options.
 	r0, _, _ := syscall.SyscallN(s.ft.Close,
 		uintptr(unsafe.Pointer(s)),
 		0,
 		0,
 	)
+
+	if s.defaultOperationOptions != nil {
+		_ = s.defaultOperationOptions.Delete()
+		s.defaultOperationOptions = nil
+	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return result

@@ -53,7 +53,7 @@ var (
 )
 
 // Application represents the MI application.
-// https://learn.microsoft.com/de-de/windows/win32/api/mi/ns-mi-mi_application
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/ns-mi-mi_application
 type Application struct {
 	reserved1 uint64
 	reserved2 uintptr
@@ -61,7 +61,7 @@ type Application struct {
 }
 
 // ApplicationFT represents the function table of the MI application.
-// https://learn.microsoft.com/de-de/windows/win32/api/mi/ns-mi-mi_applicationft
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/ns-mi-mi_applicationft
 type ApplicationFT struct {
 	Close                          uintptr
 	NewSession                     uintptr
@@ -211,16 +211,6 @@ func (application *Application) NewOperationOptions() (*OperationOptions, error)
 	}
 
 	return operationOptions, nil
-}
-
-// MustNewOperationOptions is the panicking version of NewOperationOptions.
-func (application *Application) MustNewOperationOptions() *OperationOptions {
-	operationOptions, err := application.NewOperationOptions()
-	if err != nil {
-		panic(fmt.Sprintf("failed to create operation options: %v", err))
-	}
-
-	return operationOptions
 }
 
 // NewDestinationOptions creates an DestinationOptions object that can be used with the Application.NewSession function.
