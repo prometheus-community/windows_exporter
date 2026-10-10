@@ -37,6 +37,11 @@ type Session struct {
 	reserved2 uintptr
 	ft        *SessionFT
 
+	// Go-only state after the MI_Session fields, which MI never writes past.
+	//
+	// application created the session and outlives it, so per-query
+	// operation options are created without MI_Session_GetApplication.
+	application             *Application
 	defaultOperationOptions *OperationOptions
 }
 
@@ -69,15 +74,19 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
-	if s.defaultOperationOptions != nil {
-		_ = s.defaultOperationOptions.Delete()
-	}
-
+	// MI_Session_Close cancels running operations and blocks until their
+	// handles are closed. The default options are deleted afterwards, so an
+	// operation that is still open never uses freed options.
 	r0, _, _ := syscall.SyscallN(s.ft.Close,
 		uintptr(unsafe.Pointer(s)),
 		0,
 		0,
 	)
+
+	if s.defaultOperationOptions != nil {
+		_ = s.defaultOperationOptions.Delete()
+		s.defaultOperationOptions = nil
+	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return result
@@ -202,7 +211,7 @@ func (s *Session) queryInstances(flags OperationFlags, operationOptions *Operati
 // instead of being silently left at its zero value.
 func unmarshalInstance(instance *Instance, fields []miField, structValue reflect.Value, skipMissing bool) error {
 	for _, f := range fields {
-		element, err := instance.GetElement(f.tag)
+		element, err := instance.GetElementByName(f.name)
 		if err != nil {
 			if skipMissing && errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
 				continue
@@ -211,7 +220,7 @@ func unmarshalInstance(instance *Instance, fields []miField, structValue reflect
 			return fmt.Errorf("failed to get element %s: %w", f.tag, err)
 		}
 
-		if err := setField(f.tag, structValue.Field(f.index), element); err != nil {
+		if err := setField(f.tag, structValue.Field(f.index), &element); err != nil {
 			return err
 		}
 	}
@@ -457,16 +466,15 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 // options, so the session defaults are used. The caller must delete non-nil
 // options once the operation is closed.
 func (s *Session) newOperationOptions(queryTimeout time.Duration) (*OperationOptions, error) {
+	if s == nil || s.ft == nil {
+		return nil, ErrNotInitialized
+	}
+
 	if queryTimeout < 0 {
 		return nil, nil //nolint:nilnil
 	}
 
-	app, err := s.GetApplication()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get application: %w", err)
-	}
-
-	operationOptions, err := app.NewOperationOptions()
+	operationOptions, err := s.application.NewOperationOptions()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation options: %w", err)
 	}

@@ -264,6 +264,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 				continue
 			}
 
+			if labelProperty.elementName, err = mi.NewElementName(labelProperty.Name); err != nil {
+				errs = append(errs, fmt.Errorf("query %s: label property %q: %w", query.Name, labelProperty.Name, err))
+
+				continue
+			}
+
 			if labelProperty.Label == "" {
 				labelProperty.Label = sanitizeMetricName(labelProperty.Name)
 			}
@@ -286,6 +292,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		for _, property := range query.Properties {
 			if !reIdentifier.MatchString(property.Name) {
 				errs = append(errs, fmt.Errorf("query %s: property %q must be a valid WMI property name", query.Name, property.Name))
+
+				continue
+			}
+
+			if property.elementName, err = mi.NewElementName(property.Name); err != nil {
+				errs = append(errs, fmt.Errorf("query %s: property %q: %w", query.Name, property.Name, err))
 
 				continue
 			}
@@ -515,7 +527,7 @@ func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, deadl
 		}
 
 		for i, labelProperty := range query.LabelProperties {
-			element, err := instance.GetElement(labelProperty.Name)
+			element, err := instance.GetElementByName(labelProperty.elementName)
 			if err != nil {
 				return fmt.Errorf("failed to read label property %s: %w", labelProperty.Name, err)
 			}
@@ -537,7 +549,7 @@ func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, deadl
 				continue
 			}
 
-			element, err := instance.GetElement(property.Name)
+			element, err := instance.GetElementByName(property.elementName)
 			if err != nil {
 				propertyErrs[property.Name] = fmt.Errorf("failed to read property %s: %w", property.Name, err)
 

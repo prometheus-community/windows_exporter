@@ -2,20 +2,21 @@
 
 The process collector exposes metrics about processes.
 
-Note, on Windows Server 2022, the `Process` counter set is disabled by default. To enable it, run the following command in an elevated PowerShell session:
+The collector reads all processes with one `NtQuerySystemInformation(SystemProcessInformation)` call.
+The perflib `Process` counter set reads the same data, so the values and process names are the same.
+The collector does not use performance counters. It works when the `Process` counter set is disabled,
+for example on Windows Server 2022, and it does not require administrator rights.
 
-```powershell
-lodctr.exe /E:Lsa
-lodctr.exe /E:PerfProc
-lodctr.exe /R
-```
+The `owner`, `cmdline` and `process_group_id` labels of `windows_process_info` require opening the process.
+Without administrator rights, they are empty for processes of other users and for protected processes.
+The collector reads them once per process and caches them while the process is running and matches the filters.
+A failed read is retried on the next scrape.
 
-|                     |           |
-|---------------------|-----------|
-| Metric name prefix  | `process` |
-| Data source         | Perflib   |
-| Counters            | `Process` |
-| Enabled by default? | No        |
+|                     |                            |
+|---------------------|----------------------------|
+| Metric name prefix  | `process`                  |
+| Data source         | `NtQuerySystemInformation` |
+| Enabled by default? | No                         |
 
 ## Flags
 
@@ -38,12 +39,6 @@ See [IIS worker processes](#iis-worker-processes).
 
 Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Just plain parameter without `true`.
 
-### `--collector.process.counter-version`
-
-Version of the process collector to use. 1 for Process V1, 2 for Process V2.
-0 uses Process V2 if it is available and falls back to Process V1 otherwise.
-Defaults to 1 (Process V1).
-
 ### `--collector.process.cmdline`
 
 Enables the `cmdline` label for the process metrics.
@@ -52,9 +47,9 @@ Enabled by default, and can be turned off with `--no-collector.process.cmdline`.
 
 ### Example
 To match all firefox processes: `--collector.process.include="firefox.*"`.
-Note that multiple processes with the same name will be disambiguated by
-Windows by adding a number suffix, such as `firefox#2`. Your [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must take
-these suffixes into consideration.
+The process name is the image name without the `.exe` extension, like the instance names of the `Process` counter set.
+Processes with the same name have the same `process` label and differ in the `process_id` label.
+A `#` in the image name is kept: `app#2.exe` is `app#2`. Earlier versions cut the name at the first `#`.
 
 :warning: The regular expression is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
 

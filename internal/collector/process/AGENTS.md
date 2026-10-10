@@ -1,4 +1,31 @@
-# process collector
+# Process collector
+
+The collector reads all processes with one
+`NtQuerySystemInformation(SystemProcessInformation)` call, not with the perflib
+`Process` or PDH `Process V2` counter sets. The perflib provider (perfproc) reads
+the same kernel data, so the metric values must stay identical to the `Process`
+counter set. There is no counter-set selection; `--collector.process.counter-version`
+and `Config.CounterVersion` were removed.
+
+- Process names follow the perflib instance names: the image name without a
+  case-insensitive `.exe` suffix, other extensions such as `.scr` are kept, and
+  PID 0 is `Idle`. Users' include and exclude expressions depend on these names.
+- The `windows_process_info` labels (owner, command line, process group ID) need
+  `OpenProcess` and are cached by PID and creation time, because Windows reuses
+  PIDs. The creation time of the opened handle is compared with the snapshot,
+  so a PID reused between the snapshot and the lookup is not attributed to the
+  old process. Failed lookups are not cached and retry on the next scrape;
+  access-denied results are cached as empty labels.
+- Read the snapshot buffer with bounds checks against the returned length, and
+  keep it 8-byte aligned (`[]uint64` backing array).
+
+To check value parity after changes, compare the snapshot against the `Process`
+counter set by PID in a temporary test, for example with
+`pdh.NewCollector(..., pdh.CounterTypeRaw, "Process", pdh.InstancesAll)`, including
+processes with names like `a.b.exe` and `tool.scr`. Run it as a standard user
+too: neither data source needs administrator rights.
+
+## IIS application pools
 
 IIS application pool names (`--collector.process.iis`) come from two sources.
 

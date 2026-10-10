@@ -11,6 +11,31 @@
     // Requires the time collector with its ntp subcollector enabled.
     enableTime: false,
 
+    // Collectors enabled on the windows_exporter targets, by collector name.
+    // The dashboard only renders the tabs, rows and panels of enabled
+    // collectors. The defaults match the exporter's default collectors.
+    collectors: {
+      cpu: true,
+      diskdrive: false,
+      gpu: false,
+      hyperv: false,
+      logical_disk: true,
+      memory: true,
+      net: true,
+      os: true,
+      physical_disk: true,
+      process: false,
+      scheduled_task: false,
+      service: true,
+      smb: false,
+      smbclient: false,
+      system: true,
+      tcp: false,
+      time: $._config.enableTime,
+      udp: false,
+      update: false,
+    },
+
     runbookURLPattern: 'https://prometheus-community.github.io/windows_exporter/runbooks/%s/',
 
     cpuHighUsageThreshold: 90,

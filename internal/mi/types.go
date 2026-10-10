@@ -19,7 +19,6 @@ package mi
 
 import (
 	"time"
-	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
@@ -114,39 +113,4 @@ type Datetime struct {
 	IsTimestamp bool
 	Timestamp   *Timestamp // Used when IsTimestamp is true
 	Interval    *Interval  // Used when IsTimestamp is false
-}
-
-type PropertyDecl struct {
-	Flags         uint32
-	Code          uint32
-	Name          *uint16
-	Mqualifiers   uintptr
-	NumQualifiers uint32
-	PropertyType  ValueType
-	ClassName     *uint16
-	Subscript     uint32
-	Offset        uint32
-	Origin        *uint16
-	Propagator    *uint16
-	Value         uintptr
-}
-
-func (c *ClassDecl) Properties() []*PropertyDecl {
-	// Create a slice to hold the properties
-	properties := make([]*PropertyDecl, c.NumProperties)
-
-	// Mproperties is a pointer to an array of pointers to PropertyDecl
-	propertiesArray := (**PropertyDecl)(unsafe.Pointer(c.Mproperties))
-
-	// Iterate over the number of properties and fetch each property
-	for i := range c.NumProperties {
-		// Get the property pointer at index i
-		propertyPtr := *(**PropertyDecl)(unsafe.Add(unsafe.Pointer(propertiesArray), uintptr(i)*unsafe.Sizeof(uintptr(0))))
-
-		// Append the property to the slice
-		properties[i] = propertyPtr
-	}
-
-	// Return the slice of properties
-	return properties
 }

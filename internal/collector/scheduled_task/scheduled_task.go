@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"github.com/prometheus-community/windows_exporter/internal/ole/taskschd"
@@ -55,6 +56,11 @@ type Collector struct {
 	lastResultStatus *prometheus.Desc
 	missedRuns       *prometheus.Desc
 	state            *prometheus.Desc
+
+	// metricCache reuses the metrics of tasks whose values did not change since
+	// the last scrape. Each task publishes 19 series, and building them is most
+	// of the allocations of a scrape.
+	metricCache metriccache.Cache[string, taskValues]
 }
 
 // TaskState ...
@@ -96,6 +102,13 @@ type ScheduledTask struct {
 }
 
 type ScheduledTasks []ScheduledTask
+
+// taskValues holds the inputs of the metrics of a task besides its path.
+type taskValues struct {
+	state           TaskState
+	lastTaskResult  TaskResult
+	missedRunsCount float64
+}
 
 func New(config *Config) *Collector {
 	if config == nil {
@@ -158,11 +171,16 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.metricCache.Reset()
+
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
+
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
 
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
@@ -231,64 +249,90 @@ func (c *Collector) includeTask(path string) bool {
 }
 
 func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
+	scrape := c.metricCache.Begin()
+
 	for _, task := range scheduledTasks {
-		for _, state := range TASK_STATES {
-			var stateValue float64
-
-			if strings.EqualFold(task.State.String(), state) {
-				stateValue = 1.0
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.state,
-				prometheus.GaugeValue,
-				stateValue,
-				task.Path,
-				state,
-			)
+		values := taskValues{
+			state:           task.State,
+			lastTaskResult:  task.LastTaskResult,
+			missedRunsCount: task.MissedRunsCount,
 		}
 
-		resultStatus := task.LastTaskResult.String()
-
-		for _, status := range TASK_RESULT_STATUSES {
-			var statusValue float64
-
-			if resultStatus == status {
-				statusValue = 1
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.lastResultStatus,
-				prometheus.GaugeValue,
-				statusValue,
-				task.Path,
-				status,
-			)
+		metrics, ok := scrape.Load(task.Path, values)
+		if !ok {
+			metrics = c.taskMetrics(task)
+			scrape.Store(task.Path, values, metrics)
 		}
 
-		if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
-			continue
+		for _, metric := range metrics {
+			ch <- metric
+		}
+	}
+
+	scrape.Commit()
+}
+
+// taskMetrics builds the metrics of a task.
+func (c *Collector) taskMetrics(task ScheduledTask) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, len(TASK_STATES)+len(TASK_RESULT_STATUSES)+2)
+
+	for _, state := range TASK_STATES {
+		var stateValue float64
+
+		if strings.EqualFold(task.State.String(), state) {
+			stateValue = 1.0
 		}
 
-		lastResult := 0.0
-		if task.LastTaskResult == SCHED_S_SUCCESS {
-			lastResult = 1.0
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.state,
+			prometheus.GaugeValue,
+			stateValue,
+			task.Path,
+			state,
+		))
+	}
+
+	resultStatus := task.LastTaskResult.String()
+
+	for _, status := range TASK_RESULT_STATUSES {
+		var statusValue float64
+
+		if resultStatus == status {
+			statusValue = 1
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.lastResultStatus,
+			prometheus.GaugeValue,
+			statusValue,
+			task.Path,
+			status,
+		))
+	}
+
+	if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
+		return metrics
+	}
+
+	lastResult := 0.0
+	if task.LastTaskResult == SCHED_S_SUCCESS {
+		lastResult = 1.0
+	}
+
+	return append(metrics,
+		prometheus.MustNewConstMetric(
 			c.lastResult,
 			prometheus.GaugeValue,
 			lastResult,
 			task.Path,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
+		),
+		prometheus.MustNewConstMetric(
 			c.missedRuns,
 			prometheus.GaugeValue,
 			task.MissedRunsCount,
 			task.Path,
-		)
-	}
+		),
+	)
 }
 
 // errTasksSkipped accompanies readable tasks when some tasks or folders could not be read.
