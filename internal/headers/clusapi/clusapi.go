@@ -58,12 +58,106 @@ var (
 	resourceState   = dll.NewProc("GetClusterResourceState")
 )
 
-// Cluster owns a cluster handle. Operations and closure are serialized because
-// an RPC that outlives a scrape timeout must finish before its handle is freed.
+// ErrBusy reports that an earlier call on the same Cluster has not returned
+// yet. ClusAPI RPCs cannot be cancelled; a call that outlived its scrape keeps
+// the cluster handle until the RPC returns, and later calls fail fast instead
+// of queuing behind it.
+var ErrBusy = errors.New("previous ClusAPI collection is still running")
+
+// nativeAPI holds the ClusAPI calls that drive the handle lifecycle and the
+// enumeration. Tests substitute it to exercise these paths without a cluster.
+type nativeAPI struct {
+	openCluster   func() (uintptr, error)
+	closeCluster  func(cluster uintptr) error
+	openEnum      func(cluster uintptr, enumType uint32) (uintptr, error)
+	closeEnum     func(enum uintptr) error
+	enumName      func(enum uintptr, index, enumType uint32, deadline time.Time) (objectName, error)
+	openResource  func(cluster uintptr, name objectName) (uintptr, error)
+	closeResource func(resource uintptr) error
+	readResource  func(resource uintptr, out *Resource, deadline time.Time) error
+}
+
+//nolint:gochecknoglobals
+var clusAPI = nativeAPI{
+	openCluster: func() (uintptr, error) {
+		handle, _, err := openCluster.Call(0, windows.GENERIC_READ, 0)
+		if handle == 0 {
+			return 0, callError(err)
+		}
+
+		return handle, nil
+	},
+	closeCluster: func(cluster uintptr) error {
+		if result, _, err := closeCluster.Call(cluster); result == 0 {
+			return callError(err)
+		}
+
+		return nil
+	},
+	openEnum: func(cluster uintptr, enumType uint32) (uintptr, error) {
+		enum, _, err := openEnum.Call(cluster, uintptr(enumType))
+		if enum == 0 {
+			return 0, callError(err)
+		}
+
+		return enum, nil
+	},
+	closeEnum: func(enum uintptr) error {
+		if status, _, _ := closeEnum.Call(enum); status != 0 {
+			return windows.Errno(status)
+		}
+
+		return nil
+	},
+	enumName: enumName,
+	openResource: func(cluster uintptr, name objectName) (uintptr, error) {
+		return openObject(openResource, cluster, name)
+	},
+	closeResource: func(resource uintptr) error {
+		return closeObject(closeResource, resource)
+	},
+	readResource: readResource,
+}
+
+// callError returns the last error of a failed handle or BOOL call. Go clears
+// the thread's last error before each call, so 0 means the API set none.
+func callError(err error) error {
+	if errors.Is(err, windows.Errno(0)) {
+		return errors.New("failed without setting a Windows error code")
+	}
+
+	return err
+}
+
+// openObject calls one of the OpenCluster*Ex functions, which share a signature.
+func openObject(proc *windows.LazyProc, cluster uintptr, name objectName) (uintptr, error) {
+	handle, _, err := proc.Call(cluster, uintptr(unsafe.Pointer(&name.units[0])), windows.GENERIC_READ, 0)
+	if handle == 0 {
+		return 0, callError(err)
+	}
+
+	return handle, nil
+}
+
+// closeObject calls one of the CloseCluster* functions, which return a BOOL.
+func closeObject(proc *windows.LazyProc, handle uintptr) error {
+	if result, _, err := proc.Call(handle); result == 0 {
+		return callError(err)
+	}
+
+	return nil
+}
+
+// Cluster owns a cluster handle. Only one call runs at a time: while a call
+// runs it owns the handle, and Close leaves the handle to that call, which
+// closes it when its RPC returns. This keeps a hung RPC from blocking Close.
 type Cluster struct {
-	mu     sync.Mutex
-	handle uintptr
-	closed bool
+	api *nativeAPI
+
+	mu      sync.Mutex // guards closed and running, and handle when not running
+	handle  uintptr
+	closed  bool
+	running bool
 }
 
 type Resource struct {
@@ -75,10 +169,13 @@ type Resource struct {
 	Values        map[string]uint32
 }
 
+// Open checks that the local node is a configured cluster member. A missing
+// clusapi.dll or export reports errors.ErrUnsupported, like a node that is not
+// part of a cluster.
 func Open() (*Cluster, error) {
 	for _, proc := range []*windows.LazyProc{getClusterState, openCluster, closeCluster, openEnum, nextEnum, closeEnum, openResource, closeResource, resourceControl, resourceState} {
 		if err := proc.Find(); err != nil {
-			return nil, fmt.Errorf("load ClusAPI: %w", err)
+			return nil, fmt.Errorf("load ClusAPI: %w: %w", errors.ErrUnsupported, err)
 		}
 	}
 
@@ -96,99 +193,215 @@ func Open() (*Cluster, error) {
 
 	// Defer the potentially blocking RPC until collection. A transient service
 	// outage must not turn resource initialization into an exporter startup failure.
-	return &Cluster{}, nil
+	return &Cluster{api: &clusAPI}, nil
 }
 
+func (c *Cluster) native() *nativeAPI {
+	if c.api == nil {
+		return &clusAPI
+	}
+
+	return c.api
+}
+
+// Close releases the cluster handle. A handle whose CloseCluster fails is
+// dropped anyway, so a later Build starts from a clean state. If a call is
+// still running, it closes the handle when it returns.
 func (c *Cluster) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.handle == 0 {
-		c.closed = true
+	c.closed = true
 
+	if c.running || c.handle == 0 {
 		return nil
 	}
 
-	result, _, err := closeCluster.Call(c.handle)
-	if result == 0 {
+	handle := c.handle
+	c.handle = 0
+
+	if err := c.native().closeCluster(handle); err != nil {
 		return fmt.Errorf("CloseCluster: %w", err)
 	}
-
-	c.handle = 0
-	c.closed = true
 
 	return nil
 }
 
-// Resources retains successful resource/property results alongside joined failures.
-// Windows ClusAPI RPCs cannot be cancelled. Deadline checks prevent starting
-// another RPC after the supplied budget; the caller must drain a late result.
-func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) {
-	var resources []Resource
-
+// begin marks a call as running. A call that is still running makes it fail
+// with ErrBusy. A successful begin must be paired with end.
+func (c *Cluster) begin(deadline time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.closed {
-		return nil, errors.New("cluster is closed")
+	switch {
+	case c.closed:
+		return errors.New("cluster is closed")
+	case c.running:
+		return ErrBusy
 	}
 
 	if err := checkDeadline(deadline); err != nil {
-		return nil, err
+		return err
 	}
 
-	if c.handle == 0 {
-		handle, _, err := openCluster.Call(0, windows.GENERIC_READ, 0)
-		if handle == 0 {
-			return nil, fmt.Errorf("OpenClusterEx: %w", err)
-		}
+	c.running = true
 
-		c.handle = handle
+	return nil
+}
+
+// open opens the cluster handle on first use. The running call owns the
+// handle, so the RPC runs without the lock.
+func (c *Cluster) open() error {
+	if c.handle != 0 {
+		return nil
 	}
 
+	handle, err := c.native().openCluster()
+	if err != nil {
+		return fmt.Errorf("OpenClusterEx: %w", err)
+	}
+
+	c.handle = handle
+
+	return nil
+}
+
+// end finishes a call started by begin. If Close ran meanwhile, the handle is
+// released here and the CloseCluster error is returned.
+func (c *Cluster) end() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.running = false
+
+	if !c.closed || c.handle == 0 {
+		return nil
+	}
+
+	handle := c.handle
+	c.handle = 0
+
+	if err := c.native().closeCluster(handle); err != nil {
+		return fmt.Errorf("CloseCluster: %w", err)
+	}
+
+	return nil
+}
+
+// resetHandle drops a handle whose RPC binding failed, for example after a
+// cluster service restart, so the next call reopens the cluster. The caller
+// owns the handle through begin. The close error is irrelevant: the call
+// reports the error that made the handle unusable.
+func (c *Cluster) resetHandle() {
+	_ = c.native().closeCluster(c.handle)
+	c.handle = 0
+}
+
+// errObjectDeleted marks an object that was deleted after ClusterOpenEnum took
+// its snapshot. The enumeration skips it without an error.
+var errObjectDeleted = errors.New("object was deleted during the enumeration")
+
+// enumerate calls visit for every object name of a CLUSTER_ENUM type. Visit
+// errors are joined per object; the walk stops at the deadline. The caller
+// owns the handle through begin.
+func (c *Cluster) enumerate(enumType uint32, kind string, deadline time.Time, visit func(name objectName) error) (resultErr error) {
 	if err := checkDeadline(deadline); err != nil {
-		return nil, err
+		return err
 	}
 
-	enum, _, err := openEnum.Call(c.handle, enumResource)
-	if enum == 0 {
-		return nil, fmt.Errorf("ClusterOpenEnum: %w", err)
+	api := c.native()
+
+	enum, err := api.openEnum(c.handle, enumType)
+	if err != nil {
+		c.resetHandle()
+
+		return fmt.Errorf("ClusterOpenEnum: %w", err)
 	}
 	defer func() {
-		status, _, _ := closeEnum.Call(enum)
-		if status != 0 {
-			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterCloseEnum: %w", windows.Errno(status)))
+		if err := api.closeEnum(enum); err != nil {
+			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterCloseEnum: %w", err))
 		}
 	}()
 
 	for index := uint32(0); ; index++ {
-		name, err := enumName(enum, index, enumResource, deadline)
+		name, err := api.enumName(enum, index, enumType, deadline)
 		if errors.Is(err, windows.ERROR_NO_MORE_ITEMS) {
-			return resources, resultErr
+			return resultErr
 		}
 
 		if _, ok := errors.AsType[invalidEnumEntryError](err); ok {
-			// One malformed entry must not hide the resources after it.
+			// One malformed entry must not hide the objects after it.
 			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterEnum index %d: %w", index, err))
 
 			continue
 		}
 
 		if err != nil {
-			return resources, errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
+			return errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
 		}
 
-		resource, err := c.readResource(name, deadline)
-		resources = append(resources, resource)
+		err = visit(name)
+		if errors.Is(err, errObjectDeleted) {
+			continue
+		}
 
 		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: %w", name.name, err))
+			resultErr = errors.Join(resultErr, fmt.Errorf("%s %q: %w", kind, name.name, err))
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			return resources, resultErr
+			return resultErr
 		}
 	}
+}
+
+// Resources retains successful resource/property results alongside joined failures.
+// Windows ClusAPI RPCs cannot be cancelled. Deadline checks prevent starting
+// another RPC after the supplied budget; a call that still outlives it makes
+// later calls fail with ErrBusy until it returns.
+func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) {
+	if err := c.begin(deadline); err != nil {
+		return nil, err
+	}
+	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
+
+	if err := c.open(); err != nil {
+		return nil, err
+	}
+
+	api := c.native()
+
+	var resources []Resource
+
+	err := c.enumerate(enumResource, "resource", deadline, func(name objectName) error {
+		if err := checkDeadline(deadline); err != nil {
+			return err
+		}
+
+		handle, err := api.openResource(c.handle, name)
+		if errors.Is(err, windows.ERROR_RESOURCE_NOT_FOUND) {
+			return errObjectDeleted
+		}
+
+		resource := Resource{Name: name.name, Values: make(map[string]uint32)}
+
+		if err != nil {
+			resources = append(resources, resource)
+
+			return fmt.Errorf("OpenClusterResourceEx: %w", err)
+		}
+
+		err = api.readResource(handle, &resource, deadline)
+		if closeErr := api.closeResource(handle); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("CloseClusterResource: %w", closeErr))
+		}
+
+		resources = append(resources, resource)
+
+		return err
+	})
+
+	return resources, err
 }
 
 // invalidEnumEntryError reports a ClusterEnum entry that violates the API
@@ -197,19 +410,19 @@ type invalidEnumEntryError string
 
 func (e invalidEnumEntryError) Error() string { return string(e) }
 
-// resourceName keeps the NUL-terminated native name for opening the resource
+// objectName keeps the NUL-terminated native name for opening the resource
 // next to the decoded label value.
-type resourceName struct {
+type objectName struct {
 	units []uint16
 	name  string
 }
 
-func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (resourceName, error) {
+func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (objectName, error) {
 	buffer := make([]uint16, 256)
 
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
-			return resourceName{}, err
+			return objectName{}, err
 		}
 
 		length := uint32(len(buffer))
@@ -219,7 +432,7 @@ func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (resourc
 		status, _, _ := nextEnum.Call(enum, uintptr(index), uintptr(unsafe.Pointer(&objectType)), uintptr(unsafe.Pointer(&buffer[0])), uintptr(unsafe.Pointer(&length)))
 		if windows.Errno(status) == windows.ERROR_MORE_DATA {
 			if length >= maxBufferSize/2 || int(length)+1 <= len(buffer) {
-				return resourceName{}, errors.New("invalid ClusterEnum buffer size")
+				return objectName{}, errors.New("invalid ClusterEnum buffer size")
 			}
 
 			buffer = make([]uint16, int(length)+1)
@@ -228,40 +441,28 @@ func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (resourc
 		}
 
 		if status != 0 {
-			return resourceName{}, windows.Errno(status)
+			return objectName{}, windows.Errno(status)
 		}
 
 		if objectType != enumType || length >= uint32(len(buffer)) {
-			return resourceName{}, invalidEnumEntryError(fmt.Sprintf("invalid ClusterEnum entry: type %d, length %d", objectType, length))
+			return objectName{}, invalidEnumEntryError(fmt.Sprintf("invalid ClusterEnum entry: type %d, length %d", objectType, length))
 		}
 
 		units := make([]uint16, length+1)
 		copy(units, buffer[:length])
 
-		return resourceName{units: units, name: decodeUnits(buffer[:length])}, nil
+		return objectName{units: units, name: decodeUnits(buffer[:length])}, nil
 	}
 
-	return resourceName{}, errors.New("ClusterEnum buffer did not stabilize")
+	return objectName{}, errors.New("ClusterEnum buffer did not stabilize")
 }
 
-func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resource, resultErr error) {
-	resource := Resource{Name: name.name, Values: make(map[string]uint32)}
+// readResource fills the properties of an open resource. Failed properties are
+// omitted; the identity is only valid once the state and owner are known.
+func readResource(handle uintptr, resource *Resource, deadline time.Time) error {
+	var resultErr error
+
 	hasType := false
-
-	if err := checkDeadline(deadline); err != nil {
-		return resource, err
-	}
-
-	handle, _, err := openResource.Call(c.handle, uintptr(unsafe.Pointer(&name.units[0])), windows.GENERIC_READ, 0)
-	if handle == 0 {
-		return resource, fmt.Errorf("OpenClusterResourceEx: %w", err)
-	}
-	defer func() {
-		result, _, err := closeResource.Call(handle)
-		if result == 0 {
-			resultErr = errors.Join(resultErr, fmt.Errorf("CloseClusterResource: %w", err))
-		}
-	}()
 
 	for _, code := range []uint32{resourceGetROCommonProperties, resourceGetCommonProperties} {
 		data, err := resourceBuffer(handle, code, propertyListBufferSize, deadline)
@@ -328,7 +529,7 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 	if !hasType {
 		data, err = resourceBuffer(handle, resourceGetType, typeBufferSize, deadline)
 		if err != nil {
-			return resource, errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
+			return errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
 		}
 
 		resource.Type = decodeString(data)
@@ -336,7 +537,7 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 
 	state, owner, group, err := readResourceState(handle, deadline)
 	if err != nil {
-		return resource, errors.Join(resultErr, fmt.Errorf("GetClusterResourceState: %w", err))
+		return errors.Join(resultErr, fmt.Errorf("GetClusterResourceState: %w", err))
 	}
 
 	resource.Values["State"] = state
@@ -344,7 +545,7 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 	resource.OwnerGroup = group
 	resource.IdentityValid = true
 
-	return resource, resultErr
+	return resultErr
 }
 
 func resourceBuffer(handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {

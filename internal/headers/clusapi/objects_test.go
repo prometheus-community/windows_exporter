@@ -54,20 +54,6 @@ func TestControlCodes(t *testing.T) {
 	}
 }
 
-func TestUnknownStateError(t *testing.T) {
-	if err := unknownStateError(0, windows.ERROR_ACCESS_DENIED); err != nil {
-		t.Fatalf("valid state with stale last error: %v", err)
-	}
-
-	if err := unknownStateError(^uint32(0), windows.ERROR_ACCESS_DENIED); !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-		t.Fatalf("lost native error: %v", err)
-	}
-
-	if err := unknownStateError(^uint32(0), windows.Errno(0)); err == nil {
-		t.Fatal("unknown state with success code accepted")
-	}
-}
-
 func TestGroupStateBuffers(t *testing.T) {
 	calls := 0
 

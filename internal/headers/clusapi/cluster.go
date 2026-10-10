@@ -48,28 +48,31 @@ var (
 
 // Properties reads the cluster name, the 32-bit cluster common properties and
 // the quorum values (see readQuorum). A failed name read returns no object.
-func (c *Cluster) Properties(deadline time.Time) (Object, error) {
+func (c *Cluster) Properties(deadline time.Time) (_ Object, resultErr error) {
 	for _, proc := range []*windows.LazyProc{openCluster, clusterInformation, clusterControl, quorumResource, openResource, closeResource, resourceControl} {
 		if err := proc.Find(); err != nil {
-			return Object{}, fmt.Errorf("load ClusAPI: %w", err)
+			return Object{}, fmt.Errorf("load ClusAPI: %w: %w", errors.ErrUnsupported, err)
 		}
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	if err := c.begin(deadline); err != nil {
+		return Object{}, err
+	}
+	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
 
-	if err := c.openLocked(deadline); err != nil {
+	if err := c.open(); err != nil {
 		return Object{}, err
 	}
 
 	name, err := readClusterName(c.handle, deadline)
 	if err != nil {
+		// The name is the first RPC on the handle; a broken binding fails here.
+		c.resetHandle()
+
 		return Object{}, fmt.Errorf("GetClusterInformation: %w", err)
 	}
 
 	object := Object{Name: name, Values: make(map[string]uint32)}
-
-	var resultErr error
 
 	if err := readCommonProperties(clusterControl, c.handle, objectCluster, object.Values, deadline); err != nil {
 		resultErr = errors.Join(resultErr, err)

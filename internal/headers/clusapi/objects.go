@@ -28,6 +28,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// Errors of the OpenCluster*Ex functions for an object that no longer exists.
+const (
+	errGroupNotFound   windows.Errno = 5013 // ERROR_GROUP_NOT_FOUND
+	errNodeNotFound    windows.Errno = 5042 // ERROR_CLUSTER_NODE_NOT_FOUND
+	errNetworkNotFound windows.Errno = 5045 // ERROR_CLUSTER_NETWORK_NOT_FOUND
+)
+
 // CLUSTER_ENUM values for ClusterOpenEnum.
 // https://learn.microsoft.com/en-us/windows/win32/api/clusapi/ne-clusapi-cluster_enum
 const (
@@ -90,6 +97,8 @@ type objectAPI struct {
 	kind     string
 	enumType uint32
 	object   uint32
+	// notFound is the error of the open function for a deleted object.
+	notFound windows.Errno
 	open     *windows.LazyProc
 	close    *windows.LazyProc
 	control  *windows.LazyProc
@@ -102,6 +111,7 @@ var groupAPI = objectAPI{
 	kind:     "group",
 	enumType: enumGroup,
 	object:   objectGroup,
+	notFound: errGroupNotFound,
 	open:     openGroup,
 	close:    closeGroup,
 	control:  groupControl,
@@ -113,6 +123,7 @@ var nodeAPI = objectAPI{
 	kind:     "node",
 	enumType: enumNode,
 	object:   objectNode,
+	notFound: errNodeNotFound,
 	open:     openNode,
 	close:    closeNode,
 	control:  nodeControl,
@@ -124,6 +135,7 @@ var networkAPI = objectAPI{
 	kind:     "network",
 	enumType: enumNetwork,
 	object:   objectNetwork,
+	notFound: errNetworkNotFound,
 	open:     openNetwork,
 	close:    closeNetwork,
 	control:  networkControl,
@@ -146,24 +158,30 @@ func (c *Cluster) Groups(deadline time.Time) ([]Object, error) {
 	return c.objects(&groupAPI, deadline)
 }
 
-func (c *Cluster) objects(api *objectAPI, deadline time.Time) ([]Object, error) {
+func (c *Cluster) objects(api *objectAPI, deadline time.Time) (_ []Object, resultErr error) {
 	for _, proc := range []*windows.LazyProc{openCluster, openEnum, nextEnum, closeEnum, api.open, api.close, api.control} {
 		if err := proc.Find(); err != nil {
-			return nil, fmt.Errorf("load ClusAPI: %w", err)
+			return nil, fmt.Errorf("load ClusAPI: %w: %w", errors.ErrUnsupported, err)
 		}
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	if err := c.begin(deadline); err != nil {
+		return nil, err
+	}
+	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
 
-	if err := c.openLocked(deadline); err != nil {
+	if err := c.open(); err != nil {
 		return nil, err
 	}
 
 	var objects []Object
 
-	err := c.enumerateLocked(api.enumType, api.kind, deadline, func(name resourceName) error {
+	err := c.enumerate(api.enumType, api.kind, deadline, func(name objectName) error {
 		object, err := c.readObject(api, name, deadline)
+		if errors.Is(err, errObjectDeleted) {
+			return err
+		}
+
 		objects = append(objects, object)
 
 		return err
@@ -172,83 +190,22 @@ func (c *Cluster) objects(api *objectAPI, deadline time.Time) ([]Object, error) 
 	return objects, err
 }
 
-// enumerateLocked calls visit for every object name of a CLUSTER_ENUM type.
-// Visit errors are joined per object; the walk stops at the deadline. The
-// caller holds c.mu and has opened the cluster handle.
-func (c *Cluster) enumerateLocked(enumType uint32, kind string, deadline time.Time, visit func(name resourceName) error) (resultErr error) {
-	if err := checkDeadline(deadline); err != nil {
-		return err
-	}
-
-	enum, _, err := openEnum.Call(c.handle, uintptr(enumType))
-	if enum == 0 {
-		return fmt.Errorf("ClusterOpenEnum: %w", err)
-	}
-	defer func() {
-		status, _, _ := closeEnum.Call(enum)
-		if status != 0 {
-			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterCloseEnum: %w", windows.Errno(status)))
-		}
-	}()
-
-	for index := uint32(0); ; index++ {
-		name, err := enumName(enum, index, enumType, deadline)
-		if errors.Is(err, windows.ERROR_NO_MORE_ITEMS) {
-			return resultErr
-		}
-
-		if err != nil {
-			return errors.Join(resultErr, fmt.Errorf("ClusterEnum: %w", err))
-		}
-
-		err = visit(name)
-		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("%s %q: %w", kind, name.name, err))
-		}
-
-		if errors.Is(err, context.DeadlineExceeded) {
-			return resultErr
-		}
-	}
-}
-
-// openLocked opens the cluster handle on first use. The caller holds c.mu.
-func (c *Cluster) openLocked(deadline time.Time) error {
-	if c.closed {
-		return errors.New("cluster is closed")
-	}
-
-	if err := checkDeadline(deadline); err != nil {
-		return err
-	}
-
-	if c.handle != 0 {
-		return nil
-	}
-
-	handle, _, err := openCluster.Call(0, windows.GENERIC_READ, 0)
-	if handle == 0 {
-		return fmt.Errorf("OpenClusterEx: %w", err)
-	}
-
-	c.handle = handle
-
-	return nil
-}
-
-func (c *Cluster) readObject(api *objectAPI, name resourceName, deadline time.Time) (_ Object, resultErr error) {
+func (c *Cluster) readObject(api *objectAPI, name objectName, deadline time.Time) (_ Object, resultErr error) {
 	object := Object{Name: name.name, Values: make(map[string]uint32)}
 	if err := checkDeadline(deadline); err != nil {
 		return object, err
 	}
 
-	handle, _, err := api.open.Call(c.handle, uintptr(unsafe.Pointer(&name.units[0])), windows.GENERIC_READ, 0)
-	if handle == 0 {
+	handle, err := openObject(api.open, c.handle, name)
+	if errors.Is(err, api.notFound) {
+		return object, errObjectDeleted
+	}
+
+	if err != nil {
 		return object, fmt.Errorf("%s: %w", api.open.Name, err)
 	}
 	defer func() {
-		result, _, err := api.close.Call(handle)
-		if result == 0 {
+		if err := closeObject(api.close, handle); err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s: %w", api.close.Name, err))
 		}
 	}()
@@ -354,22 +311,26 @@ func objectBuffer(proc *windows.LazyProc, handle uintptr, code uint32, size int,
 	})
 }
 
-// readGroupState calls GetClusterGroupState, which returns
-// ClusterGroupStateUnknown (-1) and sets the last error on failure.
+// readGroupState calls GetClusterGroupState. Like the resource state,
+// ClusterGroupStateUnknown (-1) is published as a value, as WMI did; the last
+// error only matters for ERROR_MORE_DATA.
 // https://learn.microsoft.com/en-us/windows/win32/api/clusapi/nf-clusapi-getclustergroupstate
 func readGroupState(handle uintptr, deadline time.Time) (uint32, string, bool, error) {
 	if err := groupState.Find(); err != nil {
 		return 0, "", false, err
 	}
 
-	// stateBuffers validates a second name; groups have only an owner node, so
-	// the unused buffer stays empty and terminated.
+	// stateBuffers handles a second name; groups have only an owner node, so
+	// the unused buffer stays empty.
 	state, node, _, err := stateBuffers(deadline, func(node, _ []uint16) (uint32, uint32, uint32, error) {
 		nodeLength := uint32(len(node))
 
 		state, _, err := groupState.Call(handle, uintptr(unsafe.Pointer(&node[0])), uintptr(unsafe.Pointer(&nodeLength)))
+		if uint32(state) == stateUnknown && errors.Is(err, windows.ERROR_MORE_DATA) {
+			return uint32(state), nodeLength, 0, err
+		}
 
-		return uint32(state), nodeLength, 0, unknownStateError(uint32(state), err)
+		return uint32(state), nodeLength, 0, nil
 	})
 	if err != nil {
 		return 0, "", false, err
@@ -379,7 +340,8 @@ func readGroupState(handle uintptr, deadline time.Time) (uint32, string, bool, e
 }
 
 // simpleState wraps GetClusterNodeState and GetClusterNetworkState. Both take
-// only the object handle and return -1 (unknown) with the last error on failure.
+// only the object handle. Their unknown state (-1) is published as a value,
+// as WMI did.
 func simpleState(proc *windows.LazyProc) func(uintptr, time.Time) (uint32, string, bool, error) {
 	return func(handle uintptr, deadline time.Time) (uint32, string, bool, error) {
 		if err := proc.Find(); err != nil {
@@ -390,26 +352,8 @@ func simpleState(proc *windows.LazyProc) func(uintptr, time.Time) (uint32, strin
 			return 0, "", false, err
 		}
 
-		state, _, err := proc.Call(handle)
-		if err := unknownStateError(uint32(state), err); err != nil {
-			return 0, "", false, err
-		}
+		state, _, _ := proc.Call(handle)
 
 		return uint32(state), "", false, nil
 	}
-}
-
-// unknownStateError converts the last error of a Get*State call that returned
-// the documented failure value -1. A success code still marks a failed call.
-func unknownStateError(state uint32, err error) error {
-	if state != ^uint32(0) {
-		return nil
-	}
-
-	var errno windows.Errno
-	if errors.As(err, &errno) && errno != 0 {
-		return errno
-	}
-
-	return errors.New("state is unknown")
 }

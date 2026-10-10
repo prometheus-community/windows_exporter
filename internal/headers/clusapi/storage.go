@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -49,23 +48,25 @@ type Partition struct {
 // source of the MSCluster_DiskPartition WMI class. Resources that do not
 // support the disk information control code are skipped. Successful
 // partitions are retained alongside joined failures.
-func (c *Cluster) DiskPartitions(deadline time.Time) ([]Partition, error) {
+func (c *Cluster) DiskPartitions(deadline time.Time) (_ []Partition, resultErr error) {
 	for _, proc := range []*windows.LazyProc{openCluster, openEnum, nextEnum, closeEnum, openResource, closeResource, resourceControl} {
 		if err := proc.Find(); err != nil {
-			return nil, fmt.Errorf("load ClusAPI: %w", err)
+			return nil, fmt.Errorf("load ClusAPI: %w: %w", errors.ErrUnsupported, err)
 		}
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	if err := c.begin(deadline); err != nil {
+		return nil, err
+	}
+	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
 
-	if err := c.openLocked(deadline); err != nil {
+	if err := c.open(); err != nil {
 		return nil, err
 	}
 
 	var partitions []Partition
 
-	err := c.enumerateLocked(enumResource, "resource", deadline, func(name resourceName) error {
+	err := c.enumerate(enumResource, "resource", deadline, func(name objectName) error {
 		found, err := c.readResourcePartitions(name, deadline)
 		partitions = append(partitions, found...)
 
@@ -75,18 +76,21 @@ func (c *Cluster) DiskPartitions(deadline time.Time) ([]Partition, error) {
 	return partitions, err
 }
 
-func (c *Cluster) readResourcePartitions(name resourceName, deadline time.Time) (_ []Partition, resultErr error) {
+func (c *Cluster) readResourcePartitions(name objectName, deadline time.Time) (_ []Partition, resultErr error) {
 	if err := checkDeadline(deadline); err != nil {
 		return nil, err
 	}
 
-	handle, _, err := openResource.Call(c.handle, uintptr(unsafe.Pointer(&name.units[0])), windows.GENERIC_READ, 0)
-	if handle == 0 {
+	handle, err := openObject(openResource, c.handle, name)
+	if errors.Is(err, windows.ERROR_RESOURCE_NOT_FOUND) {
+		return nil, errObjectDeleted
+	}
+
+	if err != nil {
 		return nil, fmt.Errorf("OpenClusterResourceEx: %w", err)
 	}
 	defer func() {
-		result, _, err := closeResource.Call(handle)
-		if result == 0 {
+		if err := closeObject(closeResource, handle); err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("CloseClusterResource: %w", err))
 		}
 	}()
