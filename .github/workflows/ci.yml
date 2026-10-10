@@ -1634,9 +1634,6 @@ jobs:
 
       - name: Go tests
         shell: pwsh
-        env:
-          # Temporary: log raw ClusAPI property lists for parser fixtures.
-          WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP: "1"
         run: ./tools/run-go-tests.ps1 -BinaryDirectory (Join-Path $env:RUNNER_TEMP "go-tests") -Timeout 10m
 
       - name: Smoke test exporter
