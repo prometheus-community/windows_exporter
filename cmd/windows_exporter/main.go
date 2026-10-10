@@ -235,7 +235,6 @@ func run(ctx context.Context, args []string) int {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())
-	mux.Handle("GET /version", httphandler.NewVersionHandler())
 	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
 		TimeoutMargin:          *timeoutMargin,
