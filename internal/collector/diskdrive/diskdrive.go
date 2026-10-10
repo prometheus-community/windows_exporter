@@ -163,6 +163,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			slog.Any("native", nativeDrives),
 		)
 	default:
+		c.logger.Debug("native disk drive properties match Win32_DiskDrive, using native APIs")
+
 		c.useNative = true
 	}
 
