@@ -429,6 +429,12 @@ type collectState struct {
 	valid []bool
 
 	names instanceNameCache
+
+	// index, occurrences and seen back the maps of rowSet. They are cleared
+	// for every sample, so their buckets are not allocated again.
+	index       map[instanceKey]int
+	occurrences map[string]int
+	seen        map[string]int
 }
 
 // collect replaces the content of dst with one sample.
@@ -581,13 +587,24 @@ type rowSet[T any] struct {
 func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] {
 	state.names.startSample()
 
+	if state.index == nil {
+		state.index = map[instanceKey]int{}
+		state.occurrences = map[string]int{}
+		state.seen = map[string]int{}
+	} else {
+		// A failed sample can leave entries behind.
+		clear(state.index)
+		clear(state.occurrences)
+		clear(state.seen)
+	}
+
 	return rowSet[T]{
 		c:           c,
 		dst:         dst,
-		index:       map[instanceKey]int{},
+		index:       state.index,
 		nameCache:   &state.names,
-		occurrences: map[string]int{},
-		seen:        map[string]int{},
+		occurrences: state.occurrences,
+		seen:        state.seen,
 		valid:       state.valid[:0],
 	}
 }

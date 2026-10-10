@@ -482,3 +482,34 @@ func TestInstanceNameCache(t *testing.T) {
 	require.Len(t, cache.names, 1, "name of a vanished instance kept")
 	require.Contains(t, cache.names, "a\x00", "keyed by the UTF-16LE content")
 }
+
+// TestRowSetReusesState checks that a sample does not see the instances of an
+// earlier sample that shared its state, even if that sample did not finish.
+func TestRowSetReusesState(t *testing.T) {
+	t.Parallel()
+
+	c := newRowSetTestCollector(false)
+	c.counters[1].FieldIndexSecondValue = -1
+	state := &collectState{}
+
+	var dst []rowSetValues
+
+	// A sample that fails after its first counter array.
+	rows := newRowSet(c, &dst, state)
+	addDuplicateTestItems(&rows, CounterTypeRaw, 0, []string{"a", "a", "b"}, []float64{1, 2, 3})
+
+	for range 2 {
+		dst = nil
+		rows = newRowSet(c, &dst, state)
+		addDuplicateTestItems(&rows, CounterTypeRaw, 0, []string{"b", "c"}, []float64{4, 5})
+		addDuplicateTestItems(&rows, CounterTypeRaw, 1, []string{"b", "c"}, []float64{6, 7})
+		rows.finish()
+
+		state.valid = rows.valid
+
+		require.Equal(t, []rowSetValues{
+			{Name: "b", A: 4, B: 6},
+			{Name: "c", A: 5, B: 7},
+		}, dst)
+	}
+}
