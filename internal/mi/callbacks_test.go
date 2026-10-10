@@ -57,7 +57,8 @@ func newTestSession(tb testing.TB) *mi.Session {
 const storagePoolQueryTimeout = 30 * time.Second
 
 // storagePoolQuery returns the MSFT_StoragePool query, or skips if the storage
-// provider is not installed. Other errors fail the test.
+// provider is not installed or not accessible, e.g. without elevation. Other
+// errors fail the test.
 func storagePoolQuery(tb testing.TB, session *mi.Session) mi.Query {
 	tb.Helper()
 
@@ -67,7 +68,8 @@ func storagePoolQuery(tb testing.TB, session *mi.Session) mi.Query {
 	var pools []msftStoragePool
 
 	err = session.Query(&pools, mi.NamespaceRootStorage, query, storagePoolQueryTimeout)
-	if errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) || errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
+	if errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) || errors.Is(err, mi.MI_RESULT_INVALID_CLASS) ||
+		errors.Is(err, mi.MI_RESULT_NOT_SUPPORTED) || errors.Is(err, mi.MI_RESULT_ACCESS_DENIED) {
 		tb.Skipf("MSFT_StoragePool is not available: %v", err)
 	}
 

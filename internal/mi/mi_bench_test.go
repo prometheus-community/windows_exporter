@@ -226,43 +226,45 @@ func Benchmark_MI_QueryFunc_GetElement_Sync(b *testing.B) {
 // use the session's default operation options.
 func Benchmark_MI_Parallel_StoragePool(b *testing.B) {
 	for _, mode := range []string{"Async", "Sync"} {
-		b.Run(mode, func(b *testing.B) {
-			session := newTestSession(b)
-			query := storagePoolQuery(b, session)
+		// b.Run calls the function once per b.N step, so the session is set
+		// up and warmed up once per mode outside of it.
+		session := newTestSession(b)
+		query := storagePoolQuery(b, session)
 
-			queryOnce := func() error {
-				var pools []msftStoragePool
+		queryOnce := func() error {
+			var pools []msftStoragePool
 
-				if mode == "Async" {
-					return session.Query(&pools, mi.NamespaceRootStorage, query, -1)
-				}
-
-				operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootStorage, mi.QueryDialectWQL,
-					"SELECT FriendlyName FROM MSFT_StoragePool")
-				if err != nil {
-					return err
-				}
-
-				err = operation.Unmarshal(&pools)
-
-				return errors.Join(err, operation.Close())
+			if mode == "Async" {
+				return session.Query(&pools, mi.NamespaceRootStorage, query, -1)
 			}
 
-			// Grow the MI and Go thread pools before the handle baseline.
-			var wg sync.WaitGroup
+			operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootStorage, mi.QueryDialectWQL,
+				"SELECT FriendlyName FROM MSFT_StoragePool")
+			if err != nil {
+				return err
+			}
 
-			for range 2 * runtime.GOMAXPROCS(0) {
-				wg.Go(func() {
-					for range 4 {
-						if err := queryOnce(); err != nil {
-							b.Error(err)
-						}
+			err = operation.Unmarshal(&pools)
+
+			return errors.Join(err, operation.Close())
+		}
+
+		// Grow the MI and Go thread pools before the handle baseline.
+		var wg sync.WaitGroup
+
+		for range 2 * runtime.GOMAXPROCS(0) {
+			wg.Go(func() {
+				for range 4 {
+					if err := queryOnce(); err != nil {
+						b.Error(err)
 					}
-				})
-			}
+				}
+			})
+		}
 
-			wg.Wait()
+		wg.Wait()
 
+		b.Run(mode, func(b *testing.B) {
 			start, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
 			require.NoError(b, err)
 
