@@ -1,9 +1,15 @@
 # Windows feature tests
 
-The CI Windows job prepares real Windows roles and workloads before running
-`go test -json -count=1 -race -timeout=10m ./...`. Collector tests validate the
-metrics from those workloads. A final exporter smoke check builds and starts the
-binary, requests `/metrics` once, and checks for a nonempty HTTP 200 response.
+The CI Windows job prepares real Windows roles and workloads, then runs the Go
+tests with the race detector. While the fixtures are provisioned, a background
+step builds every test binary and the exporter with
+[`tools/build-go-tests.ps1`](../tools/build-go-tests.ps1); linking the race test
+binaries would otherwise take minutes after provisioning.
+[`tools/run-go-tests.ps1`](../tools/run-go-tests.ps1) then runs the binaries in
+parallel through `go tool test2json`, each in its package directory, producing
+the same events as `go test -json ./...`. Collector tests validate the metrics
+from those workloads. A final exporter smoke check starts the binary, requests
+`/metrics` once, and checks for a nonempty HTTP 200 response.
 
 The job runs on Windows Server 2022; Server 2025 runners take much longer to
 provision the same fixtures. It provisions Containers, Hyper-V, SQL Server

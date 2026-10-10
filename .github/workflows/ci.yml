@@ -1,6 +1,6 @@
 name: CI
 
-# Windows tests are gated on Go and workflow changes for pull requests and branch pushes.
+# Windows tests are gated on Go, workflow and Go test script changes for pull requests and branch pushes.
 on:
   push:
     branches:
@@ -56,7 +56,7 @@ jobs:
             exit 0
           fi
 
-          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.go' '.github/workflows/ci.yml')
+          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.go' '.github/workflows/ci.yml' 'tools/build-go-tests.ps1' 'tools/run-go-tests.ps1')
           if [[ -n "$changed_files" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
@@ -403,6 +403,14 @@ jobs:
           path: ${{ runner.temp }}/sql-server/setup
           key: sql-server-2025-express-fa7e1fabc9a2-${{ runner.os }}
 
+      # Its PATH changes apply only after a wait step includes it.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: setup-go
+        background: true
+        with:
+          # renovate: golang=go
+          go-version: '1.27.2'
+
       # Steps that do not register services run in the background while Windows features install.
       - name: Download SQL Server media
         id: download-mssql
@@ -626,6 +634,20 @@ jobs:
 
           Get-WindowsFeature -Name $features |
               Format-Table DisplayName, Name, InstallState
+
+      - name: Wait for Go
+        wait: [setup-go]
+
+      # Linking the race-enabled test binaries takes minutes; do it while the
+      # fixtures below are provisioned instead of in the Go tests step.
+      - name: Build Go test binaries
+        id: build-go-tests
+        background: true
+        shell: pwsh
+        run: |
+          ./tools/build-go-tests.ps1 -OutputDirectory (Join-Path $env:RUNNER_TEMP "go-tests")
+          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Setup SQL Server Express
         id: setup-mssql
@@ -1449,14 +1471,9 @@ jobs:
               }
 
 
-      # The foreground waits for SQL Server here anyway, so Go setup costs nothing.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          # renovate: golang=go
-          go-version: '1.27.2'
-
       - name: Wait for background setup
         wait:
+          - build-go-tests
           - pull-hostprocess
           - pull-nanoserver
           - setup-bitlocker
@@ -1495,16 +1512,7 @@ jobs:
         id: go-tests
         shell: pwsh
         run: |
-          go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
-              ForEach-Object {
-                  $line = $_.ToString()
-                  try {
-                      $event = $line | ConvertFrom-Json -ErrorAction Stop
-                      if ($event.Output) { [Console]::Write($event.Output) }
-                  } catch {
-                      Write-Host $line
-                  }
-              }
+          ./tools/run-go-tests.ps1 -BinaryDirectory (Join-Path $env:RUNNER_TEMP "go-tests") -Timeout 10m
           $testExitCode = $LASTEXITCODE
           "exit_code=$testExitCode" | Add-Content $env:GITHUB_OUTPUT
           exit $testExitCode
@@ -1520,12 +1528,9 @@ jobs:
           Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
           ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
 
-      - name: Build and smoke test exporter
+      - name: Smoke test exporter
         shell: pwsh
-        run: |
-          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          ./tools/end-to-end-test.ps1
+        run: ./tools/end-to-end-test.ps1
 
       - name: Upload test logs
         if: ${{ always() }}
