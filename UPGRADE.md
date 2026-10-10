@@ -11,7 +11,7 @@ Most installations need no changes. Go through the checklist below and read the 
 |-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|-------------------------------------------------------------------|
 | You enable the `filetime` collector                                                             | Switch to the `file` collector                                          | [filetime collector removed](#filetime-collector-removed)         |
 | You use a configuration file, or set `--process.priority` or `--process.memory-limit`           | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
-| You use the `process` collector                                                                 | Check the counter version and `owner` label                             | [process collector](#process-collector)                           |
+| You use the `process` collector                                                                 | Remove `counter-version`, check the `owner` label                       | [process collector](#process-collector)                           |
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
@@ -72,6 +72,8 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
 
   The key `scrape_interval` was accepted by 0.31 but had no effect. It now fails validation.
 
+Two settings were removed and stop the exporter at startup if they are still set: `--collector.process.counter-version` (see [process collector](#process-collector)) and `--collector.container.containerd-state-dir` (see [container collector](#container-collector)). The same applies to their configuration file keys.
+
 New in the configuration file:
 
 - `collectors.disabled`, the equivalent of `--collectors.disabled`.
@@ -79,11 +81,25 @@ New in the configuration file:
 
 ## process collector
 
-### Counter version
+### counter-version removed
 
-`--collector.process.counter-version` now defaults to `1` (the registry-based Process V1 counters).
-In 0.31 the default was `0`, which picked Process V2 when available.
-To keep the 0.31 behavior on systems with Process V2, set `--collector.process.counter-version=0` (or `2`).
+The `process` collector now reads process data directly from the Windows kernel instead of the `Process` and `Process V2` performance counters.
+Metric names, labels, types and values are unchanged, and the collector also works when the `Process` performance counter set is disabled.
+
+`--collector.process.counter-version` and the `counter-version` configuration key were removed. **Setting either one stops the exporter at startup.**
+Remove the flag from service arguments and the key from configuration files:
+
+```yaml
+collector:
+  process:
+    counter-version: 2 # remove this line
+```
+
+### IIS application pools
+
+With `--collector.process.iis`, the application pool of each `w3wp` process is read from its command line.
+The optional "IIS Management Scripts and Tools" feature (`root\WebAdministration`) is no longer required. In 0.31 the process collector failed to start without it.
+Orphaned worker processes and `w3wp` processes in containers now get their application pool as well.
 
 ### owner label
 
@@ -172,10 +188,11 @@ Changed type, same name:
 The IIS values are current occupancy, so query them directly instead of with `rate()`.
 If Prometheus scrapes with OpenMetrics, the IIS metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
 
-New labels on existing metrics:
+Label changes on existing metrics:
 
 - `windows_os_info` has an `installation_type` label, for example `Server` or `Client`.
 - The `windows_netframework_clrmemory_*` metrics have a `process_id` label.
+- In the `windows_hyperv_dynamic_memory_vm_*` metrics, unnamed VM instances have `vm="(unknown)"` (or `(unknown)#N`) instead of `vm="------"`.
 
 Retired: `windows_net_route_info` was documented but never exported. It was removed from the documentation.
 
@@ -186,6 +203,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_dbreplica_database_flow_control_wait_seconds` and `windows_mssql_dbreplica_group_commit_stall_seconds` are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly.
 - `windows_mssql_locks_count` is no longer divided by 1000.
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
+- `windows_netframework_clrmemory_gc_time_percent` no longer overflows, and it is left out when Windows reports no base value. The `netframework` collector now reads the CLR counters through PDH instead of WMI; names, labels and types are unchanged.
 - The IIS URI cache flush and kernel cache item metrics read the right Windows counters, and the metadata cache hit metrics are no longer always `0`.
 - `windows_logical_disk_readonly`, the FSRM quota template information, the SMTP general failure totals and the Hyper-V root partition interrupt mappings were documented but never exported. They are exported now.
 
@@ -212,9 +230,12 @@ When the configuration of a service can't be read, `windows_service_start_mode` 
 | Collector   | New sub-collectors enabled by default           |
 |-------------|-------------------------------------------------|
 | `hyperv`    | `host`, `replica_vm`, `wmi_health`              |
-| `mscluster` | `shared_volumes`, `virtualdisk`, `storagepool`  |
+| `mscluster` | `shared_volumes`                                |
 
 These add new metrics. To keep the 0.31 set, list the sub-collectors explicitly with `--collector.hyperv.enabled` or `--collector.mscluster.enabled`.
+
+Storage pool and virtual disk metrics are in the new `storage_spaces` collector (`--collector.storage_spaces.enabled=pool,virtual_disk`), which isn't enabled by default.
+It works on standalone hosts too and doesn't need a failover cluster.
 
 ## Scrape timeouts
 
@@ -245,6 +266,8 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `collector.Config.Filetime` was removed. Use `collector.Config.File` (`file.Config`).
 - New fields in `collector.Config`: `DMI`, `File`, `Registry` and `WMI`.
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
+- `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
+- New field in `collector.Config`: `StorageSpaces`.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.
 - `Collection.Close` now releases all collector resources, including PDH queries and worker goroutines. Call it when you discard a collection, for example on a configuration reload.
 - Views created by `Collection.WithCollectors` no longer own the collectors. Their `Close` does nothing; close the original `Collection`.
