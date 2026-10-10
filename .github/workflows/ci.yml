@@ -391,7 +391,7 @@ jobs:
       WINDOWS_EXPORTER_TEST_RDP_USER: rdp-ci
       WINDOWS_TEST_OS: ${{ matrix.os }}
       # These collectors must work on the fixtures below; missing features are failures.
-      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dmi,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dmi,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,storage_spaces,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

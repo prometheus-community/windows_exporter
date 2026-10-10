@@ -58,6 +58,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
@@ -111,6 +112,7 @@ type Config struct {
 	SMB                smb.Config                `yaml:"smb"`
 	SMBClient          smbclient.Config          `yaml:"smb_client"`
 	SMTP               smtp.Config               `yaml:"smtp"`
+	StorageSpaces      storage_spaces.Config     `yaml:"storage_spaces"`
 	System             system.Config             `yaml:"system"`
 	TCP                tcp.Config                `yaml:"tcp"`
 	TerminalServices   terminal_services.Config  `yaml:"terminal_services"`
@@ -168,6 +170,7 @@ var ConfigDefaults = Config{
 	SMB:                smb.ConfigDefaults,
 	SMBClient:          smbclient.ConfigDefaults,
 	SMTP:               smtp.ConfigDefaults,
+	StorageSpaces:      storage_spaces.ConfigDefaults,
 	System:             system.ConfigDefaults,
 	TCP:                tcp.ConfigDefaults,
 	TerminalServices:   terminal_services.ConfigDefaults,

@@ -15,7 +15,7 @@
 
 //go:build windows
 
-package mscluster
+package storage_spaces
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameStoragePool = Name + "_storagepool"
+const nameStoragePool = Name + "_pool"
 
 type collectorStoragePool struct {
 	storagePoolMIQuery mi.Query
@@ -92,14 +92,14 @@ func (c *Collector) buildStoragePool() error {
 
 	c.storagePoolOperationalStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "operational_status"),
-		"Operational status codes reported for the storage pool (one series per status value).",
+		"Operational status codes reported for the storage pool (one series per status value)",
 		[]string{"name", "unique_id", "status"},
 		nil,
 	)
 
 	c.storagePoolThinProvisioningAlertThresholds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "thin_provisioning_alert_thresholds"),
-		"Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold).",
+		"Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold)",
 		[]string{"name", "unique_id", "threshold"},
 		nil,
 	)

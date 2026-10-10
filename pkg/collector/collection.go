@@ -68,6 +68,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
@@ -141,6 +142,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[smb.Name] = smb.New(&config.SMB)
 	collectors[smbclient.Name] = smbclient.New(&config.SMBClient)
 	collectors[smtp.Name] = smtp.New(&config.SMTP)
+	collectors[storage_spaces.Name] = storage_spaces.New(&config.StorageSpaces)
 	collectors[system.Name] = system.New(&config.System)
 	collectors[tcp.Name] = tcp.New(&config.TCP)
 	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)

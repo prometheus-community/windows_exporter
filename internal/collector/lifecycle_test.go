@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -155,6 +156,7 @@ func TestBuildRejectsUnknownSubCollector(t *testing.T) {
 		mssql.New(&mssql.Config{CollectorsEnabled: unknown}),
 		net.New(&net.Config{CollectorsEnabled: unknown}),
 		netframework.New(&netframework.Config{CollectorsEnabled: unknown}),
+		storage_spaces.New(&storage_spaces.Config{CollectorsEnabled: unknown}),
 		tcp.New(&tcp.Config{CollectorsEnabled: unknown}),
 	} {
 		t.Run(c.GetName(), func(t *testing.T) {
