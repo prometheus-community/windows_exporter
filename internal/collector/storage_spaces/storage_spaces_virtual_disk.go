@@ -15,7 +15,7 @@
 
 //go:build windows
 
-package mscluster
+package storage_spaces
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameVirtualDisk = Name + "_virtualdisk"
+const nameVirtualDisk = Name + "_virtual_disk"
 
 type collectorVirtualDisk struct {
 	virtualDiskMIQuery mi.Query

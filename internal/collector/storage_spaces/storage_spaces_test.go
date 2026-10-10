@@ -15,19 +15,22 @@
 
 //go:build windows
 
-package mscluster_test
+package storage_spaces_test
 
 import (
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
-	testutils.FuncBenchmarkCollector(b, mscluster.Name, mscluster.NewWithFlags)
+	testutils.FuncBenchmarkCollector(b, storage_spaces.Name, storage_spaces.NewWithFlags)
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, mscluster.New, nil)
+	metrics := testutils.TestCollector(t, storage_spaces.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_virtual_disk_size_bytes", prometheus.Labels{"name": "CIVirtualDisk"})
+	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_pool_size_bytes", prometheus.Labels{"name": "GitHubActions"})
 }

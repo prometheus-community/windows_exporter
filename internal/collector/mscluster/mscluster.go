@@ -40,8 +40,6 @@ const (
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
 	subCollectorSharedVolumes = "shared_volumes"
-	subCollectorVirtualDisk   = "virtualdisk"
-	subCollectorStoragePool   = "storagepool"
 )
 
 type Config struct {
@@ -57,8 +55,6 @@ var ConfigDefaults = Config{
 		subCollectorResource,
 		subCollectorResourceGroup,
 		subCollectorSharedVolumes,
-		subCollectorVirtualDisk,
-		subCollectorStoragePool,
 	},
 }
 
@@ -70,8 +66,6 @@ type Collector struct {
 	collectorResource
 	collectorResourceGroup
 	collectorSharedVolumes
-	collectorVirtualDisk
-	collectorStoragePool
 
 	config    Config
 	miSession *mi.Session
@@ -135,8 +129,6 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		subCollectorResource,
 		subCollectorResourceGroup,
 		subCollectorSharedVolumes,
-		subCollectorVirtualDisk,
-		subCollectorStoragePool,
 	}
 
 	for _, name := range c.config.CollectorsEnabled {
@@ -188,18 +180,6 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
 		if err := c.buildSharedVolumes(); err != nil {
 			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
-		if err := c.buildVirtualDisk(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to build virtualdisk collector: %w", err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
-		if err := c.buildStoragePool(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to build storagepool collector: %w", err))
 		}
 	}
 
@@ -276,26 +256,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		g.Go(func() error {
 			if err := c.collectSharedVolumes(ch, maxScrapeDuration); err != nil {
 				return fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
-			}
-
-			return nil
-		})
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
-		g.Go(func() error {
-			if err := c.collectVirtualDisk(ch, maxScrapeDuration); err != nil {
-				return fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
-			}
-
-			return nil
-		})
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
-		g.Go(func() error {
-			if err := c.collectStoragePool(ch, maxScrapeDuration); err != nil {
-				return fmt.Errorf("failed to collect storagepool metrics: %w", err)
 			}
 
 			return nil

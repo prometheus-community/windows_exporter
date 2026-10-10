@@ -15,7 +15,7 @@
 
 //go:build windows
 
-package mscluster
+package storage_spaces
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameStoragePool = Name + "_storagepool"
+const nameStoragePool = Name + "_pool"
 
 type collectorStoragePool struct {
 	storagePoolMIQuery mi.Query
