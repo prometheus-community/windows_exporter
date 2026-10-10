@@ -37,6 +37,9 @@ import (
 type Cache[K, V comparable] struct {
 	mu      sync.Mutex
 	entries map[K]entry[V]
+	// resets counts Reset calls, so that a scrape begun before a Reset
+	// doesn't commit afterwards.
+	resets uint64
 }
 
 type entry[V comparable] struct {
@@ -47,28 +50,32 @@ type entry[V comparable] struct {
 // Scrape collects the entries of one scrape. It must not be shared between
 // goroutines.
 type Scrape[K, V comparable] struct {
-	cache *Cache[K, V]
-	prev  map[K]entry[V]
-	next  map[K]entry[V]
+	cache  *Cache[K, V]
+	resets uint64
+	prev   map[K]entry[V]
+	next   map[K]entry[V]
 }
 
 // Begin starts a scrape based on the last committed generation.
 func (c *Cache[K, V]) Begin() Scrape[K, V] {
 	c.mu.Lock()
-	prev := c.entries
+	prev, resets := c.entries, c.resets
 	c.mu.Unlock()
 
 	return Scrape[K, V]{
-		cache: c,
-		prev:  prev,
-		next:  make(map[K]entry[V], len(prev)),
+		cache:  c,
+		resets: resets,
+		prev:   prev,
+		next:   make(map[K]entry[V], len(prev)),
 	}
 }
 
 // Reset drops all cached metrics, for example after their descriptors changed.
+// Scrapes begun before Reset don't commit their entries.
 func (c *Cache[K, V]) Reset() {
 	c.mu.Lock()
 	c.entries = nil
+	c.resets++
 	c.mu.Unlock()
 }
 
@@ -93,9 +100,13 @@ func (s *Scrape[K, V]) Store(key K, value V, metrics []prometheus.Metric) {
 }
 
 // Commit replaces the cached entries with those loaded or stored in this
-// scrape, so keys that were not seen are dropped.
+// scrape, so keys that were not seen are dropped. It does nothing if the cache
+// was reset after the scrape began, for example by a Close or Build that ran
+// while a timed-out scrape was still collecting.
 func (s *Scrape[K, V]) Commit() {
 	s.cache.mu.Lock()
-	s.cache.entries = s.next
+	if s.cache.resets == s.resets {
+		s.cache.entries = s.next
+	}
 	s.cache.mu.Unlock()
 }

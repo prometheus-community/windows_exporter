@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,6 +80,31 @@ func TestCache(t *testing.T) {
 	require.False(t, ok, "reset")
 }
 
+func TestCacheResetDuringScrape(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, string]
+
+	// A scrape that is still running when the collector is closed or rebuilt
+	// must not put its metrics back into the cache.
+	scrape := cache.Begin()
+	scrape.Store("a", "running", build("a", "running"))
+	cache.Reset()
+	scrape.Commit()
+
+	scrape = cache.Begin()
+	_, ok := scrape.Load("a", "running")
+	require.False(t, ok)
+
+	// Scrapes begun after the Reset commit as usual.
+	scrape.Store("a", "running", build("a", "running"))
+	scrape.Commit()
+
+	scrape = cache.Begin()
+	_, ok = scrape.Load("a", "running")
+	require.True(t, ok)
+}
+
 func TestCacheConcurrentScrapes(t *testing.T) {
 	t.Parallel()
 
@@ -102,7 +128,8 @@ func TestCacheConcurrentScrapes(t *testing.T) {
 						scrape.Store(name, value, metrics)
 					}
 
-					require.Len(t, metrics, 1)
+					// require must not be called outside the test goroutine.
+					assert.Len(t, metrics, 1)
 				}
 
 				scrape.Commit()
