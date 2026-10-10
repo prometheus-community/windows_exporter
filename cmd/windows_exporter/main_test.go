@@ -102,10 +102,13 @@ func TestRun(t *testing.T) {
 			}()
 
 			t.Cleanup(func() {
+				// run closes the collectors before it returns. That takes milliseconds,
+				// but native teardown (PDH, MI) can stall on a loaded CI runner, so
+				// wait for the bound closeCollection enforces.
 				select {
 				case exitCode := <-exitCodeCh:
 					require.Equal(t, tc.exitCode, exitCode)
-				case <-time.After(2 * time.Second):
+				case <-time.After(collectionCloseTimeout + 5*time.Second):
 					t.Fatalf("timed out waiting for exit code, want %d", tc.exitCode)
 				}
 			})
