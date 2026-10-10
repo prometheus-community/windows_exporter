@@ -1,6 +1,6 @@
-# cpu collector
+# CPU collector
 
-The cpu collector exposes metrics about CPU usage
+The CPU collector exposes metrics about CPU usage
 
 |||
 -|-
@@ -40,7 +40,7 @@ windows_cpu_core_frequency_mhz{instance="localhost"}
 ```
 
 ## Useful queries
-Show cpu usage by mode.
+Show CPU usage by mode.
 ```
 sum by (mode) (irate(windows_cpu_time_total{instance="localhost"}[5m]))
 ```

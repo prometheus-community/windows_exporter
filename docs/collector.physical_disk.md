@@ -13,11 +13,11 @@ Enabled by default? | Yes
 
 ### `--collector.physical_disk.disk-include`
 
-If given, a disk needs to match the include regexp in order for the corresponding disk metrics to be reported. Default: `.+`
+If given, a disk needs to match the include regular expression in order for the corresponding disk metrics to be reported. Default: `.+`
 
 ### `--collector.physical_disk.disk-exclude`
 
-If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported. Default: empty
+If given, a disk needs to *not* match the exclude regular expression in order for the corresponding disk metrics to be reported. Default: empty
 
 ## Metrics
 

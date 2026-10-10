@@ -1,6 +1,6 @@
-# dns collector
+# DNS collector
 
-The dns collector exposes metrics about the DNS server
+The DNS collector exposes metrics about the DNS server
 
 |||
 -|-|-

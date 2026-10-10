@@ -14,11 +14,11 @@ Enabled by default? | No
 
 ### `--collector.smtp.server-include`
 
-If given, a virtual SMTP server needs to match the include regexp in order for the corresponding metrics to be reported.
+If given, a virtual SMTP server needs to match the include regular expression in order for the corresponding metrics to be reported.
 
 ### `--collector.smtp.server-exclude`
 
-If given, a virtual SMTP server needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
+If given, a virtual SMTP server needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported.
 
 ## Metrics
 
