@@ -99,6 +99,9 @@ jobs:
           version: v2.18.3
           args: build --clean
 
+      - name: Verify Go overlay
+        run: go run ./tools/go-overlay verify dist/windows_exporter-amd64.exe dist/windows_exporter-arm64.exe
+
       - name: Stage build artifacts
         run: |
           mkdir -p output

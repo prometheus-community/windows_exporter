@@ -23,3 +23,4 @@ local/
 !/.idea/copyright/windows_exporter.xml
 !/.idea/vcs.xml
 !/.idea/go.imports.xml
+/.go-overlay/
