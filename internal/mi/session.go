@@ -69,9 +69,9 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
-	// MI_Session_Close blocks until all operations of the session have
-	// completed. The default options are deleted afterwards, so a still
-	// running operation never uses freed options.
+	// MI_Session_Close cancels running operations and blocks until their
+	// handles are closed. The default options are deleted afterwards, so an
+	// operation that is still open never uses freed options.
 	r0, _, _ := syscall.SyscallN(s.ft.Close,
 		uintptr(unsafe.Pointer(s)),
 		0,

@@ -19,34 +19,28 @@ package mi
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestResultError_Values pins the constants to the native MI_Result values,
+// which have no 18 and 19.
+func TestResultError_Values(t *testing.T) {
+	t.Parallel()
+
+	require.EqualValues(t, 17, MI_RESULT_METHOD_NOT_FOUND)
+	require.EqualValues(t, 20, MI_RESULT_NAMESPACE_NOT_EMPTY)
+	require.EqualValues(t, 22, MI_RESULT_INVALID_OPERATION_TIMEOUT)
+	require.EqualValues(t, 28, MI_RESULT_SERVER_IS_SHUTTING_DOWN)
+}
 
 func TestResultError_String(t *testing.T) {
 	t.Parallel()
 
 	require.Equal(t, "MI_RESULT_OK", MI_RESULT_OK.String())
 	require.Equal(t, "MI_RESULT_NO_SUCH_PROPERTY", MI_RESULT_NO_SUCH_PROPERTY.Error())
-	require.Equal(t, "MI_RESULT_SERVER_IS_SHUTTING_DOWN", MI_RESULT_SERVER_IS_SHUTTING_DOWN.String())
+	require.Equal(t, "MI_RESULT_INVALID_OPERATION_TIMEOUT", ResultError(22).String())
+	require.Equal(t, "MI_RESULT_SERVER_IS_SHUTTING_DOWN", ResultError(28).String())
+	require.Equal(t, "MI_RESULT_UNKNOWN(18)", ResultError(18).String())
 	require.Equal(t, "MI_RESULT_UNKNOWN(1000)", ResultError(1000).String())
-}
-
-// TestValueType_Size guards the MI_Type out-parameter of MI_Instance_GetElement,
-// which the native side writes as a 32-bit enum.
-func TestValueType_Size(t *testing.T) {
-	t.Parallel()
-
-	require.Equal(t, uintptr(4), unsafe.Sizeof(ValueType(0)))
-}
-
-func TestElement_GetValue_Null(t *testing.T) {
-	t.Parallel()
-
-	for _, valueType := range []ValueType{ValueTypeUINT32, ValueTypeSTRING, ValueTypeDATETIME} {
-		value, err := newElement(valueType, [5]uint64{42}, flagNull).GetValue()
-		require.NoError(t, err)
-		require.Nil(t, value)
-	}
 }

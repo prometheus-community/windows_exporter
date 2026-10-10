@@ -40,7 +40,13 @@ const (
 	MI_RESULT_INVALID_QUERY
 	MI_RESULT_METHOD_NOT_AVAILABLE
 	MI_RESULT_METHOD_NOT_FOUND
-	MI_RESULT_NAMESPACE_NOT_EMPTY
+)
+
+// MI_Result has no values 18 and 19.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/ne-mi-mi_result
+const (
+	MI_RESULT_NAMESPACE_NOT_EMPTY ResultError = iota + 20
 	MI_RESULT_INVALID_ENUMERATION_CONTEXT
 	MI_RESULT_INVALID_OPERATION_TIMEOUT
 	MI_RESULT_PULL_HAS_BEEN_ABANDONED
@@ -89,7 +95,7 @@ var resultNames = [...]string{
 // String returns the name of the MI_Result. Codes without a known name keep
 // their numeric value, so an unexpected native result stays identifiable.
 func (r ResultError) String() string {
-	if int(r) < len(resultNames) {
+	if int(r) < len(resultNames) && resultNames[r] != "" {
 		return resultNames[r]
 	}
 
