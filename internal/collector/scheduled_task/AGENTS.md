@@ -14,3 +14,8 @@ Scrape time is spent waiting on the Task Scheduler service, not on CPU.
 - To find slow calls, time each call type over a full enumeration on a live
   system. Run it as `SYSTEM` as well as a user: unprivileged accounts see fewer
   tasks.
+- Each task publishes 19 const metrics, and building them is most of the
+  allocations of a scrape. `collectMetrics` reuses the metrics of the previous
+  scrape through `internal/metriccache` while a task's path, state, last result
+  and missed runs are unchanged. Add new inputs of a task's metrics to
+  `taskValues`, or the cache returns stale series.
