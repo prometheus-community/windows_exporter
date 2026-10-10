@@ -462,6 +462,10 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 // options, so the session defaults are used. The caller must delete non-nil
 // options once the operation is closed.
 func (s *Session) newOperationOptions(queryTimeout time.Duration) (*OperationOptions, error) {
+	if s == nil || s.ft == nil {
+		return nil, ErrNotInitialized
+	}
+
 	if queryTimeout < 0 {
 		return nil, nil //nolint:nilnil
 	}

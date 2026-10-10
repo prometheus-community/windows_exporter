@@ -121,6 +121,10 @@ func (instance *Instance) GetElementByName(elementName ElementName) (Element, er
 		return Element{}, ErrNotInitialized
 	}
 
+	if elementName == nil {
+		return Element{}, ErrInvalidElementName
+	}
+
 	// MI_Value is a union sized to its largest member. On 64-bit MI_Datetime is
 	// 36 bytes and the union rounds up to 40 bytes for 8-byte alignment, so a
 	// full MI_Value must be provided; the previous single-word buffer let the

@@ -290,9 +290,10 @@ func miFieldsOf[T any]() ([]miField, error) {
 		fields = append(fields, miField{index: i, tag: miTag, name: name})
 	}
 
-	miFieldsCache.Store(structType, fields)
+	// Concurrent first queries of a type agree on one shared slice.
+	cached, _ := miFieldsCache.LoadOrStore(structType, fields)
 
-	return fields, nil
+	return cached.([]miField), nil //nolint:forcetypeassert
 }
 
 // unmarshal iterates over the operation's instances and appends them to dst.

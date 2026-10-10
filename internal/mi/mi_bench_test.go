@@ -118,3 +118,46 @@ func Benchmark_MI_Query_Unmarshal_Processor(b *testing.B) {
 		require.NoError(b, session.Query(&processors, mi.NamespaceRootCIMv2, query, -1))
 	}
 }
+
+// Benchmark_MI_QueryFunc_GetElementByName reads elements by names converted
+// once, as the wmi collector does. The zero timeout creates per-query
+// operation options.
+func Benchmark_MI_QueryFunc_GetElementByName(b *testing.B) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(b, err)
+
+	session, err := application.NewSession(nil)
+	require.NoError(b, err)
+
+	b.Cleanup(func() {
+		require.NoError(b, session.Close())
+		require.NoError(b, application.Close())
+	})
+
+	query, err := mi.NewQuery("SELECT Name, PercentIdleTime, PercentProcessorTime, InterruptsPersec FROM Win32_PerfRawData_PerfOS_Processor")
+	require.NoError(b, err)
+
+	properties := make([]mi.ElementName, 0, 4)
+
+	for _, property := range []string{"Name", "PercentIdleTime", "PercentProcessorTime", "InterruptsPersec"} {
+		name, err := mi.NewElementName(property)
+		require.NoError(b, err)
+
+		properties = append(properties, name)
+	}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		err := session.QueryFunc(mi.NamespaceRootCIMv2, query, 0, func(instance *mi.Instance) error {
+			for _, property := range properties {
+				if _, err := instance.GetElementByName(property); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+		require.NoError(b, err)
+	}
+}
