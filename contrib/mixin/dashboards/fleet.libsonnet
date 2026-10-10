@@ -1,16 +1,39 @@
 local b = import 'builders.libsonnet';
+local hosts = 'windows_os_hostname{job=~"$job", hostname=~"$hostname"}';
+// Counts hosts matching expr, a vector by instance. Falls back to 0 while hosts are selected.
+local countHosts(expr) = 'count((' + expr + ') and on (instance) ' + hosts + ') or (0 * count(' + hosts + '))';
+local cpuBusy = '100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))';
+local memoryUsed = '100 * (1 - windows_memory_physical_free_bytes{job=~"$job"} / windows_memory_physical_total_bytes{job=~"$job"})';
+local volumeFree = '100 * windows_logical_disk_free_bytes{job=~"$job", volume!~"HarddiskVolume.*"} / windows_logical_disk_size_bytes{job=~"$job", volume!~"HarddiskVolume.*"}';
+local attention = [{ color: 'green', value: null }, { color: 'orange', value: 1 }];
 
-function(on)
+// config supplies the alert thresholds, so a counter turns orange when the matching alert condition holds.
+function(on, config)
   b.tab(
     'Fleet',
     b.rows([
+      if on('os') then b.summary([
+        250,
+        251,
+        if on('cpu') then 252,
+        if on('memory') then 253,
+        if on('logical_disk') then 254,
+        if on('service') then 255,
+      ]),
       if on('os') then b.row('Hosts', b.flow([[2, 24, 10]])),
       if on('os') then b.row('Utilization', b.flow([if on('cpu') then [3, 8, 8], if on('memory') then [4, 8, 8], if on('logical_disk') then [5, 8, 8]])),
-      if on('os') then b.row('Throughput and errors', b.flow([if on('net') then [6, 8, 8], if on('logical_disk') then [7, 8, 8], if on('net') then [8, 8, 8]])),
+      if on('os') then b.row('Network and disk', b.flow([if on('net') then [6, 12, 8], if on('net') then [9, 12, 8], if on('logical_disk') then [7, 12, 8], if on('net') then [8, 12, 8]])),
     ]),
     [
+      b.stat(250, 'Hosts', 'Hosts that match the Job and Hostname selection and report windows_os_hostname.', 'count(' + hosts + ')'),
+      b.stat(251, 'Hosts down', 'Selected hosts whose last scrape failed. Hosts stay selectable for one day after they stop reporting.', 'count((up{job=~"$job"} == 0) and on (instance) last_over_time(' + hosts + '[1d])) or (0 * count(up{job=~"$job"}))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(252, 'CPU > %s%%' % config.cpuHighUsageThreshold, 'Hosts whose CPU usage is above the cpuHighUsageThreshold of the WindowsCPUHighUsage alert. The alert also requires 15 minutes above it.', countHosts(cpuBusy + ' > %s' % config.cpuHighUsageThreshold), steps=attention),
+      b.stat(253, 'RAM > %s%%' % config.memoryHighUsageThreshold, 'Hosts whose physical memory usage is above the memoryHighUsageThreshold of the WindowsMemoryHighUsage alert. The alert also requires 15 minutes above it.', countHosts('max by (instance) (' + memoryUsed + ') > %s' % config.memoryHighUsageThreshold), steps=attention),
+      b.stat(254, 'Low disk', 'Hosts with at least one volume with less than %s%% free space, the diskFreeWarningThreshold' % config.diskFreeWarningThreshold + ' of the WindowsDiskAlmostFull alert. HarddiskVolume* volumes without a drive letter are ignored.', countHosts('min by (instance) (' + volumeFree + ') < %s' % config.diskFreeWarningThreshold), steps=attention),
+      b.stat(255, 'Auto stopped', 'Hosts with at least one service with start mode auto that is not running. Delayed-start and trigger-start services can show up here until they start.', countHosts('count by (instance) (windows_service_state{job=~"$job", state="running"} == 0 and on (instance, name) windows_service_start_mode{job=~"$job", start_mode="auto"} == 1)'), steps=attention),
+
       b.panel.new(2, 'Hosts', 'table')
-      + b.panel.withDescription('One row per scraped host. Click a hostname to open its details. Services up counts running services; Auto stopped counts services with start mode auto that are not running.')
+      + b.panel.withDescription('One row per scraped host. Click a hostname to open its details. C: used is the usage of the C: volume, usually the system drive; Fullest volume is the most used volume with a drive letter. Services up counts running services; Auto stopped counts services with start mode auto that are not running.')
       + b.panel.withQueries([
         b.query.new('max by (instance, hostname) (windows_os_hostname{job=~"$job", hostname=~"$hostname"})', 'A')
         + b.query.withInstant()
@@ -48,6 +71,9 @@ function(on)
         b.query.new('(max by (instance) (windows_system_processes{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'L')
         + b.query.withInstant()
         + b.query.withFormat('table'),
+        b.query.new('(max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~"$job", volume="C:"} / windows_logical_disk_size_bytes{job=~"$job", volume="C:"}))) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'M')
+        + b.query.withInstant()
+        + b.query.withFormat('table'),
       ])
       + b.panel.withTransformations([
         {
@@ -71,6 +97,7 @@ function(on)
                 'Time 10': true,
                 'Time 11': true,
                 'Time 12': true,
+                'Time 13': true,
                 'Time 2': true,
                 'Time 3': true,
                 'Time 4': true,
@@ -90,10 +117,11 @@ function(on)
                 'Value #F': 7,
                 'Value #G': 8,
                 'Value #H': 9,
-                'Value #I': 10,
-                'Value #J': 11,
-                'Value #K': 12,
-                'Value #L': 13,
+                'Value #I': 11,
+                'Value #J': 12,
+                'Value #K': 13,
+                'Value #L': 14,
+                'Value #M': 10,
                 hostname: 0,
                 instance: 1,
                 product: 2,
@@ -110,6 +138,7 @@ function(on)
                 'Value #J': 'Services up',
                 'Value #K': 'Auto stopped',
                 'Value #L': 'Processes',
+                'Value #M': 'C: used',
                 hostname: 'Hostname',
                 instance: 'Instance',
                 product: 'OS',
@@ -484,6 +513,63 @@ function(on)
         {
           matcher: {
             id: 'byName',
+            options: 'Value #M',
+          },
+          properties: [
+            {
+              id: 'unit',
+              value: 'percent',
+            },
+            {
+              id: 'min',
+              value: 0,
+            },
+            {
+              id: 'max',
+              value: 100,
+            },
+            {
+              id: 'thresholds',
+              value: {
+                mode: 'absolute',
+                steps: [
+                  {
+                    color: 'green',
+                  },
+                  {
+                    color: 'orange',
+                    value: 80,
+                  },
+                  {
+                    color: 'red',
+                    value: 90,
+                  },
+                ],
+              },
+            },
+            {
+              id: 'color',
+              value: {
+                mode: 'continuous-GrYlRd',
+              },
+            },
+            {
+              id: 'custom.cellOptions',
+              value: {
+                mode: 'basic',
+                type: 'gauge',
+                valueDisplayMode: 'text',
+              },
+            },
+            {
+              id: 'decimals',
+              value: 1,
+            },
+          ],
+        },
+        {
+          matcher: {
+            id: 'byName',
             options: 'Value #J',
           },
           properties: [
@@ -654,6 +740,26 @@ function(on)
           ],
         },
       ]),
+
+      b.panel.new(9, 'Busiest interface', 'timeseries')
+      + b.panel.withDescription('Utilization of the busiest interface of each host: bytes sent and received per second against its current bandwidth. Unlike the throughput sum, it shows a single saturated interface on a host with several. Shows the 25 highest hosts at each point in time.')
+      + b.panel.withQueries([
+        b.query.new('topk(25, max by (instance) (rate(windows_net_bytes_total{job=~"$job"}[$__rate_interval]) / (windows_net_current_bandwidth_bytes{job=~"$job"} > 0)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~"$job", hostname=~"$hostname"}))', 'A')
+        + b.query.withLegendFormat('{{hostname}}'),
+      ])
+      + b.panel.withDefaults({
+        custom: { thresholdsStyle: { mode: 'dashed' } },
+        max: 1,
+        min: 0,
+        thresholds: { steps: b.levels(0.8, 0.9) },
+        unit: 'percentunit',
+      })
+      + b.panel.withOptions({
+        legend: {
+          calcs: [],
+          displayMode: 'list',
+        },
+      }),
 
       b.panel.new(7, 'Disk throughput', 'timeseries')
       + b.panel.withDescription('Sum over all volumes. Read is drawn below the axis. Shows the 25 highest hosts at each point in time.')

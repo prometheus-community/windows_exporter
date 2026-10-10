@@ -46,20 +46,20 @@ assert expect('defaults', {
   CPU: ['Summary', 'Utilization', 'Scheduling', 'System calls and frequency'],
   Disk: ['Summary', 'Volumes', 'Volume I/O', 'Physical disks'],
   Exporter: exporter,
-  Fleet: ['Hosts', 'Utilization', 'Throughput and errors'],
+  Fleet: ['Summary', 'Hosts', 'Utilization', 'Network and disk'],
   Memory: ['Summary', 'Physical memory and commit', 'Paging and kernel memory'],
   Network: ['Summary', 'Interfaces'],
   Overview: ['Summary', 'CPU and memory', 'Storage and network'],
   Services: ['Summary', 'State'],
 });
-assert expect('osOnly', { Exporter: exporter, Fleet: ['Hosts'], Overview: ['Summary'] });
-assert expect('smbClientOnly', { Exporter: exporter, Fleet: ['Hosts'], Overview: ['Summary'], SMB: ['Summary', 'Client shares'] });
+assert expect('osOnly', { Exporter: exporter, Fleet: ['Summary', 'Hosts'], Overview: ['Summary'] });
+assert expect('smbClientOnly', { Exporter: exporter, Fleet: ['Summary', 'Hosts'], Overview: ['Summary'], SMB: ['Summary', 'Client shares'] });
 assert expect('diskWithoutDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Physical disks']);
 assert expect('diskWithDiskdrive', ['Summary', 'Volumes', 'Volume I/O', 'Drives', 'Physical disks']);
 assert expect('replaced', {
   CPU: ['Summary', 'Utilization', 'System calls and frequency'],
   Exporter: exporter,
-  Fleet: ['Hosts', 'Utilization'],
+  Fleet: ['Summary', 'Hosts', 'Utilization'],
   Overview: ['Summary', 'CPU and memory'],
 });
 

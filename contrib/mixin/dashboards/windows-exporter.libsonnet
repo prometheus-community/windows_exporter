@@ -15,7 +15,7 @@ function(config)
   local tabs = [
     tab
     for tab in [
-      (import 'fleet.libsonnet')(on),
+      (import 'fleet.libsonnet')(on, config),
       (import 'overview.libsonnet')(on),
       (import 'cpu.libsonnet')(on),
       (import 'memory.libsonnet')(on),
