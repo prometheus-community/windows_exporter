@@ -29,6 +29,7 @@
       service: true,
       smb: false,
       smbclient: false,
+      storage_spaces: false,
       system: true,
       tcp: false,
       time: $._config.enableTime,

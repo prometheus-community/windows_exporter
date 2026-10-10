@@ -8,7 +8,7 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs, the TCP and UDP rows of the Network tab and the Drives row of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `tcp`, `udp` and `diskdrive` collectors, which are not enabled by default.
+  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
   The sample shows every tab; build the dashboard from the [mixin](../contrib/mixin#collectors) with your collectors to hide the others.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
@@ -38,7 +38,7 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | Overview | Summary of the selected host: operating system, uptime, CPUs, memory, commit charge, volumes, disk and network throughput.                                          |
 | CPU      | Utilization by mode and per core, processor queue length, context switches, interrupts, processes, threads, system calls and the effective CPU frequency.           |
 | Memory   | Used and available physical memory, commit charge, hard page faults, kernel pools and the system cache.                                                             |
-| Disk     | Volume label, disk, file system, size and free space, usage, busy time, throughput, IOPS, latency and queue length; drive model, size, partitions and status; busy time, throughput, IOPS, latency, queue length and split I/O per physical disk, labelled with the drive model when `diskdrive` is enabled. |
+| Disk     | Volume label, disk, file system, size and free space, usage, busy time, throughput, IOPS, latency and queue length; drive model, size, partitions and status; busy time, throughput, IOPS, latency, queue length and split I/O per physical disk, labelled with the drive model when `diskdrive` is enabled; health, size and usage of Storage Spaces pools and health, size, pool footprint and efficiency of their virtual disks. |
 | Network  | Throughput, utilization, packets, errors and discards per interface; TCP connection states and rates, segments and retransmissions; UDP datagrams and errors.       |
 | SMB      | Open files, connections, traffic, requests and opened files per share this host serves; traffic, requests, latency, queue length, credit stalls and metadata requests per remote share this host uses. |
 | Services | Running, pending and disabled services, automatic services that are not running, and services that started or stopped in the time range.                            |
