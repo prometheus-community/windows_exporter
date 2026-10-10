@@ -38,6 +38,7 @@ const (
 	resourceGetType               = 0x0100002d
 	resourceGetClassInfo          = 0x0100000d
 	maxBufferSize                 = 64 << 20
+	stateUnknown                  = ^uint32(0) // ClusterResourceStateUnknown
 	propertyListBufferSize        = 4 << 10
 	typeBufferSize                = 512
 )
@@ -371,7 +372,8 @@ func readResourceState(handle uintptr, deadline time.Time) (uint32, string, stri
 		nodeLength, groupLength := uint32(len(node)), uint32(len(group))
 
 		state, _, err := resourceState.Call(handle, uintptr(unsafe.Pointer(&node[0])), uintptr(unsafe.Pointer(&nodeLength)), uintptr(unsafe.Pointer(&group[0])), uintptr(unsafe.Pointer(&groupLength)))
-		if uint32(state) == ^uint32(0) {
+		// Only ERROR_MORE_DATA matters: the caller retries with larger buffers.
+		if uint32(state) == stateUnknown && errors.Is(err, windows.ERROR_MORE_DATA) {
 			return uint32(state), nodeLength, groupLength, err
 		}
 
@@ -412,8 +414,12 @@ func stateBuffers(deadline time.Time, call func([]uint16, []uint16) (uint32, uin
 			continue
 		}
 
-		if err != nil {
-			return state, "", "", err
+		// ClusterResourceStateUnknown is a state WMI published as 4294967295
+		// together with the other properties. A failed query may leave the
+		// names and lengths untouched; the buffers start zeroed, so decoding up
+		// to the first NUL yields whatever names were returned.
+		if state == stateUnknown {
+			return state, decodeUnits(node), decodeUnits(group), nil
 		}
 
 		if uint64(nodeLength) >= uint64(len(node)) || uint64(groupLength) >= uint64(len(group)) {

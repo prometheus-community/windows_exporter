@@ -187,11 +187,26 @@ func TestStateBuffersGrowthAndBitPatterns(t *testing.T) {
 		t.Fatalf("state=%d node=%s group=%s calls=%d err=%v", state, node, group, calls, err)
 	}
 
-	state, _, _, err = stateBuffers(time.Time{}, func([]uint16, []uint16) (uint32, uint32, uint32, error) {
-		return ^uint32(0), 0, 0, windows.ERROR_ACCESS_DENIED
+}
+
+// WMI published ClusterResourceStateUnknown with the other resource properties,
+// so the state is a value, not a failure. The names may be left untouched.
+func TestStateBuffersUnknownState(t *testing.T) {
+	state, node, group, err := stateBuffers(time.Time{}, func(node, group []uint16) (uint32, uint32, uint32, error) {
+		return stateUnknown, uint32(len(node)), uint32(len(group)), nil
 	})
-	if state != ^uint32(0) || !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-		t.Fatalf("unknown state=%d err=%v", state, err)
+	if err != nil || state != stateUnknown || node != "" || group != "" {
+		t.Fatalf("untouched: state=%d node=%q group=%q err=%v", state, node, group, err)
+	}
+
+	state, node, group, err = stateBuffers(time.Time{}, func(node, group []uint16) (uint32, uint32, uint32, error) {
+		copy(node, []uint16{'N', 0})
+		copy(group, []uint16{'G', 0})
+
+		return stateUnknown, 1, 1, nil
+	})
+	if err != nil || state != stateUnknown || node != "N" || group != "G" {
+		t.Fatalf("filled: state=%d node=%q group=%q err=%v", state, node, group, err)
 	}
 }
 
