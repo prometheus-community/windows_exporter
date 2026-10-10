@@ -1,9 +1,15 @@
 # Windows feature tests
 
-The CI Windows job prepares real Windows roles and workloads before running
-`go test -json -count=1 -race -timeout=10m ./...`. Collector tests validate the
-metrics from those workloads. A final exporter smoke check builds and starts the
-binary, requests `/metrics` once, and checks for a nonempty HTTP 200 response.
+The CI Windows job prepares real Windows roles and workloads, then runs the Go
+tests with the race detector. While the fixtures are provisioned, a background
+step builds every test binary and the exporter with
+[`tools/build-go-tests.ps1`](../tools/build-go-tests.ps1); linking the race test
+binaries would otherwise take minutes after provisioning.
+[`tools/run-go-tests.ps1`](../tools/run-go-tests.ps1) then runs the binaries
+verbosely in parallel, each in its package directory, and prints each
+package's output as one block. Collector tests validate the metrics
+from those workloads. A final exporter smoke check starts the binary, requests
+`/metrics` once, and checks for a nonempty HTTP 200 response.
 
 The job runs on Windows Server 2022; Server 2025 runners take much longer to
 provision the same fixtures. It provisions Containers, Hyper-V, SQL Server
@@ -23,8 +29,6 @@ when setup is missing or collection fails instead of skipping. Fixture assertion
 check known instances, including the active RDP user's session and SQL database.
 RemoteFX is required when both network and graphics instances are available.
 
-Each Windows job publishes a feature table in its Actions summary and a
-`windows-test-results-<OS>` artifact containing `feature-summary.md`, structured
-Go test events, readable test output, and setup diagnostics. The table distinguishes
-required fixtures, unavailable collectors, and empty optional instance groups.
-This records Windows feature availability rather than Go statement coverage.
+Each Windows job uploads a `windows-test-results-<OS>` artifact containing
+setup diagnostics. Unavailable optional collectors show up in the Go tests log
+as skipped `TestCollector` tests with the reason in their output.
