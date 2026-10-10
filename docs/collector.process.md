@@ -9,7 +9,8 @@ for example on Windows Server 2022, and it does not require administrator rights
 
 The `owner`, `cmdline` and `process_group_id` labels of `windows_process_info` require opening the process.
 Without administrator rights, they are empty for processes of other users and for protected processes.
-The collector reads them once per process and caches them for the lifetime of the process.
+The collector reads them once per process and caches them while the process is running and matches the filters.
+A failed read is retried on the next scrape.
 
 |                     |                            |
 |---------------------|----------------------------|
@@ -48,6 +49,7 @@ Enabled by default, and can be turned off with `--no-collector.process.cmdline`.
 To match all firefox processes: `--collector.process.include="firefox.*"`.
 The process name is the image name without the `.exe` extension, like the instance names of the `Process` counter set.
 Processes with the same name have the same `process` label and differ in the `process_id` label.
+A `#` in the image name is kept: `app#2.exe` is `app#2`. Earlier versions cut the name at the first `#`.
 
 :warning: The regular expression is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
 

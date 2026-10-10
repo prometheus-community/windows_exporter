@@ -99,6 +99,27 @@ func TestParseSystemProcessInformationRejectsTruncatedBuffer(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseSystemProcessInformationRejectsImageNameOutsideBuffer(t *testing.T) {
+	t.Parallel()
+
+	entrySize := int(unsafe.Sizeof(windows.SYSTEM_PROCESS_INFORMATION{}))
+	buf := make([]uint64, entrySize/8+1)
+	data := unsafe.Slice((*byte)(unsafe.Pointer(&buf[0])), len(buf)*8)
+	other := []uint16{'a', 'b'}
+
+	entry := (*windows.SYSTEM_PROCESS_INFORMATION)(unsafe.Pointer(&data[0]))
+	entry.ImageName.Buffer = &other[0]
+	entry.ImageName.Length = 4
+
+	_, err := parseSystemProcessInformation(nil, data, uint32(len(data)))
+	require.Error(t, err)
+
+	// A name inside the buffer, but longer than the rest of it.
+	entry.ImageName.Buffer = (*uint16)(unsafe.Pointer(&data[len(data)-2]))
+	_, err = parseSystemProcessInformation(nil, data, uint32(len(data)))
+	require.Error(t, err)
+}
+
 func TestResolveProcessInfoCache(t *testing.T) {
 	t.Parallel()
 

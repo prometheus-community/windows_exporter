@@ -119,6 +119,12 @@ func parseSystemProcessInformation(dst []processSnapshot, buf []byte, length uin
 		var imageName string
 
 		if entry.ImageName.Length > 0 && entry.ImageName.Buffer != nil {
+			// The kernel stores the image name inside the buffer. Check it, so a bad entry cannot read outside of it.
+			nameOffset := uint64(uintptr(unsafe.Pointer(entry.ImageName.Buffer)) - uintptr(unsafe.Pointer(&buf[0])))
+			if nameOffset >= end || uint64(entry.ImageName.Length) > end-nameOffset {
+				return dst, fmt.Errorf("SystemProcessInformation image name at offset %d exceeds the buffer length %d", nameOffset, end)
+			}
+
 			imageName = entry.ImageName.String()
 		}
 

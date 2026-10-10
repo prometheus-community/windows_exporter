@@ -42,6 +42,9 @@ const (
 	windowsEpoch int64 = 116444736000000000
 	// ticksPerSecond is the number of 100ns intervals per second.
 	ticksPerSecond = 1e7
+	// secondsPerTick converts 100ns intervals to seconds. Multiplying by it, like the perflib
+	// reader did, keeps the CPU time values bit-identical to the Process counter set.
+	secondsPerTick = 1 / ticksPerSecond
 )
 
 type Config struct {
@@ -488,14 +491,14 @@ func (c *Collector) collectProcess(ch chan<- prometheus.Metric, name string, pro
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(process.kernelTime)/ticksPerSecond,
+		float64(process.kernelTime)*secondsPerTick,
 		name, pid, "privileged",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(process.userTime)/ticksPerSecond,
+		float64(process.userTime)*secondsPerTick,
 		name, pid, "user",
 	)
 
