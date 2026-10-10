@@ -1,11 +1,15 @@
 # mscluster_cluster collector
 
-The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
+The collector exposes Windows failover cluster metrics. The `resource` subcollector reads through the read-only Windows Cluster API (ClusAPI); the other subcollectors retain their existing WMI sources. Resource metric names, types, labels and units are unchanged.
+
+The cluster handle is opened on the first resource scrape so a transient cluster-service failure is reported during collection. ClusAPI calls cannot be cancelled while they are running. The resource subcollector checks the remaining scrape budget before starting each native call; an outstanding call must finish before its cluster handle can be closed.
+
+If a resource property cannot be read, its sample is omitted and the scrape reports an error; valid properties and other resources are retained. Invalid resource identities are not published. Missing native values are not substituted with zero.
 
 |||
 -|-
 Metric name prefix  | `mscluster`
-Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`,`MSFT_StoragePool`
+WMI classes         | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`,`MSFT_StoragePool`
 Enabled by default? | No
 
 ## Flags

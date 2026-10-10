@@ -18,18 +18,24 @@
 package mscluster
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResource = Name + "_resource"
 
+type resourceSource interface {
+	Resources(deadline time.Time) ([]clusapi.Resource, error)
+	Close() error
+}
+
 type collectorResource struct {
-	resourceMIQuery mi.Query
+	resourceSource resourceSource
 
 	resourceCharacteristics        *prometheus.Desc
 	resourceDeadlockTimeout        *prometheus.Desc
@@ -77,13 +83,18 @@ type msClusterResource struct {
 }
 
 func (c *Collector) buildResource() error {
-	resourceMIQuery, err := mi.NewQuery("SELECT Name,Type,OwnerGroup,OwnerNode,Characteristics,DeadlockTimeout,EmbeddedFailureAction,Flags,IsAlivePollInterval,LooksAlivePollInterval,MonitorProcessId,PendingTimeout,ResourceClass,RestartAction,RestartDelay,RestartPeriod,RestartThreshold,RetryPeriodOnFailure,State,Subclass FROM MSCluster_Resource")
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.resourceMIQuery = resourceMIQuery
+	c.resourceSource = source
+	c.buildResourceDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildResourceDescriptors() {
 	c.resourceCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "characteristics"),
 		"Provides the characteristics of the object.",
@@ -192,152 +203,68 @@ func (c *Collector) buildResource() error {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
-
-	var dst []msClusterResource
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) collectResource(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration, nodeNames []string) error {
-	var dst []msClusterResource
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	var deadline time.Time
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	for _, v := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceCharacteristics,
-			prometheus.GaugeValue,
-			float64(v.Characteristics),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+	resources, resultErr := c.resourceSource.Resources(deadline)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceDeadlockTimeout,
-			prometheus.GaugeValue,
-			float64(v.DeadlockTimeout),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+	return c.publishResources(ch, resources, nodeNames, resultErr)
+}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceEmbeddedFailureAction,
-			prometheus.GaugeValue,
-			float64(v.EmbeddedFailureAction),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceFlags,
-			prometheus.GaugeValue,
-			float64(v.Flags),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceIsAlivePollInterval,
-			prometheus.GaugeValue,
-			float64(v.IsAlivePollInterval),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceLooksAlivePollInterval,
-			prometheus.GaugeValue,
-			float64(v.LooksAlivePollInterval),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceMonitorProcessId,
-			prometheus.GaugeValue,
-			float64(v.MonitorProcessId),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		for _, nodeName := range nodeNames {
-			isCurrentState := 0.0
-			if v.OwnerNode == nodeName {
-				isCurrentState = 1.0
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.resourceOwnerNode,
-				prometheus.GaugeValue,
-				isCurrentState,
-				v.Type, v.OwnerGroup, nodeName, v.Name,
-			)
+func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []clusapi.Resource, nodeNames []string, resultErr error) error {
+	for _, resource := range resources {
+		if !resource.IdentityValid {
+			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourcePendingTimeout,
-			prometheus.GaugeValue,
-			float64(v.PendingTimeout),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+		fields := []struct {
+			name string
+			desc *prometheus.Desc
+		}{
+			{"Characteristics", c.resourceCharacteristics},
+			{"DeadlockTimeout", c.resourceDeadlockTimeout},
+			{"EmbeddedFailureAction", c.resourceEmbeddedFailureAction},
+			{"Flags", c.resourceFlags},
+			{"IsAlivePollInterval", c.resourceIsAlivePollInterval},
+			{"LooksAlivePollInterval", c.resourceLooksAlivePollInterval},
+			{"MonitorProcessId", c.resourceMonitorProcessId},
+			{"PendingTimeout", c.resourcePendingTimeout},
+			{"ResourceClass", c.resourceResourceClass},
+			{"RestartAction", c.resourceRestartAction},
+			{"RestartDelay", c.resourceRestartDelay},
+			{"RestartPeriod", c.resourceRestartPeriod},
+			{"RestartThreshold", c.resourceRestartThreshold},
+			{"RetryPeriodOnFailure", c.resourceRetryPeriodOnFailure},
+			{"State", c.resourceState},
+			{"Subclass", c.resourceSubClass},
+		}
+		for _, field := range fields {
+			value, exists := resource.Values[field.name]
+			if !exists {
+				resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: missing DWORD property %s", resource.Name, field.name))
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceResourceClass,
-			prometheus.GaugeValue,
-			float64(v.ResourceClass),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+				continue
+			}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceRestartAction,
-			prometheus.GaugeValue,
-			float64(v.RestartAction),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+			ch <- prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, float64(value), resource.Type, resource.OwnerGroup, resource.Name)
+		}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceRestartDelay,
-			prometheus.GaugeValue,
-			float64(v.RestartDelay),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+		for _, nodeName := range nodeNames {
+			value := 0.0
+			if resource.OwnerNode == nodeName {
+				value = 1
+			}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceRestartPeriod,
-			prometheus.GaugeValue,
-			float64(v.RestartPeriod),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceRestartThreshold,
-			prometheus.GaugeValue,
-			float64(v.RestartThreshold),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceRetryPeriodOnFailure,
-			prometheus.GaugeValue,
-			float64(v.RetryPeriodOnFailure),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceState,
-			prometheus.GaugeValue,
-			float64(v.State),
-			v.Type, v.OwnerGroup, v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceSubClass,
-			prometheus.GaugeValue,
-			float64(v.Subclass),
-			v.Type, v.OwnerGroup, v.Name,
-		)
+			ch <- prometheus.MustNewConstMetric(c.resourceOwnerNode, prometheus.GaugeValue, value, resource.Type, resource.OwnerGroup, nodeName, resource.Name)
+		}
 	}
 
-	return nil
+	return resultErr
 }

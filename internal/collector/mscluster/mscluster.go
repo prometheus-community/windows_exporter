@@ -18,11 +18,13 @@
 package mscluster
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -73,8 +75,9 @@ type Collector struct {
 	collectorVirtualDisk
 	collectorStoragePool
 
-	config    Config
-	miSession *mi.Session
+	lifecycleMu sync.Mutex
+	config      Config
+	miSession   *mi.Session
 }
 
 func New(config *Config) *Collector {
@@ -120,10 +123,34 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
+
+	return c.closeResource()
+}
+
+func (c *Collector) closeResource() error {
+	if c.resourceSource == nil {
+		return nil
+	}
+
+	if err := c.resourceSource.Close(); err != nil {
+		return err
+	}
+
+	c.resourceSource = nil
+
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
+
+	if err := c.closeResource(); err != nil {
+		return err
+	}
+
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
@@ -147,7 +174,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if miSession == nil {
+	if miSession == nil && slices.ContainsFunc(c.config.CollectorsEnabled, func(name string) bool { return name != subCollectorResource }) {
 		return errors.New("miSession is nil")
 	}
 
@@ -203,12 +230,21 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
+	if len(errs) != 0 {
+		errs = append(errs, c.closeResource())
+	}
+
 	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
+
+	scrapeStarted := time.Now()
+
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
@@ -251,7 +287,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
 			g.Go(func() error {
-				if err := c.collectResource(ch, maxScrapeDuration, nodeNames); err != nil {
+				budget := maxScrapeDuration
+				if budget > 0 {
+					budget -= time.Since(scrapeStarted)
+					if budget <= 0 {
+						return fmt.Errorf("failed to collect resource metrics: %w", context.DeadlineExceeded)
+					}
+				}
+
+				if err := c.collectResource(ch, budget, nodeNames); err != nil {
 					return fmt.Errorf("failed to collect resource metrics: %w", err)
 				}
 
