@@ -93,7 +93,6 @@ func TestCollectorIISAppPool(t *testing.T) {
 		ProcessInclude:      regexp.MustCompile(`^(?:w3wp)$`),
 		ProcessExclude:      types.RegExpEmpty,
 		EnableWorkerProcess: true,
-		CounterVersion:      1,
 	})
 
 	require.Contains(t, families, "windows_process_info")
@@ -142,7 +141,6 @@ func TestCollectorWorkerProcessCommandLine(t *testing.T) {
 		ProcessInclude:      regexp.MustCompile(`^(?:w3wp)$`),
 		ProcessExclude:      types.RegExpEmpty,
 		EnableWorkerProcess: true,
-		CounterVersion:      1,
 	})
 
 	// The process snapshot includes suspended processes.

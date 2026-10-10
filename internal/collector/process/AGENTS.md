@@ -4,8 +4,8 @@ The collector reads all processes with one
 `NtQuerySystemInformation(SystemProcessInformation)` call, not with the perflib
 `Process` or PDH `Process V2` counter sets. The perflib provider (perfproc) reads
 the same kernel data, so the metric values must stay identical to the `Process`
-counter set. `CounterVersion` and `--collector.process.counter-version` are
-deprecated and ignored; keep the field for library users such as Grafana Alloy.
+counter set. There is no counter-set selection; `--collector.process.counter-version`
+and `Config.CounterVersion` were removed.
 
 - Process names follow the perflib instance names: the image name without a
   case-insensitive `.exe` suffix, other extensions such as `.scr` are kept, and

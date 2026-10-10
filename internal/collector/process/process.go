@@ -49,9 +49,6 @@ type Config struct {
 	ProcessExclude      *regexp.Regexp `yaml:"exclude"`
 	EnableWorkerProcess bool           `yaml:"iis"`
 	EnableCMDLine       bool           `yaml:"cmdline"`
-	// Deprecated: CounterVersion is ignored. The collector reads the process list from the kernel
-	// instead of the Process or Process V2 counter sets.
-	CounterVersion uint8 `yaml:"counter-version"`
 }
 
 //nolint:gochecknoglobals
@@ -60,7 +57,6 @@ var ConfigDefaults = Config{
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
 	EnableCMDLine:       true,
-	CounterVersion:      1,
 }
 
 type Collector struct {
@@ -147,11 +143,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"If enabled, the full cmdline is exposed to the windows_process_info metrics.",
 	).Default(strconv.FormatBool(c.config.EnableCMDLine)).BoolVar(&c.config.EnableCMDLine)
 
-	app.Flag(
-		"collector.process.counter-version",
-		"Deprecated: ignored. The process collector reads the process list directly from the kernel and no longer uses the Process or Process V2 performance counters.",
-	).Default(strconv.FormatUint(uint64(c.config.CounterVersion), 10)).Uint8Var(&c.config.CounterVersion)
-
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
@@ -191,10 +182,6 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	if c.config.CounterVersion != ConfigDefaults.CounterVersion {
-		c.logger.Warn("collector.process.counter-version is deprecated and ignored. The process collector no longer uses performance counters.")
-	}
 
 	c.infoCache = nil
 	c.lookupCache = sync.Map{}

@@ -38,10 +38,6 @@ See [IIS worker processes](#iis-worker-processes).
 
 Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Just plain parameter without `true`.
 
-### `--collector.process.counter-version`
-
-Deprecated and ignored. The collector no longer uses the `Process` or `Process V2` counter sets.
-
 ### `--collector.process.cmdline`
 
 Enables the `cmdline` label for the process metrics.
