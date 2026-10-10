@@ -38,6 +38,11 @@ func TestControlCodes(t *testing.T) {
 		objectNode<<24 | ctlGetFlags:              0x04000009,
 		objectNode<<24 | ctlGetROCommonProperties: 0x04000055,
 		objectNode<<24 | ctlGetCommonProperties:   0x04000059,
+		// CLUSCTL_NETWORK_CODES.
+		objectNetwork<<24 | ctlGetCharacteristics:    0x05000005,
+		objectNetwork<<24 | ctlGetFlags:              0x05000009,
+		objectNetwork<<24 | ctlGetROCommonProperties: 0x05000055,
+		objectNetwork<<24 | ctlGetCommonProperties:   0x05000059,
 	} {
 		if code != want {
 			t.Errorf("control code %#x, want %#x", code, want)
@@ -92,6 +97,10 @@ func TestClusterClosedObjects(t *testing.T) {
 	}
 
 	if _, err := c.Nodes(time.Time{}); err == nil {
+		t.Fatal("read closed cluster")
+	}
+
+	if _, err := c.Networks(time.Time{}); err == nil {
 		t.Fatal("read closed cluster")
 	}
 }

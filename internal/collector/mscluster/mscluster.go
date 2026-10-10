@@ -50,7 +50,7 @@ const (
 // nativeSubCollectors read through ClusAPI and do not need an MI session.
 //
 //nolint:gochecknoglobals
-var nativeSubCollectors = []string{subCollectorNode, subCollectorResource, subCollectorResourceGroup}
+var nativeSubCollectors = []string{subCollectorNetwork, subCollectorNode, subCollectorResource, subCollectorResourceGroup}
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"enabled"`
@@ -154,6 +154,7 @@ func (c *Collector) closeSources() error {
 		release()
 	}
 
+	closeSource(c.networkSource, func() { c.networkSource = nil })
 	closeSource(c.nodeSource, func() { c.nodeSource = nil })
 	closeSource(c.resourceSource, func() { c.resourceSource = nil })
 	closeSource(c.resourceGroupSource, func() { c.resourceGroupSource = nil })

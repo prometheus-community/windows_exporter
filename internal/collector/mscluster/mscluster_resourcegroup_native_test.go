@@ -57,6 +57,10 @@ func (s *objectFixtureSource) Nodes(time.Time) ([]clusapi.Object, error) {
 	return s.objectsWithDeadline()
 }
 
+func (s *objectFixtureSource) Networks(time.Time) ([]clusapi.Object, error) {
+	return s.objectsWithDeadline()
+}
+
 func (s *objectFixtureSource) Close() error {
 	s.closeCount++
 
