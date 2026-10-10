@@ -79,9 +79,10 @@ run = '''jsonnet -e '(import "mixin.libsonnet") { _config+:: { enableActiveDirec
 
 [tasks.test]
 description = "Run all mixin lint, runbook, and rule tests"
-depends = ["lint", "check-runbooks"]
+depends = ["lint", "check-runbooks", "vendor"]
 run = [
   "jsonnet tests/runbooks.test.jsonnet",
+  "jsonnet -J vendor tests/dashboard.test.jsonnet > /dev/null",
   "promtool test rules tests/*.test.yaml",
 ]
 
