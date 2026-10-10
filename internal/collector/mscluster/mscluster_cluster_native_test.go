@@ -160,6 +160,52 @@ func TestClusterVersionDependentFields(t *testing.T) {
 	}
 }
 
+// The CI cluster showed which MSCluster_Cluster values WMI synthesizes when the
+// cluster service does not report the property.
+func TestClusterWMISynthesizedValues(t *testing.T) {
+	cluster := clusterFixture()
+	synthesized := map[string]float64{
+		"ClusSvcRegroupOpeningTimeout": 0, "ClusSvcRegroupPruningTimeout": 0, "DisableGroupPreferredOwnerRandomization": 0,
+		"GracePeriodEnabled": 0, "GracePeriodTimeout": 0, "QuorumArbitrationTimeMin": 0, "ResourceDllDeadlockPeriod": 0,
+		"RootMemoryReserved": 0, "MaxNumberOfNodes": 64,
+	}
+
+	for name := range synthesized {
+		delete(cluster.Values, name)
+	}
+
+	families, err := gatherCluster(t, cluster, nil, osversion.LTSC2022)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"clus_svc_regroup_opening_timeout", "grace_period_enabled", "root_memory_reserved"} {
+		if got := families["windows_mscluster_cluster_"+name].GetMetric()[0].GetGauge().GetValue(); got != 0 {
+			t.Errorf("%s = %v", name, got)
+		}
+	}
+
+	if got := families["windows_mscluster_cluster_max_number_of_nodes"].GetMetric()[0].GetGauge().GetValue(); got != 64 {
+		t.Errorf("max_number_of_nodes = %v", got)
+	}
+
+	// Reported values win over the synthesized ones.
+	if got := familiesValue(t, clusterFixture(), "max_number_of_nodes"); got == 64 {
+		t.Error("synthesized value replaced the reported one")
+	}
+}
+
+func familiesValue(t *testing.T, cluster clusapi.Object, metric string) float64 {
+	t.Helper()
+
+	families, err := gatherCluster(t, cluster, nil, osversion.LTSC2022)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return families["windows_mscluster_cluster_"+metric].GetMetric()[0].GetGauge().GetValue()
+}
+
 func TestClusterPartialResultsAndJoinedErrors(t *testing.T) {
 	first, second := errors.New("first cause"), errors.New("second cause")
 	cluster := clusterFixture()
