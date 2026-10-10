@@ -193,7 +193,7 @@ func (c *Collector) publishNodes(ch chan<- prometheus.Metric, nodes []clusapi.Ob
 		{name: "Characteristics", desc: c.nodeCharacteristics},
 		// The previous WMI query selected DetectedCloudPlatform only on Windows
 		// Server 2022 and newer and published 0 on older builds.
-		{name: "DetectedCloudPlatform", desc: c.nodeDetectedCloudPlatform, minBuild: osversion.LTSC2022, zeroBeforeMinBuild: true},
+		{name: "DetectedCloudPlatform", desc: c.nodeDetectedCloudPlatform, minBuild: osversion.LTSC2022, older: zeroIfMissing},
 		{name: "DynamicWeight", desc: c.nodeDynamicWeight},
 		{name: "Flags", desc: c.nodeFlags},
 		{name: "MajorVersion", desc: c.nodeMajorVersion},

@@ -241,35 +241,11 @@ func (c *Cluster) readObject(api *objectAPI, name resourceName, deadline time.Ti
 		}
 	}()
 
-	for _, operation := range []uint32{ctlGetROCommonProperties, ctlGetCommonProperties} {
-		code := api.object<<24 | operation
+	if err := readCommonProperties(api.control, handle, api.object, object.Values, deadline); err != nil {
+		resultErr = errors.Join(resultErr, err)
 
-		data, err := objectBuffer(api.control, handle, code, propertyListBufferSize, deadline)
-		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", api.control.Name, code, err))
-
-			if errors.Is(err, context.DeadlineExceeded) {
-				return object, resultErr
-			}
-
-			continue
-		}
-
-		properties, err := ParseProperties(data)
-		if err != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", api.control.Name, code, err))
-
-			continue
-		}
-
-		for name, values := range properties {
-			if len(values) != 1 {
-				continue
-			}
-
-			if value, err := values[0].Value32(); err == nil {
-				object.Values[name] = value
-			}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return object, resultErr
 		}
 	}
 
@@ -303,6 +279,46 @@ func (c *Cluster) readObject(api *objectAPI, name resourceName, deadline time.Ti
 	object.OwnerNodeValid = ownerValid
 
 	return object, resultErr
+}
+
+// readCommonProperties stores the single 32-bit values of the read-only and
+// read/write common property lists in values. Other formats are skipped.
+func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint32, values map[string]uint32, deadline time.Time) error {
+	var resultErr error
+
+	for _, operation := range []uint32{ctlGetROCommonProperties, ctlGetCommonProperties} {
+		code := object<<24 | operation
+
+		data, err := objectBuffer(control, handle, code, propertyListBufferSize, deadline)
+		if err != nil {
+			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", control.Name, code, err))
+
+			if errors.Is(err, context.DeadlineExceeded) {
+				return resultErr
+			}
+
+			continue
+		}
+
+		properties, err := ParseProperties(data)
+		if err != nil {
+			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", control.Name, code, err))
+
+			continue
+		}
+
+		for name, list := range properties {
+			if len(list) != 1 {
+				continue
+			}
+
+			if value, err := list[0].Value32(); err == nil {
+				values[name] = value
+			}
+		}
+	}
+
+	return resultErr
 }
 
 // objectBuffer calls a Cluster{Group,Node,Network}Control function. They share

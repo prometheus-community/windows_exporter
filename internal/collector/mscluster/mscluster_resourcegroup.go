@@ -190,7 +190,7 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 	fields := []objectField{
 		{name: "AutoFailbackType", desc: c.resourceGroupAutoFailbackType},
 		{name: "Characteristics", desc: c.resourceGroupCharacteristics},
-		{name: "ColdStartSetting", desc: c.resourceGroupColdStartSetting, minBuild: osversion.LTSC2016},
+		{name: "ColdStartSetting", desc: c.resourceGroupColdStartSetting, minBuild: osversion.LTSC2016, older: omitIfMissing},
 		{name: "DefaultOwner", desc: c.resourceGroupDefaultOwner},
 		{name: "FailbackWindowEnd", desc: c.resourceGroupFailbackWindowEnd, signed: true},
 		{name: "FailbackWindowStart", desc: c.resourceGroupFailbackWindowStart, signed: true},

@@ -25,19 +25,32 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// objectField maps a ClusAPI value of a group, node or network to the metric
-// that previously published the WMI property of the same name.
+// beforeMinBuild selects how a field is published on Windows builds older than
+// its objectField.minBuild.
+type beforeMinBuild int
+
+const (
+	// omitIfMissing publishes a value that exists and omits a missing one
+	// without an error. The property did not exist on older builds.
+	omitIfMissing beforeMinBuild = iota
+	// zeroIfMissing keeps the previous behavior for properties that the WMI
+	// query did not select on older builds and therefore published as 0.
+	zeroIfMissing
+	// neverPublish keeps the previous behavior for properties that were not
+	// published at all on older builds.
+	neverPublish
+)
+
+// objectField maps a ClusAPI value of a cluster, group, node or network to the
+// metric that previously published the WMI property of the same name.
 type objectField struct {
 	name string
 	desc *prometheus.Desc
 	// Signed fields are sint32 in WMI, so 0xFFFFFFFF is published as -1.
 	signed bool
-	// MinBuild is the first Windows build that has the property. On older
-	// builds a missing value is omitted without an error.
+	// MinBuild is the first Windows build that has the property.
 	minBuild uint16
-	// ZeroBeforeMinBuild keeps the previous behavior for properties that the
-	// WMI query did not select on older builds and therefore published as 0.
-	zeroBeforeMinBuild bool
+	older    beforeMinBuild
 }
 
 // publishObjectFields publishes the fields of one object with its name as the
@@ -45,12 +58,15 @@ type objectField struct {
 func publishObjectFields(ch chan<- prometheus.Metric, kind string, object clusapi.Object, fields []objectField, build uint16, resultErr error) error {
 	for _, field := range fields {
 		raw, exists := object.Values[field.name]
+		older := build < field.minBuild
 
 		switch {
+		case older && field.older == neverPublish:
+			continue
 		case exists:
-		case build < field.minBuild && field.zeroBeforeMinBuild:
+		case older && field.older == zeroIfMissing:
 			raw = 0
-		case build < field.minBuild:
+		case older:
 			continue
 		default:
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s %q: missing property %s", kind, object.Name, field.name))
