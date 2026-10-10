@@ -123,8 +123,48 @@ func TestParsePropertiesListEndmark(t *testing.T) {
 	}
 }
 
+func testLongPropertyList() []byte {
+	data := testPropertyList()
+	binary.LittleEndian.PutUint32(data[36:], propertyValue|formatLong)
+
+	return data
+}
+
+func TestPropertyValue32(t *testing.T) {
+	properties, err := ParseProperties(testLongPropertyList())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	value := properties["NodeWeight"][0]
+	if _, err := value.DWORD(); err == nil {
+		t.Fatal("LONG accepted as DWORD")
+	}
+
+	bits, err := value.Value32()
+	if err != nil || int32(bits) != -1 {
+		t.Fatalf("LONG bits = %#x, err = %v", bits, err)
+	}
+
+	if _, err := (Property{Format: formatString, Data: []byte{0, 0, 0, 0}}).Value32(); err == nil {
+		t.Fatal("string accepted as 32-bit value")
+	}
+
+	if _, err := (Property{Format: formatLong, Data: []byte{0, 0}}).Value32(); err == nil {
+		t.Fatal("short LONG accepted")
+	}
+
+	invalid := testLongPropertyList()
+	binary.LittleEndian.PutUint32(invalid[40:], 3)
+
+	if _, err := ParseProperties(invalid); err == nil {
+		t.Fatal("accepted LONG with invalid length")
+	}
+}
+
 func FuzzParseProperties(f *testing.F) {
 	f.Add(testPropertyList())
+	f.Add(testLongPropertyList())
 	f.Add(binary.LittleEndian.AppendUint32(testPropertyList(), 0))
 	f.Add([]byte{0, 0, 0, 0})
 	f.Fuzz(func(t *testing.T, data []byte) { _, _ = ParseProperties(data) })

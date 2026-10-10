@@ -18,18 +18,25 @@
 package mscluster
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResourceGroup = Name + "_resourcegroup"
 
+type resourceGroupSource interface {
+	Groups(deadline time.Time) ([]clusapi.Object, error)
+	Close() error
+}
+
 type collectorResourceGroup struct {
-	resourceGroupMIQuery mi.Query
+	resourceGroupSource resourceGroupSource
 
 	resourceGroupAutoFailbackType    *prometheus.Desc
 	resourceGroupCharacteristics     *prometheus.Desc
@@ -47,7 +54,8 @@ type collectorResourceGroup struct {
 	resourceGroupState               *prometheus.Desc
 }
 
-// msClusterResourceGroup represents the MSCluster_ResourceGroup WMI class
+// msClusterResourceGroup represents the MSCluster_ResourceGroup WMI class. The
+// collector reads ClusAPI; the parity test compares against this WMI model.
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
 type msClusterResourceGroup struct {
 	Name string `mi:"Name"`
@@ -68,14 +76,29 @@ type msClusterResourceGroup struct {
 	State               uint   `mi:"State"`
 }
 
+type resourceGroupField struct {
+	name string
+	desc *prometheus.Desc
+	// Signed fields are sint32 in MSCluster_ResourceGroup; -1 means "not set".
+	signed bool
+	// Optional fields do not exist before Windows Server 2016. A missing value
+	// on older builds is omitted without an error.
+	optional bool
+}
+
 func (c *Collector) buildResourceGroup() error {
-	resourceGroupMIQuery, err := mi.NewQuery("SELECT AutoFailbackType,Characteristics,ColdStartSetting,DefaultOwner,FailbackWindowEnd,FailbackWindowStart,FailoverPeriod,FailoverThreshold,Flags,GroupType,OwnerNode,Priority,ResiliencyPeriod,State FROM MSCluster_ResourceGroup")
+	source, err := clusapi.Open()
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return err
 	}
 
-	c.resourceGroupMIQuery = resourceGroupMIQuery
+	c.resourceGroupSource = source
+	c.buildResourceGroupDescriptors()
 
+	return nil
+}
+
+func (c *Collector) buildResourceGroupDescriptors() {
 	c.resourceGroupAutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
@@ -142,12 +165,6 @@ func (c *Collector) buildResourceGroup() error {
 		[]string{"node_name", "name"},
 		nil,
 	)
-	c.resourceGroupOwnerNode = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "owner_node"),
-		"The node hosting the resource group. 0: Not hosted; 1: Hosted",
-		[]string{"node_name", "name"},
-		nil,
-	)
 	c.resourceGroupPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "priority"),
 		"Priority value of the resource group",
@@ -166,131 +183,75 @@ func (c *Collector) buildResourceGroup() error {
 		[]string{"name"},
 		nil,
 	)
-
-	var dst []msClusterResourceGroup
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration, nodeNames []string) error {
-	var dst []msClusterResourceGroup
-
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	var deadline time.Time
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	for _, v := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupAutoFailbackType,
-			prometheus.GaugeValue,
-			float64(v.AutoFailbackType),
-			v.Name,
-		)
+	groups, resultErr := c.resourceGroupSource.Groups(deadline)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupCharacteristics,
-			prometheus.GaugeValue,
-			float64(v.Characteristics),
-			v.Name,
-		)
+	return c.publishResourceGroups(ch, groups, nodeNames, osversion.Build() >= osversion.LTSC2016, resultErr)
+}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupColdStartSetting,
-			prometheus.GaugeValue,
-			float64(v.ColdStartSetting),
-			v.Name,
-		)
+func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []clusapi.Object, nodeNames []string, requireServer2016Fields bool, resultErr error) error {
+	// The order matches the previous WMI publication order.
+	fields := []resourceGroupField{
+		{name: "AutoFailbackType", desc: c.resourceGroupAutoFailbackType},
+		{name: "Characteristics", desc: c.resourceGroupCharacteristics},
+		{name: "ColdStartSetting", desc: c.resourceGroupColdStartSetting, optional: true},
+		{name: "DefaultOwner", desc: c.resourceGroupDefaultOwner},
+		{name: "FailbackWindowEnd", desc: c.resourceGroupFailbackWindowEnd, signed: true},
+		{name: "FailbackWindowStart", desc: c.resourceGroupFailbackWindowStart, signed: true},
+		{name: "FailoverPeriod", desc: c.resourceGroupFailOverPeriod},
+		{name: "FailoverThreshold", desc: c.resourceGroupFailOverThreshold},
+		{name: "Flags", desc: c.resourceGroupFlags},
+		{name: "GroupType", desc: c.resourceGroupGroupType},
+		{name: "Priority", desc: c.resourceGroupPriority},
+		{name: "ResiliencyPeriod", desc: c.resourceGroupResiliencyPeriod, optional: true},
+		{name: "State", desc: c.resourceGroupState},
+	}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupDefaultOwner,
-			prometheus.GaugeValue,
-			float64(v.DefaultOwner),
-			v.Name,
-		)
+	for _, group := range groups {
+		if group.Name == "" {
+			continue
+		}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupFailbackWindowEnd,
-			prometheus.GaugeValue,
-			float64(v.FailbackWindowEnd),
-			v.Name,
-		)
+		for _, field := range fields {
+			raw, exists := group.Values[field.name]
+			if !exists {
+				if !field.optional || requireServer2016Fields {
+					resultErr = errors.Join(resultErr, fmt.Errorf("group %q: missing property %s", group.Name, field.name))
+				}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupFailbackWindowStart,
-			prometheus.GaugeValue,
-			float64(v.FailbackWindowStart),
-			v.Name,
-		)
+				continue
+			}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupFailOverPeriod,
-			prometheus.GaugeValue,
-			float64(v.FailoverPeriod),
-			v.Name,
-		)
+			value := float64(raw)
+			if field.signed {
+				value = float64(int32(raw))
+			}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupFailOverThreshold,
-			prometheus.GaugeValue,
-			float64(v.FailoverThreshold),
-			v.Name,
-		)
+			ch <- prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, value, group.Name)
+		}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupFlags,
-			prometheus.GaugeValue,
-			float64(v.Flags),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupGroupType,
-			prometheus.GaugeValue,
-			float64(v.GroupType),
-			v.Name,
-		)
+		if !group.OwnerNodeValid {
+			continue
+		}
 
 		for _, nodeName := range nodeNames {
 			isCurrentState := 0.0
-			if v.OwnerNode == nodeName {
+			if group.OwnerNode == nodeName {
 				isCurrentState = 1.0
 			}
 
-			ch <- prometheus.MustNewConstMetric(
-				c.resourceGroupOwnerNode,
-				prometheus.GaugeValue,
-				isCurrentState,
-				nodeName, v.Name,
-			)
+			ch <- prometheus.MustNewConstMetric(c.resourceGroupOwnerNode, prometheus.GaugeValue, isCurrentState, nodeName, group.Name)
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupPriority,
-			prometheus.GaugeValue,
-			float64(v.Priority),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupResiliencyPeriod,
-			prometheus.GaugeValue,
-			float64(v.ResiliencyPeriod),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.resourceGroupState,
-			prometheus.GaugeValue,
-			float64(v.State),
-			v.Name,
-		)
 	}
 
-	return nil
+	return resultErr
 }
