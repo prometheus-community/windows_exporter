@@ -122,6 +122,48 @@ func TestResourceNativeWMIParity(t *testing.T) {
 			t.Errorf("native/WMI metric mismatch: %s\nnative: %v\nWMI: %v", name, gotFamilies[name], want)
 		}
 	}
+
+	if t.Failed() {
+		logResourceWMINulls(t, session, query)
+	}
+}
+
+// logResourceWMINulls shows which WMI properties are NULL. The WMI collector
+// published NULL as 0, so a native value can only match if it is 0 as well.
+func logResourceWMINulls(t *testing.T, session *mi.Session, query mi.Query) {
+	t.Helper()
+
+	err := session.QueryFunc(mi.NamespaceRootMSCluster, query, time.Minute, func(instance *mi.Instance) error {
+		element, err := instance.GetElement("Name")
+		if err != nil {
+			return err
+		}
+
+		name, err := element.String()
+		if err != nil {
+			return err
+		}
+
+		var nulls []string
+
+		for _, property := range []string{"Characteristics", "DeadlockTimeout", "EmbeddedFailureAction", "Flags", "IsAlivePollInterval", "LooksAlivePollInterval", "MonitorProcessId", "PendingTimeout", "ResourceClass", "RestartAction", "RestartDelay", "RestartPeriod", "RestartThreshold", "RetryPeriodOnFailure", "State", "Subclass", "Type", "OwnerGroup", "OwnerNode"} {
+			element, err := instance.GetElement(property)
+			if err != nil {
+				return err
+			}
+
+			if element.IsNull() {
+				nulls = append(nulls, property)
+			}
+		}
+
+		t.Logf("WMI resource %q NULL properties: %v", name, nulls)
+
+		return nil
+	})
+	if err != nil {
+		t.Logf("WMI NULL diagnostics: %v", err)
+	}
 }
 
 // Resource source comparisons require a live cluster; missing CI fixtures fail.
