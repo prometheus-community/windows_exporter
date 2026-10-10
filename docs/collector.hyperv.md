@@ -86,16 +86,20 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 | Name                                                                   | Description                                                                       | Type    | Labels |
 |------------------------------------------------------------------------|-----------------------------------------------------------------------------------|---------|--------|
-| `windows_hyperv_dynamic_memory_vm_added_bytes_total`                   | Represents the cumulative amount of memory added to the VM.                       | counter | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_added_total`                         | Represents the cumulative amount of memory added to the VM.                       | counter | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_pressure_current_ratio`              | Represents the current pressure in the VM.                                        | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_guest_available_bytes`               | Represents the current amount of available memory in the VM (reported by the VM). | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes` | Represents the amount of memory visible in the VM                                 | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes` | Represents the amount of memory visible in the VM.                                | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_pressure_maximum_ratio`              | Represents the maximum pressure band in the VM.                                   | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_add_operations_total`                | Represents the total number of add operations for the VM.                         | counter | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_remove_operations_total`             | Represents the total number of remove operations for the VM.                      | counter | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_pressure_minimum_ratio`              | Represents the minimum pressure band in the VM.                                   | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_physical`                            | Represents the current amount of memory in the VM.                                | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_physical_bytes`                      | Represents the current amount of memory in the VM.                                | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_removed_bytes_total`                 | Represents the cumulative amount of memory removed from the VM.                   | counter | `vm`   |
+
+Windows reports no instance name for VMs managed by the Host Compute Service, such as the WSL 2 VM.
+The first such VM has `vm="(unknown)"`, further ones `vm="(unknown)#1"`, `vm="(unknown)#2"` and so on.
+The suffix only keeps the series unique and does not identify the VM across scrapes.
 
 ### Hyper-V Host
 

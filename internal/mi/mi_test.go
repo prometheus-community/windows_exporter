@@ -1079,3 +1079,59 @@ func Test_MI_QueryUnmarshal_InvalidClass(t *testing.T) {
 		require.Equal(t, []win32Process{{Name: "System Idle Process"}}, processes)
 	}
 }
+
+func Test_MI_Query_NilSession(t *testing.T) {
+	t.Parallel()
+
+	var (
+		session   *mi.Session
+		processes []win32Process
+	)
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+	require.NoError(t, err)
+
+	require.ErrorIs(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 0), mi.ErrNotInitialized)
+	require.ErrorIs(t, session.QueryFunc(mi.NamespaceRootCIMv2, query, 0, func(*mi.Instance) error { return nil }), mi.ErrNotInitialized)
+}
+
+func Test_MI_GetElementByName(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, application.Close())
+	})
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, session.Close())
+	})
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 4")
+	require.NoError(t, err)
+
+	name, err := mi.NewElementName("Name")
+	require.NoError(t, err)
+
+	var names []string
+
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, time.Second, func(instance *mi.Instance) error {
+		_, err := instance.GetElementByName(nil)
+		require.ErrorIs(t, err, mi.ErrInvalidElementName)
+
+		element, err := instance.GetElementByName(name)
+		if err != nil {
+			return err
+		}
+
+		value, err := element.String()
+		names = append(names, value)
+
+		return err
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"System"}, names)
+}

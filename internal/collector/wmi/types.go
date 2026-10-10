@@ -42,6 +42,9 @@ type Query struct {
 type LabelProperty struct {
 	Name  string `json:"name"  yaml:"name"`
 	Label string `json:"label" yaml:"label"`
+
+	// Resolved at Build time.
+	elementName mi.ElementName
 }
 
 type Property struct {
@@ -52,8 +55,9 @@ type Property struct {
 	Labels map[string]string `json:"labels" yaml:"labels"`
 
 	// Resolved at Build time.
-	desc       *prometheus.Desc
-	metricType prometheus.ValueType
+	elementName mi.ElementName
+	desc        *prometheus.Desc
+	metricType  prometheus.ValueType
 }
 
 // UnmarshalYAML decodes the wmi block of the configuration file, where the

@@ -15,12 +15,10 @@
 
 //go:build windows
 
-package registry
+package process
 
-import (
-	"strconv"
-)
-
-func MapCounterToIndex(name string) string {
-	return strconv.Itoa(int(CounterNameTable.LookupIndex(name)))
-}
+// WorkerProcessAppPool exposes the command line source to the IIS tests, which
+// must live in process_test because testutils imports the collector registry.
+//
+//nolint:gochecknoglobals
+var WorkerProcessAppPool = workerProcessAppPool

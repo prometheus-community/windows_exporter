@@ -15,7 +15,7 @@
 
 //go:build windows
 
-package mscluster
+package storage_spaces
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameVirtualDisk = Name + "_virtualdisk"
+const nameVirtualDisk = Name + "_virtual_disk"
 
 type collectorVirtualDisk struct {
 	virtualDiskMIQuery mi.Query
@@ -62,7 +62,7 @@ func (c *Collector) buildVirtualDisk() error {
 
 	c.virtualDiskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "info"),
-		"Virtual Disk information (value is always 1)",
+		"Virtual disk information (value is always 1)",
 		[]string{"name", "unique_id"},
 		nil,
 	)
@@ -83,7 +83,7 @@ func (c *Collector) buildVirtualDisk() error {
 
 	c.virtualDiskAllocatedSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "allocated_size_bytes"),
-		"Allocated size of the virtual disk in bytes (data actually provisioned, excludes thin-provisioned unused capacity)",
+		"Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity)",
 		[]string{"name", "unique_id"},
 		nil,
 	)
@@ -97,7 +97,7 @@ func (c *Collector) buildVirtualDisk() error {
 
 	c.virtualDiskStorageEfficiency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "storage_efficiency_percent"),
-		"Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100)",
+		"Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100), omitted while FootprintOnPool is 0",
 		[]string{"name", "unique_id"},
 		nil,
 	)
@@ -159,25 +159,21 @@ func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric, maxScrapeDur
 			vdisk.UniqueId,
 		)
 
-		// Calculate storage efficiency (avoid division by zero).
 		// AllocatedSize (not Size) is the correct numerator: Size is the
 		// thin-provisioned ceiling, while AllocatedSize reflects the capacity
 		// actually provisioned. Using Size inflates the ratio on thin-provisioned
 		// disks (e.g. S2D FTT2 CSVs).
-		var storageEfficiency float64
+		// Without a footprint the ratio is undefined; skip it instead of
+		// publishing 0.
 		if vdisk.FootprintOnPool > 0 {
-			storageEfficiency = float64(vdisk.AllocatedSize) / float64(vdisk.FootprintOnPool) * 100
-		} else {
-			storageEfficiency = 0
+			ch <- prometheus.MustNewConstMetric(
+				c.virtualDiskStorageEfficiency,
+				prometheus.GaugeValue,
+				float64(vdisk.AllocatedSize)/float64(vdisk.FootprintOnPool)*100,
+				vdisk.FriendlyName,
+				vdisk.UniqueId,
+			)
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.virtualDiskStorageEfficiency,
-			prometheus.GaugeValue,
-			storageEfficiency,
-			vdisk.FriendlyName,
-			vdisk.UniqueId,
-		)
 	}
 
 	return nil

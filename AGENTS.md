@@ -16,8 +16,8 @@ their runtime behavior.
 - [`internal/collector`](internal/collector): built-in collectors. Each implements
   `GetName`, `Build`, `Collect` and `Close` from
   [`pkg/collector/types.go`](pkg/collector/types.go).
-- [`internal/pdh`](internal/pdh) and [`internal/pdh/registry`](internal/pdh/registry):
-  performance counter queries and perflib decoding. [`internal/mi`](internal/mi)
+- [`internal/pdh`](internal/pdh):
+  performance counter queries. [`internal/mi`](internal/mi)
   provides Management Infrastructure queries; [`internal/ole`](internal/ole) and
   [`internal/headers`](internal/headers) contain native Windows bindings.
 - [`internal/config`](internal/config), [`internal/httphandler`](internal/httphandler)
@@ -86,7 +86,7 @@ exercised a live Windows role.
   even when the Windows counter name says average, percentage or seconds.
   Convert units explicitly; expose the base/operation count needed for ratios.
   Never publish an invalid sample as zero: that can look like a counter reset.
-- Keep the typed PDH/registry collectors and `perfdata` tags. Preserve duplicate
+- Keep the typed PDH collectors and `perfdata` tags. Preserve duplicate
   instance occurrences within a sample; their suffixes are not stable identities.
   Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
@@ -168,6 +168,10 @@ Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
 Edit the Jsonnet/Grafonnet source under `contrib/mixin/dashboards`, including its
 tab modules and shared builders, and regenerate
 `dashboard/windows-exporter-dashboard.json`. Do not hand-edit generated JSON.
+Gate every tab, row, panel and variable on the collectors it queries with
+`on('<collector>')` (names from `_config.collectors`), and run
+`jsonnet -J vendor tests/dashboard.test.jsonnet` to check the layout for several
+collector selections.
 
 From `contrib/mixin`, install the pinned tools with `make tools`, ensure they
 are on `PATH`, then run `make fmt`, `make generate`, `make check-dashboards` and

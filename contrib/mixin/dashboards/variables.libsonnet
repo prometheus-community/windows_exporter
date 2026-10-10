@@ -22,7 +22,8 @@ local new(name, definition) = common
                                 refId: 'PrometheusVariableQueryEditor-VariableQuery',
                               }));
 
-[
+// Variables of disabled collectors are left out.
+function(on) [variable for variable in [
   datasource.withKind()
   + datasource.spec.withAllowCustomValue(true)
   + datasource.spec.withCurrent({
@@ -72,57 +73,57 @@ local new(name, definition) = common
   new('show_hostname', 'label_values(windows_os_hostname{job=~"$job", instance="$instance"}, hostname)')
   + query.spec.withHide('hideVariable')
   ,
-  new('volume', 'label_values(windows_logical_disk_size_bytes{job=~"$job", instance="$instance"}, volume)')
-  + query.spec.withCurrent({
-    text: [
-      'All',
-    ],
-    value: [
-      '$__all',
-    ],
-  })
-  + query.spec.withIncludeAll(true)
-  + query.spec.withLabel('Volume')
-  + query.spec.withMulti(true)
-  + query.spec.withRegex('/^(?!HarddiskVolume).+$/')
+  if on('logical_disk') then new('volume', 'label_values(windows_logical_disk_size_bytes{job=~"$job", instance="$instance"}, volume)')
+                             + query.spec.withCurrent({
+                               text: [
+                                 'All',
+                               ],
+                               value: [
+                                 '$__all',
+                               ],
+                             })
+                             + query.spec.withIncludeAll(true)
+                             + query.spec.withLabel('Volume')
+                             + query.spec.withMulti(true)
+                             + query.spec.withRegex('/^(?!HarddiskVolume).+$/')
   ,
-  new('nic', 'label_values(windows_net_bytes_total{job=~"$job", instance="$instance"}, nic)')
-  + query.spec.withCurrent({
-    text: [
-      'All',
-    ],
-    value: [
-      '$__all',
-    ],
-  })
-  + query.spec.withIncludeAll(true)
-  + query.spec.withLabel('Network interface')
-  + query.spec.withMulti(true)
-  + query.spec.withRegex('/^(?!isatap|Teredo|6to4).+$/'),
-  new('process', 'label_values(windows_process_info{job=~"$job", instance="$instance", process_id!="0"}, process)')
-  + query.spec.withCurrent({
-    text: [
-      'All',
-    ],
-    value: [
-      '$__all',
-    ],
-  })
-  + query.spec.withIncludeAll(true)
-  + query.spec.withLabel('Process')
-  + query.spec.withMulti(true),
-  variables.CustomVariableKind.withKind()
-  + variables.CustomVariableKind.withSpec({
-    name: 'process_top',
-    label: 'Top N processes',
-    description: 'Maximum number of processes per graph. Summary counters include all selected processes.',
-    query: '5,10,20',
-    current: { text: '10', value: '10' },
-    options: [{ text: value, value: value, selected: value == '10' } for value in ['5', '10', '20']],
-    multi: false,
-    includeAll: false,
-    allowCustomValue: false,
-    hide: 'dontHide',
-    skipUrlSync: false,
-  }),
-]
+  if on('net') then new('nic', 'label_values(windows_net_bytes_total{job=~"$job", instance="$instance"}, nic)')
+                    + query.spec.withCurrent({
+                      text: [
+                        'All',
+                      ],
+                      value: [
+                        '$__all',
+                      ],
+                    })
+                    + query.spec.withIncludeAll(true)
+                    + query.spec.withLabel('Network interface')
+                    + query.spec.withMulti(true)
+                    + query.spec.withRegex('/^(?!isatap|Teredo|6to4).+$/'),
+  if on('process') then new('process', 'label_values(windows_process_info{job=~"$job", instance="$instance", process_id!="0"}, process)')
+                        + query.spec.withCurrent({
+                          text: [
+                            'All',
+                          ],
+                          value: [
+                            '$__all',
+                          ],
+                        })
+                        + query.spec.withIncludeAll(true)
+                        + query.spec.withLabel('Process')
+                        + query.spec.withMulti(true),
+  if on('process') then variables.CustomVariableKind.withKind()
+                        + variables.CustomVariableKind.withSpec({
+                          name: 'process_top',
+                          label: 'Top N processes',
+                          description: 'Maximum number of processes per graph. Summary counters include all selected processes.',
+                          query: '5,10,20',
+                          current: { text: '10', value: '10' },
+                          options: [{ text: value, value: value, selected: value == '10' } for value in ['5', '10', '20']],
+                          multi: false,
+                          includeAll: false,
+                          allowCustomValue: false,
+                          hide: 'dontHide',
+                          skipUrlSync: false,
+                        }),
+] if variable != null]

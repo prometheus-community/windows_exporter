@@ -1,2 +1,8 @@
 // Renders dashboard/windows-exporter-dashboard.json. Run with jsonnet -J vendor -S.
-(import 'lib/manifest.libsonnet')((import 'mixin.libsonnet').grafanaDashboards['windows-exporter.json'])
+// The sample dashboard shows every collector; mixin users select theirs with
+// _config.collectors.
+local mixin = (import 'mixin.libsonnet') + {
+  _config+:: { collectors: { [collector]: true for collector in std.objectFields(super.collectors) } },
+};
+
+(import 'lib/manifest.libsonnet')(mixin.grafanaDashboards['windows-exporter.json'])

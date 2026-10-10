@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type ValueType int
+type ValueType uint32
 
 //nolint:iotamixing
 const (
@@ -229,7 +229,14 @@ func (i *Interval) Duration() time.Duration {
 		time.Duration(i.Microseconds)*time.Microsecond
 }
 
+// GetValue returns the element's value as the matching Go type. A NULL
+// element returns nil without an error, since MI makes no promise about the
+// contents of its union.
 func (e *Element) GetValue() (any, error) {
+	if e.IsNull() {
+		return nil, nil //nolint:nilnil
+	}
+
 	switch e.valueType {
 	case ValueTypeBOOLEAN:
 		return e.value == 1, nil

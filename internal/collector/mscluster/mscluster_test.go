@@ -31,8 +31,6 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, mscluster.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_virtualdisk_size_bytes", prometheus.Labels{"name": "CIVirtualDisk"})
-	testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_storagepool_size_bytes", prometheus.Labels{"name": "GitHubActions"})
 
 	// Resource fixtures from the CI cluster setup cover each resource state.
 	for name, state := range map[string]float64{

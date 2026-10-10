@@ -25,16 +25,11 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/pdh"
-	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
-	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -42,12 +37,21 @@ import (
 
 const Name = "process"
 
+const (
+	// windowsEpoch is the FILETIME of the Unix epoch, in 100ns intervals since 1601.
+	windowsEpoch int64 = 116444736000000000
+	// ticksPerSecond is the number of 100ns intervals per second.
+	ticksPerSecond = 1e7
+	// secondsPerTick converts 100ns intervals to seconds. Multiplying by it, like the perflib
+	// reader did, keeps the CPU time values bit-identical to the Process counter set.
+	secondsPerTick = 1 / ticksPerSecond
+)
+
 type Config struct {
 	ProcessInclude      *regexp.Regexp `yaml:"include"`
 	ProcessExclude      *regexp.Regexp `yaml:"exclude"`
 	EnableWorkerProcess bool           `yaml:"iis"`
 	EnableCMDLine       bool           `yaml:"cmdline"`
-	CounterVersion      uint8          `yaml:"counter-version"`
 }
 
 //nolint:gochecknoglobals
@@ -56,7 +60,6 @@ var ConfigDefaults = Config{
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
 	EnableCMDLine:       true,
-	CounterVersion:      1,
 }
 
 type Collector struct {
@@ -64,13 +67,15 @@ type Collector struct {
 
 	logger *slog.Logger
 
+	// miSession is set when root\WebAdministration answered during Build. It's
+	// the fallback for worker processes whose command line can't be read.
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
-	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
-	perfDataObject    []perfDataCounterValues
-	workerCh          chan processWorkerRequest
-	workerWG          sync.WaitGroup
+	snapshot  snapshotBuffer
+	processes []processSnapshot
+	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
+	infoCache map[uint32]processInfo
 
 	lookupCache sync.Map
 
@@ -133,18 +138,13 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.process.iis",
-		"Enable IIS collectWorker process name queries. May cause the collector to leak memory.",
+		"Append the IIS application pool name to the process name of IIS worker processes (w3wp).",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
 	app.Flag(
 		"collector.process.cmdline",
 		"If enabled, the full cmdline is exposed to the windows_process_info metrics.",
 	).Default(strconv.FormatBool(c.config.EnableCMDLine)).BoolVar(&c.config.EnableCMDLine)
-
-	app.Flag(
-		"collector.process.counter-version",
-		"Version of the process collector to use. 1 for Process V1, 2 for Process V2, 0 for Process V2 with fallback to Process V1 if V2 is not available. Defaults to 1.",
-	).Default(strconv.FormatUint(uint64(c.config.CounterVersion), 10)).Uint8Var(&c.config.CounterVersion)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
@@ -173,15 +173,12 @@ func (c *Collector) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.perfDataCollector != nil {
-		c.perfDataCollector.Close()
-	}
+	c.snapshot = snapshotBuffer{}
+	c.processes = nil
+	c.infoCache = nil
 
-	if c.workerCh != nil {
-		close(c.workerCh)
-		c.workerCh = nil
-		c.workerWG.Wait()
-	}
+	// The session belongs to the caller of Build.
+	c.miSession = nil
 
 	return nil
 }
@@ -189,40 +186,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	var err error
-
-	switch c.config.CounterVersion {
-	case 2:
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
-	case 1:
-		c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
-	default:
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
-		c.config.CounterVersion = 2
-
-		if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
-			// NewCollector returns a partially built collector on errors. Release it before falling back to V1.
-			c.perfDataCollector.Close()
-
-			c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
-			c.config.CounterVersion = 1
-		}
-
-		c.logger.LogAttrs(context.Background(), slog.LevelDebug, fmt.Sprintf("Using process collector V%d", c.config.CounterVersion))
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to create Process V%d collector: %w", c.config.CounterVersion, err)
-	}
-
-	c.workerCh = make(chan processWorkerRequest, 32)
-
-	for range 4 {
-		c.workerWG.Add(1)
-		go c.collectWorker(c.workerCh)
-	}
-
-	c.mu = sync.RWMutex{}
+	c.infoCache = nil
 	c.lookupCache = sync.Map{}
 
 	// The flags wrap the expressions in ^(?:...)$, the defaults of [New] are [types.RegExpAny] and [types.RegExpEmpty].
@@ -329,199 +293,331 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	c.miSession = nil
+
 	if c.config.EnableWorkerProcess {
-		if miSession == nil {
-			return errors.New("miSession is nil")
-		}
-
-		miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
-		if err != nil {
-			return fmt.Errorf("failed to create WMI query: %w", err)
-		}
-
-		c.workerProcessMIQueryQuery = miQuery
-		c.miSession = miSession
-
-		var workerProcesses []WorkerProcess
-
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, 0); err != nil {
-			c.config.EnableWorkerProcess = false
-
-			return fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
+		if err := c.buildWorkerProcessWMI(miSession); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	return c.collect(ch, maxScrapeDuration)
-}
-
-// ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
-func (c *Collector) getProcessInformation(pid uint32) (string, string, uint32, error) {
-	if pid == 0 {
-		return "", "", 0, nil
-	}
-
-	hProcess, vmReadAccess, err := c.openProcess(pid)
-	if err != nil {
-		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return "", "", 0, nil
-		}
-
-		return "", "", 0, err
-	}
-
-	defer func(hProcess windows.Handle) {
-		if err := windows.CloseHandle(hProcess); err != nil {
-			c.logger.Warn("CloseHandle failed",
-				slog.Any("err", err),
-			)
-		}
-	}(hProcess)
-
-	owner, err := c.getProcessOwner(c.logger, hProcess)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	var (
-		cmdLine        string
-		processGroupID uint32
-	)
-
-	if vmReadAccess {
-		cmdLine, processGroupID, err = c.getExtendedProcessInformation(hProcess)
-		if err != nil {
-			return "", owner, processGroupID, err
-		}
-	}
-
-	return cmdLine, owner, processGroupID, nil
-}
-
-func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (string, uint32, error) {
-	// Get the process environment block (PEB) address
-	var pbi windows.PROCESS_BASIC_INFORMATION
-
-	retLen := uint32(unsafe.Sizeof(pbi))
-	if err := windows.NtQueryInformationProcess(hProcess, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), retLen, &retLen); err != nil {
-		return "", 0, fmt.Errorf("failed to query process basic information: %w", err)
-	}
-
-	peb := windows.PEB{}
-
-	err := windows.ReadProcessMemory(hProcess,
-		uintptr(unsafe.Pointer(pbi.PebBaseAddress)),
-		(*byte)(unsafe.Pointer(&peb)),
-		unsafe.Sizeof(peb),
-		nil,
-	)
-	if err != nil {
-		return "", 0, fmt.Errorf("failed to read process memory: %w", err)
-	}
-
-	processParameters := windows.RTL_USER_PROCESS_PARAMETERS{}
-
-	err = windows.ReadProcessMemory(hProcess,
-		uintptr(unsafe.Pointer(peb.ProcessParameters)),
-		(*byte)(unsafe.Pointer(&processParameters)),
-		unsafe.Sizeof(processParameters),
-		nil,
-	)
-	if err != nil {
-		return "", 0, fmt.Errorf("failed to read process memory: %w", err)
-	}
-
-	var cmdLine string
-
-	if c.config.EnableCMDLine {
-		cmdLineUTF16 := make([]uint16, processParameters.CommandLine.Length)
-
-		err = windows.ReadProcessMemory(hProcess,
-			uintptr(unsafe.Pointer(processParameters.CommandLine.Buffer)),
-			(*byte)(unsafe.Pointer(&cmdLineUTF16[0])),
-			uintptr(processParameters.CommandLine.Length),
-			nil,
+// buildWorkerProcessWMI enables the root\WebAdministration fallback for application pool names
+// if the IIS WMI provider is installed. Without it, only the w3wp command line is used.
+func (c *Collector) buildWorkerProcessWMI(miSession *mi.Session) error {
+	if miSession == nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelDebug,
+			"No MI session, reading IIS application pool names from the w3wp command line only",
 		)
-		if err != nil {
-			return "", processParameters.ProcessGroupId, fmt.Errorf("failed to read process memory: %w", err)
-		}
 
-		cmdLine = strings.TrimSpace(windows.UTF16ToString(cmdLineUTF16))
+		return nil
 	}
 
-	return cmdLine, processParameters.ProcessGroupId, nil
+	miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	var workerProcesses []WorkerProcess
+
+	if err = miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, 0); err != nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelDebug,
+			`root\WebAdministration isn't available, reading IIS application pool names from the w3wp command line only`,
+			slog.Any("err", err),
+		)
+
+		return nil
+	}
+
+	c.workerProcessMIQueryQuery = miQuery
+	c.miSession = miSession
+
+	return nil
 }
 
-func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle) (string, error) {
-	var tok windows.Token
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if err := windows.OpenProcessToken(hProcess, windows.TOKEN_QUERY, &tok); err != nil {
-		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return "", nil
-		}
+	var err error
 
-		return "", fmt.Errorf("failed to open process token: %w", err)
-	}
-
-	defer func(tok windows.Token) {
-		if err := tok.Close(); err != nil {
-			logger.Warn("Token close failed",
-				slog.Any("err", err),
-			)
-		}
-	}(tok)
-
-	tokenUser, err := tok.GetTokenUser()
+	c.processes, err = c.snapshot.query(c.processes)
 	if err != nil {
-		return "", fmt.Errorf("failed to get token user: %w", err)
+		return fmt.Errorf("failed to query processes: %w", err)
 	}
 
-	sid := tokenUser.User.Sid.String()
+	processes := make([]*processSnapshot, 0, len(c.processes))
 
-	var owner string
+	var workerProcessIDs []uint32
 
-	ownerVal, ok := c.lookupCache.Load(sid)
+	for i := range c.processes {
+		process := &c.processes[i]
 
-	if ok {
-		owner, ok = ownerVal.(string)
-	}
-
-	if !ok {
-		account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
-		if err != nil {
-			owner = sid
-		} else {
-			owner = fmt.Sprintf(`%s\%s`, domain, account)
+		if c.config.ProcessExclude.MatchString(process.name) || !c.config.ProcessInclude.MatchString(process.name) {
+			continue
 		}
 
-		c.lookupCache.Store(sid, owner)
+		if c.config.EnableWorkerProcess && isWorkerProcess(process.name) {
+			workerProcessIDs = append(workerProcessIDs, process.pid)
+		}
+
+		processes = append(processes, process)
 	}
 
-	return owner, nil
+	var appPools map[uint32]string
+
+	if len(workerProcessIDs) > 0 {
+		appPools, err = resolveAppPools(c.logger, workerProcessIDs, workerProcessAppPool, c.workerProcessWMIQuery(maxScrapeDuration))
+	}
+
+	infos := c.resolveProcessInfo(processes)
+
+	for i, process := range processes {
+		name := process.name
+		if appPoolName := appPools[process.pid]; appPoolName != "" {
+			name = name + "_" + appPoolName
+		}
+
+		c.collectProcess(ch, name, process, &infos[i])
+	}
+
+	return err
 }
 
-func (c *Collector) openProcess(pid uint32) (windows.Handle, bool, error) {
-	// Open the process with QUERY_INFORMATION and VM_READ permissions.
-	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_VM_READ, false, pid)
-	if err == nil {
-		return hProcess, true, nil
+// workerProcessWMIQuery returns the root\WebAdministration query, or nil if it was unavailable during Build.
+func (c *Collector) workerProcessWMIQuery(maxScrapeDuration time.Duration) func() ([]WorkerProcess, error) {
+	miSession, miQuery := c.miSession, c.workerProcessMIQueryQuery
+	if miSession == nil {
+		return nil
 	}
 
-	if !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-		return 0, false, fmt.Errorf("failed to open process: %w", err)
+	return func() ([]WorkerProcess, error) {
+		var workerProcesses []WorkerProcess
+
+		err := miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, miQuery, maxScrapeDuration)
+
+		return workerProcesses, err
+	}
+}
+
+// resolveAppPools maps IIS worker process IDs to application pool names.
+//
+// The command line of the worker process is the primary source: it needs no
+// optional feature and no WMI round trip. WMI is queried at most once, for the
+// worker processes whose command line couldn't be read or has no -ap argument,
+// and only if queryWMI isn't nil. Unresolved processes have no entry.
+func resolveAppPools(
+	logger *slog.Logger,
+	pids []uint32,
+	readCommandLine func(pid uint32) (string, error),
+	queryWMI func() ([]WorkerProcess, error),
+) (map[uint32]string, error) {
+	appPools := make(map[uint32]string, len(pids))
+
+	var unresolved []uint32
+
+	for _, pid := range pids {
+		appPool, err := readCommandLine(pid)
+		if err == nil {
+			appPools[pid] = appPool
+
+			continue
+		}
+
+		logger.LogAttrs(context.Background(), slog.LevelDebug, "Failed to read the IIS application pool from the worker process command line",
+			slog.Uint64("pid", uint64(pid)),
+			slog.Any("err", err),
+		)
+
+		// OpenProcess fails with ERROR_INVALID_PARAMETER for processes that exited after the
+		// process snapshot. WAS no longer reports them either.
+		if !errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+			unresolved = append(unresolved, pid)
+		}
 	}
 
-	if errors.Is(err, windows.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
-		return 0, false, errors.New("process not found")
+	if len(unresolved) == 0 || queryWMI == nil {
+		return appPools, nil
 	}
 
-	hProcess, err = windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	workerProcesses, err := queryWMI()
 	if err != nil {
-		return 0, false, fmt.Errorf("failed to open process with limited permissions: %w", err)
+		return appPools, fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
 	}
 
-	return hProcess, false, nil
+	byPID := make(map[uint64]string, len(workerProcesses))
+	for _, wp := range workerProcesses {
+		if _, ok := byPID[wp.ProcessId]; !ok && wp.AppPoolName != "" {
+			byPID[wp.ProcessId] = wp.AppPoolName
+		}
+	}
+
+	for _, pid := range unresolved {
+		if appPool, ok := byPID[uint64(pid)]; ok {
+			appPools[pid] = appPool
+		}
+	}
+
+	return appPools, nil
+}
+
+func (c *Collector) collectProcess(ch chan<- prometheus.Metric, name string, process *processSnapshot, info *processInfo) {
+	pid := strconv.FormatUint(uint64(process.pid), 10)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.info,
+		prometheus.GaugeValue,
+		1.0,
+		name, pid, strconv.FormatUint(uint64(process.parentPID), 10), strconv.FormatUint(uint64(info.processGroupID), 10), info.owner, info.cmdLine,
+	)
+
+	// Perflib reports whole seconds for the Elapsed Time counter of the Process counter set.
+	ch <- prometheus.MustNewConstMetric(
+		c.startTime,
+		prometheus.GaugeValue,
+		float64((process.createTime-windowsEpoch)/ticksPerSecond),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.handleCount,
+		prometheus.GaugeValue,
+		float64(process.handleCount),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.cpuTimeTotal,
+		prometheus.CounterValue,
+		float64(process.kernelTime)*secondsPerTick,
+		name, pid, "privileged",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.cpuTimeTotal,
+		prometheus.CounterValue,
+		float64(process.userTime)*secondsPerTick,
+		name, pid, "user",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioBytesTotal,
+		prometheus.CounterValue,
+		float64(process.otherTransferCount),
+		name, pid, "other",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioOperationsTotal,
+		prometheus.CounterValue,
+		float64(process.otherOperationCount),
+		name, pid, "other",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioBytesTotal,
+		prometheus.CounterValue,
+		float64(process.readTransferCount),
+		name, pid, "read",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioOperationsTotal,
+		prometheus.CounterValue,
+		float64(process.readOperationCount),
+		name, pid, "read",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioBytesTotal,
+		prometheus.CounterValue,
+		float64(process.writeTransferCount),
+		name, pid, "write",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ioOperationsTotal,
+		prometheus.CounterValue,
+		float64(process.writeOperationCount),
+		name, pid, "write",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pageFaultsTotal,
+		prometheus.CounterValue,
+		float64(process.pageFaultCount),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pageFileBytes,
+		prometheus.GaugeValue,
+		float64(process.pageFileUsage),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolBytes,
+		prometheus.GaugeValue,
+		float64(process.nonPagedPoolUsage),
+		name, pid, "nonpaged",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolBytes,
+		prometheus.GaugeValue,
+		float64(process.pagedPoolUsage),
+		name, pid, "paged",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.priorityBase,
+		prometheus.GaugeValue,
+		float64(process.basePriority),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.privateBytes,
+		prometheus.GaugeValue,
+		float64(process.privatePageCount),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.threadCount,
+		prometheus.GaugeValue,
+		float64(process.threadCount),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.virtualBytes,
+		prometheus.GaugeValue,
+		float64(process.virtualSize),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.workingSetPrivate,
+		prometheus.GaugeValue,
+		float64(process.workingSetPrivate),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.workingSetPeak,
+		prometheus.GaugeValue,
+		float64(process.workingSetPeak),
+		name, pid,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.workingSet,
+		prometheus.GaugeValue,
+		float64(process.workingSetSize),
+		name, pid,
+	)
 }

@@ -62,6 +62,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
@@ -122,6 +123,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	smb.Name:                NewBuilderWithFlags(smb.NewWithFlags),
 	smbclient.Name:          NewBuilderWithFlags(smbclient.NewWithFlags),
 	smtp.Name:               NewBuilderWithFlags(smtp.NewWithFlags),
+	storage_spaces.Name:     NewBuilderWithFlags(storage_spaces.NewWithFlags),
 	system.Name:             NewBuilderWithFlags(system.NewWithFlags),
 	tcp.Name:                NewBuilderWithFlags(tcp.NewWithFlags),
 	terminal_services.Name:  NewBuilderWithFlags(terminal_services.NewWithFlags),

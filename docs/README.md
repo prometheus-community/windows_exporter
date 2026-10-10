@@ -44,6 +44,7 @@ Actions workflow publishes default-branch changes to GitHub Pages.
 - [`smb`](collector.smb.md)
 - [`smbclient`](collector.smbclient.md)
 - [`smtp`](collector.smtp.md)
+- [`storage_spaces`](collector.storage_spaces.md)
 - [`system`](collector.system.md)
 - [`tcp`](collector.tcp.md)
 - [`terminal_services`](collector.terminal_services.md)

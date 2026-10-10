@@ -1,5 +1,5 @@
 {
   grafanaDashboards+:: {
-    'windows-exporter.json': import 'windows-exporter.libsonnet',
+    'windows-exporter.json': (import 'windows-exporter.libsonnet')($._config),
   },
 }
