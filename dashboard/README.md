@@ -34,7 +34,7 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 
 | Tab      | Content                                                                                                                                                             |
 |----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Fleet    | One row per host with OS version, uptime, CPU, memory, commit charge, the fullest volume and stopped automatic services, and graphs of the 25 highest hosts.        |
+| Fleet    | Counts of hosts, hosts down and hosts above the CPU, memory and disk alert thresholds or with stopped automatic services; one row per host with OS version, uptime, CPU, memory, commit charge, C: and fullest volume usage and stopped automatic services; graphs of the 25 highest hosts, including the busiest interface per host.        |
 | Overview | Summary of the selected host: operating system, uptime, CPUs, memory, commit charge, volumes, disk and network throughput.                                          |
 | CPU      | Utilization by mode and per core, processor queue length, context switches, interrupts, processes, threads, system calls and the effective CPU frequency.           |
 | Memory   | Used and available physical memory, commit charge, hard page faults, kernel pools and the system cache.                                                             |

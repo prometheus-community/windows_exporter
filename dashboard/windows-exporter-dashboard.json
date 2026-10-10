@@ -10436,6 +10436,29 @@
                                         },
                                         "refId": "L"
                                     }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~\"$job\", volume=\"C:\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume=\"C:\"}))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "M"
+                                    }
                                 }
                             ],
                             "queryOptions": {},
@@ -10461,6 +10484,7 @@
                                                 "Time 10": true,
                                                 "Time 11": true,
                                                 "Time 12": true,
+                                                "Time 13": true,
                                                 "Time 2": true,
                                                 "Time 3": true,
                                                 "Time 4": true,
@@ -10480,10 +10504,11 @@
                                                 "Value #F": 7,
                                                 "Value #G": 8,
                                                 "Value #H": 9,
-                                                "Value #I": 10,
-                                                "Value #J": 11,
-                                                "Value #K": 12,
-                                                "Value #L": 13,
+                                                "Value #I": 11,
+                                                "Value #J": 12,
+                                                "Value #K": 13,
+                                                "Value #L": 14,
+                                                "Value #M": 10,
                                                 "hostname": 0,
                                                 "instance": 1,
                                                 "product": 2,
@@ -10500,6 +10525,7 @@
                                                 "Value #J": "Services up",
                                                 "Value #K": "Auto stopped",
                                                 "Value #L": "Processes",
+                                                "Value #M": "C: used",
                                                 "hostname": "Hostname",
                                                 "instance": "Instance",
                                                 "product": "OS",
@@ -10511,7 +10537,7 @@
                             ]
                         }
                     },
-                    "description": "One row per scraped host. Click a hostname to open its details. Services up counts running services; Auto stopped counts services with start mode auto that are not running.",
+                    "description": "One row per scraped host. Click a hostname to open its details. C: used is the usage of the C: volume, usually the system drive; Fullest volume is the most used volume with a drive letter. Services up counts running services; Auto stopped counts services with start mode auto that are not running.",
                     "id": 2,
                     "links": [],
                     "title": "Hosts",
@@ -10836,6 +10862,63 @@
                                         "matcher": {
                                             "id": "byName",
                                             "options": "Value #I"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #M"
                                         },
                                         "properties": [
                                             {
@@ -15787,6 +15870,531 @@
                                     "mode": "single",
                                     "sort": "none"
                                 }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-250": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts that match the Job and Hostname selection and report windows_os_hostname.",
+                    "id": 250,
+                    "links": [],
+                    "title": "Hosts",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-251": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((up{job=~\"$job\"} == 0) and on (instance) last_over_time(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}[1d])) or (0 * count(up{job=~\"$job\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Selected hosts whose last scrape failed. Hosts stay selectable for one day after they stop reporting.",
+                    "id": 251,
+                    "links": [],
+                    "title": "Hosts down",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-252": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1))) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts whose CPU usage is above the cpuHighUsageThreshold of the WindowsCPUHighUsage alert. The alert also requires 15 minutes above it.",
+                    "id": 252,
+                    "links": [],
+                    "title": "CPU > 90%",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-253": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"})) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts whose physical memory usage is above the memoryHighUsageThreshold of the WindowsMemoryHighUsage alert. The alert also requires 15 minutes above it.",
+                    "id": 253,
+                    "links": [],
+                    "title": "RAM > 90%",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-254": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((min by (instance) (100 * windows_logical_disk_free_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"}) < 10) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts with at least one volume with less than 10% free space, the diskFreeWarningThreshold of the WindowsDiskAlmostFull alert. HarddiskVolume* volumes without a drive letter are ignored.",
+                    "id": 254,
+                    "links": [],
+                    "title": "Low disk",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-255": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, name) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts with at least one service with start mode auto that is not running. Delayed-start and trigger-start services can show up here until they start.",
+                    "id": 255,
+                    "links": [],
+                    "title": "Auto stopped",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
                             }
                         },
                         "version": ""
@@ -23658,6 +24266,126 @@
                     }
                 }
             },
+            "panel-9": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, max by (instance) (rate(windows_net_bytes_total{job=~\"$job\"}[$__rate_interval]) / (windows_net_current_bandwidth_bytes{job=~\"$job\"} > 0)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Utilization of the busiest interface of each host: bytes sent and received per second against its current bandwidth. Unlike the throughput sum, it shows a single saturated interface on a host with several. Shows the 25 highest hosts at each point in time.",
+                    "id": 9,
+                    "links": [],
+                    "title": "Busiest interface",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "dashed"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 0.8
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 0.9
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
             "panel-90": {
                 "kind": "Panel",
                 "spec": {
@@ -24775,6 +25503,98 @@
                                                                 "spec": {
                                                                     "element": {
                                                                         "kind": "ElementReference",
+                                                                        "name": "panel-250"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 0,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-251"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 4,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-252"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 8,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-253"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 12,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-254"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 16,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-255"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 20,
+                                                                    "y": 0
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                "title": "Summary"
+                                            }
+                                        },
+                                        {
+                                            "kind": "RowsLayoutRow",
+                                            "spec": {
+                                                "collapse": false,
+                                                "layout": {
+                                                    "kind": "GridLayout",
+                                                    "spec": {
+                                                        "items": [
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
                                                                         "name": "panel-2"
                                                                     },
                                                                     "height": 10,
@@ -24858,8 +25678,21 @@
                                                                         "name": "panel-6"
                                                                     },
                                                                     "height": 8,
-                                                                    "width": 8,
+                                                                    "width": 12,
                                                                     "x": 0,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-9"
+                                                                    },
+                                                                    "height": 8,
+                                                                    "width": 12,
+                                                                    "x": 12,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -24871,9 +25704,9 @@
                                                                         "name": "panel-7"
                                                                     },
                                                                     "height": 8,
-                                                                    "width": 8,
-                                                                    "x": 8,
-                                                                    "y": 0
+                                                                    "width": 12,
+                                                                    "x": 0,
+                                                                    "y": 8
                                                                 }
                                                             },
                                                             {
@@ -24884,15 +25717,15 @@
                                                                         "name": "panel-8"
                                                                     },
                                                                     "height": 8,
-                                                                    "width": 8,
-                                                                    "x": 16,
-                                                                    "y": 0
+                                                                    "width": 12,
+                                                                    "x": 12,
+                                                                    "y": 8
                                                                 }
                                                             }
                                                         ]
                                                     }
                                                 },
-                                                "title": "Throughput and errors"
+                                                "title": "Network and disk"
                                             }
                                         }
                                     ]
