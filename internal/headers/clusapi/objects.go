@@ -31,6 +31,7 @@ import (
 // CLUSTER_ENUM values for ClusterOpenEnum.
 // https://learn.microsoft.com/en-us/windows/win32/api/clusapi/ne-clusapi-cluster_enum
 const (
+	enumNode     = 0x01
 	enumResource = 0x04
 	enumGroup    = 0x08
 )
@@ -40,6 +41,7 @@ const (
 // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/mscs/control-code-architecture
 const (
 	objectGroup = 3
+	objectNode  = 4
 
 	ctlGetCharacteristics    = 0x05
 	ctlGetFlags              = 0x09
@@ -58,6 +60,11 @@ var (
 	closeGroup   = dll.NewProc("CloseClusterGroup")
 	groupControl = dll.NewProc("ClusterGroupControl")
 	groupState   = dll.NewProc("GetClusterGroupState")
+
+	openNode    = dll.NewProc("OpenClusterNodeEx")
+	closeNode   = dll.NewProc("CloseClusterNode")
+	nodeControl = dll.NewProc("ClusterNodeControl")
+	nodeState   = dll.NewProc("GetClusterNodeState")
 )
 
 // Object is a cluster group, node or network. Values contains the 32-bit
@@ -92,6 +99,22 @@ var groupAPI = objectAPI{
 	close:    closeGroup,
 	control:  groupControl,
 	state:    readGroupState,
+}
+
+//nolint:gochecknoglobals
+var nodeAPI = objectAPI{
+	kind:     "node",
+	enumType: enumNode,
+	object:   objectNode,
+	open:     openNode,
+	close:    closeNode,
+	control:  nodeControl,
+	state:    simpleState(nodeState),
+}
+
+// Nodes reads every cluster node; see Groups for the result contract.
+func (c *Cluster) Nodes(deadline time.Time) ([]Object, error) {
+	return c.objects(&nodeAPI, deadline)
 }
 
 // Groups reads every cluster group. Successful groups and properties are
@@ -302,6 +325,27 @@ func readGroupState(handle uintptr, deadline time.Time) (uint32, string, bool, e
 	}
 
 	return state, node, true, nil
+}
+
+// simpleState wraps GetClusterNodeState and GetClusterNetworkState. Both take
+// only the object handle and return -1 (unknown) with the last error on failure.
+func simpleState(proc *windows.LazyProc) func(uintptr, time.Time) (uint32, string, bool, error) {
+	return func(handle uintptr, deadline time.Time) (uint32, string, bool, error) {
+		if err := proc.Find(); err != nil {
+			return 0, "", false, err
+		}
+
+		if err := checkDeadline(deadline); err != nil {
+			return 0, "", false, err
+		}
+
+		state, _, err := proc.Call(handle)
+		if err := unknownStateError(uint32(state), err); err != nil {
+			return 0, "", false, err
+		}
+
+		return uint32(state), "", false, nil
+	}
 }
 
 // unknownStateError converts the last error of a Get*State call that returned

@@ -18,8 +18,6 @@
 package mscluster
 
 import (
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
@@ -74,16 +72,6 @@ type msClusterResourceGroup struct {
 	Priority            uint   `mi:"Priority"`
 	ResiliencyPeriod    uint   `mi:"ResiliencyPeriod"`
 	State               uint   `mi:"State"`
-}
-
-type resourceGroupField struct {
-	name string
-	desc *prometheus.Desc
-	// Signed fields are sint32 in MSCluster_ResourceGroup; -1 means "not set".
-	signed bool
-	// Optional fields do not exist before Windows Server 2016. A missing value
-	// on older builds is omitted without an error.
-	optional bool
 }
 
 func (c *Collector) buildResourceGroup() error {
@@ -195,15 +183,14 @@ func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, maxScrapeD
 
 	groups, resultErr := c.resourceGroupSource.Groups(deadline)
 
-	return c.publishResourceGroups(ch, groups, nodeNames, osversion.Build() >= osversion.LTSC2016, resultErr)
+	return c.publishResourceGroups(ch, groups, nodeNames, osversion.Build(), resultErr)
 }
 
-func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []clusapi.Object, nodeNames []string, requireServer2016Fields bool, resultErr error) error {
-	// The order matches the previous WMI publication order.
-	fields := []resourceGroupField{
+func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []clusapi.Object, nodeNames []string, build uint16, resultErr error) error {
+	fields := []objectField{
 		{name: "AutoFailbackType", desc: c.resourceGroupAutoFailbackType},
 		{name: "Characteristics", desc: c.resourceGroupCharacteristics},
-		{name: "ColdStartSetting", desc: c.resourceGroupColdStartSetting, optional: true},
+		{name: "ColdStartSetting", desc: c.resourceGroupColdStartSetting, minBuild: osversion.LTSC2016},
 		{name: "DefaultOwner", desc: c.resourceGroupDefaultOwner},
 		{name: "FailbackWindowEnd", desc: c.resourceGroupFailbackWindowEnd, signed: true},
 		{name: "FailbackWindowStart", desc: c.resourceGroupFailbackWindowStart, signed: true},
@@ -212,7 +199,7 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 		{name: "Flags", desc: c.resourceGroupFlags},
 		{name: "GroupType", desc: c.resourceGroupGroupType},
 		{name: "Priority", desc: c.resourceGroupPriority},
-		{name: "ResiliencyPeriod", desc: c.resourceGroupResiliencyPeriod, optional: true},
+		{name: "ResiliencyPeriod", desc: c.resourceGroupResiliencyPeriod, minBuild: osversion.LTSC2016},
 		{name: "State", desc: c.resourceGroupState},
 	}
 
@@ -221,23 +208,7 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 			continue
 		}
 
-		for _, field := range fields {
-			raw, exists := group.Values[field.name]
-			if !exists {
-				if !field.optional || requireServer2016Fields {
-					resultErr = errors.Join(resultErr, fmt.Errorf("group %q: missing property %s", group.Name, field.name))
-				}
-
-				continue
-			}
-
-			value := float64(raw)
-			if field.signed {
-				value = float64(int32(raw))
-			}
-
-			ch <- prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, value, group.Name)
-		}
+		resultErr = publishObjectFields(ch, "group", group, fields, build, resultErr)
 
 		if !group.OwnerNodeValid {
 			continue

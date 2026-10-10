@@ -25,6 +25,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -89,12 +90,12 @@ func TestResourceGroupNativeWMIParity(t *testing.T) {
 
 	nodeNames := wmiNodeNames(t, session)
 
-	gotFamilies, err := gatherResourceGroups(t, groups, nil, true, nodeNames...)
+	gotFamilies, err := gatherResourceGroups(t, groups, nil, osversion.Build(), nodeNames...)
 	if err != nil {
 		t.Error(err)
 	}
 
-	wantFamilies, err := gatherResourceGroups(t, expected, nil, true, nodeNames...)
+	wantFamilies, err := gatherResourceGroups(t, expected, nil, osversion.Build(), nodeNames...)
 	if err != nil {
 		t.Fatal(err)
 	}
