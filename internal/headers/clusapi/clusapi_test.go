@@ -29,7 +29,7 @@ import (
 func TestControlBuffer(t *testing.T) {
 	calls := 0
 
-	data, err := controlBuffer(time.Time{}, func(buffer []byte) (uint32, error) {
+	data, err := controlBuffer(time.Time{}, 0, func(buffer []byte) (uint32, error) {
 		calls++
 		switch calls {
 		case 1:
@@ -59,6 +59,48 @@ func TestControlBuffer(t *testing.T) {
 	}
 }
 
+func TestControlBufferPresized(t *testing.T) {
+	calls := 0
+
+	data, err := controlBuffer(time.Time{}, 8, func(buffer []byte) (uint32, error) {
+		calls++
+		if len(buffer) != 8 {
+			t.Fatalf("buffer = %d", len(buffer))
+		}
+
+		copy(buffer, []byte{1, 2, 3, 4, 5, 6, 7, 8})
+
+		return 8, nil
+	})
+	if err != nil || calls != 1 || len(data) != 8 || data[7] != 8 {
+		t.Fatalf("data = %v, calls = %d, err = %v", data, calls, err)
+	}
+
+	calls = 0
+
+	data, err = controlBuffer(time.Time{}, 4, func(buffer []byte) (uint32, error) {
+		calls++
+		if calls == 1 {
+			return 6, windows.ERROR_MORE_DATA
+		}
+
+		if len(buffer) != 6 {
+			t.Fatalf("buffer = %d", len(buffer))
+		}
+
+		return 6, nil
+	})
+	if err != nil || calls != 2 || len(data) != 6 {
+		t.Fatalf("growth: data = %v, calls = %d, err = %v", data, calls, err)
+	}
+
+	// A pre-sized buffer that is already large enough must not be shrunk or retried.
+	_, err = controlBuffer(time.Time{}, 8, func([]byte) (uint32, error) { return 4, windows.ERROR_MORE_DATA })
+	if err == nil {
+		t.Fatal("accepted ERROR_MORE_DATA without growth")
+	}
+}
+
 func TestControlBufferInvalidSizes(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -71,7 +113,7 @@ func TestControlBufferInvalidSizes(t *testing.T) {
 		{"unrelated_error", 0, windows.ERROR_ACCESS_DENIED},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := controlBuffer(time.Time{}, func([]byte) (uint32, error) { return tc.size, tc.err })
+			_, err := controlBuffer(time.Time{}, 0, func([]byte) (uint32, error) { return tc.size, tc.err })
 			if err == nil {
 				t.Fatal("accepted invalid native response")
 			}
@@ -87,7 +129,7 @@ func TestControlBufferDeadline(t *testing.T) {
 	calls := 0
 	deadline := time.Now().Add(time.Millisecond)
 
-	_, err := controlBuffer(deadline, func([]byte) (uint32, error) {
+	_, err := controlBuffer(deadline, 0, func([]byte) (uint32, error) {
 		calls++
 
 		time.Sleep(2 * time.Millisecond)
@@ -98,7 +140,7 @@ func TestControlBufferDeadline(t *testing.T) {
 		t.Fatalf("calls = %d, err = %v", calls, err)
 	}
 
-	_, err = controlBuffer(time.Now().Add(-time.Second), func([]byte) (uint32, error) {
+	_, err = controlBuffer(time.Now().Add(-time.Second), 0, func([]byte) (uint32, error) {
 		t.Fatal("started native call after deadline")
 
 		return 0, nil
@@ -179,7 +221,7 @@ func TestStateBuffersInvalidNativeResponses(t *testing.T) {
 func TestControlBufferSuccessfulSizeProbe(t *testing.T) {
 	calls := 0
 
-	data, err := controlBuffer(time.Time{}, func(buffer []byte) (uint32, error) {
+	data, err := controlBuffer(time.Time{}, 0, func(buffer []byte) (uint32, error) {
 		calls++
 		if calls == 1 {
 			return 4, nil

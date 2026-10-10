@@ -38,6 +38,8 @@ const (
 	resourceGetType               = 0x0100002d
 	resourceGetClassInfo          = 0x0100000d
 	maxBufferSize                 = 64 << 20
+	propertyListBufferSize        = 4 << 10
+	typeBufferSize                = 512
 )
 
 //nolint:gochecknoglobals
@@ -244,6 +246,8 @@ func enumName(enum uintptr, index uint32, deadline time.Time) (resourceName, err
 
 func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resource, resultErr error) {
 	resource := Resource{Name: name.name, Values: make(map[string]uint32)}
+	hasType := false
+
 	if err := checkDeadline(deadline); err != nil {
 		return resource, err
 	}
@@ -260,22 +264,7 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 	}()
 
 	for _, code := range []uint32{resourceGetROCommonProperties, resourceGetCommonProperties} {
-		data, err := controlBuffer(deadline, func(buffer []byte) (uint32, error) {
-			var (
-				size    uint32
-				pointer *byte
-			)
-			if len(buffer) != 0 {
-				pointer = &buffer[0]
-			}
-
-			status, _, _ := resourceControl.Call(handle, 0, uintptr(code), 0, 0, uintptr(unsafe.Pointer(pointer)), uintptr(len(buffer)), uintptr(unsafe.Pointer(&size)))
-			if status != 0 {
-				return size, windows.Errno(status)
-			}
-
-			return size, nil
-		})
+		data, err := resourceBuffer(handle, code, propertyListBufferSize, deadline)
 		if err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterResourceControl %#x: %w", code, err))
 
@@ -298,13 +287,22 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 				resource.Values[name] = value
 			}
 		}
+
+		// The read-only common Type property is the same resource type name
+		// that CLUSCTL_RESOURCE_GET_RESOURCE_TYPE returns.
+		if values := properties["Type"]; len(values) == 1 {
+			if value, err := values[0].String(); err == nil {
+				resource.Type = value
+				hasType = true
+			}
+		}
 	}
 
 	for _, field := range []struct {
 		name string
 		code uint32
 	}{{"Characteristics", resourceGetCharacteristics}, {"Flags", resourceGetFlags}} {
-		data, err := resourceBuffer(handle, field.code, deadline)
+		data, err := resourceBuffer(handle, field.code, 4, deadline)
 		switch {
 		case err != nil:
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s: %w", field.name, err))
@@ -315,7 +313,7 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 		}
 	}
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, deadline)
+	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
 	switch {
 	case err != nil:
 		resultErr = errors.Join(resultErr, fmt.Errorf("class information: %w", err))
@@ -326,12 +324,15 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 		resource.Values["Subclass"] = binary.LittleEndian.Uint32(data[4:])
 	}
 
-	data, err = resourceBuffer(handle, resourceGetType, deadline)
-	if err != nil {
-		return resource, errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
-	}
+	// The property lists normally carry the type; only ask separately without it.
+	if !hasType {
+		data, err = resourceBuffer(handle, resourceGetType, typeBufferSize, deadline)
+		if err != nil {
+			return resource, errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
+		}
 
-	resource.Type = decodeString(data)
+		resource.Type = decodeString(data)
+	}
 
 	state, owner, group, err := readResourceState(handle, deadline)
 	if err != nil {
@@ -346,8 +347,8 @@ func (c *Cluster) readResource(name resourceName, deadline time.Time) (_ Resourc
 	return resource, resultErr
 }
 
-func resourceBuffer(handle uintptr, code uint32, deadline time.Time) ([]byte, error) {
-	return controlBuffer(deadline, func(buffer []byte) (uint32, error) {
+func resourceBuffer(handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {
+	return controlBuffer(deadline, size, func(buffer []byte) (uint32, error) {
 		var (
 			size    uint32
 			pointer *byte
@@ -433,8 +434,14 @@ func checkDeadline(deadline time.Time) error {
 	return nil
 }
 
-func controlBuffer(deadline time.Time, call func([]byte) (uint32, error)) ([]byte, error) {
+// controlBuffer starts with a buffer of the expected size, so most controls need
+// one RPC. ERROR_MORE_DATA still grows the buffer to the reported size; size 0
+// starts with a NULL size probe.
+func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, error)) ([]byte, error) {
 	var buffer []byte
+	if size > 0 {
+		buffer = make([]byte, size)
+	}
 
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
