@@ -436,6 +436,6 @@ windows_service_state{name="Themes",state="stopped"} 0
 # HELP windows_udp_datagram_received_errors_total Number of received UDP datagrams that could not be delivered for reasons other than the lack of an application at the destination port
 # TYPE windows_udp_datagram_received_errors_total counter
 # HELP windows_udp_datagram_received_total UDP datagrams are delivered to UDP users
-# TYPE windows_udp_datagram_received_total gauge
+# TYPE windows_udp_datagram_received_total counter
 # HELP windows_udp_datagram_sent_total UDP datagrams are sent from the entity
 # TYPE windows_udp_datagram_sent_total counter

@@ -260,7 +260,7 @@ func logCollectorResult(ctx context.Context, logger *slog.Logger, name string, e
 	if err != nil {
 		if !expectedCollectionError(err) {
 			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) {
-				err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
+				err = fmt.Errorf("%w. Check application logs from initialization phase for more information", err)
 			}
 
 			logger.LogAttrs(ctx, slog.LevelWarn,

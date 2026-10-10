@@ -16,7 +16,7 @@ None
 
 | Name                                          | Description                                                                                                                            | Type    | Labels |
 |-----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|---------|--------|
-| `windows_udp_datagram_datagram_no_port_total` | Number of received UDP datagrams for which there was no application at the destination port                                            | counter | af     |
+| `windows_udp_datagram_no_port_total`          | Number of received UDP datagrams for which there was no application at the destination port                                            | counter | af     |
 | `windows_udp_datagram_received_errors_total`  | Number of received UDP datagrams that could not be delivered for reasons other than the lack of an application at the destination port | counter | af     |
 | `windows_udp_datagram_received_total`         | Number of UDP datagrams segments received                                                                                              | counter | af     |
 | `windows_udp_datagram_sent_total`             | Number of UDP datagrams segments sent                                                                                                  | counter | af     |
