@@ -29,6 +29,10 @@ const (
 	CM_GETIDLIST_FILTER_PRESENT    = 0x00000100
 
 	DEVPROP_TYPE_UINT32 uint32 = 0x00000007
+
+	// CM_Get_DevNode_Registry_Property properties
+	CM_DRP_DEVICEDESC   uint32 = 0x00000001
+	CM_DRP_FRIENDLYNAME uint32 = 0x0000000D
 )
 
 // DEVPROPKEY represents a device property key (GUID + pid)

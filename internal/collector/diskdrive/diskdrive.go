@@ -18,9 +18,11 @@
 package diskdrive
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,13 +39,20 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
+// A Collector is a Prometheus Collector for the Win32_DiskDrive properties
+// DeviceID, Model, Caption, Name, Partitions, Size, Status and Availability.
+// The values are read natively when they match WMI at Build time.
 type Collector struct {
 	config Config
 	logger *slog.Logger
 
 	miSession *mi.Session
 	miQuery   mi.Query
+
+	// useNative is set by Build when the native reader reproduced the WMI
+	// result exactly.
+	useNative  bool
+	nativeRead func() ([]diskDrive, error)
 
 	availability *prometheus.Desc
 	diskInfo     *prometheus.Desc
@@ -78,6 +87,7 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
+	c.useNative = false
 
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -127,12 +137,87 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.miQuery = miQuery
 	c.miSession = miSession
 
-	var dst []diskDrive
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	wmiDrives, err := c.readWMI(0)
+	if err != nil {
+		return err
+	}
+
+	if c.nativeRead == nil {
+		c.nativeRead = readNativeDiskDrives
+	}
+
+	// The native reader replaces WMI only after it reproduced the complete WMI
+	// result on this host. The properties are rebuilt from the CIMWin32
+	// implementation of a recent Windows build; older provider builds keep WMI
+	// if they behave differently.
+	nativeDrives, err := c.nativeRead()
+
+	switch {
+	case err != nil:
+		c.logger.Info("native disk drive enumeration failed, using WMI",
+			slog.Any("err", err),
+		)
+	case !equalDiskDrives(nativeDrives, wmiDrives):
+		c.logger.Info("native disk drive properties differ from Win32_DiskDrive, using WMI",
+			slog.Any("wmi", wmiDrives),
+			slog.Any("native", nativeDrives),
+		)
+	default:
+		c.useNative = true
 	}
 
 	return nil
+}
+
+func (c *Collector) readWMI(maxScrapeDuration time.Duration) ([]diskDrive, error) {
+	var dst []diskDrive
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, maxScrapeDuration); err != nil {
+		return nil, fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return dst, nil
+}
+
+func (c *Collector) readDiskDrives(maxScrapeDuration time.Duration) ([]diskDrive, error) {
+	if !c.useNative {
+		return c.readWMI(maxScrapeDuration)
+	}
+
+	drives, err := c.nativeRead()
+	if err != nil {
+		return nil, fmt.Errorf("failed to enumerate disk drives: %w", err)
+	}
+
+	return drives, nil
+}
+
+// equalDiskDrives reports whether both results contain the same drives with
+// identical raw property values, independent of their order.
+func equalDiskDrives(a, b []diskDrive) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	a = slices.Clone(a)
+	b = slices.Clone(b)
+
+	slices.SortFunc(a, compareDiskDrives)
+	slices.SortFunc(b, compareDiskDrives)
+
+	return slices.Equal(a, b)
+}
+
+func compareDiskDrives(a, b diskDrive) int {
+	return cmp.Or(
+		cmp.Compare(a.DeviceID, b.DeviceID),
+		cmp.Compare(a.Name, b.Name),
+		cmp.Compare(a.Model, b.Model),
+		cmp.Compare(a.Caption, b.Caption),
+		cmp.Compare(a.Size, b.Size),
+		cmp.Compare(a.Partitions, b.Partitions),
+		cmp.Compare(a.Status, b.Status),
+		cmp.Compare(a.Availability, b.Availability),
+	)
 }
 
 type diskDrive struct {
@@ -190,13 +275,13 @@ var (
 
 // Collect sends the metric values for each metric to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []diskDrive
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	dst, err := c.readDiskDrives(maxScrapeDuration)
+	if err != nil {
+		return err
 	}
 
 	if len(dst) == 0 {
-		return errors.New("WMI query returned empty result set")
+		return errors.New("no disk drives found")
 	}
 
 	for _, disk := range dst {

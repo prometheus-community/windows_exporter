@@ -31,6 +31,8 @@ var (
 	procCMGetDeviceIDListSize = cfgmgr32.NewProc("CM_Get_Device_ID_List_SizeW")
 	procCMGetDevNodePropertyW = cfgmgr32.NewProc("CM_Get_DevNode_PropertyW")
 	procCMLocateDevNodeW      = cfgmgr32.NewProc("CM_Locate_DevNodeW")
+
+	procCMGetDevNodeRegistryPropertyW = cfgmgr32.NewProc("CM_Get_DevNode_Registry_PropertyW")
 )
 
 func CMGetDeviceIDListSize(filter *win32.LPWSTR, size *uint32) error {
@@ -89,6 +91,26 @@ func CMGetDevNodeProperty(devInst uint32, propKey *DEVPROPKEY, propType *uint32,
 
 	if ret != CR_SUCCESS {
 		return fmt.Errorf("CMGetDevNodeProperty failed: 0x%02X", ret)
+	}
+
+	return nil
+}
+
+// CMGetDevNodeRegistryProperty wraps CM_Get_DevNode_Registry_PropertyW. A
+// failure returns the native windows.CONFIGRET.
+// https://learn.microsoft.com/en-us/windows/win32/api/cfgmgr32/nf-cfgmgr32-cm_get_devnode_registry_propertyw
+func CMGetDevNodeRegistryProperty(devInst uint32, property uint32, regDataType *uint32, buf unsafe.Pointer, bufLen *uint32) error {
+	ret, _, _ := procCMGetDevNodeRegistryPropertyW.Call(
+		uintptr(devInst),
+		uintptr(property),
+		uintptr(unsafe.Pointer(regDataType)),
+		uintptr(buf),
+		uintptr(unsafe.Pointer(bufLen)),
+		0,
+	)
+
+	if ret != CR_SUCCESS {
+		return windows.CONFIGRET(ret)
 	}
 
 	return nil

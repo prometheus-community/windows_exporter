@@ -8,6 +8,27 @@ The diskdrive collector exposes metrics about physical disks
 | Classes             | [`Win32_DiskDrive`](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-diskdrive)                                                            |
 | Enabled by default? | No                                                                                                                                                           |
 
+At startup, the collector queries `Win32_DiskDrive` and reads the same
+properties through SetupAPI, the configuration manager and disk IOCTLs. If both
+results are identical, every scrape uses the native APIs. Otherwise the
+collector keeps using WMI and logs both results at info level. Startup
+therefore still requires WMI.
+
+The native values follow the CIMWin32 provider:
+
+- `name` and `device_id` are `PHYSICALDRIVE<n>` from `IOCTL_STORAGE_GET_DEVICE_NUMBER`.
+- `model` is the device's friendly name. `caption` is the friendly name, the
+  device description or the drive path, in that order.
+- `diskdrive_size` is cylinders × tracks per cylinder × sectors per track × bytes
+  per sector from `IOCTL_DISK_GET_DRIVE_GEOMETRY`. It can be smaller than the disk's
+  byte size.
+- `diskdrive_partitions` counts recognized MBR partitions, or GPT partitions
+  other than the Microsoft reserved partition.
+- `diskdrive_status` is derived from the device node status flags. A successful
+  `IOCTL_STORAGE_PREDICT_FAILURE` call replaces it with `Pred Fail` or `OK`.
+- `Win32_DiskDrive` never sets `Availability`, so all `diskdrive_availability`
+  series are 0.
+
 ## Flags
 
 None
