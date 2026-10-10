@@ -55,6 +55,7 @@ func BenchmarkRowSetInstanceNames(b *testing.B) {
 		rows.addRawItems(0, buf, instances)
 		rows.addRawItems(1, buf, instances)
 		rows.finish()
+		state.names.removeUnseen()
 
 		state.valid = rows.valid
 	}

@@ -447,6 +447,10 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 
 	rows := newRowSet(c, dst, state)
 
+	// Also after an error or panic, so the cache stays bounded while samples keep failing.
+	// A name that the sample did not reach is decoded again by the next sample.
+	defer state.names.removeUnseen()
+
 	for counterIndex := range c.counters {
 		for _, instance := range c.counters[counterIndex].Instances {
 			itemCount, ok, err := c.getCounterArray(instance, &state.buf)
@@ -702,7 +706,6 @@ func (r *rowSet[T]) nameDuplicates() {
 // required. Without partial rows, such rows are removed. Otherwise, the
 // missing values are set to NaN.
 func (r *rowSet[T]) finish() {
-	r.nameCache.removeUnseen()
 	r.nameDuplicates()
 
 	rows := *r.dst
@@ -796,7 +799,7 @@ func formatCounterPath(object, instance, counterName string) string {
 // call writes its single name at the same address.
 //
 // The cache is kept between samples, so a name is decoded once while its instance exists.
-// Names that were not seen in a completed sample are removed, because instance names that
+// Names that a sample did not decode are removed at its end, because instance names that
 // contain process IDs, like those of GPU Engine, change all the time.
 type instanceNameCache struct {
 	names  map[string]*cachedInstanceName
@@ -844,8 +847,7 @@ func (cache *instanceNameCache) decode(p *uint16) string {
 	return name
 }
 
-// removeUnseen removes the names that the current sample did not contain.
-// It must only be called once all items of the sample were decoded.
+// removeUnseen removes the names that the current sample did not decode.
 func (cache *instanceNameCache) removeUnseen() {
 	for raw, cached := range cache.names {
 		if cached.sample != cache.sample {

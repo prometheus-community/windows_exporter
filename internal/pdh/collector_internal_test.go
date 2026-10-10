@@ -407,6 +407,48 @@ func TestCollectRecoversPanic(t *testing.T) {
 	require.NotEmpty(t, dst)
 }
 
+// TestCollectKeepsInstanceNames checks that Collect reuses decoded names between samples and
+// removes the cached names that a failed sample did not reach.
+func TestCollectKeepsInstanceNames(t *testing.T) {
+	t.Parallel()
+
+	c, err := NewCollector[processThreads](slog.New(slog.DiscardHandler), CounterTypeRaw, "Process", InstancesAll)
+	require.NoError(t, err)
+
+	t.Cleanup(c.Close)
+
+	systemName := func(rows []processThreads) string {
+		i := slices.IndexFunc(rows, func(row processThreads) bool { return row.Name == "System" })
+		require.NotEqual(t, -1, i, "missing instance System")
+
+		return rows[i].Name
+	}
+
+	var first, second []processThreads
+
+	require.NoError(t, c.Collect(&first))
+	require.NoError(t, c.Collect(&second))
+	require.Same(t, unsafe.StringData(systemName(first)), unsafe.StringData(systemName(second)), "name decoded again")
+
+	// Assertions run without holding the lock, because a failed assertion would leave it locked for Close.
+	cachedNames := func(fieldIndex int) int {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		c.counters[0].FieldIndexValue = fieldIndex
+
+		return len(c.state.names.names)
+	}
+
+	// Point the counter at a field that does not exist, so that the first item panics.
+	require.Greater(t, cachedNames(42), 1)
+	require.Error(t, c.Collect(&first))
+	require.Equal(t, 1, cachedNames(1), "names not reached by the failed sample kept")
+
+	require.NoError(t, c.Collect(&first))
+	require.Equal(t, systemName(second), systemName(first))
+}
+
 func TestInstanceNameCache(t *testing.T) {
 	t.Parallel()
 
