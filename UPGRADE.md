@@ -237,6 +237,9 @@ These add new metrics. To keep the 0.31 set, list the sub-collectors explicitly 
 Storage pool and virtual disk metrics are in the new `storage_spaces` collector (`--collector.storage_spaces.enabled=pool,virtual_disk`), which isn't enabled by default.
 It works on standalone hosts too and doesn't need a failover cluster.
 
+The `mscluster` collector now reads cluster data through the Windows Cluster API (`clusapi.dll`) instead of the `root\MSCluster` WMI namespace.
+Metric names, labels and configuration are unchanged. A property that can't be read is left out and reported as a collection error, instead of being exported as `0`.
+
 ## Scrape timeouts
 
 The scrape timeout comes from the `X-Prometheus-Scrape-Timeout-Seconds` header, minus `--scrape.timeout-margin`. In 0.32:
