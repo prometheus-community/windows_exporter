@@ -380,7 +380,11 @@ jobs:
           annotations: ${{ steps.meta.outputs.labels }}
 
   publish:
-    if: github.repository == 'prometheus-community/windows_exporter' && startsWith(github.ref, 'refs/tags/')
+    # Publishing a release fires both a tag push and a release:published run for
+    # the same tag. Upload only from the release run: it is the only one where
+    # the release is guaranteed to exist, and uploading from both runs would
+    # race on the same asset names.
+    if: github.repository == 'prometheus-community/windows_exporter' && github.event_name == 'release'
     runs-on: ubuntu-26.04
     needs:
       - package
@@ -396,6 +400,8 @@ jobs:
       - name: Publish Artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The job runs without a checkout, so gh cannot infer the repository.
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release upload "$GITHUB_REF_NAME" \
             windows_exporter-*.exe \
@@ -1729,6 +1735,9 @@ jobs:
 
   super-linter:
     name: Super Linter
+    # Super Linter cannot derive the commit range VALIDATE_ALL_CODEBASE=false
+    # needs from release events; the tag push run already lints the same commit.
+    if: github.event_name != 'release'
     runs-on: ubuntu-26.04
     permissions:
       contents: read
