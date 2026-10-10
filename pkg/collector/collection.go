@@ -73,7 +73,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
@@ -147,7 +146,6 @@ func NewWithConfig(config Config) *Collection {
 	collectors[tcp.Name] = tcp.New(&config.TCP)
 	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
-	collectors[thermalzone.Name] = thermalzone.New(&config.ThermalZone)
 	collectors[time.Name] = time.New(&config.Time)
 	collectors[udp.Name] = udp.New(&config.UDP)
 	collectors[update.Name] = update.New(&config.Update)

@@ -67,7 +67,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
@@ -128,7 +127,6 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	tcp.Name:                NewBuilderWithFlags(tcp.NewWithFlags),
 	terminal_services.Name:  NewBuilderWithFlags(terminal_services.NewWithFlags),
 	textfile.Name:           NewBuilderWithFlags(textfile.NewWithFlags),
-	thermalzone.Name:        NewBuilderWithFlags(thermalzone.NewWithFlags),
 	time.Name:               NewBuilderWithFlags(time.NewWithFlags),
 	udp.Name:                NewBuilderWithFlags(udp.NewWithFlags),
 	update.Name:             NewBuilderWithFlags(update.NewWithFlags),
