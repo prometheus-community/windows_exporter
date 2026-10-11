@@ -179,9 +179,6 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
-
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
@@ -210,6 +207,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"task", "state"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
 
 	return nil
 }
@@ -258,11 +258,9 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 			missedRunsCount: task.MissedRunsCount,
 		}
 
-		metrics, ok := scrape.Load(task.Path, values)
-		if !ok {
-			metrics = c.taskMetrics(task)
-			scrape.Store(task.Path, values, metrics)
-		}
+		metrics := scrape.Get(task.Path, values, func() []prometheus.Metric {
+			return c.taskMetrics(task)
+		})
 
 		for _, metric := range metrics {
 			ch <- metric

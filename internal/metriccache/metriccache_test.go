@@ -140,6 +140,87 @@ func TestCacheConcurrentScrapes(t *testing.T) {
 	wg.Wait()
 }
 
+func TestScrapeGet(t *testing.T) {
+	t.Parallel()
+
+	var (
+		cache  metriccache.Cache[string, string]
+		builds int
+	)
+
+	get := func(scrape *metriccache.Scrape[string, string], value string) []prometheus.Metric {
+		return scrape.Get("a", value, func() []prometheus.Metric {
+			builds++
+
+			return build("a", value)
+		})
+	}
+
+	scrape := cache.Begin()
+	a := get(scrape, "running")
+	scrape.Commit()
+
+	scrape = cache.Begin()
+	require.Same(t, a[0], get(scrape, "running")[0])
+	require.Equal(t, 1, builds, "unchanged value is reused")
+
+	require.NotSame(t, a[0], get(scrape, "stopped")[0])
+	require.Equal(t, 2, builds, "changed value is rebuilt")
+	scrape.Commit()
+}
+
+func TestScrapeAfterCommit(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, string]
+
+	scrape := cache.Begin()
+	scrape.Store("a", "running", build("a", "running"))
+	scrape.Commit()
+
+	// A late call must not modify the committed generation.
+	scrape.Store("b", "stopped", build("b", "stopped"))
+	scrape.Commit()
+
+	next := cache.Begin()
+	_, ok := next.Load("a", "running")
+	require.True(t, ok)
+
+	_, ok = next.Load("b", "stopped")
+	require.False(t, ok, "stored after Commit")
+}
+
+func TestScrapeConcurrentWorkers(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, int]
+
+	for range 10 {
+		scrape := cache.Begin()
+
+		var wg sync.WaitGroup
+
+		// Several workers of one scrape share it, as in the service collector.
+		for worker := range 4 {
+			wg.Go(func() {
+				for k := range 100 {
+					name := strconv.Itoa(worker*100 + k)
+
+					metrics := scrape.Get(name, k%3, func() []prometheus.Metric {
+						return build(name, strconv.Itoa(k%3))
+					})
+
+					// require must not be called outside the test goroutine.
+					assert.Len(t, metrics, 1)
+				}
+			})
+		}
+
+		wg.Wait()
+		scrape.Commit()
+	}
+}
+
 func BenchmarkScrape(b *testing.B) {
 	var cache metriccache.Cache[string, int]
 
