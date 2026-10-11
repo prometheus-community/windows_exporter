@@ -44,6 +44,9 @@ var (
 type CounterValues = map[string]map[string]CounterValue
 
 type Collector[T any] struct {
+	// query is the shared query of a collector from [NewQueryCollector], or
+	// nil if the collector owns handle.
+	query                 *Query
 	object                string
 	resultType            CounterType
 	counters              []Counter
@@ -113,6 +116,22 @@ type Counter struct {
 // could not be added or the initial collection failed. The caller owns that
 // Collector and must Close it. If the Collector is nil, no resources are held.
 func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector[T], error) {
+	return newStructCollector[T](logger, nil, resultType, object, instances)
+}
+
+// NewQueryCollector creates a collector like [NewCollector] whose counters are
+// part of query. [Query.Collect] samples them together with the other
+// collectors of the query; [Collector.Collect] reads the latest sample. Close
+// the collector before the query.
+func NewQueryCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string) (*Collector[T], error) {
+	if query == nil {
+		return nil, ErrPerformanceCounterNotInitialized
+	}
+
+	return newStructCollector[T](logger, query, resultType, object, instances)
+}
+
+func newStructCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	valueType := reflect.TypeFor[T]()
 	if valueType.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("expected a struct, got %s", valueType)
@@ -167,7 +186,7 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		},
 	}
 
-	return newCollector(logger, resultType, object, instances, fields, rows, false, errs)
+	return newCollector(logger, query, resultType, object, instances, fields, rows, false, errs)
 }
 
 // NewDynamicCollector creates a collector for counters that are only known at runtime.
@@ -192,10 +211,10 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 		},
 	}
 
-	return newCollector(logger, resultType, object, instances, fields, rows, true, nil)
+	return newCollector(logger, nil, resultType, object, instances, fields, rows, true, nil)
 }
 
-func newCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string,
+func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string,
 	fields []counterField, rows rowAccessor[T], partialRows bool, errs []error,
 ) (*Collector[T], error) {
 	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
@@ -204,7 +223,17 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 
 	var handle pdhQueryHandle
 
-	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
+	if query != nil {
+		// Adding counters while the query samples is not safe.
+		query.mu.Lock()
+		defer query.mu.Unlock()
+
+		if query.handle == 0 {
+			return nil, ErrPerformanceCounterNotInitialized
+		}
+
+		handle = query.handle
+	} else if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
 		return nil, NewPdhError(ret)
 	}
 
@@ -213,6 +242,7 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 	}
 
 	collector := &Collector[T]{
+		query:                 query,
 		object:                object,
 		resultType:            resultType,
 		counters:              make([]Counter, 0, len(fields)),
@@ -326,7 +356,11 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 	}
 
 	if len(collector.counters) == 0 {
-		collector.Close()
+		// A shared query stays open for its other collectors, and its lock
+		// is held here, so only close a query of our own.
+		if query == nil {
+			collector.Close()
+		}
 
 		errs = append(errs, errors.New("no counters configured"))
 
@@ -340,6 +374,14 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 	collector.state = &collectState{}
 
 	// Collect initial data because some counters need to be read twice to get the correct value.
+	if query != nil {
+		if ret := CollectQueryData(handle); ret != ErrorSuccess && ret != NoData {
+			return collector, fmt.Errorf("failed to collect initial data: %w", NewPdhError(ret))
+		}
+
+		return collector, nil
+	}
+
 	var collectValues []T
 	if err := collector.Collect(&collectValues); err != nil && !errors.Is(err, ErrNoData) {
 		return collector, fmt.Errorf("failed to collect initial data: %w", err)
@@ -408,6 +450,12 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 		return errors.New("dst must not be nil")
 	}
 
+	if c.query != nil {
+		// Reading the counter arrays while the query samples is not safe.
+		c.query.mu.Lock()
+		defer c.query.mu.Unlock()
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -445,8 +493,11 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 		}
 	}()
 
-	if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
-		return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+	// A collector in a shared query reads the sample taken by Query.Collect.
+	if c.query == nil {
+		if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
+			return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+		}
 	}
 
 	*dst = (*dst)[:0:0]
@@ -787,11 +838,26 @@ func (c *Collector[T]) Close() {
 		return
 	}
 
+	if c.query != nil {
+		c.query.mu.Lock()
+		defer c.query.mu.Unlock()
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.handle != 0 {
+	switch {
+	case c.handle == 0:
+	case c.query == nil:
 		CloseQuery(c.handle)
+	case c.query.handle != 0:
+		// The query belongs to its other collectors; only remove the
+		// counters of this one.
+		for _, counter := range c.counters {
+			for _, instance := range counter.Instances {
+				RemoveCounter(instance)
+			}
+		}
 	}
 
 	c.handle = 0

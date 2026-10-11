@@ -60,6 +60,9 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	// perfDataQuery samples the IPv4 and IPv6 objects together, so the
+	// collector waits only once for the other performance counter queries.
+	perfDataQuery      *pdh.Query
 	perfDataCollector4 *pdh.Collector[perfDataCounterValues]
 	perfDataCollector6 *pdh.Collector[perfDataCounterValues]
 	perfDataObject4    []perfDataCounterValues
@@ -123,6 +126,7 @@ func (c *Collector) Close() error {
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		c.perfDataCollector4.Close()
 		c.perfDataCollector6.Close()
+		c.perfDataQuery.Close()
 	}
 
 	return nil
@@ -207,12 +211,17 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		var err error
 
-		c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "TCPv4", nil)
+		c.perfDataQuery, err = pdh.NewQuery()
+		if err != nil {
+			return fmt.Errorf("failed to open TCP performance counter query: %w", err)
+		}
+
+		c.perfDataCollector4, err = pdh.NewQueryCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), c.perfDataQuery, pdh.CounterTypeRaw, "TCPv4", nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create TCPv4 collector: %w", err))
 		}
 
-		c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "TCPv6", nil)
+		c.perfDataCollector6, err = pdh.NewQueryCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), c.perfDataQuery, pdh.CounterTypeRaw, "TCPv6", nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create TCPv6 collector: %w", err))
 		}
@@ -243,6 +252,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
+
+	if err := c.perfDataQuery.Collect(); err != nil {
+		return fmt.Errorf("failed to collect TCP metrics: %w", err)
+	}
 
 	if err := c.perfDataCollector4.Collect(&c.perfDataObject4); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect TCPv4 metrics. %w", err))
