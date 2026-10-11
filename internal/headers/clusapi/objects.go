@@ -210,7 +210,7 @@ func (c *Cluster) readObject(api *objectAPI, name objectName, deadline time.Time
 		}
 	}()
 
-	if err := readCommonProperties(api.control, handle, api.object, object.Values, deadline); err != nil {
+	if err := readCommonProperties(api.control, handle, api.object, object.Values, &c.scratch, deadline); err != nil {
 		resultErr = errors.Join(resultErr, err)
 
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -222,7 +222,7 @@ func (c *Cluster) readObject(api *objectAPI, name objectName, deadline time.Time
 		name      string
 		operation uint32
 	}{{"Characteristics", ctlGetCharacteristics}, {"Flags", ctlGetFlags}} {
-		data, err := objectBuffer(api.control, handle, api.object<<24|field.operation, 4, deadline)
+		data, err := c.scratch.objectControl(api.control, handle, api.object<<24|field.operation, 4, deadline)
 
 		switch {
 		case err != nil:
@@ -252,16 +252,13 @@ func (c *Cluster) readObject(api *objectAPI, name objectName, deadline time.Time
 
 // readCommonProperties stores the single 32-bit values of the read-only and
 // read/write common property lists in values. Other formats are skipped.
-func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint32, values map[string]uint32, deadline time.Time) error {
+func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint32, values map[string]uint32, scratch *controlScratch, deadline time.Time) error {
 	var resultErr error
-
-	buffer := propertyLists.Get().(*[]byte) //nolint:forcetypeassert
-	defer propertyLists.Put(buffer)
 
 	for _, operation := range []uint32{ctlGetROCommonProperties, ctlGetCommonProperties} {
 		code := object<<24 | operation
 
-		data, err := objectBufferIn(control, handle, code, *buffer, deadline)
+		data, err := scratch.objectControl(control, handle, code, propertyListBufferSize, deadline)
 		if err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", control.Name, code, err))
 
@@ -280,13 +277,11 @@ func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint
 		}
 
 		for name, list := range properties {
-			// Checking the format first skips the error Value32 builds for
-			// every string or binary property.
-			if len(list) != 1 || (list[0].Format != formatDWORD && list[0].Format != formatLong) {
+			if len(list) != 1 {
 				continue
 			}
 
-			if value, err := list[0].Value32(); err == nil {
+			if value, ok := list[0].value32(); ok {
 				values[name] = value
 			}
 		}
@@ -295,14 +290,19 @@ func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint
 	return resultErr
 }
 
-// objectBuffer calls a Cluster{Group,Node,Network}Control function. They share
-// the ClusterResourceControl signature and return a DWORD status code.
-func objectBuffer(proc *windows.LazyProc, handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {
-	return objectBufferIn(proc, handle, code, newControlBuffer(size), deadline)
+// objectControl calls a Cluster{Group,Node,Network}Control function starting
+// with n bytes of the scratch buffer. The result is only valid until the next
+// control.
+func (s *controlScratch) objectControl(proc *windows.LazyProc, handle uintptr, code uint32, n int, deadline time.Time) ([]byte, error) {
+	data, err := objectBufferIn(proc, handle, code, s.get(n), deadline)
+	s.keep(data)
+
+	return data, err
 }
 
-// objectBufferIn is objectBuffer starting with buffer instead of a new one. The
-// result may share buffer's memory.
+// objectBufferIn calls a Cluster{Group,Node,Network}Control function. They
+// share the ClusterResourceControl signature and return a DWORD status code.
+// The result may share buffer's memory.
 func objectBufferIn(proc *windows.LazyProc, handle uintptr, code uint32, buffer []byte, deadline time.Time) ([]byte, error) {
 	return controlBufferIn(deadline, buffer, func(buffer []byte) (uint32, error) {
 		var (

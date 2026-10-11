@@ -32,10 +32,12 @@
   the documentation miss this. The parser validates only the structure and
   accepts zero padding. `TestDumpPropertyLists` logs real lists as hex when
   `WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP` is set on a cluster node.
-- `ParseProperties` returns `Property.Data` slices into the control buffer.
-  Property list reads borrow that buffer from `propertyLists` and return it
-  only after the values are copied out (`copyResourceProperties`,
-  `readCommonProperties`); never keep a parsed list past that point.
+- Each `Cluster` owns one control buffer (`controlScratch`). Like the handle,
+  it belongs to the running call, so calls never share it and no `sync.Pool`
+  is needed. `ParseProperties` returns `Property.Data` slices into it: copy
+  values out (`copyResourceProperties`, `readCommonProperties`) before the
+  next control, and never keep a parsed list past that point. `get` zeroes
+  the bytes, so a reused buffer reads like a new one.
 - `clusapi.Open` reports an unconfigured cluster or a missing ClusAPI with
   `errors.ErrUnsupported`; the shared collector test treats that as an
   unsupported role on hosts where `mscluster` is not a required fixture.

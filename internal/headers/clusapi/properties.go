@@ -42,11 +42,21 @@ type Property struct {
 }
 
 func (p Property) DWORD() (uint32, error) {
-	if p.Format != formatDWORD || len(p.Data) != 4 {
+	value, ok := p.dword()
+	if !ok {
 		return 0, fmt.Errorf("expected DWORD, format %d, length %d", p.Format, len(p.Data))
 	}
 
-	return binary.LittleEndian.Uint32(p.Data), nil
+	return value, nil
+}
+
+// dword is DWORD without the error, for callers that skip other formats.
+func (p Property) dword() (uint32, bool) {
+	if p.Format != formatDWORD || len(p.Data) != 4 {
+		return 0, false
+	}
+
+	return binary.LittleEndian.Uint32(p.Data), true
 }
 
 // String decodes an SZ, EXPAND_SZ or EXPANDED_SZ value like WMI does: the value
@@ -63,11 +73,21 @@ func (p Property) String() (string, error) {
 // Value32 returns the bit pattern of a DWORD or LONG value. Callers decide the
 // signedness, matching the WMI type of the property they publish.
 func (p Property) Value32() (uint32, error) {
-	if (p.Format != formatDWORD && p.Format != formatLong) || len(p.Data) != 4 {
+	value, ok := p.value32()
+	if !ok {
 		return 0, fmt.Errorf("expected DWORD or LONG, format %d, length %d", p.Format, len(p.Data))
 	}
 
-	return binary.LittleEndian.Uint32(p.Data), nil
+	return value, nil
+}
+
+// value32 is Value32 without the error, for callers that skip other formats.
+func (p Property) value32() (uint32, bool) {
+	if (p.Format != formatDWORD && p.Format != formatLong) || len(p.Data) != 4 {
+		return 0, false
+	}
+
+	return binary.LittleEndian.Uint32(p.Data), true
 }
 
 // ParseProperties decodes CLUSPROP_LIST without casting untrusted bytes to native
@@ -181,8 +201,15 @@ func decodeString(data []byte) string {
 		units = make([]uint16, 0, len(data)/2)
 	}
 
+	// Stop at the first NUL: fixed-size fields such as MAX_PATH names would
+	// otherwise always outgrow the stack buffer.
 	for i := 0; i+1 < len(data); i += 2 {
-		units = append(units, binary.LittleEndian.Uint16(data[i:]))
+		unit := binary.LittleEndian.Uint16(data[i:])
+		if unit == 0 {
+			break
+		}
+
+		units = append(units, unit)
 	}
 
 	return decodeUnits(units)

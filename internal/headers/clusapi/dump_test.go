@@ -60,7 +60,7 @@ func TestDumpPropertyLists(t *testing.T) {
 	deadline := time.Now().Add(time.Minute)
 
 	for _, code := range []uint32{objectCluster<<24 | ctlGetROCommonProperties, objectCluster<<24 | ctlGetCommonProperties} {
-		data, err := controlBuffer(deadline, 0, func(buffer []byte) (uint32, error) {
+		data, err := controlBufferIn(deadline, newControlBuffer(0), func(buffer []byte) (uint32, error) {
 			var (
 				size    uint32
 				pointer *byte
@@ -88,7 +88,7 @@ func TestDumpPropertyLists(t *testing.T) {
 		}
 
 		for _, code := range []uint32{resourceTypeGetROCommonProperties, resourceTypeGetCommonProperties, resourceTypeGetPrivateProperties} {
-			data, err := controlBuffer(deadline, 0, func(buffer []byte) (uint32, error) {
+			data, err := controlBufferIn(deadline, newControlBuffer(0), func(buffer []byte) (uint32, error) {
 				var (
 					size    uint32
 					pointer *byte
@@ -133,11 +133,11 @@ func TestDumpPropertyLists(t *testing.T) {
 		}
 
 		for _, code := range []uint32{resourceGetROCommonProperties, resourceGetCommonProperties, resourceGetROPrivateProperties, resourceGetPrivateProperties} {
-			data, err := resourceBuffer(handle, code, 0, deadline)
+			data, err := resourceBufferIn(handle, code, nil, deadline)
 			logPropertyList(t, fmt.Sprintf("resource %q %#x", name.name, code), data, err)
 		}
 
-		data, err := resourceBuffer(handle, resourceGetType, 0, deadline)
+		data, err := resourceBufferIn(handle, resourceGetType, nil, deadline)
 		t.Logf("resource %q GET_RESOURCE_TYPE: %s err=%v", name.name, hex.EncodeToString(data), err)
 
 		closeResource.Call(handle) //nolint:errcheck

@@ -98,7 +98,7 @@ func (f *fakeAPI) api() *nativeAPI {
 			return 2, nil
 		},
 		closeResource: func(uintptr) error { return nil },
-		readResource: func(_ uintptr, resource *Resource, _ time.Time) error {
+		readResource: func(_ uintptr, resource *Resource, _ *controlScratch, _ time.Time) error {
 			resource.Values["State"] = 2
 			resource.IdentityValid = true
 
