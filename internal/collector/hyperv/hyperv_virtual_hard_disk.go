@@ -33,6 +33,10 @@ import (
 // fails the sub-collector instead of blocking the scrape.
 const virtualHardDiskQueryTimeout = 10 * time.Second
 
+// virtualHardDiskResourceSubType marks virtual hard disks. ISO and floppy
+// images share ResourceType 31 and differ only in ResourceSubType.
+const virtualHardDiskResourceSubType = "Microsoft:Hyper-V:Virtual Hard Disk"
+
 // collectorVirtualHardDisk Hyper-V virtual hard disk size metrics
 type collectorVirtualHardDisk struct {
 	virtualHardDiskVMQuery      mi.Query
@@ -53,8 +57,9 @@ type msvmVirtualMachine struct {
 // msvmStorageAllocationSettingData is the part of
 // Msvm_StorageAllocationSettingData needed to find attached virtual hard disks.
 type msvmStorageAllocationSettingData struct {
-	InstanceID   string   `mi:"InstanceID"`
-	HostResource []string `mi:"HostResource"`
+	InstanceID      string   `mi:"InstanceID"`
+	ResourceSubType string   `mi:"ResourceSubType"`
+	HostResource    []string `mi:"HostResource"`
 }
 
 func (c *Collector) buildVirtualHardDisk() error {
@@ -73,8 +78,9 @@ func (c *Collector) buildVirtualHardDisk() error {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
 
-	// ResourceType 31 is a logical disk: virtual hard disks, not ISO images.
-	c.virtualHardDiskSettingQuery, err = mi.NewQuery("SELECT InstanceID, HostResource FROM Msvm_StorageAllocationSettingData WHERE ResourceType = 31")
+	// ResourceType 31 is a logical disk: virtual hard disks, ISO and floppy
+	// images. attachedVirtualHardDisks keeps the virtual hard disks.
+	c.virtualHardDiskSettingQuery, err = mi.NewQuery("SELECT InstanceID, ResourceSubType, HostResource FROM Msvm_StorageAllocationSettingData WHERE ResourceType = 31")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -147,6 +153,10 @@ func attachedVirtualHardDisks(vms []msvmVirtualMachine, settings []msvmStorageAl
 	var disks []attachedVirtualHardDisk
 
 	for _, setting := range settings {
+		if setting.ResourceSubType != virtualHardDiskResourceSubType {
+			continue
+		}
+
 		owner, ok := strings.CutPrefix(setting.InstanceID, "Microsoft:")
 		if !ok {
 			continue

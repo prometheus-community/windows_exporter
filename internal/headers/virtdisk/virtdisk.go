@@ -43,8 +43,9 @@ const (
 )
 
 const (
-	virtualDiskAccessGetInfo     = 0x00080000 // VIRTUAL_DISK_ACCESS_GET_INFO
+	virtualDiskAccessNone        = 0x00000000 // VIRTUAL_DISK_ACCESS_NONE, required with version 2 parameters
 	openVirtualDiskFlagNoParents = 0x00000001 // OPEN_VIRTUAL_DISK_FLAG_NO_PARENTS
+	openVirtualDiskVersion2      = 2          // OPEN_VIRTUAL_DISK_VERSION_2
 
 	getVirtualDiskInfoSize            = 1 // GET_VIRTUAL_DISK_INFO_SIZE
 	getVirtualDiskInfoProviderSubtype = 7 // GET_VIRTUAL_DISK_INFO_PROVIDER_SUBTYPE
@@ -62,6 +63,15 @@ var virtualStorageTypeVendorMicrosoft = windows.GUID{
 type virtualStorageType struct {
 	DeviceID uint32
 	VendorID windows.GUID
+}
+
+// openVirtualDiskParametersV2 is OPEN_VIRTUAL_DISK_PARAMETERS with
+// OPEN_VIRTUAL_DISK_VERSION_2. The union is 4-byte aligned.
+type openVirtualDiskParametersV2 struct {
+	Version        uint32
+	GetInfoOnly    int32 // BOOL
+	ReadOnly       int32 // BOOL
+	ResiliencyGUID windows.GUID
 }
 
 // getVirtualDiskInfo is GET_VIRTUAL_DISK_INFO. The union is 8-byte aligned
@@ -106,12 +116,16 @@ func GetInfo(path string) (Info, error) {
 		handle      windows.Handle
 	)
 
+	// GetInfoOnly opens a disk that is in use by a running virtual machine,
+	// like Get-VHD does.
+	params := openVirtualDiskParametersV2{Version: openVirtualDiskVersion2, GetInfoOnly: 1}
+
 	ret, _, _ := procOpenVirtualDisk.Call(
 		uintptr(unsafe.Pointer(&storageType)),
 		uintptr(unsafe.Pointer(pathPtr)),
-		virtualDiskAccessGetInfo,
+		virtualDiskAccessNone,
 		openVirtualDiskFlagNoParents,
-		0, // OPEN_VIRTUAL_DISK_PARAMETERS: NULL means version 1 defaults
+		uintptr(unsafe.Pointer(&params)),
 		uintptr(unsafe.Pointer(&handle)),
 	)
 	if ret != 0 {

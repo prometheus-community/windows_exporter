@@ -30,23 +30,28 @@ import (
 //nolint:gochecknoglobals
 var procCreateVirtualDisk = modVirtdisk.NewProc("CreateVirtualDisk")
 
-// createVirtualDiskParametersV1 is CREATE_VIRTUAL_DISK_PARAMETERS with
-// CREATE_VIRTUAL_DISK_VERSION_1. The union starts at offset 8.
-type createVirtualDiskParametersV1 struct {
-	Version           uint32
-	_                 uint32
-	UniqueID          windows.GUID
-	MaximumSize       uint64
-	BlockSizeInBytes  uint32
-	SectorSizeInBytes uint32
-	ParentPath        *uint16
-	SourcePath        *uint16
+// createVirtualDiskParametersV2 is CREATE_VIRTUAL_DISK_PARAMETERS with
+// CREATE_VIRTUAL_DISK_VERSION_2, which VHDX requires. The union starts at offset 8.
+type createVirtualDiskParametersV2 struct {
+	Version                   uint32
+	_                         uint32
+	UniqueID                  windows.GUID
+	MaximumSize               uint64
+	BlockSizeInBytes          uint32
+	SectorSizeInBytes         uint32
+	PhysicalSectorSizeInBytes uint32
+	_                         uint32
+	ParentPath                *uint16
+	SourcePath                *uint16
+	OpenFlags                 uint32
+	ParentVirtualStorageType  virtualStorageType
+	SourceVirtualStorageType  virtualStorageType
+	ResiliencyGUID            windows.GUID
 }
 
 const (
-	createVirtualDiskVersion1              = 1
+	createVirtualDiskVersion2              = 2
 	createVirtualDiskFlagFullPhysicalAlloc = 0x1
-	virtualDiskAccessCreate                = 0x00100000
 	virtualStorageTypeDeviceVHDX           = 3
 )
 
@@ -59,7 +64,7 @@ func createVHDX(t *testing.T, path string, size uint64, fixed bool) {
 	require.NoError(t, err)
 
 	storageType := virtualStorageType{DeviceID: virtualStorageTypeDeviceVHDX, VendorID: virtualStorageTypeVendorMicrosoft}
-	params := createVirtualDiskParametersV1{Version: createVirtualDiskVersion1, MaximumSize: size}
+	params := createVirtualDiskParametersV2{Version: createVirtualDiskVersion2, MaximumSize: size}
 
 	var flags uintptr
 	if fixed {
@@ -71,7 +76,7 @@ func createVHDX(t *testing.T, path string, size uint64, fixed bool) {
 	ret, _, _ := procCreateVirtualDisk.Call(
 		uintptr(unsafe.Pointer(&storageType)),
 		uintptr(unsafe.Pointer(pathPtr)),
-		virtualDiskAccessCreate,
+		virtualDiskAccessNone,
 		0, // security descriptor
 		flags,
 		0, // provider specific flags
