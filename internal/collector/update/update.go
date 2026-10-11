@@ -50,6 +50,13 @@ var ConfigDefaults = Config{
 	ScrapeInterval: 6 * time.Hour,
 }
 
+// searchCriteria finds pending updates of both deployment actions. Criteria
+// without a DeploymentAction clause imply DeploymentAction='Installation' and
+// miss optional updates, such as the monthly non-security preview update.
+// OR is only allowed at the top level of a WUA criteria string.
+const searchCriteria = "IsInstalled=0 and IsHidden=0 and DeploymentAction='Installation'" +
+	" or IsInstalled=0 and IsHidden=0 and DeploymentAction='OptionalInstallation'"
+
 var (
 	ErrNoUpdates             = errors.New("pending gather update metrics")
 	ErrUpdateServiceDisabled = errors.New("windows updates service is disabled")
@@ -118,7 +125,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.pendingUpdate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Expose information for a single pending update item",
-		[]string{"id", "revision", "category", "severity", "title"},
+		[]string{"id", "revision", "category", "severity", "title", "deployment_action"},
 		nil,
 	)
 
@@ -289,7 +296,7 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 	timeStart := time.Now()
 
-	result, err := searcher.Search("IsInstalled=0 and IsHidden=0")
+	result, err := searcher.Search(searchCriteria)
 	if err != nil {
 		return nil, fmt.Errorf("search for updates: %w", err)
 	}
@@ -339,6 +346,7 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 			update.category,
 			update.severity,
 			update.title,
+			update.deploymentAction,
 		))
 
 		if update.lastPublished != (time.Time{}) {
@@ -362,12 +370,13 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 }
 
 type windowsUpdate struct {
-	identity      string
-	revision      string
-	category      string
-	severity      string
-	title         string
-	lastPublished time.Time
+	identity         string
+	revision         string
+	category         string
+	severity         string
+	title            string
+	deploymentAction string
+	lastPublished    time.Time
 }
 
 // getUpdateStatus retrieves the update status of the given item.
@@ -387,6 +396,11 @@ func (c *Collector) getUpdateStatus(item *wuapi.Update) (windowsUpdate, error) {
 	title, err := item.Title()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
+	}
+
+	deploymentAction, err := item.DeploymentAction()
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get DeploymentAction: %w", err)
 	}
 
 	identity, err := item.Identity()
@@ -421,13 +435,25 @@ func (c *Collector) getUpdateStatus(item *wuapi.Update) (windowsUpdate, error) {
 	}
 
 	return windowsUpdate{
-		identity:      updateID,
-		revision:      strconv.FormatInt(int64(revision), 10),
-		category:      categoryName,
-		severity:      severity,
-		title:         title,
-		lastPublished: lastPublishedDate,
+		identity:         updateID,
+		revision:         strconv.FormatInt(int64(revision), 10),
+		category:         categoryName,
+		severity:         severity,
+		title:            title,
+		deploymentAction: deploymentActionLabel(deploymentAction),
+		lastPublished:    lastPublishedDate,
 	}, nil
+}
+
+func deploymentActionLabel(action wuapi.DeploymentAction) string {
+	switch action {
+	case wuapi.DeploymentActionInstallation:
+		return "installation"
+	case wuapi.DeploymentActionOptionalInstallation:
+		return "optional_installation"
+	default:
+		return strconv.FormatInt(int64(action), 10)
+	}
 }
 
 func getUpdateCategory(update *wuapi.Update) (string, error) {

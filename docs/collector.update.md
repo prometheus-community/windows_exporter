@@ -27,9 +27,11 @@ Default: `6h0m0s`
 
 ## Metrics
 
+Pending updates include optional updates, such as the monthly non-security preview update. The `deployment_action` label is `installation` for regular updates and `optional_installation` for optional ones. Filter with `deployment_action="installation"` to ignore optional updates.
+
 | Name                                           | Description                                                      | Type  | Labels                                        |
 |------------------------------------------------|------------------------------------------------------------------|-------|-----------------------------------------------|
-| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `id`,`revision`,`category`,`severity`,`title` |
+| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `id`,`revision`,`category`,`severity`,`title`,`deployment_action` |
 | `windows_update_pending_published_timestamp`   | Expose last published timestamp for a single pending update item | gauge | `id`,`revision`                               |
 | `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API      | gauge |                                               |
 | `windows_update_scrape_timestamp_seconds`      | Timestamp of the last scrape                                     | gauge |                                               |
@@ -38,8 +40,9 @@ Default: `6h0m0s`
 ```
 # HELP windows_update_pending_info Expose information for a single pending update item
 # TYPE windows_update_pending_info gauge
-windows_update_pending_info{category="Definition Updates",id="a32ca1d0-ddd4-486b-b708-d941db4f1051",revision="204",severity="",title="Update for Windows Security platform - KB5007651 (Version 10.0.27840.1000)"} 1
-windows_update_pending_info{category="Definition Updates",id="b50a64de-a0bb-465b-9842-9963b6eee21e",revision="200",severity="",title="Security Intelligence Update for Microsoft Defender Antivirus - KB2267602 (Version 1.429.146.0) - Current Channel (Broad)"} 1
+windows_update_pending_info{category="Definition Updates",deployment_action="installation",id="a32ca1d0-ddd4-486b-b708-d941db4f1051",revision="204",severity="",title="Update for Windows Security platform - KB5007651 (Version 10.0.27840.1000)"} 1
+windows_update_pending_info{category="Definition Updates",deployment_action="installation",id="b50a64de-a0bb-465b-9842-9963b6eee21e",revision="200",severity="",title="Security Intelligence Update for Microsoft Defender Antivirus - KB2267602 (Version 1.429.146.0) - Current Channel (Broad)"} 1
+windows_update_pending_info{category="Updates",deployment_action="optional_installation",id="4c5a2079-dd6c-4b78-a20b-07b2d5ea2217",revision="1",severity="",title="2026-09 Preview Update (KB5124010) (26300.9550)"} 1
 # HELP windows_update_pending_published_timestamp Expose last published timestamp for a single pending update item
 # TYPE windows_update_pending_published_timestamp gauge
 windows_update_pending_published_timestamp{id="a32ca1d0-ddd4-486b-b708-d941db4f1051",revision="204"} 1.747872e+09

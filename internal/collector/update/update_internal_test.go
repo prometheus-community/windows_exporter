@@ -47,13 +47,13 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 			logger := slog.New(slog.NewTextHandler(&logs, nil))
 			c := &Collector{
 				logger:                     logger,
-				pendingUpdate:              prometheus.NewDesc("test_pending", "", []string{"id", "revision", "category", "severity", "title"}, nil),
+				pendingUpdate:              prometheus.NewDesc("test_pending", "", []string{"id", "revision", "category", "severity", "title", "deployment_action"}, nil),
 				pendingUpdateLastPublished: prometheus.NewDesc("test_published", "", []string{"id", "revision"}, nil),
 				queryDurationSeconds:       prometheus.NewDesc("test_duration", "", nil, nil),
 				lastScrapeMetric:           prometheus.NewDesc("test_timestamp", "", nil, nil),
 			}
 
-			searcher, attempted := fakeUpdateSearch(tc.countError)
+			searcher, attempted, criteria := fakeUpdateSearch(tc.countError)
 
 			metrics, err := c.fetchUpdates(logger, searcher)
 			if tc.countError {
@@ -65,10 +65,12 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 			}
 
 			require.NoError(t, err)
+			require.Equal(t, searchCriteria, *criteria)
 			require.Equal(t, []int32{0, 1, 2}, *attempted)
 			require.Len(t, metrics, 6, "two readable updates retain info and publication metrics plus scrape metrics")
 
 			ids := []string{}
+			actions := []string{}
 
 			for _, metric := range metrics {
 				if metric.Desc() != c.pendingUpdate {
@@ -79,13 +81,17 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 				require.NoError(t, metric.Write(&sample))
 
 				for _, label := range sample.GetLabel() {
-					if label.GetName() == "id" {
+					switch label.GetName() {
+					case "id":
 						ids = append(ids, label.GetValue())
+					case "deployment_action":
+						actions = append(actions, label.GetValue())
 					}
 				}
 			}
 
 			require.Equal(t, []string{"update-0", "update-2"}, ids)
+			require.Equal(t, []string{"installation", "optional_installation"}, actions)
 			require.Contains(t, logs.String(), "failed to fetch Windows Update history item")
 			require.Contains(t, logs.String(), "get collection item 1")
 		})
@@ -93,10 +99,13 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 }
 
 // fakeUpdateSearch implements only the native slots exercised by a scrape.
-// Item 1 cannot be read; both surrounding items remain available.
-func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32) {
+// Item 1 cannot be read; both surrounding items remain available. Item 0 is a
+// regular update and item 2 an optional one. The search criteria are recorded.
+func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string) {
 	release := windows.NewCallback(func(uintptr) uintptr { return 0 })
 	attempted := []int32{}
+
+	var criteria string
 
 	var selected int32
 
@@ -123,7 +132,7 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32) {
 	})
 	identity := &wuapi.UpdateIdentity{VTable: &identityMethods[0]}
 
-	var updateMethods [35]uintptr
+	var updateMethods [49]uintptr
 
 	updateMethods[2] = release
 	updateMethods[7] = windows.NewCallback(func(_ uintptr, out **uint16) uintptr {
@@ -146,6 +155,14 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32) {
 	})
 	updateMethods[34] = windows.NewCallback(func(_ uintptr, out **uint16) uintptr {
 		return fakeBSTR("Critical", out)
+	})
+	updateMethods[48] = windows.NewCallback(func(_ uintptr, out *wuapi.DeploymentAction) uintptr {
+		*out = wuapi.DeploymentActionInstallation
+		if selected == 2 {
+			*out = wuapi.DeploymentActionOptionalInstallation
+		}
+
+		return 0
 	})
 	update := &wuapi.Update{VTable: &updateMethods[0]}
 
@@ -188,13 +205,14 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32) {
 	var searcherMethods [20]uintptr
 
 	searcherMethods[2] = release
-	searcherMethods[19] = windows.NewCallback(func(_ uintptr, _ *uint16, out **wuapi.SearchResult) uintptr {
+	searcherMethods[19] = windows.NewCallback(func(_ uintptr, input *uint16, out **wuapi.SearchResult) uintptr {
+		criteria = windows.UTF16PtrToString(input)
 		*out = result
 
 		return 0
 	})
 
-	return &wuapi.UpdateSearcher{VTable: &searcherMethods[0]}, &attempted
+	return &wuapi.UpdateSearcher{VTable: &searcherMethods[0]}, &attempted, &criteria
 }
 
 func fakeBSTR(value string, out **uint16) uintptr {
