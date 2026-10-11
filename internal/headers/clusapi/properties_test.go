@@ -236,3 +236,128 @@ func BenchmarkParseProperties(b *testing.B) {
 		}
 	}
 }
+
+func encodeUTF16(units ...uint16) []byte {
+	data := make([]byte, 0, len(units)*2)
+	for _, unit := range units {
+		data = binary.LittleEndian.AppendUint16(data, unit)
+	}
+
+	return data
+}
+
+// referenceDecode is the utf16.Decode based decoding decodeString replaced.
+func referenceDecode(data []byte) string {
+	units := make([]uint16, len(data)/2)
+	for i := range units {
+		units[i] = binary.LittleEndian.Uint16(data[i*2:])
+	}
+
+	for i, unit := range units {
+		if unit == 0 {
+			units = units[:i]
+
+			break
+		}
+	}
+
+	return string(utf16.Decode(units))
+}
+
+func TestDecodeString(t *testing.T) {
+	tests := map[string][]uint16{
+		"empty":                {},
+		"ascii":                utf16.Encode([]rune("Cluster IP Address")),
+		"nul":                  append(utf16.Encode([]rune("Type")), 0, 'x'),
+		"pair":                 utf16.Encode([]rune("disk 💾")),
+		"unpaired_high":        {'a', 0xd83d, 'b'},
+		"unpaired_low":         {'a', 0xdcbe, 'b'},
+		"high_before_nul":      {'a', 0xd83d, 0, 'b'},
+		"high_at_end":          {'a', 0xd83d},
+		"two_highs_then_low":   {0xd83d, 0xd83d, 0xdcbe},
+		"replacement_char_bmp": {0xfffd},
+	}
+	for name, units := range tests {
+		t.Run(name, func(t *testing.T) {
+			data := encodeUTF16(units...)
+			if got, want := decodeString(data), referenceDecode(data); got != want {
+				t.Errorf("decodeString = %q, want %q", got, want)
+			}
+
+			if got, want := decodeUnits(units), referenceDecode(data); got != want {
+				t.Errorf("decodeUnits = %q, want %q", got, want)
+			}
+		})
+	}
+
+	if got := decodeString([]byte{'a', 0, 'b'}); got != "a" {
+		t.Errorf("odd length = %q, want %q", got, "a")
+	}
+}
+
+func FuzzDecodeString(f *testing.F) {
+	f.Add(encodeUTF16(utf16.Encode([]rune("Name 💾"))...))
+	f.Add(encodeUTF16('a', 0xd83d, 'b'))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if got, want := decodeString(data), referenceDecode(data); got != want {
+			t.Fatalf("decodeString(% x) = %q, want %q", data, got, want)
+		}
+	})
+}
+
+func appendTestProperty(data []byte, name string, values ...uint32) []byte {
+	encoded := encodeUTF16(append(utf16.Encode([]rune(name)), 0)...)
+
+	data = binary.LittleEndian.AppendUint32(data, propertyName)
+	data = binary.LittleEndian.AppendUint32(data, uint32(len(encoded)))
+
+	data = append(data, encoded...)
+	for len(data)%4 != 0 {
+		data = append(data, 0)
+	}
+
+	for _, value := range values {
+		data = binary.LittleEndian.AppendUint32(data, propertyValue|formatDWORD)
+		data = binary.LittleEndian.AppendUint32(data, 4)
+		data = binary.LittleEndian.AppendUint32(data, value)
+	}
+
+	return binary.LittleEndian.AppendUint32(data, 0)
+}
+
+// The value lists share one backing array; values of one property must not
+// leak into another.
+func TestParsePropertiesMultipleValues(t *testing.T) {
+	data := binary.LittleEndian.AppendUint32(nil, 3)
+	data = appendTestProperty(data, "First", 1, 2)
+	data = appendTestProperty(data, "Second", 3)
+	data = appendTestProperty(data, "Third", 4, 5, 6)
+
+	properties, err := ParseProperties(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, want := range map[string][]uint32{"First": {1, 2}, "Second": {3}, "Third": {4, 5, 6}} {
+		values := properties[name]
+		if len(values) != len(want) {
+			t.Fatalf("%s: got %d values, want %d", name, len(values), len(want))
+		}
+
+		for i, value := range values {
+			if got, err := value.DWORD(); err != nil || got != want[i] {
+				t.Errorf("%s[%d] = %d, %v, want %d", name, i, got, err, want[i])
+			}
+		}
+	}
+}
+
+func BenchmarkDecodeString(b *testing.B) {
+	data := encodeUTF16(utf16.Encode([]rune("Microsoft Windows Server 2022 Datacenter"))...)
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		_ = decodeString(data)
+	}
+}

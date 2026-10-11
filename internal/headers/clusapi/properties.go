@@ -19,6 +19,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 	"unicode/utf16"
 )
 
@@ -40,11 +42,21 @@ type Property struct {
 }
 
 func (p Property) DWORD() (uint32, error) {
-	if p.Format != formatDWORD || len(p.Data) != 4 {
+	value, ok := p.dword()
+	if !ok {
 		return 0, fmt.Errorf("expected DWORD, format %d, length %d", p.Format, len(p.Data))
 	}
 
-	return binary.LittleEndian.Uint32(p.Data), nil
+	return value, nil
+}
+
+// dword is DWORD without the error, for callers that skip other formats.
+func (p Property) dword() (uint32, bool) {
+	if p.Format != formatDWORD || len(p.Data) != 4 {
+		return 0, false
+	}
+
+	return binary.LittleEndian.Uint32(p.Data), true
 }
 
 // String decodes an SZ, EXPAND_SZ or EXPANDED_SZ value like WMI does: the value
@@ -61,11 +73,21 @@ func (p Property) String() (string, error) {
 // Value32 returns the bit pattern of a DWORD or LONG value. Callers decide the
 // signedness, matching the WMI type of the property they publish.
 func (p Property) Value32() (uint32, error) {
-	if (p.Format != formatDWORD && p.Format != formatLong) || len(p.Data) != 4 {
+	value, ok := p.value32()
+	if !ok {
 		return 0, fmt.Errorf("expected DWORD or LONG, format %d, length %d", p.Format, len(p.Data))
 	}
 
-	return binary.LittleEndian.Uint32(p.Data), nil
+	return value, nil
+}
+
+// value32 is Value32 without the error, for callers that skip other formats.
+func (p Property) value32() (uint32, bool) {
+	if (p.Format != formatDWORD && p.Format != formatLong) || len(p.Data) != 4 {
+		return 0, false
+	}
+
+	return binary.LittleEndian.Uint32(p.Data), true
 }
 
 // ParseProperties decodes CLUSPROP_LIST without casting untrusted bytes to native
@@ -86,6 +108,9 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 	}
 
 	properties := make(map[string][]Property, count)
+	// Nearly every property has a single value, so all value lists share
+	// one backing array instead of one allocation per property.
+	all := make([]Property, 0, count)
 
 	for range count {
 		if len(data) < 8 || binary.LittleEndian.Uint32(data) != propertyName {
@@ -99,7 +124,7 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 
 		name := decodeString(nameBytes)
 		data = rest
-		values := make([]Property, 0, 1)
+		start := len(all)
 
 		for {
 			if len(data) < 4 {
@@ -127,13 +152,15 @@ func ParseProperties(data []byte) (map[string][]Property, error) {
 				return nil, fmt.Errorf("invalid DWORD length for %q", name)
 			}
 
-			values = append(values, Property{Format: format, Data: payload})
+			all = append(all, Property{Format: format, Data: payload})
 			data = rest
 		}
 
 		// Keep the first occurrence; a repeated name does not affect the structure.
+		// The full slice expression keeps appends for later properties from
+		// writing into this list.
 		if _, exists := properties[name]; !exists {
-			properties[name] = values
+			properties[name] = all[start:len(all):len(all)]
 		}
 	}
 
@@ -165,16 +192,32 @@ func propertyPayload(data []byte) ([]byte, []byte, error) {
 
 // decodeString decodes little-endian UTF-16 bytes. A trailing odd byte is ignored.
 func decodeString(data []byte) string {
-	units := make([]uint16, len(data)/2)
-	for i := range units {
-		units[i] = binary.LittleEndian.Uint16(data[i*2:])
+	// Names and type strings are short; converting them on the stack leaves
+	// the result as the only allocation.
+	var stack [128]uint16
+
+	units := stack[:0]
+	if len(data)/2 > len(stack) {
+		units = make([]uint16, 0, len(data)/2)
+	}
+
+	// Stop at the first NUL: fixed-size fields such as MAX_PATH names would
+	// otherwise always outgrow the stack buffer.
+	for i := 0; i+1 < len(data); i += 2 {
+		unit := binary.LittleEndian.Uint16(data[i:])
+		if unit == 0 {
+			break
+		}
+
+		units = append(units, unit)
 	}
 
 	return decodeUnits(units)
 }
 
 // decodeUnits ends the string at the first NUL and replaces invalid UTF-16 with
-// U+FFFD, matching the strings WMI returned for the same names.
+// U+FFFD, matching the strings WMI returned for the same names. It decodes like
+// utf16.Decode, but writes straight into the result instead of a []rune.
 func decodeUnits(units []uint16) string {
 	for i, unit := range units {
 		if unit == 0 {
@@ -184,5 +227,28 @@ func decodeUnits(units []uint16) string {
 		}
 	}
 
-	return string(utf16.Decode(units))
+	var builder strings.Builder
+
+	builder.Grow(len(units))
+
+	for i := 0; i < len(units); i++ {
+		r := rune(units[i])
+
+		if utf16.IsSurrogate(r) {
+			decoded := unicode.ReplacementChar
+			if i+1 < len(units) {
+				decoded = utf16.DecodeRune(r, rune(units[i+1]))
+			}
+
+			if decoded != unicode.ReplacementChar {
+				i++
+			}
+
+			r = decoded
+		}
+
+		builder.WriteRune(r)
+	}
+
+	return builder.String()
 }

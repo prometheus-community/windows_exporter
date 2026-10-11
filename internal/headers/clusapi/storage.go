@@ -95,7 +95,7 @@ func (c *Cluster) readResourcePartitions(name objectName, deadline time.Time) (_
 		}
 	}()
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
+	data, err := c.scratch.resourceControl(handle, resourceGetClassInfo, 8, deadline)
 	if err != nil {
 		return nil, fmt.Errorf("class information: %w", err)
 	}
@@ -104,7 +104,7 @@ func (c *Cluster) readResourcePartitions(name objectName, deadline time.Time) (_
 		return nil, nil
 	}
 
-	data, err = resourceBuffer(handle, resourceStorageGetDiskInfoEx, propertyListBufferSize, deadline)
+	data, err = c.scratch.resourceControl(handle, resourceStorageGetDiskInfoEx, propertyListBufferSize, deadline)
 	if errors.Is(err, windows.ERROR_INVALID_FUNCTION) || errors.Is(err, windows.ERROR_NOT_SUPPORTED) {
 		// Storage class resources such as storage pools have no disk layout.
 		return nil, nil
