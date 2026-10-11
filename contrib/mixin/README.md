@@ -258,7 +258,24 @@ queries, IDs, variables, annotations, transformations, and tab/row layout.
 `mise run check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
 any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
-`enableFleetTab` and `enableOverviewTab`.
+`enableFleetTab`, `enableOverviewTab` and the dashboard metadata below.
+
+### Metadata
+
+`dashboardUID`, `dashboardTitle`, `dashboardDescription` and `dashboardTags`
+set the dashboard's UID (`metadata.name`), title, description and tags. Give a
+customized dashboard its own UID so it can be imported next to the sample
+dashboard instead of replacing it:
+
+```jsonnet
+(import 'mixin.libsonnet') {
+  _config+:: {
+    dashboardUID: 'windows-compact',
+    dashboardTitle: 'Windows (compact)',
+    dashboardTags+: ['compact'],
+  },
+}.grafanaDashboards['windows-exporter.json']
+```
 
 ### Collectors
 

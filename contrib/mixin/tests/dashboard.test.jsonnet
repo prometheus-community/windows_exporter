@@ -44,6 +44,17 @@ local expect(name, want) =
   assert results[name] == want : name + ': got ' + std.manifestJson(results[name]);
   true;
 
+local metadata = render(function(collectors) collectors, {
+  dashboardUID: 'custom-uid',
+  dashboardTitle: 'Custom title',
+  dashboardDescription: 'Custom description',
+  dashboardTags+: ['custom'],
+});
+assert metadata.metadata.name == 'custom-uid' : 'metadata: got UID ' + metadata.metadata.name;
+assert metadata.spec.title == 'Custom title' : 'metadata: got title ' + metadata.spec.title;
+assert metadata.spec.description == 'Custom description' : 'metadata: got description ' + metadata.spec.description;
+assert metadata.spec.tags == ['prometheus', 'windows', 'windows_exporter', 'custom'] : 'metadata: got tags ' + std.manifestJson(metadata.spec.tags);
+
 assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
 assert expect('defaults', {
   CPU: ['Summary', 'Utilization', 'Scheduling', 'System calls and frequency'],

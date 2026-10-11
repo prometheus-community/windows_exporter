@@ -1,9 +1,10 @@
 local b = import 'builders.libsonnet';
 local dashboard = b.dashboard;
 
-// config.collectors selects the collectors the dashboard renders, and
+// config.collectors selects the collectors the dashboard renders,
 // config.enableFleetTab and config.enableOverviewTab the tabs across
-// collectors, see config.libsonnet.
+// collectors, and config.dashboard* its UID, title, description and tags, see
+// config.libsonnet.
 function(config)
   local known = std.objectFields((import '../config.libsonnet')._config.collectors);
   local unknown = std.setDiff(std.objectFields(config.collectors), known);
@@ -39,9 +40,9 @@ function(config)
   local panelNames = std.flattenArrays([std.objectFields(tab.elements) for tab in tabs]);
   assert std.length(panelNames) == std.length(std.set(panelNames)) : 'Panel IDs must be unique across tabs';
 
-  dashboard.new('Kdaassddw', 'Windows Exporter')
+  dashboard.new(config.dashboardUID, config.dashboardTitle)
   + dashboard.spec.withCursorSync('Crosshair')
-  + dashboard.spec.withDescription('Fleet overview and per-host details for Windows hosts monitored by windows_exporter.')
+  + dashboard.spec.withDescription(config.dashboardDescription)
   + dashboard.spec.withEditable(true)
   + dashboard.spec.withLinks([
     {
@@ -59,11 +60,7 @@ function(config)
   ])
   + dashboard.spec.withLiveNow(false)
   + dashboard.spec.withPreload(false)
-  + dashboard.spec.withTags([
-    'prometheus',
-    'windows',
-    'windows_exporter',
-  ])
+  + dashboard.spec.withTags(config.dashboardTags)
   + dashboard.spec.withTimeSettings({
     autoRefresh: '1m',
     autoRefreshIntervals: [
