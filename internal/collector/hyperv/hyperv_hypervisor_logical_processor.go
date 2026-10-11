@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -80,7 +81,7 @@ func (c *Collector) buildHypervisorLogicalProcessor() error {
 	return nil
 }
 
-func (c *Collector) collectHypervisorLogicalProcessor(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHypervisorLogicalProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorHypervisorLogicalProcessor.Collect(&c.perfDataObjectHypervisorLogicalProcessor)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Logical Processor metrics: %w", err)
@@ -95,35 +96,35 @@ func (c *Collector) collectHypervisorLogicalProcessor(ch chan<- prometheus.Metri
 
 		coreID := parts[2]
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorLogicalProcessorGuestRunTimePercent,
 			coreID, "guest",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorLogicalProcessorHypervisorRunTimePercent,
 			coreID, "hypervisor",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorLogicalProcessorIdleRunTimePercent,
 			coreID, "idle",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorLogicalProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorLogicalProcessorTotalRunTimePercent,
 			coreID,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorLogicalProcessorContextSwitches,
 			prometheus.CounterValue,
 			data.HypervisorLogicalProcessorContextSwitches,

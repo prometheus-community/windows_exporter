@@ -26,6 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/cfgmgr32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -56,6 +57,12 @@ type Collector struct {
 	// discoverGPUDevices enumerates the GPU adapters. If nil, gdi32.GetGPUDevices is used.
 	// It is replaced in tests to make the discovery deterministic.
 	discoverGPUDevices func() ([]gdi32.GPUDevice, error)
+
+	// labels keeps the label pairs of the series of the last scrape, and
+	// instances the parsed counter instance names, so neither is built again
+	// while the GPU process or engine stays.
+	labels    labelcache.Cache
+	instances instanceCache
 
 	// GPU Engine
 	gpuEnginePerfDataCollector *pdh.Collector[gpuEnginePerfDataCounterValues]
@@ -140,6 +147,8 @@ func (c *Collector) Close() error {
 	c.gpuLocalAdapterMemoryPerfDataCollector.Close()
 	c.gpuNonLocalAdapterMemoryPerfDataCollector.Close()
 	c.gpuProcessMemoryPerfDataCollector.Close()
+	c.labels.Reset()
+	c.instances.reset()
 
 	return nil
 }
@@ -400,23 +409,29 @@ func (c *Collector) getGPUDevice(luid string) (gpuDevice, bool) {
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
 
-	if err := c.collectGpuEngineMetrics(ch); err != nil {
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
+	instances := c.instances.begin()
+	defer instances.commit()
+
+	if err := c.collectGpuEngineMetrics(ch, scrape, instances); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := c.collectGpuAdapterMemoryMetrics(ch); err != nil {
+	if err := c.collectGpuAdapterMemoryMetrics(ch, scrape, instances); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := c.collectGpuLocalAdapterMemoryMetrics(ch); err != nil {
+	if err := c.collectGpuLocalAdapterMemoryMetrics(ch, scrape, instances); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := c.collectGpuNonLocalAdapterMemoryMetrics(ch); err != nil {
+	if err := c.collectGpuNonLocalAdapterMemoryMetrics(ch, scrape, instances); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := c.collectGpuProcessMemoryMetrics(ch); err != nil {
+	if err := c.collectGpuProcessMemoryMetrics(ch, scrape, instances); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -471,7 +486,7 @@ func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, instances *instanceScrape) error {
 	// Collect the GPU Engine perf data.
 	if err := c.gpuEnginePerfDataCollector.Collect(&c.gpuEnginePerfDataObject); err != nil {
 		return fmt.Errorf("failed to collect GPU Engine perf data: %w", err)
@@ -479,14 +494,14 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
 
 	// Iterate over the GPU Engine perf data and aggregate the values.
 	for _, data := range c.gpuEnginePerfDataObject {
-		instance := parseGPUCounterInstanceString(data.Name)
+		instance := instances.parse(data.Name)
 
 		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuEngineRunningTime,
 			prometheus.CounterValue,
 			data.RunningTime/10_000_000,
@@ -497,35 +512,35 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, instances *instanceScrape) error {
 	// Collect the GPU Adapter Memory perf data.
 	if err := c.gpuAdapterMemoryPerfDataCollector.Collect(&c.gpuAdapterMemoryPerfDataObject); err != nil {
 		return fmt.Errorf("failed to collect GPU Adapter Memory perf data: %w", err)
 	}
 
 	for _, data := range c.gpuAdapterMemoryPerfDataObject {
-		instance := parseGPUCounterInstanceString(data.Name)
+		instance := instances.parse(data.Name)
 
 		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuAdapterMemoryDedicatedUsage,
 			prometheus.GaugeValue,
 			data.DedicatedUsage,
 			instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuAdapterMemorySharedUsage,
 			prometheus.GaugeValue,
 			data.SharedUsage,
 			instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuAdapterMemoryTotalCommitted,
 			prometheus.GaugeValue,
 			data.TotalCommitted,
@@ -536,21 +551,21 @@ func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) 
 	return nil
 }
 
-func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, instances *instanceScrape) error {
 	// Collect the GPU Local Adapter Memory perf data.
 	if err := c.gpuLocalAdapterMemoryPerfDataCollector.Collect(&c.gpuLocalAdapterMemoryPerfDataObject); err != nil {
 		return fmt.Errorf("failed to collect GPU Local Adapter Memory perf data: %w", err)
 	}
 
 	for _, data := range c.gpuLocalAdapterMemoryPerfDataObject {
-		instance := parseGPUCounterInstanceString(data.Name)
+		instance := instances.parse(data.Name)
 
 		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
 			data.LocalUsage,
@@ -561,21 +576,21 @@ func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Met
 	return nil
 }
 
-func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, instances *instanceScrape) error {
 	// Collect the GPU Non Local Adapter Memory perf data.
 	if err := c.gpuNonLocalAdapterMemoryPerfDataCollector.Collect(&c.gpuNonLocalAdapterMemoryPerfDataObject); err != nil {
 		return fmt.Errorf("failed to collect GPU Non Local Adapter Memory perf data: %w", err)
 	}
 
 	for _, data := range c.gpuNonLocalAdapterMemoryPerfDataObject {
-		instance := parseGPUCounterInstanceString(data.Name)
+		instance := instances.parse(data.Name)
 
 		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuNonLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
 			data.NonLocalUsage,
@@ -586,49 +601,49 @@ func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.
 	return nil
 }
 
-func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, instances *instanceScrape) error {
 	// Collect the GPU Process Memory perf data.
 	if err := c.gpuProcessMemoryPerfDataCollector.Collect(&c.gpuProcessMemoryPerfDataObject); err != nil {
 		return fmt.Errorf("failed to collect GPU Process Memory perf data: %w", err)
 	}
 
 	for _, data := range c.gpuProcessMemoryPerfDataObject {
-		instance := parseGPUCounterInstanceString(data.Name)
+		instance := instances.parse(data.Name)
 
 		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuProcessMemoryDedicatedUsage,
 			prometheus.GaugeValue,
 			data.DedicatedUsage,
 			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuProcessMemoryLocalUsage,
 			prometheus.GaugeValue,
 			data.LocalUsage,
 			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuProcessMemoryNonLocalUsage,
 			prometheus.GaugeValue,
 			data.NonLocalUsage,
 			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuProcessMemorySharedUsage,
 			prometheus.GaugeValue,
 			data.SharedUsage,
 			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.gpuProcessMemoryTotalCommitted,
 			prometheus.GaugeValue,
 			data.TotalCommitted,

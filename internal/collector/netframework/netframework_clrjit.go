@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -70,7 +71,7 @@ type perfDataClrJIT struct {
 	TotalNumberofILBytesJitted float64 `perfdata:"Total # of IL Bytes Jitted"`
 }
 
-func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrJIT
 	if err := c.perfClrJIT.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Jit: %w", err)
@@ -81,28 +82,28 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, _ time.Duration) 
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfMethodsJitted,
 			prometheus.CounterValue,
 			float64(process.NumberofMethodsJitted),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeInJit,
 			prometheus.GaugeValue,
 			float64(process.PercentTimeinJit)/c.perfFrequency,
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.standardJitFailures,
 			prometheus.GaugeValue,
 			float64(process.StandardJitFailures),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalNumberOfILBytesJitted,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofILBytesJitted),

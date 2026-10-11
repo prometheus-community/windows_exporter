@@ -28,6 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
@@ -73,6 +74,10 @@ const (
 
 // A Collector collects .NET Framework performance counters.
 type Collector struct {
+	// labels keeps the label pairs of the series of the last scrape. The
+	// counters change on every scrape, but their process labels stay the
+	// same while the process runs.
+	labels                 labelcache.Cache
 	config                 Config
 	logger                 *slog.Logger
 	perfFrequency          float64
@@ -86,7 +91,7 @@ type Collector struct {
 	perfClrRemoting        perfCollector[perfDataClrRemoting]
 	perfClrSecurity        perfCollector[perfDataClrSecurity]
 
-	collectorFns []func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
+	collectorFns []func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, maxScrapeDuration time.Duration) error
 
 	// clrexceptions
 	numberOfExceptionsThrown *prometheus.Desc
@@ -203,6 +208,7 @@ func (c *Collector) Close() error {
 
 	c.closeFns = nil
 	c.collectorFns = nil
+	c.labels.Reset()
 
 	return nil
 }
@@ -224,11 +230,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.perfFrequency = float64(frequency)
 	}
 
-	c.collectorFns = make([]func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error, 0, len(c.config.CollectorsEnabled))
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, maxScrapeDuration time.Duration) error, 0, len(c.config.CollectorsEnabled))
 
 	subCollectors := map[string]struct {
 		build   func() error
-		collect func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
+		collect func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, maxScrapeDuration time.Duration) error
 		close   func()
 	}{
 		collectorClrExceptions: {
@@ -334,11 +340,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	var g recovery.Group
 
 	for _, fn := range c.collectorFns {
 		g.Go(func() error {
-			return fn(ch, maxScrapeDuration)
+			return fn(ch, scrape, maxScrapeDuration)
 		})
 	}
 

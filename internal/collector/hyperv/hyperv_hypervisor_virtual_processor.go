@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -97,7 +98,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 	return nil
 }
 
-func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorHypervisorVirtualProcessor.Collect(&c.perfDataObjectHypervisorVirtualProcessor)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Virtual Processor metrics: %w", err)
@@ -118,63 +119,63 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		vmName := parts[0]
 		coreID := coreParts[2]
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorHypervisorRunTimePercent,
 			vmName, coreID, "hypervisor",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorGuestRunTimePercent,
 			vmName, coreID, "guest",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorRemoteRunTimePercent,
 			vmName, coreID, "remote",
 		)
 		// Same metric with new name for better clarity, old one is kept for backward compatibility
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorHypervisorRunTimePercent,
 			vmName, coreID, "hypervisor",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorGuestRunTimePercent,
 			vmName, coreID, "guest",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorRemoteRunTimePercent,
 			vmName, coreID, "remote",
 		)
 		// end same metric
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorTotalRunTimePercent,
 			vmName, coreID,
 		)
 		// Same metric with new name for better clarity, old one is kept for backward compatibility
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorTotalRunTimePercent,
 			vmName, coreID,
 		)
 		// end same metric
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorContextSwitches,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorCPUWaitTimePerDispatch,

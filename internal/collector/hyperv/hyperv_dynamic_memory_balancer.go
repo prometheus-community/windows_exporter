@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -85,14 +86,14 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 	return nil
 }
 
-func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorDynamicMemoryBalancer.Collect(&c.perfDataObjectDynamicMemoryBalancer)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory Balancer metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectDynamicMemoryBalancer {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAvailableMemory,
 			prometheus.GaugeValue,
 			utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemory),
@@ -100,7 +101,7 @@ func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) er
 		)
 
 		if osversion.Build() >= osversion.LTSC2019 {
-			ch <- prometheus.MustNewConstMetric(
+			ch <- scrape.MustNewConstMetric(
 				c.vmDynamicMemoryBalancerAvailableMemoryForBalancing,
 				prometheus.GaugeValue,
 				utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemoryForBalancing),
@@ -108,14 +109,14 @@ func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) er
 			)
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAveragePressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmDynamicMemoryBalancerAveragePressure),
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerSystemCurrentPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmDynamicMemoryBalancerSystemCurrentPressure),

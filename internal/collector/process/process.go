@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -74,6 +75,10 @@ type Collector struct {
 
 	snapshot  snapshotBuffer
 	processes []processSnapshot
+	// labels keeps the label pairs of the series of the last scrape. Process
+	// values change on every scrape, but their labels stay the same while
+	// the process runs.
+	labels labelcache.Cache
 	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
 	infoCache map[uint32]processInfo
 
@@ -176,6 +181,7 @@ func (c *Collector) Close() error {
 	c.snapshot = snapshotBuffer{}
 	c.processes = nil
 	c.infoCache = nil
+	c.labels.Reset()
 
 	// The session belongs to the caller of Build.
 	c.miSession = nil
@@ -374,13 +380,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 	infos := c.resolveProcessInfo(processes)
 
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	for i, process := range processes {
 		name := process.name
 		if appPoolName := appPools[process.pid]; appPoolName != "" {
 			name = name + "_" + appPoolName
 		}
 
-		c.collectProcess(ch, name, process, &infos[i])
+		c.collectProcess(ch, scrape, name, process, &infos[i])
 	}
 
 	return err
@@ -463,10 +472,10 @@ func resolveAppPools(
 	return appPools, nil
 }
 
-func (c *Collector) collectProcess(ch chan<- prometheus.Metric, name string, process *processSnapshot, info *processInfo) {
+func (c *Collector) collectProcess(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, name string, process *processSnapshot, info *processInfo) {
 	pid := strconv.FormatUint(uint64(process.pid), 10)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.info,
 		prometheus.GaugeValue,
 		1.0,
@@ -474,147 +483,147 @@ func (c *Collector) collectProcess(ch chan<- prometheus.Metric, name string, pro
 	)
 
 	// Perflib reports whole seconds for the Elapsed Time counter of the Process counter set.
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.startTime,
 		prometheus.GaugeValue,
 		float64((process.createTime-windowsEpoch)/ticksPerSecond),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.handleCount,
 		prometheus.GaugeValue,
 		float64(process.handleCount),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
 		float64(process.kernelTime)*secondsPerTick,
 		name, pid, "privileged",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
 		float64(process.userTime)*secondsPerTick,
 		name, pid, "user",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioBytesTotal,
 		prometheus.CounterValue,
 		float64(process.otherTransferCount),
 		name, pid, "other",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioOperationsTotal,
 		prometheus.CounterValue,
 		float64(process.otherOperationCount),
 		name, pid, "other",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioBytesTotal,
 		prometheus.CounterValue,
 		float64(process.readTransferCount),
 		name, pid, "read",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioOperationsTotal,
 		prometheus.CounterValue,
 		float64(process.readOperationCount),
 		name, pid, "read",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioBytesTotal,
 		prometheus.CounterValue,
 		float64(process.writeTransferCount),
 		name, pid, "write",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.ioOperationsTotal,
 		prometheus.CounterValue,
 		float64(process.writeOperationCount),
 		name, pid, "write",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.pageFaultsTotal,
 		prometheus.CounterValue,
 		float64(process.pageFaultCount),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.pageFileBytes,
 		prometheus.GaugeValue,
 		float64(process.pageFileUsage),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.poolBytes,
 		prometheus.GaugeValue,
 		float64(process.nonPagedPoolUsage),
 		name, pid, "nonpaged",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.poolBytes,
 		prometheus.GaugeValue,
 		float64(process.pagedPoolUsage),
 		name, pid, "paged",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.priorityBase,
 		prometheus.GaugeValue,
 		float64(process.basePriority),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.privateBytes,
 		prometheus.GaugeValue,
 		float64(process.privatePageCount),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.threadCount,
 		prometheus.GaugeValue,
 		float64(process.threadCount),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.virtualBytes,
 		prometheus.GaugeValue,
 		float64(process.virtualSize),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.workingSetPrivate,
 		prometheus.GaugeValue,
 		float64(process.workingSetPrivate),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.workingSetPeak,
 		prometheus.GaugeValue,
 		float64(process.workingSetPeak),
 		name, pid,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.workingSet,
 		prometheus.GaugeValue,
 		float64(process.workingSetSize),
