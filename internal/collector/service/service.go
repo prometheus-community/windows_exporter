@@ -101,12 +101,6 @@ type serviceValues struct {
 	processStartTime uint64
 }
 
-// lockedScrape serializes the access of the collect workers to a scrape of the metric cache.
-type lockedScrape struct {
-	mu     sync.Mutex
-	scrape metriccache.Scrape[string, serviceValues]
-}
-
 // serviceEntry is a copy of an [windows.ENUM_SERVICE_STATUS_PROCESS], which
 // does not point into the buffer of queryAllServices.
 type serviceEntry struct {
@@ -298,7 +292,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
-	scrape := &lockedScrape{scrape: c.metricCache.Begin()}
+	scrape := c.metricCache.Begin()
 
 	servicesCh := make(chan serviceEntry, len(services))
 
@@ -324,12 +318,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	err = g.Wait()
 
 	// Services that were not collected in this scrape are dropped from the cache.
-	scrape.scrape.Commit()
+	scrape.Commit()
 
 	return err
 }
 
-func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *lockedScrape, service serviceEntry) {
+func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *metriccache.Scrape[string, serviceValues], service serviceEntry) {
 	if c.config.ServiceExclude.MatchString(service.name) || !c.config.ServiceInclude.MatchString(service.name) {
 		return
 	}
@@ -342,7 +336,7 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *lockedScr
 	}
 }
 
-func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *lockedScrape, service serviceEntry) error {
+func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *metriccache.Scrape[string, serviceValues], service serviceEntry) error {
 	serviceName := service.name
 
 	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
@@ -429,17 +423,9 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *lockedSc
 		values.processStartTime = c.processStartTime(serviceName, values.processID)
 	}
 
-	scrape.mu.Lock()
-	metrics, ok := scrape.scrape.Load(serviceName, values)
-	scrape.mu.Unlock()
-
-	if !ok {
-		metrics = c.serviceMetrics(serviceName, values)
-
-		scrape.mu.Lock()
-		scrape.scrape.Store(serviceName, values, metrics)
-		scrape.mu.Unlock()
-	}
+	metrics := scrape.Get(serviceName, values, func() []prometheus.Metric {
+		return c.serviceMetrics(serviceName, values)
+	})
 
 	for _, metric := range metrics {
 		ch <- metric

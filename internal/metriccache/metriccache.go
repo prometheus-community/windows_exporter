@@ -47,22 +47,26 @@ type entry[V comparable] struct {
 	metrics []prometheus.Metric
 }
 
-// Scrape collects the entries of one scrape. It must not be shared between
-// goroutines.
+// Scrape collects the entries of one scrape. Its methods may be called by the
+// concurrent workers of one scrape.
 type Scrape[K, V comparable] struct {
 	cache  *Cache[K, V]
 	resets uint64
-	prev   map[K]entry[V]
-	next   map[K]entry[V]
+	// prev is the last committed generation. It is never modified, so it is
+	// read without holding mu.
+	prev map[K]entry[V]
+
+	mu   sync.Mutex
+	next map[K]entry[V]
 }
 
 // Begin starts a scrape based on the last committed generation.
-func (c *Cache[K, V]) Begin() Scrape[K, V] {
+func (c *Cache[K, V]) Begin() *Scrape[K, V] {
 	c.mu.Lock()
 	prev, resets := c.entries, c.resets
 	c.mu.Unlock()
 
-	return Scrape[K, V]{
+	return &Scrape[K, V]{
 		cache:  c,
 		resets: resets,
 		prev:   prev,
@@ -88,7 +92,9 @@ func (s *Scrape[K, V]) Load(key K, value V) ([]prometheus.Metric, bool) {
 		return nil, false
 	}
 
+	s.mu.Lock()
 	s.next[key] = e
+	s.mu.Unlock()
 
 	return e.metrics, true
 }
@@ -96,7 +102,23 @@ func (s *Scrape[K, V]) Load(key K, value V) ([]prometheus.Metric, bool) {
 // Store keeps metrics built from value for key. The caller must not modify
 // metrics afterwards.
 func (s *Scrape[K, V]) Store(key K, value V, metrics []prometheus.Metric) {
+	s.mu.Lock()
 	s.next[key] = entry[V]{value: value, metrics: metrics}
+	s.mu.Unlock()
+}
+
+// Get returns the metrics of the last scrape for key if they were built from
+// an equal value. Otherwise it calls build and stores its result. The caller
+// must not modify the returned slice.
+func (s *Scrape[K, V]) Get(key K, value V, build func() []prometheus.Metric) []prometheus.Metric {
+	if metrics, ok := s.Load(key, value); ok {
+		return metrics
+	}
+
+	metrics := build()
+	s.Store(key, value, metrics)
+
+	return metrics
 }
 
 // Commit replaces the cached entries with those loaded or stored in this
@@ -104,9 +126,13 @@ func (s *Scrape[K, V]) Store(key K, value V, metrics []prometheus.Metric) {
 // was reset after the scrape began, for example by a Close or Build that ran
 // while a timed-out scrape was still collecting.
 func (s *Scrape[K, V]) Commit() {
+	s.mu.Lock()
+	next := s.next
+	s.mu.Unlock()
+
 	s.cache.mu.Lock()
 	if s.cache.resets == s.resets {
-		s.cache.entries = s.next
+		s.cache.entries = next
 	}
 	s.cache.mu.Unlock()
 }

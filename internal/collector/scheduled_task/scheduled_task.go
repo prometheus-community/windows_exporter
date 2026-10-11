@@ -258,11 +258,9 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 			missedRunsCount: task.MissedRunsCount,
 		}
 
-		metrics, ok := scrape.Load(task.Path, values)
-		if !ok {
-			metrics = c.taskMetrics(task)
-			scrape.Store(task.Path, values, metrics)
-		}
+		metrics := scrape.Get(task.Path, values, func() []prometheus.Metric {
+			return c.taskMetrics(task)
+		})
 
 		for _, metric := range metrics {
 			ch <- metric
