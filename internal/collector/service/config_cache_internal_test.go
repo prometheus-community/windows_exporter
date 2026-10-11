@@ -91,7 +91,7 @@ func waitForCheck(t *testing.T, cache *serviceConfigCache) int {
 	var dropped int
 
 	require.Eventually(t, func() bool {
-		n, err := cache.refresh()
+		n, _, err := cache.refresh()
 		if !assert.NoError(t, err) {
 			return true
 		}
@@ -116,7 +116,7 @@ func TestConfigCacheKeepsEntriesWithoutNotification(t *testing.T) {
 
 	cache, _ := newTestConfigCache(t)
 
-	dropped, err := cache.refresh()
+	dropped, _, err := cache.refresh()
 	require.NoError(t, err)
 	assert.Zero(t, dropped)
 	assert.True(t, cached(cache, "svcA"))
@@ -169,7 +169,7 @@ func TestConfigCacheKeepsServiceOnDeeperWrite(t *testing.T) {
 	waitForCheck(t, cache)
 	time.Sleep(100 * time.Millisecond)
 
-	_, err = cache.refresh()
+	_, _, err = cache.refresh()
 	require.NoError(t, err)
 
 	lastWrite, err := cache.lastWrite("svcA")
@@ -229,8 +229,9 @@ func TestConfigCacheExpires(t *testing.T) {
 	cache.expiresAt = time.Now().Add(-time.Second)
 	cache.mu.Unlock()
 
-	dropped, err := cache.refresh()
+	dropped, expired, err := cache.refresh()
 	require.NoError(t, err)
+	assert.True(t, expired)
 	assert.Equal(t, 2, dropped)
 	assert.False(t, cached(cache, "svcA"))
 	assert.False(t, cached(cache, "svcB"))
@@ -249,7 +250,7 @@ func TestConfigCacheAfterClose(t *testing.T) {
 	cache.put("svcA", generation, cachedServiceConfig{available: true})
 	assert.False(t, cached(cache, "svcA"))
 
-	dropped, err := cache.refresh()
+	dropped, _, err := cache.refresh()
 	require.NoError(t, err)
 	assert.Zero(t, dropped)
 	require.NoError(t, cache.close())

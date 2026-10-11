@@ -20,6 +20,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -42,7 +43,14 @@ const (
 	// configCacheMaxAge bounds how long a cached configuration is used, in case
 	// a change notification is missed.
 	configCacheMaxAge = 10 * time.Minute
+
+	// configCacheMinKeyAge is how long a service key must be unchanged before its
+	// configuration is cached. Registry write times have a resolution of one
+	// clock tick, so a second write in the same tick would not change it.
+	configCacheMinKeyAge = time.Second
 )
+
+var errConfigCacheClosed = errors.New("service configuration cache is closed")
 
 // cachedServiceConfig is the result of queryServiceConfig.
 type cachedServiceConfig struct {
@@ -61,8 +69,9 @@ type cachedServiceConfig struct {
 // write below it, and drivers and services write to deeper subkeys (Parameters,
 // Enum, State, ...) every few seconds. So a notification only triggers a check
 // of the last write time of each cached service key, which changes only when
-// the values of the key itself change. Only services whose key changed are
-// queried again. The state and process of a service are never cached.
+// the values of the key itself change or a direct subkey is created or deleted.
+// Only services whose key changed are queried again. The state and process of a
+// service are never cached.
 type serviceConfigCache struct {
 	mu sync.Mutex
 
@@ -122,6 +131,19 @@ func (cache *serviceConfigCache) armLocked() error {
 
 // lastWrite returns the last write time of the registry key of a service.
 func (cache *serviceConfigCache) lastWrite(name string) (time.Time, error) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	return cache.lastWriteLocked(name)
+}
+
+// lastWriteLocked is lastWrite for callers that hold the lock, which keeps
+// close from closing the services key while it is in use.
+func (cache *serviceConfigCache) lastWriteLocked(name string) (time.Time, error) {
+	if cache.key == 0 {
+		return time.Time{}, errConfigCacheClosed
+	}
+
 	key, err := registry.OpenKey(cache.key, name, registry.QUERY_VALUE)
 	if err != nil {
 		return time.Time{}, err
@@ -139,14 +161,14 @@ func (cache *serviceConfigCache) lastWrite(name string) (time.Time, error) {
 
 // refresh drops the cached configurations of services whose registry key changed
 // since they were queried, or all of them if the cache expired. It returns the
-// number of dropped configurations. If the watch can't be armed again, the cache
-// is disabled.
-func (cache *serviceConfigCache) refresh() (int, error) {
+// number of dropped configurations and whether the cache expired. If the watch
+// can't be armed again, the cache is disabled.
+func (cache *serviceConfigCache) refresh() (int, bool, error) {
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 
 	if cache.entries == nil {
-		return 0, nil
+		return 0, false, nil
 	}
 
 	if !time.Now().Before(cache.expiresAt) {
@@ -156,25 +178,25 @@ func (cache *serviceConfigCache) refresh() (int, error) {
 		cache.generation++
 		cache.expiresAt = time.Now().Add(configCacheMaxAge)
 
-		return dropped, nil
+		return dropped, true, nil
 	}
 
 	event, err := windows.WaitForSingleObject(cache.changed, 0)
 	if err != nil {
 		cache.entries = nil
 
-		return 0, fmt.Errorf("failed to check registry key for changes: %w", err)
+		return 0, false, fmt.Errorf("failed to check registry key for changes: %w", err)
 	}
 
 	if event != windows.WAIT_OBJECT_0 {
-		return 0, nil
+		return 0, false, nil
 	}
 
 	// Arm before checking the keys, so that a change from now on is not missed.
 	if err := cache.armLocked(); err != nil {
 		cache.entries = nil
 
-		return 0, err
+		return 0, false, err
 	}
 
 	cache.generation++
@@ -183,7 +205,7 @@ func (cache *serviceConfigCache) refresh() (int, error) {
 
 	for name, entry := range cache.entries {
 		// A failure, for example because the service was deleted, also drops the entry.
-		lastWrite, err := cache.lastWrite(name)
+		lastWrite, err := cache.lastWriteLocked(name)
 		if err == nil && lastWrite.Equal(entry.lastWrite) {
 			continue
 		}
@@ -193,7 +215,7 @@ func (cache *serviceConfigCache) refresh() (int, error) {
 		dropped++
 	}
 
-	return dropped, nil
+	return dropped, false, nil
 }
 
 // get returns the cached configuration of a service and the current generation.
@@ -277,7 +299,18 @@ func (c *Collector) getCachedServiceConfig(serviceName string) (mgr.Config, bool
 		return mgr.Config{}, false, err
 	}
 
-	if lastWriteErr == nil {
+	switch {
+	case lastWriteErr != nil:
+		c.logger.Debug("Failed to read the last write time of the service registry key. The service configuration is not cached",
+			slog.String("service", serviceName),
+			slog.Any("err", lastWriteErr),
+		)
+	case !available:
+		// An unavailable configuration, for example a display name from a missing
+		// MUI file, can become available without a change to the service key.
+	case time.Since(lastWrite) < configCacheMinKeyAge:
+		// Cached on a later scrape, once a second write in the same tick is ruled out.
+	default:
 		c.configCache.put(serviceName, generation, cachedServiceConfig{
 			config:    config,
 			available: available,

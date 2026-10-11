@@ -309,11 +309,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
-	if dropped, err := c.configCache.refresh(); err != nil {
+	switch dropped, expired, err := c.configCache.refresh(); {
+	case err != nil:
 		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
 			slog.Any("err", err),
 		)
-	} else if dropped > 0 {
+	case expired:
+		c.logger.Debug("Service configuration cache expired",
+			slog.Int("count", dropped),
+		)
+	case dropped > 0:
 		c.logger.Debug("Dropped changed service configurations from the cache",
 			slog.Int("count", dropped),
 		)

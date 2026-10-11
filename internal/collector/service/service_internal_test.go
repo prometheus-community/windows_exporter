@@ -35,7 +35,7 @@ import (
 )
 
 type serviceMetricCollector struct {
-	t         *testing.T
+	t         assert.TestingT
 	collector *Collector
 }
 
@@ -48,15 +48,21 @@ func (c serviceMetricCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 // serviceMetrics scrapes the collector and returns the value of each series of
-// the service as "<metric>{<label values>}".
-func serviceMetrics(t *testing.T, c *Collector, name string) map[string]float64 {
-	t.Helper()
-
+// the service as "<metric>{<label values>}". It only reports failures to t, so
+// that it can be retried inside EventuallyWithT.
+func serviceMetrics(t assert.TestingT, c *Collector, name string) map[string]float64 {
 	registry := prometheus.NewPedanticRegistry()
-	require.NoError(t, registry.Register(serviceMetricCollector{t: t, collector: c}))
+	// require must not be used inside EventuallyWithT.
+	//nolint:testifylint
+	if !assert.NoError(t, registry.Register(serviceMetricCollector{t: t, collector: c})) {
+		return nil
+	}
 
 	families, err := registry.Gather()
-	require.NoError(t, err)
+	//nolint:testifylint
+	if !assert.NoError(t, err) {
+		return nil
+	}
 
 	metrics := make(map[string]float64)
 
@@ -131,6 +137,9 @@ func TestCollectorPicksUpConfigChanges(t *testing.T) {
 	t.Cleanup(func() { assert.NoError(t, c.Close()) })
 	require.True(t, c.configCache.enabled(), "the configuration cache must be enabled")
 
+	// A configuration is only cached once its key is older than a clock tick.
+	time.Sleep(configCacheMinKeyAge + 100*time.Millisecond)
+
 	metrics := serviceMetrics(t, c, name)
 	assert.InDelta(t, 1.0, metrics["windows_service_start_mode{start_mode=manual}"], 0)
 	assert.Contains(t, metrics, `windows_service_info{display_name=before,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem}`)
@@ -147,20 +156,21 @@ func TestCollectorPicksUpConfigChanges(t *testing.T) {
 
 	// The change notification is delivered asynchronously.
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		metrics := serviceMetrics(t, c, name)
+		metrics := serviceMetrics(collect, c, name)
 		assert.InDelta(collect, 1.0, metrics["windows_service_start_mode{start_mode=disabled}"], 0)
 		assert.InDelta(collect, 0.0, metrics["windows_service_start_mode{start_mode=manual}"], 0)
 		assert.Contains(collect, metrics, `windows_service_info{display_name=after,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem}`)
 	}, 5*time.Second, 50*time.Millisecond)
 
 	// The service control manager removes the service once the last handle is closed.
+	require.NoError(t, service.Delete())
+
 	deleted = true
 
-	require.NoError(t, service.Delete())
 	require.NoError(t, service.Close())
 
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		assert.Empty(collect, serviceMetrics(t, c, name))
+		assert.Empty(collect, serviceMetrics(collect, c, name))
 
 		_, _, ok := c.configCache.get(name)
 		assert.False(collect, ok, "the configuration of a deleted service must be dropped")

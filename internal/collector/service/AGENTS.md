@@ -13,6 +13,10 @@
   Tcpip, VSS, driver `Enum` keys, Hyper-V). Treat it as a hint only and compare
   the last write time of each service's own key, which changes only for its own
   values and direct subkeys.
+- Registry write times have a resolution of one clock tick, so two writes in
+  the same tick leave the time unchanged. Only cache a configuration once its
+  key is older than `configCacheMinKeyAge`, and never cache an unavailable one
+  (for example a missing MUI display name), which can change without a write.
 - The cache tests use a temporary key below `HKEY_CURRENT_USER`, so they run
   without elevation. Registry write times have a coarse resolution; sleep before
   a write that must get a newer time.
