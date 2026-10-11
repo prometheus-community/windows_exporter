@@ -317,6 +317,10 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 	}
 	defer updates.Release()
 
+	// Both criteria clauses are evaluated separately, so an update could be
+	// returned twice. Its publication metric must be emitted only once.
+	seen := make(map[string]struct{})
+
 	for item, err := range updates.All() {
 		if err != nil {
 			if _, ok := errors.AsType[*ole.CollectionItemError](err); !ok {
@@ -336,6 +340,13 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 			continue
 		}
+
+		key := update.identity + "/" + update.revision
+		if _, ok := seen[key]; ok {
+			continue
+		}
+
+		seen[key] = struct{}{}
 
 		metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 			c.pendingUpdate,

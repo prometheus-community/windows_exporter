@@ -9,24 +9,25 @@ function(on)
   b.tab(
     'Updates',
     b.rows([
-      if on('update') then b.summary([210, 211, 212, 214, 215]),
+      if on('update') then b.summary([210, 211, 212, 213, 214, 215]),
       if on('update') then b.row('Pending updates', b.flow([[216, 24, 10]])),
       if on('update') then b.row('History', b.flow([[217, 12, 8], [218, 12, 8]])),
     ]),
     [
-      b.stat(210, 'Pending', 'Updates that are available but not installed.' + requirement, pending('')),
+      b.stat(210, 'Pending', 'Updates that are available but not installed, including optional updates.' + requirement, pending('')),
       b.stat(211, 'Critical', 'Pending updates with the Microsoft security severity Critical.' + requirement, pending('severity="Critical"'), steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
       b.stat(212, 'Important', 'Pending updates with the Microsoft security severity Important.' + requirement, pending('severity="Important"'), steps=[{ color: 'green', value: null }, { color: 'orange', value: 1 }]),
-      b.stat(214, 'Oldest pending', 'Time since the oldest pending update was published. Orange after 30 days, red after 60 days.' + requirement, 'time() - min(' + metric('pending_published_timestamp') + ')', 'dtdurations', steps=[{ color: 'green', value: null }, { color: 'orange', value: days(30) }, { color: 'red', value: days(60) }])
+      b.stat(213, 'Optional', 'Pending optional updates, such as the monthly non-security preview update. Windows does not install them automatically.' + requirement, pending('deployment_action="optional_installation"')),
+      b.stat(214, 'Oldest pending', 'Time since the oldest pending regular update was published. Optional updates are left out. Orange after 30 days, red after 60 days.' + requirement, 'time() - min(' + metric('pending_published_timestamp') + ' and on (id, revision) ' + metric('pending_info', 'deployment_action="installation"') + ')', 'dtdurations', steps=[{ color: 'green', value: null }, { color: 'orange', value: days(30) }, { color: 'red', value: days(60) }])
       + b.panel.withDefaults({ noValue: 'none' })
       + b.panel.withOptions({ reduceOptions: { calcs: ['last'] } }),
       b.stat(215, 'Last check', 'Time since the collector last queried Windows Update. Orange after 1 day, red after 7 days.' + requirement, 'time() - ' + metric('scrape_timestamp_seconds'), 'dtdurations', steps=[{ color: 'green', value: null }, { color: 'orange', value: days(1) }, { color: 'red', value: days(7) }])
       + b.panel.withOptions({ reduceOptions: { calcs: ['last'] } }),
 
       b.panel.new(216, 'Pending updates', 'table')
-      + b.panel.withDescription('Pending updates with their category, security severity and publish date. Category names follow the Windows display language.' + requirement)
+      + b.panel.withDescription('Pending updates with their category, security severity, type and publish date. Optional updates, such as the monthly non-security preview update, are not installed automatically. Category names follow the Windows display language.' + requirement)
       + b.panel.withQueries([
-        b.query.new('max by (title, category, severity) (' + '(' + metric('pending_published_timestamp') + ' * on (id, revision) group_right ' + metric('pending_info') + ') or on (id, revision) (0 * ' + metric('pending_info') + ')) * 1000', 'A')
+        b.query.new('max by (title, category, severity, deployment_action) (' + '(' + metric('pending_published_timestamp') + ' * on (id, revision) group_right ' + metric('pending_info') + ') or on (id, revision) (0 * ' + metric('pending_info') + ')) * 1000', 'A')
         + b.query.withInstant()
         + b.query.withFormat('table'),
       ])
@@ -37,8 +38,8 @@ function(on)
           options: {
             excludeByName: { Time: true },
             includeByName: {},
-            indexByName: { title: 0, category: 1, severity: 2, Value: 3 },
-            renameByName: { title: 'Update', category: 'Category', severity: 'Severity', Value: 'Published' },
+            indexByName: { title: 0, category: 1, severity: 2, deployment_action: 3, Value: 4 },
+            renameByName: { title: 'Update', category: 'Category', severity: 'Severity', deployment_action: 'Type', Value: 'Published' },
           },
         },
       }])
@@ -50,6 +51,11 @@ function(on)
           { id: 'color', value: { fixedColor: 'text', mode: 'fixed' } },
           { id: 'mappings', value: [{ type: 'value', options: { Critical: { color: 'red', index: 0 }, Important: { color: 'orange', index: 1 } } }] },
           { id: 'custom.cellOptions', value: { type: 'color-text' } },
+        ],
+      }, {
+        matcher: { id: 'byName', options: 'Type' },
+        properties: [
+          { id: 'mappings', value: [{ type: 'value', options: { installation: { index: 0, text: 'Regular' }, optional_installation: { index: 1, text: 'Optional' } } }] },
         ],
       }]),
 

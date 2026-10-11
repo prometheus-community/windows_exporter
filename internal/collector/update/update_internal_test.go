@@ -38,7 +38,7 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 		name       string
 		countError bool
 	}{
-		{name: "skip unreadable item"},
+		{name: "skip unreadable and duplicate items"},
 		{name: "count failure", countError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -66,8 +66,8 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, searchCriteria, *criteria)
-			require.Equal(t, []int32{0, 1, 2}, *attempted)
-			require.Len(t, metrics, 6, "two readable updates retain info and publication metrics plus scrape metrics")
+			require.Equal(t, []int32{0, 1, 2, 3}, *attempted)
+			require.Len(t, metrics, 6, "two distinct readable updates retain info and publication metrics plus scrape metrics")
 
 			ids := []string{}
 			actions := []string{}
@@ -100,7 +100,8 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 
 // fakeUpdateSearch implements only the native slots exercised by a scrape.
 // Item 1 cannot be read; both surrounding items remain available. Item 0 is a
-// regular update and item 2 an optional one. The search criteria are recorded.
+// regular update and item 2 an optional one. Item 3 repeats the identity of
+// item 0. The search criteria are recorded.
 func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string) {
 	release := windows.NewCallback(func(uintptr) uintptr { return 0 })
 	attempted := []int32{}
@@ -128,7 +129,7 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string
 		return 0
 	})
 	identityMethods[8] = windows.NewCallback(func(_ uintptr, out **uint16) uintptr {
-		return fakeBSTR(fmt.Sprintf("update-%d", selected), out)
+		return fakeBSTR(fmt.Sprintf("update-%d", selected%3), out)
 	})
 	identity := &wuapi.UpdateIdentity{VTable: &identityMethods[0]}
 
@@ -186,7 +187,7 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string
 			return 0x80070005
 		}
 
-		*out = 3
+		*out = 4
 
 		return 0
 	})

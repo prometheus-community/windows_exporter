@@ -130,6 +130,7 @@ const (
 func (u *Update) DeploymentAction() (DeploymentAction, error) {
 	return u.Get[DeploymentAction](updateDeploymentAction)
 }
+
 func (i *UpdateIdentity) UpdateID() (string, error)      { return i.String(identityUpdateID) }
 func (i *UpdateIdentity) RevisionNumber() (int32, error) { return i.Get[int32](identityRevision) }
 func (c *Category) Name() (string, error)                { return c.String(categoryName) }
