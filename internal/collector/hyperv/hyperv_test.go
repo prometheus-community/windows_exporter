@@ -19,6 +19,7 @@ package hyperv_test
 
 import (
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -112,6 +113,46 @@ func TestCollectorVirtualHardDisk(t *testing.T) {
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_file_size_bytes", labels); metric != nil {
 		require.Positive(t, metric.GetGauge().GetValue())
 		require.Less(t, metric.GetGauge().GetValue(), float64(1<<30))
+	}
+}
+
+// TestCollectorVirtualHardDiskCheckpoint checks the CI fixture VM
+// CIVirtualHardDisk: a 64 MiB dynamic disk with a checkpoint (so the VM runs
+// on a differencing .avhdx) and an 8 MiB fixed disk attached after the
+// checkpoint. Each attached disk must be reported once, the checkpoint's own
+// settings and the parent disk must not be reported.
+func TestCollectorVirtualHardDiskCheckpoint(t *testing.T) {
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk"}})
+
+	differencing := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", prometheus.Labels{"vm": "CIVirtualHardDisk", "type": "differencing"})
+	fixed := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", prometheus.Labels{"vm": "CIVirtualHardDisk", "type": "fixed"})
+
+	if differencing == nil || fixed == nil {
+		return
+	}
+
+	require.InDelta(t, 64<<20, differencing.GetGauge().GetValue(), 0)
+	require.InDelta(t, 8<<20, fixed.GetGauge().GetValue(), 0)
+
+	for _, name := range []string{"windows_hyperv_virtual_hard_disk_size_bytes", "windows_hyperv_virtual_hard_disk_file_size_bytes"} {
+		var paths []string
+
+		for _, metric := range metrics[name].GetMetric() {
+			labels := make(map[string]string)
+			for _, label := range metric.GetLabel() {
+				labels[label.GetName()] = label.GetValue()
+			}
+
+			if labels["vm"] == "CIVirtualHardDisk" {
+				paths = append(paths, labels["path"])
+			}
+		}
+
+		require.Len(t, paths, 2, "%s: expected the differencing and the fixed disk, got %v", name, paths)
+
+		for _, path := range paths {
+			require.True(t, strings.HasSuffix(strings.ToLower(path), ".avhdx") || strings.HasSuffix(strings.ToLower(path), "fixed.vhdx"), "%s: unexpected disk %s", name, path)
+		}
 	}
 }
 
