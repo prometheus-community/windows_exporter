@@ -12,58 +12,58 @@ A Prometheus exporter for Windows machines.
 
 <!-- textlint-disable terminology -->
 
-| Name                                                       | Description                                                                                                                                                 | Enabled by default |
-|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
-| [ad](docs/collector.ad.md)                                 | Active Directory Domain Services                                                                                                                            |                    |
-| [adcs](docs/collector.adcs.md)                             | Active Directory Certificate Services                                                                                                                       |                    |
-| [adfs](docs/collector.adfs.md)                             | Active Directory Federation Services                                                                                                                        |                    |
-| [cache](docs/collector.cache.md)                           | Cache metrics                                                                                                                                               |                    |
-| [cpu](docs/collector.cpu.md)                               | CPU usage                                                                                                                                                   | &#10003;           |
-| [cpu_info](docs/collector.cpu_info.md)                     | CPU Information                                                                                                                                             |                    |
-| [container](docs/collector.container.md)                   | Container metrics                                                                                                                                           |                    |
-| [diskdrive](docs/collector.diskdrive.md)                   | Diskdrive metrics                                                                                                                                           |                    |
-| [dfsr](docs/collector.dfsr.md)                             | DFSR metrics                                                                                                                                                |                    |
-| [dhcp](docs/collector.dhcp.md)                             | DHCP Server                                                                                                                                                 |                    |
-| [dmi](docs/collector.dmi.md)                               | DMI / SMBIOS system information                                                                                                                             |                    |
-| [dns](docs/collector.dns.md)                               | DNS Server                                                                                                                                                  |                    |
-| [exchange](docs/collector.exchange.md)                     | Exchange metrics                                                                                                                                            |                    |
-| [file](docs/collector.file.md)                             | File metrics                                                                                                                                                |                    |
-| [fsrmquota](docs/collector.fsrmquota.md)                   | Microsoft File Server Resource Manager (FSRM) Quotas collector                                                                                              |                    |
-| [gpu](docs/collector.gpu.md)                               | GPU metrics                                                                                                                                                 |                    |
-| [hyperv](docs/collector.hyperv.md)                         | Hyper-V hosts                                                                                                                                               |                    |
-| [iis](docs/collector.iis.md)                               | IIS sites and applications                                                                                                                                  |                    |
-| [license](docs/collector.license.md)                       | Windows license status                                                                                                                                      |                    |
-| [logical_disk](docs/collector.logical_disk.md)             | Logical disks, disk I/O                                                                                                                                     | &#10003;           |
-| [memory](docs/collector.memory.md)                         | Memory usage metrics                                                                                                                                        | &#10003;           |
-| [mscluster](docs/collector.mscluster.md)                   | MSCluster metrics                                                                                                                                           |                    |
-| [msmq](docs/collector.msmq.md)                             | MSMQ queues                                                                                                                                                 |                    |
-| [mssql](docs/collector.mssql.md)                           | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics |                    |
-| [netframework](docs/collector.netframework.md)             | .NET Framework metrics                                                                                                                                      |                    |
-| [net](docs/collector.net.md)                               | Network interface I/O                                                                                                                                       | &#10003;           |
-| [nps](docs/collector.nps.md)                               | Network Policy Server (NPS)                                                                                                                                 |                    |
-| [os](docs/collector.os.md)                                 | OS information (hostname, product/version, install time)                                                                                                   | &#10003;           |
-| [pagefile](docs/collector.pagefile.md)                     | pagefile metrics                                                                                                                                            |                    |
-| [performancecounter](docs/collector.performancecounter.md) | Custom performance counter metrics                                                                                                                          |                    |
-| [physical_disk](docs/collector.physical_disk.md)           | physical disk metrics                                                                                                                                       | &#10003;           |
-| [printer](docs/collector.printer.md)                       | Printer metrics                                                                                                                                             |                    |
-| [process](docs/collector.process.md)                       | Per-process metrics                                                                                                                                         |                    |
-| [registry](docs/collector.registry.md)                     | Windows registry values (REG_DWORD and REG_QWORD)                                                                                                           |                    |
-| [remote_fx](docs/collector.remote_fx.md)                   | RemoteFX protocol (RDP) metrics                                                                                                                             |                    |
-| [scheduled_task](docs/collector.scheduled_task.md)         | Scheduled Tasks metrics                                                                                                                                     |                    |
-| [service](docs/collector.service.md)                       | Service state metrics                                                                                                                                       | &#10003;           |
-| [smb](docs/collector.smb.md)                               | SMB Server                                                                                                                                                  |                    |
-| [smbclient](docs/collector.smbclient.md)                   | SMB Client                                                                                                                                                  |                    |
-| [smtp](docs/collector.smtp.md)                             | IIS SMTP Server                                                                                                                                             |                    |
-| [storage_spaces](docs/collector.storage_spaces.md)         | Storage Spaces pools and virtual disks                                                                                                                      |                    |
-| [system](docs/collector.system.md)                         | System calls                                                                                                                                                | &#10003;           |
-| [tcp](docs/collector.tcp.md)                               | TCP connections                                                                                                                                             |                    |
-| [terminal_services](docs/collector.terminal_services.md)   | Terminal services (RDS)                                                                                                                                     |                    |
-| [textfile](docs/collector.textfile.md)                     | Read prometheus metrics from a text file                                                                                                                    |                    |
-| [time](docs/collector.time.md)                             | Windows Time Service                                                                                                                                        |                    |
-| [udp](docs/collector.udp.md)                               | UDP connections                                                                                                                                             |                    |
-| [update](docs/collector.update.md)                         | Windows Update Service                                                                                                                                      |                    |
-| [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent                                                                                                    |                    |
-| [wmi](docs/collector.wmi.md)                               | Custom WMI query metrics                                                                                                                                    |                    |
+| Name                                                       | Description                                                    | Enabled by default |
+|------------------------------------------------------------|----------------------------------------------------------------|--------------------|
+| [ad](docs/collector.ad.md)                                 | Active Directory Domain Services                               |                    |
+| [adcs](docs/collector.adcs.md)                             | Active Directory Certificate Services                          |                    |
+| [adfs](docs/collector.adfs.md)                             | Active Directory Federation Services                           |                    |
+| [cache](docs/collector.cache.md)                           | Cache metrics                                                  |                    |
+| [cpu](docs/collector.cpu.md)                               | CPU usage                                                      | &#10003;           |
+| [cpu_info](docs/collector.cpu_info.md)                     | CPU Information                                                |                    |
+| [container](docs/collector.container.md)                   | Container metrics                                              |                    |
+| [diskdrive](docs/collector.diskdrive.md)                   | Diskdrive metrics                                              |                    |
+| [dfsr](docs/collector.dfsr.md)                             | DFSR metrics                                                   |                    |
+| [dhcp](docs/collector.dhcp.md)                             | DHCP Server                                                    |                    |
+| [dmi](docs/collector.dmi.md)                               | DMI / SMBIOS system information                                |                    |
+| [dns](docs/collector.dns.md)                               | DNS Server                                                     |                    |
+| [exchange](docs/collector.exchange.md)                     | Exchange metrics                                               |                    |
+| [file](docs/collector.file.md)                             | File metrics                                                   |                    |
+| [fsrmquota](docs/collector.fsrmquota.md)                   | Microsoft File Server Resource Manager (FSRM) Quotas collector |                    |
+| [gpu](docs/collector.gpu.md)                               | GPU metrics                                                    |                    |
+| [hyperv](docs/collector.hyperv.md)                         | Hyper-V hosts                                                  |                    |
+| [iis](docs/collector.iis.md)                               | IIS sites and applications                                     |                    |
+| [license](docs/collector.license.md)                       | Windows license status                                         |                    |
+| [logical_disk](docs/collector.logical_disk.md)             | Logical disks, disk I/O                                        | &#10003;           |
+| [memory](docs/collector.memory.md)                         | Memory usage metrics                                           | &#10003;           |
+| [mscluster](docs/collector.mscluster.md)                   | MSCluster metrics                                              |                    |
+| [msmq](docs/collector.msmq.md)                             | MSMQ queues                                                    |                    |
+| [mssql](docs/collector.mssql.md)                           | SQL Server Performance Objects metrics                         |                    |
+| [netframework](docs/collector.netframework.md)             | .NET Framework metrics                                         |                    |
+| [net](docs/collector.net.md)                               | Network interface I/O                                          | &#10003;           |
+| [nps](docs/collector.nps.md)                               | Network Policy Server (NPS)                                    |                    |
+| [os](docs/collector.os.md)                                 | OS information (hostname, product/version, install time)       | &#10003;           |
+| [pagefile](docs/collector.pagefile.md)                     | pagefile metrics                                               |                    |
+| [performancecounter](docs/collector.performancecounter.md) | Custom performance counter metrics                             |                    |
+| [physical_disk](docs/collector.physical_disk.md)           | physical disk metrics                                          | &#10003;           |
+| [printer](docs/collector.printer.md)                       | Printer metrics                                                |                    |
+| [process](docs/collector.process.md)                       | Per-process metrics                                            |                    |
+| [registry](docs/collector.registry.md)                     | Windows registry values (REG_DWORD and REG_QWORD)              |                    |
+| [remote_fx](docs/collector.remote_fx.md)                   | RemoteFX protocol (RDP) metrics                                |                    |
+| [scheduled_task](docs/collector.scheduled_task.md)         | Scheduled Tasks metrics                                        |                    |
+| [service](docs/collector.service.md)                       | Service state metrics                                          | &#10003;           |
+| [smb](docs/collector.smb.md)                               | SMB Server                                                     |                    |
+| [smbclient](docs/collector.smbclient.md)                   | SMB Client                                                     |                    |
+| [smtp](docs/collector.smtp.md)                             | IIS SMTP Server                                                |                    |
+| [storage_spaces](docs/collector.storage_spaces.md)         | Storage Spaces pools and virtual disks                         |                    |
+| [system](docs/collector.system.md)                         | System calls                                                   | &#10003;           |
+| [tcp](docs/collector.tcp.md)                               | TCP connections                                                |                    |
+| [terminal_services](docs/collector.terminal_services.md)   | Terminal services (RDS)                                        |                    |
+| [textfile](docs/collector.textfile.md)                     | Read prometheus metrics from a text file                       |                    |
+| [time](docs/collector.time.md)                             | Windows Time Service                                           |                    |
+| [udp](docs/collector.udp.md)                               | UDP connections                                                |                    |
+| [update](docs/collector.update.md)                         | Windows Update Service                                         |                    |
+| [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent       |                    |
+| [wmi](docs/collector.wmi.md)                               | Custom WMI query metrics                                       |                    |
 <!-- textlint-enable terminology -->
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
