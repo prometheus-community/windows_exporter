@@ -48,12 +48,45 @@ function Write-Step([String] $Message) {
     Write-Host "::group::$Message"
 }
 
+# Some runs lose the runner during the repair or uninstall, and then no log
+# is uploaded. Print what Windows Installer and Windows did around each
+# operation, so passing runs show what could end or starve the runner.
+function Get-RunnerProcess {
+    return @(Get-Process -Name 'Runner.Listener', 'Runner.Worker' -ErrorAction SilentlyContinue |
+            ForEach-Object { "$($_.Name)=$($_.Id)" }) -join ' '
+}
+
+function Write-MsiexecDiagnostic([String] $Log, [DateTime] $Since) {
+    if (Test-Path $Log) {
+        # The verbose log is UTF-16.
+        Select-String -Path $Log -Encoding unicode -Pattern 'RESTART MANAGER', 'reboot', 'in use', 'Return value 3', 'KillProcess' |
+            ForEach-Object { Write-Host "  msi: $($_.Line.Trim())" }
+    }
+
+    $events = Get-WinEvent -ErrorAction SilentlyContinue -FilterHashtable @{
+        LogName   = 'System', 'Application'
+        StartTime = $Since
+    } | Where-Object {
+        $_.Level -le 3 -or $_.ProviderName -in 'Microsoft-Windows-RestartManager', 'Service Control Manager', 'MsiInstaller'
+    }
+
+    foreach ($entry in (@($events) | Sort-Object TimeCreated)) {
+        $message = ($entry.Message -split "`r?`n")[0]
+        Write-Host "  event: $($entry.TimeCreated.ToString('HH:mm:ss.fff')) $($entry.LogName)/$($entry.ProviderName)/$($entry.Id): $message"
+    }
+}
+
 function Invoke-Msiexec([String] $Name, [String[]] $Arguments) {
     $log = Join-Path $WorkDir "$Name.log"
     $allArguments = $Arguments + @('/qn', '/norestart', '/L*v', "`"$log`"")
     Write-Host "msiexec $($allArguments -join ' ')"
+    Write-Host "  runner before: $(Get-RunnerProcess)"
 
+    $since = Get-Date
     $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $allArguments -Wait -PassThru
+    Write-Host "  msiexec $Name took $([Math]::Round(((Get-Date) - $since).TotalSeconds, 1)) s, exit code $($process.ExitCode)"
+    Write-Host "  runner after: $(Get-RunnerProcess)"
+    Write-MsiexecDiagnostic -Log $log -Since $since
     # 3010 means success, but a restart is required.
     if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
         throw "msiexec $Name failed with exit code $($process.ExitCode), see $log"
