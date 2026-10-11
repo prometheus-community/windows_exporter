@@ -69,9 +69,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	info, err := sysinfoapi.GetSMBIOSSystemInfo()
+	info, err := sysinfoapi.GetSMBIOSInfo()
 	if err != nil {
-		return fmt.Errorf("SMBIOS system info unavailable: %w", err)
+		return fmt.Errorf("SMBIOS info unavailable: %w", err)
 	}
 
 	// Sanitize label values: firmware strings may contain invalid UTF-8 bytes.
@@ -80,17 +80,36 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		return strings.ToValidUTF8(strings.TrimSpace(s), "�")
 	}
 
+	// Label names match node_exporter's node_dmi_info. Fields the firmware
+	// does not provide stay empty; Prometheus drops empty labels on ingestion.
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
-		"A metric with a constant '1' value labeled by product_name, product_serial, "+
-			"product_uuid, product_version, system_vendor from SMBIOS Type 1 (System Information).",
+		"A metric with a constant '1' value labeled by bios_date, bios_release, bios_vendor, bios_version, "+
+			"board_asset_tag, board_name, board_serial, board_vendor, board_version, chassis_asset_tag, "+
+			"chassis_serial, chassis_vendor, chassis_version, product_family, product_name, product_serial, "+
+			"product_sku, product_uuid, product_version, system_vendor from SMBIOS.",
 		nil,
 		prometheus.Labels{
-			"product_name":    cleanLabel(info.ProductName),
-			"product_serial":  cleanLabel(info.SerialNumber),
-			"product_uuid":    strings.ToLower(cleanLabel(info.UUID)),
-			"product_version": cleanLabel(info.Version),
-			"system_vendor":   cleanLabel(info.Manufacturer),
+			"bios_date":         cleanLabel(info.BIOS.ReleaseDate),
+			"bios_release":      cleanLabel(info.BIOS.Release),
+			"bios_vendor":       cleanLabel(info.BIOS.Vendor),
+			"bios_version":      cleanLabel(info.BIOS.Version),
+			"board_asset_tag":   cleanLabel(info.Board.AssetTag),
+			"board_name":        cleanLabel(info.Board.Product),
+			"board_serial":      cleanLabel(info.Board.SerialNumber),
+			"board_vendor":      cleanLabel(info.Board.Manufacturer),
+			"board_version":     cleanLabel(info.Board.Version),
+			"chassis_asset_tag": cleanLabel(info.Chassis.AssetTag),
+			"chassis_serial":    cleanLabel(info.Chassis.SerialNumber),
+			"chassis_vendor":    cleanLabel(info.Chassis.Manufacturer),
+			"chassis_version":   cleanLabel(info.Chassis.Version),
+			"product_family":    cleanLabel(info.System.Family),
+			"product_name":      cleanLabel(info.System.ProductName),
+			"product_serial":    cleanLabel(info.System.SerialNumber),
+			"product_sku":       cleanLabel(info.System.SKUNumber),
+			"product_uuid":      strings.ToLower(cleanLabel(info.System.UUID)),
+			"product_version":   cleanLabel(info.System.Version),
+			"system_vendor":     cleanLabel(info.System.Manufacturer),
 		},
 	)
 

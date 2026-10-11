@@ -21,6 +21,26 @@ import (
 	"fmt"
 )
 
+// SMBIOSInfo holds the identification strings of the SMBIOS structures that
+// node_exporter exposes through /sys/class/dmi/id on Linux.
+type SMBIOSInfo struct {
+	BIOS    SMBIOSBIOSInfo
+	System  SMBIOSSystemInfo
+	Board   SMBIOSBoardInfo
+	Chassis SMBIOSChassisInfo
+}
+
+// SMBIOSBIOSInfo holds the fields extracted from the SMBIOS Type 0
+// (BIOS Information) structure.
+type SMBIOSBIOSInfo struct {
+	Vendor      string
+	Version     string
+	ReleaseDate string
+	// Release is the system BIOS major.minor release (SMBIOS 2.4+),
+	// formatted like the Linux kernel's bios_release attribute.
+	Release string
+}
+
 // SMBIOSSystemInfo holds the fields extracted from the SMBIOS Type 1
 // (System Information) structure.
 type SMBIOSSystemInfo struct {
@@ -29,6 +49,27 @@ type SMBIOSSystemInfo struct {
 	Version      string
 	SerialNumber string
 	UUID         string
+	SKUNumber    string
+	Family       string
+}
+
+// SMBIOSBoardInfo holds the fields extracted from the first SMBIOS Type 2
+// (Baseboard Information) structure.
+type SMBIOSBoardInfo struct {
+	Manufacturer string
+	Product      string
+	Version      string
+	SerialNumber string
+	AssetTag     string
+}
+
+// SMBIOSChassisInfo holds the fields extracted from the first SMBIOS Type 3
+// (System Enclosure or Chassis) structure.
+type SMBIOSChassisInfo struct {
+	Manufacturer string
+	Version      string
+	SerialNumber string
+	AssetTag     string
 }
 
 // rawSMBIOSDataHeaderSize is the size of the RawSMBIOSData header returned
@@ -37,9 +78,49 @@ type SMBIOSSystemInfo struct {
 // DMARevision (1) + Length (4) = 8 bytes.
 const rawSMBIOSDataHeaderSize = 8
 
-// parseSMBIOSSystemInfo parses the raw RSMB firmware table and extracts
-// the Type 1 (System Information) structure.
-func parseSMBIOSSystemInfo(data []byte) (*SMBIOSSystemInfo, error) {
+const (
+	smbiosTypeBIOS      = 0
+	smbiosTypeSystem    = 1
+	smbiosTypeBaseboard = 2
+	smbiosTypeChassis   = 3
+)
+
+// smbiosStructure is one structure of the SMBIOS table: its formatted area
+// and the strings of its unformatted area.
+type smbiosStructure struct {
+	formatted []byte
+	strs      []string
+}
+
+// byteAt returns the byte at offset in the formatted area and whether the
+// structure is long enough to contain it.
+func (s smbiosStructure) byteAt(offset int) (byte, bool) {
+	if offset >= len(s.formatted) {
+		return 0, false
+	}
+
+	return s.formatted[offset], true
+}
+
+// stringAt resolves the string index stored at offset in the formatted area.
+// It returns an empty string when the structure is too short for the field.
+func (s smbiosStructure) stringAt(offset int) string {
+	index, ok := s.byteAt(offset)
+	if !ok {
+		return ""
+	}
+
+	return getStringByIndex(s.strs, index)
+}
+
+// parseSMBIOSInfo parses the raw RSMB firmware table and extracts the
+// Type 0 (BIOS), Type 1 (System), Type 2 (Baseboard) and Type 3 (Chassis)
+// structures. Only the first structure of each type is used, matching the
+// Linux kernel. Type 1 is required; the others are optional. Like the old
+// parser and the Linux kernel for SMBIOS 2.x tables, the walk continues past
+// the Type 127 end-of-table marker, since some firmware places structures
+// after it.
+func parseSMBIOSInfo(data []byte) (*SMBIOSInfo, error) {
 	if len(data) < rawSMBIOSDataHeaderSize {
 		return nil, errors.New("SMBIOS data too short for header")
 	}
@@ -56,7 +137,11 @@ func parseSMBIOSSystemInfo(data []byte) (*SMBIOSSystemInfo, error) {
 
 	tableData = tableData[:tableLen]
 
-	// Walk structures looking for Type 1.
+	info := &SMBIOSInfo{}
+	seen := map[byte]bool{}
+
+	var walkErr error
+
 	offset := 0
 	for offset < len(tableData) {
 		if offset+4 > len(tableData) {
@@ -88,41 +173,115 @@ func parseSMBIOSSystemInfo(data []byte) (*SMBIOSSystemInfo, error) {
 		}
 
 		if !foundTerminator {
-			return nil, errors.New("SMBIOS string area not properly terminated (missing double-NUL)")
+			walkErr = errors.New("SMBIOS string area not properly terminated (missing double-NUL)")
+
+			break
 		}
 
-		if structType == 1 && structLen >= 0x08 {
-			// Type 1: System Information
-			// Offsets (within the formatted area):
-			//   04h: Manufacturer (string index)
-			//   05h: Product Name (string index)
-			//   06h: Version (string index)
-			//   07h: Serial Number (string index)
-			//   08h-17h: UUID (16 bytes) — present only when structLen >= 0x19
-			strs := extractStrings(tableData[stringsStart:stringsEnd])
-
-			info := &SMBIOSSystemInfo{
-				Manufacturer: getStringByIndex(strs, tableData[offset+0x04]),
-				ProductName:  getStringByIndex(strs, tableData[offset+0x05]),
-				Version:      getStringByIndex(strs, tableData[offset+0x06]),
-				SerialNumber: getStringByIndex(strs, tableData[offset+0x07]),
+		if !seen[structType] {
+			s := smbiosStructure{
+				formatted: tableData[offset : offset+structLen],
+				strs:      extractStrings(tableData[stringsStart:stringsEnd]),
 			}
 
-			// UUID is only available in SMBIOS 2.1+ (structLen >= 0x19).
-			if structLen >= 0x19 {
-				// SMBIOS 2.6+ uses little-endian byte order for the first three UUID fields;
-				// earlier versions use network (big-endian) order throughout.
-				smbios26Plus := smbiosMajor > 2 || (smbiosMajor == 2 && smbiosMinor >= 6)
-				info.UUID = formatUUID(tableData[offset+0x08:offset+0x18], smbios26Plus)
+			switch structType {
+			case smbiosTypeBIOS:
+				seen[structType] = true
+				info.BIOS = parseSMBIOSBIOSInfo(s)
+			case smbiosTypeSystem:
+				// The Type 1 fields this parser reads require at least 8 bytes.
+				if structLen >= 0x08 {
+					seen[structType] = true
+					info.System = parseSMBIOSSystemInfo(s, smbiosMajor, smbiosMinor)
+				}
+			case smbiosTypeBaseboard:
+				seen[structType] = true
+				info.Board = SMBIOSBoardInfo{
+					Manufacturer: s.stringAt(0x04),
+					Product:      s.stringAt(0x05),
+					Version:      s.stringAt(0x06),
+					SerialNumber: s.stringAt(0x07),
+					AssetTag:     s.stringAt(0x08),
+				}
+			case smbiosTypeChassis:
+				seen[structType] = true
+				info.Chassis = SMBIOSChassisInfo{
+					Manufacturer: s.stringAt(0x04),
+					Version:      s.stringAt(0x06),
+					SerialNumber: s.stringAt(0x07),
+					AssetTag:     s.stringAt(0x08),
+				}
 			}
-
-			return info, nil
 		}
 
 		offset = stringsEnd
 	}
 
-	return nil, errors.New("SMBIOS Type 1 (System Information) structure not found")
+	// A malformed structure after Type 1 only loses the structures that follow it.
+	if !seen[smbiosTypeSystem] {
+		if walkErr != nil {
+			return nil, walkErr
+		}
+
+		return nil, errors.New("SMBIOS Type 1 (System Information) structure not found")
+	}
+
+	return info, nil
+}
+
+// parseSMBIOSBIOSInfo decodes a Type 0 (BIOS Information) structure.
+//
+//	04h: Vendor (string index)
+//	05h: BIOS Version (string index)
+//	08h: BIOS Release Date (string index)
+//	14h: System BIOS Major Release (2.4+)
+//	15h: System BIOS Minor Release (2.4+)
+func parseSMBIOSBIOSInfo(s smbiosStructure) SMBIOSBIOSInfo {
+	bios := SMBIOSBIOSInfo{
+		Vendor:      s.stringAt(0x04),
+		Version:     s.stringAt(0x05),
+		ReleaseDate: s.stringAt(0x08),
+	}
+
+	major, okMajor := s.byteAt(0x14)
+	minor, okMinor := s.byteAt(0x15)
+
+	// 0xFF in both fields means the system does not support them.
+	if okMajor && okMinor && (major != 0xFF || minor != 0xFF) {
+		bios.Release = fmt.Sprintf("%d.%d", major, minor)
+	}
+
+	return bios
+}
+
+// parseSMBIOSSystemInfo decodes a Type 1 (System Information) structure.
+//
+//	04h: Manufacturer (string index)
+//	05h: Product Name (string index)
+//	06h: Version (string index)
+//	07h: Serial Number (string index)
+//	08h-17h: UUID (16 bytes, 2.1+)
+//	19h: SKU Number (string index, 2.4+)
+//	1Ah: Family (string index, 2.4+)
+func parseSMBIOSSystemInfo(s smbiosStructure, smbiosMajor, smbiosMinor byte) SMBIOSSystemInfo {
+	system := SMBIOSSystemInfo{
+		Manufacturer: s.stringAt(0x04),
+		ProductName:  s.stringAt(0x05),
+		Version:      s.stringAt(0x06),
+		SerialNumber: s.stringAt(0x07),
+		SKUNumber:    s.stringAt(0x19),
+		Family:       s.stringAt(0x1A),
+	}
+
+	// UUID is only available in SMBIOS 2.1+ (structLen >= 0x19).
+	if len(s.formatted) >= 0x19 {
+		// SMBIOS 2.6+ uses little-endian byte order for the first three UUID fields;
+		// earlier versions use network (big-endian) order throughout.
+		smbios26Plus := smbiosMajor > 2 || (smbiosMajor == 2 && smbiosMinor >= 6)
+		system.UUID = formatUUID(s.formatted[0x08:0x18], smbios26Plus)
+	}
+
+	return system
 }
 
 // extractStrings splits the unformatted string area into individual strings.

@@ -153,13 +153,13 @@ func TestParseSMBIOSSystemInfo(t *testing.T) {
 
 	data := slices.Concat(header, tableData)
 
-	info, err := parseSMBIOSSystemInfo(data)
+	info, err := parseSMBIOSInfo(data)
 	require.NoError(t, err)
-	assert.Equal(t, "QEMU", info.Manufacturer)
-	assert.Equal(t, "Standard PC (Q35 + ICH9, 2009)", info.ProductName)
-	assert.Equal(t, "pc-q35-9.2", info.Version)
-	assert.Equal(t, "SN-12345", info.SerialNumber)
-	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.UUID)
+	assert.Equal(t, "QEMU", info.System.Manufacturer)
+	assert.Equal(t, "Standard PC (Q35 + ICH9, 2009)", info.System.ProductName)
+	assert.Equal(t, "pc-q35-9.2", info.System.Version)
+	assert.Equal(t, "SN-12345", info.System.SerialNumber)
+	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.System.UUID)
 }
 
 func TestParseSMBIOSSystemInfoPre26(t *testing.T) {
@@ -196,10 +196,10 @@ func TestParseSMBIOSSystemInfoPre26(t *testing.T) {
 
 	data := slices.Concat(header, tableData)
 
-	info, err := parseSMBIOSSystemInfo(data)
+	info, err := parseSMBIOSInfo(data)
 	require.NoError(t, err)
-	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.UUID)
-	assert.Equal(t, "QEMU", info.Manufacturer)
+	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.System.UUID)
+	assert.Equal(t, "QEMU", info.System.Manufacturer)
 }
 
 func TestParseSMBIOSSystemInfoSMBIOS20(t *testing.T) {
@@ -233,13 +233,13 @@ func TestParseSMBIOSSystemInfoSMBIOS20(t *testing.T) {
 
 	data := slices.Concat(header, tableData)
 
-	info, err := parseSMBIOSSystemInfo(data)
+	info, err := parseSMBIOSInfo(data)
 	require.NoError(t, err)
-	assert.Equal(t, "OldBIOS", info.Manufacturer)
-	assert.Equal(t, "Legacy PC", info.ProductName)
-	assert.Equal(t, "v0.1", info.Version)
-	assert.Equal(t, "SN-OLD", info.SerialNumber)
-	assert.Empty(t, info.UUID, "UUID should be empty for 8-byte SMBIOS 2.0 Type 1 structures")
+	assert.Equal(t, "OldBIOS", info.System.Manufacturer)
+	assert.Equal(t, "Legacy PC", info.System.ProductName)
+	assert.Equal(t, "v0.1", info.System.Version)
+	assert.Equal(t, "SN-OLD", info.System.SerialNumber)
+	assert.Empty(t, info.System.UUID, "UUID should be empty for 8-byte SMBIOS 2.0 Type 1 structures")
 }
 
 func TestParseSMBIOSSystemInfoWithType0Preceding(t *testing.T) {
@@ -286,13 +286,13 @@ func TestParseSMBIOSSystemInfoWithType0Preceding(t *testing.T) {
 
 	data := slices.Concat(header, tableData)
 
-	info, err := parseSMBIOSSystemInfo(data)
+	info, err := parseSMBIOSInfo(data)
 	require.NoError(t, err)
-	assert.Equal(t, "Dell Inc.", info.Manufacturer)
-	assert.Equal(t, "PowerEdge R740", info.ProductName)
-	assert.Equal(t, "v2.0", info.Version)
-	assert.Equal(t, "SN-ABCDE", info.SerialNumber)
-	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.UUID)
+	assert.Equal(t, "Dell Inc.", info.System.Manufacturer)
+	assert.Equal(t, "PowerEdge R740", info.System.ProductName)
+	assert.Equal(t, "v2.0", info.System.Version)
+	assert.Equal(t, "SN-ABCDE", info.System.SerialNumber)
+	assert.Equal(t, "12345678-1234-5678-9abc-def012345678", info.System.UUID)
 }
 
 func TestParseSMBIOSSystemInfoUnterminatedStrings(t *testing.T) {
@@ -324,12 +324,184 @@ func TestParseSMBIOSSystemInfoUnterminatedStrings(t *testing.T) {
 
 	data := slices.Concat(header, tableData)
 
-	_, err := parseSMBIOSSystemInfo(data)
+	_, err := parseSMBIOSInfo(data)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not properly terminated")
 }
 
-func FuzzParseSMBIOSSystemInfo(f *testing.F) {
+// buildRSMB wraps SMBIOS structures in a RawSMBIOSData header for SMBIOS 3.2.
+func buildRSMB(structures ...[]byte) []byte {
+	tableData := slices.Concat(structures...)
+	tableLen := len(tableData)
+
+	header := []byte{
+		0x00, // Used20CallingMethod
+		0x03, // SMBIOSMajorVersion
+		0x02, // SMBIOSMinorVersion
+		0x00, // DMARevision
+		byte(tableLen), byte(tableLen >> 8), byte(tableLen >> 16), byte(tableLen >> 24),
+	}
+
+	return slices.Concat(header, tableData)
+}
+
+// smbiosStruct builds one SMBIOS structure with a formatted area of length
+// bytes, the given fields set and the given strings.
+func smbiosStruct(structType byte, length int, fields map[int]byte, strs ...string) []byte {
+	formatted := make([]byte, length)
+	formatted[0] = structType
+	formatted[1] = byte(length)
+
+	for offset, value := range fields {
+		formatted[offset] = value
+	}
+
+	var stringArea []byte
+
+	for _, str := range strs {
+		stringArea = append(stringArea, str...)
+		stringArea = append(stringArea, 0)
+	}
+
+	if len(stringArea) == 0 {
+		stringArea = []byte{0}
+	}
+
+	return slices.Concat(formatted, stringArea, []byte{0})
+}
+
+func TestParseSMBIOSInfoAllTypes(t *testing.T) {
+	t.Parallel()
+
+	type0 := smbiosStruct(0, 0x1A,
+		map[int]byte{0x04: 1, 0x05: 2, 0x08: 3, 0x14: 2, 0x15: 17},
+		"American Megatrends Inc.", "1.4.2", "05/23/2024",
+	)
+	type1 := smbiosStruct(1, 0x1B,
+		map[int]byte{0x04: 1, 0x05: 2, 0x06: 3, 0x07: 4, 0x19: 5, 0x1A: 6},
+		"Dell Inc.", "PowerEdge R740", "v2.0", "SN-SYS", "SKU=0715", "PowerEdge",
+	)
+	type2 := smbiosStruct(2, 0x0F,
+		map[int]byte{0x04: 1, 0x05: 2, 0x06: 3, 0x07: 4, 0x08: 5},
+		"Dell Inc.", "0WXD1Y", "A05", "SN-BOARD", "BOARD-TAG",
+	)
+	// A second baseboard must not override the first.
+	type2b := smbiosStruct(2, 0x0F, map[int]byte{0x04: 1, 0x05: 2}, "Other", "Second")
+	type3 := smbiosStruct(3, 0x15,
+		map[int]byte{0x04: 1, 0x05: 0x17, 0x06: 2, 0x07: 3, 0x08: 4},
+		"Dell Inc.", "C1", "SN-CHASSIS", "CHASSIS-TAG",
+	)
+	end := smbiosStruct(127, 4, nil)
+
+	info, err := parseSMBIOSInfo(buildRSMB(type0, end, type1, type2, type2b, type3))
+	require.NoError(t, err)
+
+	assert.Equal(t, SMBIOSBIOSInfo{
+		Vendor:      "American Megatrends Inc.",
+		Version:     "1.4.2",
+		ReleaseDate: "05/23/2024",
+		Release:     "2.17",
+	}, info.BIOS)
+	assert.Equal(t, "SKU=0715", info.System.SKUNumber)
+	assert.Equal(t, "PowerEdge", info.System.Family)
+	assert.Equal(t, "PowerEdge R740", info.System.ProductName)
+	assert.Equal(t, SMBIOSBoardInfo{
+		Manufacturer: "Dell Inc.",
+		Product:      "0WXD1Y",
+		Version:      "A05",
+		SerialNumber: "SN-BOARD",
+		AssetTag:     "BOARD-TAG",
+	}, info.Board)
+	assert.Equal(t, SMBIOSChassisInfo{
+		Manufacturer: "Dell Inc.",
+		Version:      "C1",
+		SerialNumber: "SN-CHASSIS",
+		AssetTag:     "CHASSIS-TAG",
+	}, info.Chassis)
+}
+
+func TestParseSMBIOSInfoShortStructures(t *testing.T) {
+	t.Parallel()
+
+	// SMBIOS 2.0-sized structures: no BIOS release, SKU, family or asset tags.
+	type0 := smbiosStruct(0, 0x12, map[int]byte{0x04: 1, 0x05: 2, 0x08: 3}, "Vendor", "1.0", "01/01/2000")
+	type1 := smbiosStruct(1, 0x08, map[int]byte{0x04: 1}, "Maker")
+	type2 := smbiosStruct(2, 0x08, map[int]byte{0x04: 1, 0x05: 2, 0x06: 3, 0x07: 4}, "BV", "BN", "BVer", "BS")
+	type3 := smbiosStruct(3, 0x08, map[int]byte{0x04: 1, 0x06: 2, 0x07: 3}, "CV", "CVer", "CS")
+
+	info, err := parseSMBIOSInfo(buildRSMB(type0, type1, type2, type3))
+	require.NoError(t, err)
+
+	assert.Equal(t, "Vendor", info.BIOS.Vendor)
+	assert.Equal(t, "01/01/2000", info.BIOS.ReleaseDate)
+	assert.Empty(t, info.BIOS.Release)
+	assert.Empty(t, info.System.SKUNumber)
+	assert.Empty(t, info.System.Family)
+	assert.Equal(t, "BS", info.Board.SerialNumber)
+	assert.Empty(t, info.Board.AssetTag)
+	assert.Equal(t, "CS", info.Chassis.SerialNumber)
+	assert.Empty(t, info.Chassis.AssetTag)
+}
+
+func TestParseSMBIOSInfoBIOSReleaseNotSupported(t *testing.T) {
+	t.Parallel()
+
+	type0 := smbiosStruct(0, 0x18, map[int]byte{0x04: 1, 0x14: 0xFF, 0x15: 0xFF}, "Vendor")
+	type1 := smbiosStruct(1, 0x08, map[int]byte{0x04: 1}, "Maker")
+
+	info, err := parseSMBIOSInfo(buildRSMB(type0, type1))
+	require.NoError(t, err)
+	assert.Empty(t, info.BIOS.Release)
+}
+
+func TestParseSMBIOSInfoBIOSReleaseMinorMissing(t *testing.T) {
+	t.Parallel()
+
+	// Length 0x15 covers the major release byte but not the minor one.
+	type0 := smbiosStruct(0, 0x15, map[int]byte{0x04: 1, 0x14: 2}, "Vendor")
+	type1 := smbiosStruct(1, 0x08, map[int]byte{0x04: 1}, "Maker")
+
+	info, err := parseSMBIOSInfo(buildRSMB(type0, type1))
+	require.NoError(t, err)
+	assert.Empty(t, info.BIOS.Release)
+}
+
+func TestParseSMBIOSInfoMalformedBeforeSystem(t *testing.T) {
+	t.Parallel()
+
+	type0 := smbiosStruct(0, 0x12, map[int]byte{0x04: 1}, "Vendor")
+	broken := slices.Concat(smbiosStruct(2, 0x08, nil)[:0x08], []byte("Board\x00"))
+
+	_, err := parseSMBIOSInfo(buildRSMB(type0, broken))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not properly terminated")
+}
+
+func TestParseSMBIOSInfoMalformedAfterSystem(t *testing.T) {
+	t.Parallel()
+
+	// A structure with an unterminated string area after Type 1 must not
+	// discard the System Information that was already parsed.
+	type1 := smbiosStruct(1, 0x08, map[int]byte{0x04: 1}, "Maker")
+	broken := slices.Concat(smbiosStruct(2, 0x08, map[int]byte{0x04: 1})[:0x08], []byte("Board\x00"))
+
+	info, err := parseSMBIOSInfo(buildRSMB(type1, broken))
+	require.NoError(t, err)
+	assert.Equal(t, "Maker", info.System.Manufacturer)
+	assert.Empty(t, info.Board.Manufacturer)
+}
+
+func TestParseSMBIOSInfoMissingSystem(t *testing.T) {
+	t.Parallel()
+
+	type0 := smbiosStruct(0, 0x12, map[int]byte{0x04: 1}, "Vendor")
+
+	_, err := parseSMBIOSInfo(buildRSMB(type0))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Type 1")
+}
+
+func FuzzParseSMBIOSInfo(f *testing.F) {
 	// Seed with a valid RSMB blob.
 	header := []byte{
 		0x00, 0x03, 0x02, 0x00,
@@ -362,6 +534,6 @@ func FuzzParseSMBIOSSystemInfo(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Must not panic on any input.
-		_, _ = parseSMBIOSSystemInfo(data)
+		_, _ = parseSMBIOSInfo(data)
 	})
 }

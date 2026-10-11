@@ -37,13 +37,11 @@ func TestCollector(t *testing.T) {
 		return
 	}
 
+	labels := make(map[string]string, len(metric.GetLabel()))
 	for _, label := range metric.GetLabel() {
-		if label.GetName() == "product_uuid" {
-			require.NotEmpty(t, label.GetValue(), "SMBIOS system UUID is empty")
-
-			return
-		}
+		labels[label.GetName()] = label.GetValue()
 	}
 
-	t.Fatalf("windows_dmi_info has no product_uuid label: %s", metric)
+	require.NotEmpty(t, labels["product_uuid"], "SMBIOS system UUID is empty: %s", metric)
+	require.NotEmpty(t, labels["bios_vendor"], "SMBIOS BIOS vendor is empty: %s", metric)
 }
