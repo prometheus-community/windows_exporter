@@ -276,9 +276,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
 	}
 
-	// The session and Connection Broker counters read this sample.
+	// The session and Connection Broker counters read this sample. Unlike
+	// netframework, a failed sample, including pdh.ErrNoData, skips both, so
+	// they don't publish the values of an earlier sample again.
 	if err := c.perfDataQuery.Collect(); err != nil {
-		errs = append(errs, fmt.Errorf("failed collecting terminal services performance counters: %w", err))
+		errs = append(errs, fmt.Errorf("failed to sample session and Connection Broker counters: %w", err))
 
 		return errors.Join(errs...)
 	}
