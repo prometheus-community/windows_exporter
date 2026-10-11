@@ -84,7 +84,8 @@ type Collector struct {
 
 	// metricCache reuses the metrics of services whose values did not change since
 	// the last scrape. Each service publishes up to 14 series, and building them is
-	// most of the allocations of a scrape.
+	// most of the allocations of a scrape. The values are still queried on every
+	// scrape, so it saves allocations, not system calls.
 	metricCache metriccache.Cache[string, serviceValues]
 }
 
@@ -183,9 +184,6 @@ func (c *Collector) GetName() string {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
-
 	c.serviceConfigPoolBytes = sync.Pool{
 		New: func() any {
 			return new([]byte)
@@ -218,6 +216,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"name", "process_id"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
 
 	c.apiStateValues = map[uint32]string{
 		windows.SERVICE_CONTINUE_PENDING: "continue pending",

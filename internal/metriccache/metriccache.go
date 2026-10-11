@@ -56,7 +56,9 @@ type Scrape[K, V comparable] struct {
 	// read without holding mu.
 	prev map[K]entry[V]
 
-	mu   sync.Mutex
+	mu sync.Mutex
+	// next collects the entries of this scrape. Commit hands it to the cache
+	// and sets it to nil, so later calls can't modify a committed generation.
 	next map[K]entry[V]
 }
 
@@ -93,7 +95,9 @@ func (s *Scrape[K, V]) Load(key K, value V) ([]prometheus.Metric, bool) {
 	}
 
 	s.mu.Lock()
-	s.next[key] = e
+	if s.next != nil {
+		s.next[key] = e
+	}
 	s.mu.Unlock()
 
 	return e.metrics, true
@@ -103,7 +107,9 @@ func (s *Scrape[K, V]) Load(key K, value V) ([]prometheus.Metric, bool) {
 // metrics afterwards.
 func (s *Scrape[K, V]) Store(key K, value V, metrics []prometheus.Metric) {
 	s.mu.Lock()
-	s.next[key] = entry[V]{value: value, metrics: metrics}
+	if s.next != nil {
+		s.next[key] = entry[V]{value: value, metrics: metrics}
+	}
 	s.mu.Unlock()
 }
 
@@ -124,11 +130,18 @@ func (s *Scrape[K, V]) Get(key K, value V, build func() []prometheus.Metric) []p
 // Commit replaces the cached entries with those loaded or stored in this
 // scrape, so keys that were not seen are dropped. It does nothing if the cache
 // was reset after the scrape began, for example by a Close or Build that ran
-// while a timed-out scrape was still collecting.
+// while a timed-out scrape was still collecting. Calls on the scrape after
+// Commit don't change the cache.
 func (s *Scrape[K, V]) Commit() {
 	s.mu.Lock()
 	next := s.next
+	s.next = nil
 	s.mu.Unlock()
+
+	if next == nil {
+		// Committed before.
+		return
+	}
 
 	s.cache.mu.Lock()
 	if s.cache.resets == s.resets {

@@ -169,6 +169,27 @@ func TestScrapeGet(t *testing.T) {
 	scrape.Commit()
 }
 
+func TestScrapeAfterCommit(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, string]
+
+	scrape := cache.Begin()
+	scrape.Store("a", "running", build("a", "running"))
+	scrape.Commit()
+
+	// A late call must not modify the committed generation.
+	scrape.Store("b", "stopped", build("b", "stopped"))
+	scrape.Commit()
+
+	next := cache.Begin()
+	_, ok := next.Load("a", "running")
+	require.True(t, ok)
+
+	_, ok = next.Load("b", "stopped")
+	require.False(t, ok, "stored after Commit")
+}
+
 func TestScrapeConcurrentWorkers(t *testing.T) {
 	t.Parallel()
 
