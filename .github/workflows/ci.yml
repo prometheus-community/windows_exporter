@@ -867,6 +867,18 @@ jobs:
               Start-Sleep -Seconds 2
           } while ($true)
 
+          # Storage Spaces Direct clusters have a Health resource (type "Health
+          # Service") that answers CLUSCTL_RESOURCE_GET_CLASS_INFO with only the
+          # class DWORD (#2669). S2D itself claims every disk of an allowed bus
+          # type, and marking the other VHDX disks as not claimable removes them
+          # from the host, which breaks the other steps. Disks from a loopback
+          # iSCSI target vanish when the node joins the cluster, because the
+          # iSCSI Target Server then only serves clustered targets. So register
+          # the resource directly. It stays offline without S2D.
+          if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
+              Add-ClusterResource -Name "Health" -ResourceType "Health Service" -Group "Cluster Group" | Out-Null
+          }
+
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
