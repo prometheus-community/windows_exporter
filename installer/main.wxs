@@ -81,6 +81,13 @@
         <Property Id="ARPNOREPAIR" Value="1" />
         <Property Id="ARPSIZE" Value="10000" />
 
+        <!-- Without this, Windows Installer uses the Restart Manager in silent mode to shut down every
+            process that holds one of the package's files, before ServiceControl stops the service. It ran
+            during every upgrade, repair and uninstall, where GitHub-hosted runners intermittently lost
+            their runner agent. ServiceControl and KillProcess already stop the exporter of this
+            installation. -->
+        <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+
         <Property Id="START_MENU_FOLDER" Value="0" />
         <Property Id="NOSTART" Value="0" />
 
