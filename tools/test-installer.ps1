@@ -76,7 +76,7 @@ function Write-MsiexecDiagnostic([String] $Log, [DateTime] $Since) {
     }
 }
 
-function Invoke-Msiexec([String] $Name, [String[]] $Arguments) {
+function Invoke-Msiexec([String] $Name, [String[]] $Arguments, [Switch] $PreviousPackage) {
     $log = Join-Path $WorkDir "$Name.log"
     $allArguments = $Arguments + @('/qn', '/norestart', '/L*v', "`"$log`"")
     Write-Host "msiexec $($allArguments -join ' ')"
@@ -89,8 +89,9 @@ function Invoke-Msiexec([String] $Name, [String[]] $Arguments) {
     Write-MsiexecDiagnostic -Log $log -Since $since
 
     # The package disables the Restart Manager, so no operation may shut down
-    # applications that hold its files.
-    if (Test-Path $log) {
+    # applications that hold its files. An upgrade removes the previous release
+    # with the previous package's settings, which still enable it.
+    if (-not $PreviousPackage -and (Test-Path $log)) {
         $shutdown = Select-String -Path $log -Encoding unicode -Pattern 'RESTART MANAGER: Successfully shut down'
         if ($null -ne $shutdown) {
             throw "msiexec $Name let the Restart Manager shut down applications, see $log"
@@ -214,7 +215,7 @@ try {
         throw "checksum mismatch for $previousMsi`: $actualHash, expected $expectedHash"
     }
 
-    Invoke-Msiexec -Name 'install-previous' -Arguments @('/i', "`"$previousMsi`"")
+    Invoke-Msiexec -Name 'install-previous' -Arguments @('/i', "`"$previousMsi`"") -PreviousPackage
     Assert-ServiceRunning | Out-Null
     Write-Host '::endgroup::'
 
@@ -227,7 +228,7 @@ try {
 
     Write-Step 'Upgrade to this build'
     Start-Foreign
-    Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"")
+    Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"") -PreviousPackage
     $metrics = Assert-ServiceRunning
     Assert-InstalledExecutable
 
