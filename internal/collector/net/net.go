@@ -29,6 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -83,6 +84,25 @@ type Collector struct {
 	nicIPAddressInfo *prometheus.Desc
 	nicOperStatus    *prometheus.Desc
 	nicInfo          *prometheus.Desc
+
+	// nicMetricCache reuses the nic_info, nic_operation_status and
+	// nic_address_info metrics of adapters whose information did not change
+	// since the last scrape. Each adapter publishes at least 8 of these series.
+	// The adapter addresses are still queried on every scrape, so it saves
+	// allocations, not system calls.
+	nicMetricCache metriccache.Cache[string, nicValues]
+}
+
+// nicValues holds the inputs of the nic_info metrics of an adapter besides its
+// name.
+type nicValues struct {
+	friendlyName string
+	macAddress   string
+	operStatus   uint32
+	// addresses encodes the global unicast and anycast addresses of an adapter
+	// that is up, in emission order. Each address is its length, its bytes and
+	// its address family, so the encoding is unambiguous.
+	addresses string
 }
 
 func New(config *Config) *Collector {
@@ -161,6 +181,7 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
+	c.nicMetricCache.Reset()
 
 	return nil
 }
@@ -270,6 +291,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic", "friendly_name", "mac"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.nicMetricCache.Reset()
 
 	var err error
 
@@ -422,6 +446,10 @@ func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 
 	convertNicName := strings.NewReplacer("(", "[", ")", "]", "#", "_")
 
+	scrape := c.nicMetricCache.Begin()
+
+	var addresses []byte
+
 	for _, nicAdapter := range nicAdapterAddresses {
 		friendlyName := windows.UTF16PtrToString(nicAdapter.FriendlyName)
 		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapter.Description))
@@ -440,70 +468,129 @@ func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 			nicAdapter.PhysicalAddress[5],
 		)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.nicInfo,
-			prometheus.GaugeValue,
-			1,
-			nicName,
-			friendlyName,
-			macAddress,
-		)
+		addresses = addresses[:0]
 
-		for operState, labelValue := range operStatus {
-			var metricStatus float64
-			if operState == nicAdapter.OperStatus {
-				metricStatus = 1
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicOperStatus,
-				prometheus.GaugeValue,
-				metricStatus,
-				nicName,
-				labelValue,
-			)
+		if nicAdapter.OperStatus == windows.IfOperStatusUp {
+			addresses = appendNICAddresses(addresses, nicAdapter)
 		}
 
-		if nicAdapter.OperStatus != windows.IfOperStatusUp {
-			continue
+		values := nicValues{
+			friendlyName: friendlyName,
+			macAddress:   macAddress,
+			operStatus:   nicAdapter.OperStatus,
+			addresses:    string(addresses),
 		}
 
-		for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
-			ipAddr := address.Address.IP()
+		metrics := scrape.Get(nicName, values, func() []prometheus.Metric {
+			return c.nicMetrics(nicName, nicAdapter, values)
+		})
 
-			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
-				continue
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicIPAddressInfo,
-				prometheus.GaugeValue,
-				1,
-				nicName,
-				ipAddr.String(),
-				addressFamily[address.Address.Sockaddr.Addr.Family],
-			)
-		}
-
-		for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
-			ipAddr := address.Address.IP()
-
-			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
-				continue
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicIPAddressInfo,
-				prometheus.GaugeValue,
-				1,
-				nicName,
-				ipAddr.String(),
-				addressFamily[address.Address.Sockaddr.Addr.Family],
-			)
+		for _, metric := range metrics {
+			ch <- metric
 		}
 	}
 
+	scrape.Commit()
+
 	return nil
+}
+
+// appendNICAddresses appends the encoding of the global unicast and anycast
+// addresses of nicAdapter to b, in the order nicMetrics emits them.
+func appendNICAddresses(b []byte, nicAdapter *windows.IpAdapterAddresses) []byte {
+	appendAddress := func(address *windows.SocketAddress) {
+		ipAddr := address.IP()
+
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			return
+		}
+
+		family := address.Sockaddr.Addr.Family
+
+		b = append(b, byte(len(ipAddr)))
+		b = append(b, ipAddr...)
+		b = append(b, byte(family>>8), byte(family))
+	}
+
+	for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
+		appendAddress(&address.Address)
+	}
+
+	for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
+		appendAddress(&address.Address)
+	}
+
+	return b
+}
+
+// nicMetrics builds the nic_info, nic_operation_status and nic_address_info
+// metrics of an adapter.
+func (c *Collector) nicMetrics(nicName string, nicAdapter *windows.IpAdapterAddresses, values nicValues) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, 1+len(operStatus))
+
+	metrics = append(metrics, prometheus.MustNewConstMetric(
+		c.nicInfo,
+		prometheus.GaugeValue,
+		1,
+		nicName,
+		values.friendlyName,
+		values.macAddress,
+	))
+
+	for operState, labelValue := range operStatus {
+		var metricStatus float64
+		if operState == values.operStatus {
+			metricStatus = 1
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicOperStatus,
+			prometheus.GaugeValue,
+			metricStatus,
+			nicName,
+			labelValue,
+		))
+	}
+
+	if values.operStatus != windows.IfOperStatusUp {
+		return metrics
+	}
+
+	for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
+		ipAddr := address.Address.IP()
+
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			continue
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicIPAddressInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			ipAddr.String(),
+			addressFamily[address.Address.Sockaddr.Addr.Family],
+		))
+	}
+
+	for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
+		ipAddr := address.Address.IP()
+
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			continue
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicIPAddressInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			ipAddr.String(),
+			addressFamily[address.Address.Sockaddr.Addr.Family],
+		))
+	}
+
+	return metrics
 }
 
 // adapterAddresses returns a list of IP adapter and address
