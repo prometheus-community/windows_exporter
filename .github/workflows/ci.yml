@@ -888,10 +888,21 @@ jobs:
                   $uniqueIds = @($physicalDisks | ForEach-Object UniqueId)
                   $otherDisks = @(Get-PhysicalDisk | Where-Object { $_.UniqueId -notin $uniqueIds })
                   $otherDisks | Format-Table FriendlyName, DeviceId, BusType, UniqueId
-                  Set-ClusterStorageSpacesDirectDisk `
-                      -CanBeClaimed $false `
-                      -PhysicalDiskIds @($otherDisks | ForEach-Object UniqueId) `
-                      -Confirm:$false
+                  # The documented -PhysicalDiskIds parameter is missing on the
+                  # windows-2022 runner, so pick whichever disk parameter exists.
+                  $setDisk = Get-Command Set-ClusterStorageSpacesDirectDisk
+                  Write-Host "Set-ClusterStorageSpacesDirectDisk parameters: $($setDisk.Parameters.Keys -join ', ')"
+                  if ($setDisk.Parameters.ContainsKey("PhysicalDiskIds")) {
+                      Set-ClusterStorageSpacesDirectDisk -CanBeClaimed $false -Confirm:$false `
+                          -PhysicalDiskIds @($otherDisks | ForEach-Object UniqueId)
+                  }
+                  elseif ($setDisk.Parameters.ContainsKey("PhysicalDisk")) {
+                      Set-ClusterStorageSpacesDirectDisk -CanBeClaimed $false -Confirm:$false `
+                          -PhysicalDisk $otherDisks
+                  }
+                  else {
+                      throw "Set-ClusterStorageSpacesDirectDisk has no physical disk parameter"
+                  }
 
                   # VHDX disks report BusType "File Backed Virtual", which S2D
                   # rejects unless the cluster allows every bus type.
