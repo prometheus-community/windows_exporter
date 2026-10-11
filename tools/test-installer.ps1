@@ -167,7 +167,7 @@ function Get-AdoptedProcess {
 
 function Reset-AdoptedProcess {
     for ($attempt = 0; ; $attempt++) {
-        $adopted = Get-AdoptedProcess
+        $adopted = @(Get-AdoptedProcess)
         if ($adopted.Count -eq 0) {
             return
         }
