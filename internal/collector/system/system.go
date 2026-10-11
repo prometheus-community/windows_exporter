@@ -18,6 +18,7 @@
 package system
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -83,7 +84,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.bootTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
-		"Unix timestamp of system boot time",
+		"Unix timestamp of last system boot. Follows clock corrections.",
 		nil,
 		nil,
 	)
@@ -144,11 +145,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	// The boot time does not depend on the performance counters.
+	bootTimeErr := c.collectBootTime(ch)
+
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect System metrics: %w", err)
+		return errors.Join(bootTimeErr, fmt.Errorf("failed to collect System metrics: %w", err))
 	} else if len(c.perfDataObject) == 0 {
-		return fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected)
+		return errors.Join(bootTimeErr, fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -196,6 +200,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		float64(4294967295),
 	)
 
+	return bootTimeErr
+}
+
+func (c *Collector) collectBootTime(ch chan<- prometheus.Metric) error {
 	bootTime, err := ntdll.BootTime()
 	if err != nil {
 		return fmt.Errorf("failed to get system boot time: %w", err)

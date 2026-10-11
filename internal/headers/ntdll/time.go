@@ -40,8 +40,7 @@ type SystemTimeOfDayInformation struct {
 // BootTime returns the time the system booted.
 //
 // The kernel moves the boot time along when the system time is set, so it
-// stays correct after a clock correction. Time spent in sleep or hibernation
-// counts as uptime.
+// stays correct after a clock correction.
 func BootTime() (time.Time, error) {
 	var info SystemTimeOfDayInformation
 
