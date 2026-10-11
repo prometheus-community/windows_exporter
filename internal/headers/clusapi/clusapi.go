@@ -56,6 +56,14 @@ var (
 	closeResource   = dll.NewProc("CloseClusterResource")
 	resourceControl = dll.NewProc("ClusterResourceControl")
 	resourceState   = dll.NewProc("GetClusterResourceState")
+
+	// propertyLists keeps control buffers between objects. Values parsed from
+	// a buffer point into it, so a buffer goes back only after they are copied.
+	propertyLists = sync.Pool{New: func() any {
+		buffer := make([]byte, propertyListBufferSize)
+
+		return &buffer
+	}}
 )
 
 // ErrBusy reports that an earlier call on the same Cluster has not returned
@@ -464,8 +472,13 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 
 	hasType := false
 
+	// All controls of a resource share one buffer: each result is copied out
+	// before the next control overwrites it.
+	buffer := propertyLists.Get().(*[]byte) //nolint:forcetypeassert
+	defer propertyLists.Put(buffer)
+
 	for _, code := range []uint32{resourceGetROCommonProperties, resourceGetCommonProperties} {
-		data, err := resourceBuffer(handle, code, propertyListBufferSize, deadline)
+		data, err := resourceBufferIn(handle, code, *buffer, deadline)
 		if err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterResourceControl %#x: %w", code, err))
 
@@ -479,23 +492,8 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 			continue
 		}
 
-		for name, values := range properties {
-			if len(values) != 1 {
-				continue
-			}
-
-			if value, err := values[0].DWORD(); err == nil {
-				resource.Values[name] = value
-			}
-		}
-
-		// The read-only common Type property is the same resource type name
-		// that CLUSCTL_RESOURCE_GET_RESOURCE_TYPE returns.
-		if values := properties["Type"]; len(values) == 1 {
-			if value, err := values[0].String(); err == nil {
-				resource.Type = value
-				hasType = true
-			}
+		if copyResourceProperties(resource, properties) {
+			hasType = true
 		}
 	}
 
@@ -503,7 +501,7 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 		name string
 		code uint32
 	}{{"Characteristics", resourceGetCharacteristics}, {"Flags", resourceGetFlags}} {
-		data, err := resourceBuffer(handle, field.code, 4, deadline)
+		data, err := resourceBufferIn(handle, field.code, (*buffer)[:4], deadline)
 		switch {
 		case err != nil:
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s: %w", field.name, err))
@@ -514,7 +512,7 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 		}
 	}
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
+	data, err := resourceBufferIn(handle, resourceGetClassInfo, (*buffer)[:8], deadline)
 	if err != nil {
 		resultErr = errors.Join(resultErr, fmt.Errorf("class information: %w", err))
 	} else {
@@ -523,7 +521,7 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 
 	// The property lists normally carry the type; only ask separately without it.
 	if !hasType {
-		data, err = resourceBuffer(handle, resourceGetType, typeBufferSize, deadline)
+		data, err = resourceBufferIn(handle, resourceGetType, (*buffer)[:typeBufferSize], deadline)
 		if err != nil {
 			return errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
 		}
@@ -542,6 +540,35 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 	resource.IdentityValid = true
 
 	return resultErr
+}
+
+// copyResourceProperties copies the single DWORD values and the type name out
+// of a parsed property list, so the list's buffer can be reused. It reports
+// whether the list had the type.
+func copyResourceProperties(resource *Resource, properties map[string][]Property) bool {
+	for name, values := range properties {
+		// Checking the format first skips the error DWORD builds for every
+		// string or binary property.
+		if len(values) != 1 || values[0].Format != formatDWORD {
+			continue
+		}
+
+		if value, err := values[0].DWORD(); err == nil {
+			resource.Values[name] = value
+		}
+	}
+
+	// The read-only common Type property is the same resource type name that
+	// CLUSCTL_RESOURCE_GET_RESOURCE_TYPE returns.
+	if values := properties["Type"]; len(values) == 1 {
+		if value, err := values[0].String(); err == nil {
+			resource.Type = value
+
+			return true
+		}
+	}
+
+	return false
 }
 
 // parseResourceClassInfo decodes CLUS_RESOURCE_CLASS_INFO. Some resource DLLs,
@@ -564,7 +591,13 @@ func parseResourceClassInfo(data []byte) (uint32, uint32) {
 }
 
 func resourceBuffer(handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {
-	return controlBuffer(deadline, size, func(buffer []byte) (uint32, error) {
+	return resourceBufferIn(handle, code, newControlBuffer(size), deadline)
+}
+
+// resourceBufferIn is resourceBuffer starting with buffer instead of a new one.
+// The result may share buffer's memory.
+func resourceBufferIn(handle uintptr, code uint32, buffer []byte, deadline time.Time) ([]byte, error) {
+	return controlBufferIn(deadline, buffer, func(buffer []byte) (uint32, error) {
 		var (
 			size    uint32
 			pointer *byte
@@ -597,7 +630,8 @@ func readResourceState(handle uintptr, deadline time.Time) (uint32, string, stri
 }
 
 func stateBuffers(deadline time.Time, call func([]uint16, []uint16) (uint32, uint32, uint32, error)) (uint32, string, string, error) {
-	node, group := make([]uint16, 256), make([]uint16, 256)
+	units := make([]uint16, 512)
+	node, group := units[:256:256], units[256:]
 
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
@@ -659,11 +693,20 @@ func checkDeadline(deadline time.Time) error {
 // one RPC. ERROR_MORE_DATA still grows the buffer to the reported size; size 0
 // starts with a NULL size probe.
 func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, error)) ([]byte, error) {
-	var buffer []byte
-	if size > 0 {
-		buffer = make([]byte, size)
+	return controlBufferIn(deadline, newControlBuffer(size), call)
+}
+
+func newControlBuffer(size int) []byte {
+	if size <= 0 {
+		return nil
 	}
 
+	return make([]byte, size)
+}
+
+// controlBufferIn is controlBuffer starting with buffer, which an empty buffer
+// turns into a NULL size probe. The result may share buffer's memory.
+func controlBufferIn(deadline time.Time, buffer []byte, call func([]byte) (uint32, error)) ([]byte, error) {
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
 			return nil, err

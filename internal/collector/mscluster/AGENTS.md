@@ -32,6 +32,10 @@
   the documentation miss this. The parser validates only the structure and
   accepts zero padding. `TestDumpPropertyLists` logs real lists as hex when
   `WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP` is set on a cluster node.
+- `ParseProperties` returns `Property.Data` slices into the control buffer.
+  Property list reads borrow that buffer from `propertyLists` and return it
+  only after the values are copied out (`copyResourceProperties`,
+  `readCommonProperties`); never keep a parsed list past that point.
 - `clusapi.Open` reports an unconfigured cluster or a missing ClusAPI with
   `errors.ErrUnsupported`; the shared collector test treats that as an
   unsupported role on hosts where `mscluster` is not a required fixture.

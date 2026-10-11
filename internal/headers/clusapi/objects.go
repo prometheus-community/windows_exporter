@@ -255,10 +255,13 @@ func (c *Cluster) readObject(api *objectAPI, name objectName, deadline time.Time
 func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint32, values map[string]uint32, deadline time.Time) error {
 	var resultErr error
 
+	buffer := propertyLists.Get().(*[]byte) //nolint:forcetypeassert
+	defer propertyLists.Put(buffer)
+
 	for _, operation := range []uint32{ctlGetROCommonProperties, ctlGetCommonProperties} {
 		code := object<<24 | operation
 
-		data, err := objectBuffer(control, handle, code, propertyListBufferSize, deadline)
+		data, err := objectBufferIn(control, handle, code, *buffer, deadline)
 		if err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s %#x: %w", control.Name, code, err))
 
@@ -277,7 +280,9 @@ func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint
 		}
 
 		for name, list := range properties {
-			if len(list) != 1 {
+			// Checking the format first skips the error Value32 builds for
+			// every string or binary property.
+			if len(list) != 1 || (list[0].Format != formatDWORD && list[0].Format != formatLong) {
 				continue
 			}
 
@@ -293,7 +298,13 @@ func readCommonProperties(control *windows.LazyProc, handle uintptr, object uint
 // objectBuffer calls a Cluster{Group,Node,Network}Control function. They share
 // the ClusterResourceControl signature and return a DWORD status code.
 func objectBuffer(proc *windows.LazyProc, handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {
-	return controlBuffer(deadline, size, func(buffer []byte) (uint32, error) {
+	return objectBufferIn(proc, handle, code, newControlBuffer(size), deadline)
+}
+
+// objectBufferIn is objectBuffer starting with buffer instead of a new one. The
+// result may share buffer's memory.
+func objectBufferIn(proc *windows.LazyProc, handle uintptr, code uint32, buffer []byte, deadline time.Time) ([]byte, error) {
+	return controlBufferIn(deadline, buffer, func(buffer []byte) (uint32, error) {
 		var (
 			size    uint32
 			pointer *byte
