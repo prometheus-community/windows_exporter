@@ -860,17 +860,93 @@ jobs:
               Start-Sleep -Seconds 2
           } while ($true)
 
-          # Storage Spaces Direct clusters have a Health resource (type "Health
-          # Service") that answers CLUSCTL_RESOURCE_GET_CLASS_INFO with only the
-          # class DWORD (#2669). S2D itself claims every disk of an allowed bus
-          # type, and marking the other VHDX disks as not claimable removes them
-          # from the host, which breaks the other steps. So register the
-          # resource directly. It stays offline without S2D.
+          # Storage Spaces Direct adds the Health resource (type "Health Service").
+          # It answers CLUSCTL_RESOURCE_GET_CLASS_INFO with only the class DWORD
+          # (#2669). S2D claims every disk of an allowed bus type, and the other
+          # steps attach VHDX disks ("File Backed Virtual") and the runner's temp
+          # disk is NVMe. So S2D gets disks from a loopback iSCSI target and only
+          # the iSCSI bus type is allowed. S2DBusTypes has one bit per
+          # STORAGE_BUS_TYPE value (the default 396288 is SAS, SATA, NVMe, SCM).
+          if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
+              $s2dLog = Join-Path $env:RUNNER_TEMP "s2d-setup.log"
+              try {
+                  $result = Install-WindowsFeature -Name FS-iSCSITarget-Server
+                  if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                      throw "The iSCSI Target Server could not be installed without a restart"
+                  }
+
+                  Set-Service -Name MSiSCSI -StartupType Automatic
+                  Start-Service -Name MSiSCSI
+                  $initiatorIqn = (Get-InitiatorPort | Where-Object ConnectionType -eq "iSCSI" | Select-Object -First 1).NodeAddress
+                  if (-not $initiatorIqn) { throw "No iSCSI initiator port found" }
+
+                  New-IscsiServerTarget -TargetName "cis2d" -InitiatorIds "IQN:$initiatorIqn" | Out-Null
+                  foreach ($i in 1..3) {
+                      $path = Join-Path $env:RUNNER_TEMP "s2d-iscsi-$i.vhdx"
+                      New-IscsiVirtualDisk -Path $path -SizeBytes 10GB | Out-Null
+                      Add-IscsiVirtualDiskTargetMapping -TargetName "cis2d" -Path $path
+                  }
+
+                  New-IscsiTargetPortal -TargetPortalAddress 127.0.0.1 | Out-Null
+                  $target = Get-IscsiTarget | Where-Object NodeAddress -like "*-cis2d-target"
+                  if ($null -eq $target) { throw "The loopback iSCSI target was not discovered" }
+                  Connect-IscsiTarget -NodeAddress $target.NodeAddress | Out-Null
+                  Update-HostStorageCache
+
+                  $deadline = (Get-Date).AddSeconds(60)
+                  do {
+                      $iscsiDisks = @(Get-PhysicalDisk | Where-Object BusType -eq "iSCSI")
+                      if ($iscsiDisks.Count -ge 3) { break }
+                      Start-Sleep -Seconds 2
+                  } while ((Get-Date) -lt $deadline)
+
+                  Get-PhysicalDisk | Format-Table FriendlyName, DeviceId, BusType, CanPool, CannotPoolReason, UniqueId |
+                      Out-String -Width 300 | Tee-Object -FilePath $s2dLog -Append
+                  if ($iscsiDisks.Count -ne 3) {
+                      throw "Expected three iSCSI disks, found $($iscsiDisks.Count)"
+                  }
+
+                  (Get-Cluster).S2DBusTypes = [uint32](1 -shl 9) # BusTypeiScsi
+
+                  # Enable-ClusterStorageSpacesDirect can wait indefinitely for the
+                  # disks to be claimed, so bound it and log its progress.
+                  $enable = Start-Job -ScriptBlock {
+                      Import-Module FailoverClusters
+                      Enable-ClusterStorageSpacesDirect `
+                          -AutoConfig:$false `
+                          -CacheState Disabled `
+                          -SkipEligibilityChecks `
+                          -Confirm:$false `
+                          -Verbose 4>&1 | ForEach-Object { "$_" }
+                  }
+
+                  $finished = Wait-Job $enable -Timeout 240
+                  Receive-Job $enable -ErrorAction Continue 2>&1 | Tee-Object -FilePath $s2dLog -Append
+                  if ($null -eq $finished) {
+                      Stop-Job $enable
+                      throw "Enable-ClusterStorageSpacesDirect did not finish within 4 minutes"
+                  }
+
+                  if ($enable.State -ne "Completed") {
+                      throw "Enable-ClusterStorageSpacesDirect ended in state $($enable.State)"
+                  }
+              }
+              catch {
+                  Write-Host "::warning::Storage Spaces Direct setup failed: $_"
+                  "Storage Spaces Direct setup failed: $_" | Add-Content -Path $s2dLog
+              }
+
+              Get-PhysicalDisk | Format-Table FriendlyName, DeviceId, BusType, CanPool, HealthStatus |
+                  Out-String -Width 300 | Tee-Object -FilePath $s2dLog -Append
+          }
+
+          # Without S2D, register the resource type directly. It stays offline,
+          # but still answers with only the class DWORD.
           if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
               Add-ClusterResource -Name "Health" -ResourceType "Health Service" -Group "Cluster Group" | Out-Null
           }
 
-          Get-Cluster | Format-List Name, AdministrativeAccessPoint
+          Get-Cluster | Format-List Name, AdministrativeAccessPoint, S2DEnabled, S2DBusTypes
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
           Get-ClusterGroup | Format-Table Name, State, OwnerNode, GroupType
