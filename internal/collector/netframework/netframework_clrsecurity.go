@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -57,7 +58,7 @@ func (c *Collector) buildClrSecurity() error {
 
 	var err error
 
-	c.perfClrSecurity, err = newPerfCollector[perfDataClrSecurity](c.logger, ".NET CLR Security")
+	c.perfClrSecurity, err = newPerfCollector[perfDataClrSecurity](c.logger, c.perfQuery, ".NET CLR Security")
 
 	return err
 }
@@ -70,7 +71,7 @@ type perfDataClrSecurity struct {
 	TotalRuntimeChecks    float64 `perfdata:"Total Runtime Checks"`
 }
 
-func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrSecurity
 	if err := c.perfClrSecurity.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Security: %w", err)
@@ -81,28 +82,28 @@ func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, _ time.Durat
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberLinkTimeChecks,
 			prometheus.CounterValue,
 			float64(process.NumberLinkTimeChecks),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeInRTChecks,
 			prometheus.GaugeValue,
 			float64(process.PercentTimeinRTchecks)/c.perfFrequency,
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.stackWalkDepth,
 			prometheus.GaugeValue,
 			float64(process.StackWalkDepth),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalRuntimeChecks,
 			prometheus.CounterValue,
 			float64(process.TotalRuntimeChecks),

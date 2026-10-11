@@ -42,6 +42,7 @@ const (
 	updateIdentity                = 19
 	updateDeploymentTime          = 30
 	updateSeverity                = 34
+	updateDeploymentAction        = 48
 	identityRevision              = 7
 	identityUpdateID              = 8
 	categoryCollectionItem        = 7
@@ -113,6 +114,23 @@ func (u *Update) Identity() (*UpdateIdentity, error) {
 func (u *Update) LastDeploymentChangeTime() (ole.DATE, error) {
 	return u.Get[ole.DATE](updateDeploymentTime)
 }
+
+// DeploymentAction is the WUA DeploymentAction enumeration.
+// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-deploymentaction
+type DeploymentAction int32
+
+const (
+	DeploymentActionNone                 DeploymentAction = 0
+	DeploymentActionInstallation         DeploymentAction = 1
+	DeploymentActionUninstallation       DeploymentAction = 2
+	DeploymentActionDetection            DeploymentAction = 3
+	DeploymentActionOptionalInstallation DeploymentAction = 4
+)
+
+func (u *Update) DeploymentAction() (DeploymentAction, error) {
+	return u.Get[DeploymentAction](updateDeploymentAction)
+}
+
 func (i *UpdateIdentity) UpdateID() (string, error)      { return i.String(identityUpdateID) }
 func (i *UpdateIdentity) RevisionNumber() (int32, error) { return i.Get[int32](identityRevision) }
 func (c *Category) Name() (string, error)                { return c.String(categoryName) }

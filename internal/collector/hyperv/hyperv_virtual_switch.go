@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -217,154 +218,154 @@ func (c *Collector) buildVirtualSwitch() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualSwitch.Collect(&c.perfDataObjectVirtualSwitch)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Switch metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectVirtualSwitch {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchBroadcastPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchBroadcastPacketsReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchBroadcastPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchBroadcastPacketsSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchBytes,
 			prometheus.CounterValue,
 			data.VirtualSwitchBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchBytesReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchBytesReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchBytesSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchBytesSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchDirectedPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchDirectedPacketsReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchDirectedPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchDirectedPacketsSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			data.VirtualSwitchDroppedPacketsIncoming,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			data.VirtualSwitchDroppedPacketsOutgoing,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			data.VirtualSwitchExtensionsDroppedPacketsIncoming,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			data.VirtualSwitchExtensionsDroppedPacketsOutgoing,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchLearnedMacAddresses,
 			prometheus.CounterValue,
 			data.VirtualSwitchLearnedMacAddresses,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchMulticastPacketsReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchMulticastPacketsSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchNumberOfSendChannelMoves,
 			prometheus.CounterValue,
 			data.VirtualSwitchNumberOfSendChannelMoves,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchNumberOfVMQMoves,
 			prometheus.CounterValue,
 			data.VirtualSwitchNumberOfVMQMoves,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchPacketsFlooded,
 			prometheus.CounterValue,
 			data.VirtualSwitchPacketsFlooded,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchPackets,
 			prometheus.CounterValue,
 			data.VirtualSwitchPackets,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchPacketsReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchPacketsSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSwitchPurgedMacAddresses,
 			prometheus.CounterValue,
 			data.VirtualSwitchPurgedMacAddresses,

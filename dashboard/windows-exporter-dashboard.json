@@ -12728,7 +12728,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Updates that are available but not installed. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
+                    "description": "Updates that are available but not installed, including optional updates. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
                     "id": 210,
                     "links": [],
                     "title": "Pending",
@@ -12953,6 +12953,91 @@
                     }
                 }
             },
+            "panel-213": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"optional_installation\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Pending optional updates, such as the monthly non-security preview update. Windows does not install them automatically. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
+                    "id": 213,
+                    "links": [],
+                    "title": "Optional",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
             "panel-214": {
                 "kind": "Panel",
                 "spec": {
@@ -12972,7 +13057,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "time() - min(windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "time() - min(windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"} and on (id, revision) windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"installation\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12989,7 +13074,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Time since the oldest pending update was published. Orange after 30 days, red after 60 days. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
+                    "description": "Time since the oldest pending regular update was published. Optional updates are left out. Orange after 30 days, red after 60 days. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
                     "id": 214,
                     "links": [],
                     "title": "Oldest pending",
@@ -13157,7 +13242,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (title, category, severity) ((windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"} * on (id, revision) group_right windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or on (id, revision) (0 * windows_update_pending_info{job=~\"$job\", instance=\"$instance\"})) * 1000",
+                                                "expr": "max by (title, category, severity, deployment_action) ((windows_update_pending_published_timestamp{job=~\"$job\", instance=\"$instance\"} * on (id, revision) group_right windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or on (id, revision) (0 * windows_update_pending_info{job=~\"$job\", instance=\"$instance\"})) * 1000",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -13181,14 +13266,16 @@
                                             },
                                             "includeByName": {},
                                             "indexByName": {
-                                                "Value": 3,
+                                                "Value": 4,
                                                 "category": 1,
+                                                "deployment_action": 3,
                                                 "severity": 2,
                                                 "title": 0
                                             },
                                             "renameByName": {
                                                 "Value": "Published",
                                                 "category": "Category",
+                                                "deployment_action": "Type",
                                                 "severity": "Severity",
                                                 "title": "Update"
                                             }
@@ -13198,7 +13285,7 @@
                             ]
                         }
                     },
-                    "description": "Pending updates with their category, security severity and publish date. Category names follow the Windows display language. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
+                    "description": "Pending updates with their category, security severity, type and publish date. Optional updates, such as the monthly non-security preview update, are not installed automatically. Category names follow the Windows display language. Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.",
                     "id": 216,
                     "links": [],
                     "title": "Pending updates",
@@ -13279,6 +13366,32 @@
                                                 "value": {
                                                     "type": "color-text"
                                                 }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Type"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "installation": {
+                                                                "index": 0,
+                                                                "text": "Regular"
+                                                            },
+                                                            "optional_installation": {
+                                                                "index": 1,
+                                                                "text": "Optional"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
                                             }
                                         ]
                                     }
@@ -29025,7 +29138,7 @@
                                                                         "name": "panel-210"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 5,
+                                                                    "width": 4,
                                                                     "x": 0,
                                                                     "y": 0
                                                                 }
@@ -29038,8 +29151,8 @@
                                                                         "name": "panel-211"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 5,
-                                                                    "x": 5,
+                                                                    "width": 4,
+                                                                    "x": 4,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -29051,8 +29164,21 @@
                                                                         "name": "panel-212"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 5,
-                                                                    "x": 10,
+                                                                    "width": 4,
+                                                                    "x": 8,
+                                                                    "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-213"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 4,
+                                                                    "x": 12,
                                                                     "y": 0
                                                                 }
                                                             },
@@ -29064,8 +29190,8 @@
                                                                         "name": "panel-214"
                                                                     },
                                                                     "height": 4,
-                                                                    "width": 5,
-                                                                    "x": 15,
+                                                                    "width": 4,
+                                                                    "x": 16,
                                                                     "y": 0
                                                                 }
                                                             },

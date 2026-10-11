@@ -5,8 +5,7 @@ The net collector exposes metrics about network interfaces
 |||
 -|-
 Metric name prefix  | `net`
-Data source         | Perflib
-Classes             | [`Win32_PerfRawData_Tcpip_NetworkInterface`](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80))
+Data source         | Performance counters (`Network Interface`), [`GetAdaptersAddresses`](https://learn.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getadaptersaddresses)
 Enabled by default? | Yes
 
 ## Flags
@@ -26,6 +25,12 @@ If given, an interface name needs to *not* match the exclude regular expression 
 Comma-separated list of collectors to use. Defaults to all, if not specified. Supported values are: `metrics`, `nic_info`.
 
 Default: `metrics,nic_info`
+
+## Interface names
+
+The `nic` label is the instance name of the adapter in the `Network Interface` performance counter object. It is the adapter description with `(` and `)` replaced by `[` and `]`, and `#`, `/` and `\` replaced by `_`, for example `Intel[R] PRO_1000 MT Network Connection _2`. The include and exclude expressions match this name.
+
+The `mac` label of `windows_net_nic_info` is empty for adapters without a physical address, like the loopback adapter.
 
 ## Metrics
 
@@ -59,7 +64,7 @@ rate(windows_net_bytes_sent_total{instance="localhost"}[2m])
 ## Useful queries
 Get total utilisation of network interface as a percentage
 ```
-rate(windows_net_bytes_total{instance="localhost", nic="Microsoft_Hyper_V_Network_Adapter__1"}[2m]) / windows_net_current_bandwidth_bytes{instance="localhost", nic="Microsoft_Hyper_V_Network_Adapter__1"} * 100
+rate(windows_net_bytes_total{instance="localhost", nic="Microsoft Hyper-V Network Adapter _2"}[2m]) / windows_net_current_bandwidth_bytes{instance="localhost", nic="Microsoft Hyper-V Network Adapter _2"} * 100
 ```
 
 ## Alerting examples

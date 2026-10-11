@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -177,14 +178,14 @@ func (c *Collector) buildReplicaVM() error {
 	return nil
 }
 
-func (c *Collector) collectReplicaVM(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectReplicaVM(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	return errors.Join(
-		c.collectReplicaVMPerfData(ch),
-		c.collectReplicaVMRelationships(ch),
+		c.collectReplicaVMPerfData(ch, scrape),
+		c.collectReplicaVMRelationships(ch, scrape),
 	)
 }
 
-func (c *Collector) collectReplicaVMPerfData(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectReplicaVMPerfData(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	if c.perfDataCollectorReplicaVM == nil {
 		return nil
 	}
@@ -198,63 +199,63 @@ func (c *Collector) collectReplicaVMPerfData(ch chan<- prometheus.Metric) error 
 	}
 
 	for _, data := range c.perfDataObjectReplicaVM {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMAverageReplicationLatency,
 			prometheus.GaugeValue,
 			data.AverageReplicationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMAverageReplicationSize,
 			prometheus.GaugeValue,
 			data.AverageReplicationSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMCompressionEfficiency,
 			prometheus.GaugeValue,
 			data.CompressionEfficiency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMLastReplicationSize,
 			prometheus.GaugeValue,
 			data.LastReplicationSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMNetworkReceivedBytes,
 			prometheus.CounterValue,
 			data.NetworkBytesRecv,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMNetworkSentBytes,
 			prometheus.CounterValue,
 			data.NetworkBytesSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMReplicationCount,
 			prometheus.CounterValue,
 			data.ReplicationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMReplicationLatency,
 			prometheus.GaugeValue,
 			data.ReplicationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMResynchronizedBytes,
 			prometheus.CounterValue,
 			data.ResynchronizedBytes,
@@ -265,7 +266,7 @@ func (c *Collector) collectReplicaVMPerfData(ch chan<- prometheus.Metric) error 
 	return nil
 }
 
-func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	var dst []msvmReplicationRelationship
 
 	if err := c.miSession.Query(&dst, mi.NamespaceRootVirtualizationV2, c.miQueryReplicaVM, replicaVMQueryTimeout); err != nil {
@@ -275,7 +276,7 @@ func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric) e
 	for _, relationship := range dst {
 		relationshipType := replicationRelationshipType(relationship.InstanceID)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMHealth,
 			prometheus.GaugeValue,
 			float64(relationship.ReplicationHealth),
@@ -283,7 +284,7 @@ func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric) e
 			relationshipType,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.replicaVMState,
 			prometheus.GaugeValue,
 			float64(relationship.ReplicationState),

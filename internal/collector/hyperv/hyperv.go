@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
@@ -113,8 +114,13 @@ type Collector struct {
 
 	miSession *mi.Session
 
-	collectorFns []func(ch chan<- prometheus.Metric) error
+	collectorFns []func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error
 	closeFns     []func()
+
+	// labels keeps the label pairs of the series of the last scrape. The
+	// counters change on every scrape, but their VM, switch and adapter
+	// labels stay the same.
+	labels labelcache.Cache
 }
 
 func New(config *Config) *Collector {
@@ -165,6 +171,7 @@ func (c *Collector) Close() error {
 	}
 
 	c.closeFns = nil
+	c.labels.Reset()
 
 	return nil
 }
@@ -172,7 +179,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.miSession = miSession
 	c.logger = logger.With(slog.String("collector", Name))
-	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error, 0, len(c.config.CollectorsEnabled))
 	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
 
 	if len(c.config.CollectorsEnabled) == 0 {
@@ -181,7 +188,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	subCollectors := map[string]struct {
 		build          func() error
-		collect        func(ch chan<- prometheus.Metric) error
+		collect        func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error
 		close          func()
 		minBuildNumber uint16
 	}{
@@ -333,11 +340,14 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	var g recovery.Group
 
 	for _, fn := range c.collectorFns {
 		g.Go(func() error {
-			return fn(ch)
+			return fn(ch, scrape)
 		})
 	}
 

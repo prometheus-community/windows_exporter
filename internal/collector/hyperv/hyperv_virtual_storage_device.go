@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -165,91 +166,91 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualStorageDevice.Collect(&c.perfDataObjectVirtualStorageDevice)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Storage Device metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectVirtualStorageDevice {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceErrorCount,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceErrorCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceQueueLength,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceQueueLength,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceReadBytes,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceReadBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceReadOperations,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceReadOperations,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceWriteBytes,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceWriteBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceWriteOperations,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceWriteOperations,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLatency,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceThroughput,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceThroughput,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceNormalizedThroughput,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceNormalizedThroughput,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLowerQueueLength,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceLowerQueueLength,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLowerLatency,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceLowerLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceIOQuotaReplenishmentRate,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceIOQuotaReplenishmentRate,
@@ -258,14 +259,14 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) err
 
 		// The raw value of a PERF_AVERAGE_TIMER counter is the sum of all IO latencies in
 		// 100ns ticks; the operation count it is averaged over is Throughput.
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceIOLatency,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceLatency*pdh.TicksToSecondScaleFactor,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLowerIOLatency,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceLowerLatency*pdh.TicksToSecondScaleFactor,

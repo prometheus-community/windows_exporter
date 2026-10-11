@@ -74,3 +74,38 @@ func TestParseGPUCounterInstanceString(t *testing.T) {
 		})
 	}
 }
+
+func TestInstanceCache(t *testing.T) {
+	t.Parallel()
+
+	var cache instanceCache
+
+	names := []string{
+		"pid_1234_luid_0x00000000_0x00005678_phys_0_eng_0_engtype_3D",
+		"pid_1234_luid_0x00000000_0x00005678_phys_0_eng_1_engtype_Compute_0",
+		"luid_0x00000000_0x00005678_phys_0",
+	}
+
+	for range 3 {
+		scrape := cache.begin()
+
+		for _, name := range names {
+			require.Equal(t, parseGPUCounterInstanceString(name), scrape.parse(name))
+		}
+
+		scrape.commit()
+		scrape.commit()
+	}
+
+	require.Len(t, cache.entries, len(names))
+
+	// Instances that a scrape doesn't see are dropped.
+	scrape := cache.begin()
+	scrape.parse(names[0])
+	scrape.commit()
+
+	require.Len(t, cache.entries, 1)
+
+	cache.reset()
+	require.Empty(t, cache.entries)
+}

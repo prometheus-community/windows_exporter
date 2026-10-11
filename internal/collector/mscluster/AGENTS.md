@@ -27,6 +27,17 @@
   two groups (`CIResources`, `CIFailedResources`) on a private network of an
   internal Hyper-V switch; the parity tests require them. It has no clustered
   disks, so shared volume parity still compares empty sets.
+  The "Cluster Group" also holds an offline "Health Service" resource
+  without Storage Spaces Direct. It answers `CLUSCTL_RESOURCE_GET_CLASS_INFO`
+  with only 4 bytes, like the Health resource of S2D clusters (#2669). S2D
+  itself cannot be enabled on the runner: it claims every VHDX disk of the
+  other steps, and `Set-ClusterStorageSpacesDirectDisk -CanBeClaimed $false`
+  removes those disks from the host instead of leaving them alone. Disks from
+  a loopback iSCSI target (with `S2DBusTypes` limited to iSCSI) appear before
+  `New-Cluster`, but the session and the target are gone after it: once the
+  node is clustered, the iSCSI Target Server only serves clustered targets.
+  A clustered target needs a cluster disk for its files, and
+  `Get-ClusterAvailableDisk` does not list a host-mounted VHDX.
 - Property lists returned by the cluster service end with an extra
   `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
   the documentation miss this. The parser validates only the structure and

@@ -37,8 +37,8 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 | `windows_logical_disk_writes_total`              | Rate of write operations on the disk                                                                                      | counter | `volume`                                                          |
 | `windows_logical_disk_read_seconds_total`        | Seconds the disk was busy servicing read requests                                                                         | counter | `volume`                                                          |
 | `windows_logical_disk_write_seconds_total`       | Seconds the disk was busy servicing write requests                                                                        | counter | `volume`                                                          |
-| `windows_logical_disk_free_bytes`                | Unused space of the disk in bytes (not real time, updates every 10-15 min)                                                | gauge   | `volume`                                                          |
-| `windows_logical_disk_size_bytes`                | Total size of the disk in bytes (not real time, updates every 10-15 min)                                                  | gauge   | `volume`                                                          |
+| `windows_logical_disk_free_bytes`                | Unused space of the disk in bytes                                                                                         | gauge   | `volume`                                                          |
+| `windows_logical_disk_size_bytes`                | Total size of the disk in bytes                                                                                           | gauge   | `volume`                                                          |
 | `windows_logical_disk_idle_seconds_total`        | Seconds the disk was idle (not servicing read/write requests)                                                             | counter | `volume`                                                          |
 | `windows_logical_disk_split_ios_total`           | Number of I/Os to the disk split into multiple I/Os                                                                       | counter | `volume`                                                          |
 | `windows_logical_disk_read_latency_seconds_total` | Shows the average time, in seconds, of a read operation from the disk                                                     | counter | `volume`                                                          |
@@ -61,9 +61,18 @@ rate(windows_logical_disk_read_seconds_total[5m])
 rate(windows_logical_disk_write_seconds_total[5m])
 ```
 
-### Warning about size metrics
-The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
-This is the same behavior as the Windows performance counters.
+### Size metrics
+The `free_bytes` and `size_bytes` metrics are read from the volume on every scrape. Both are the free and total bytes
+of the whole volume, regardless of NTFS disk quotas of the account running windows_exporter.
+
+If the volume can't be queried, they fall back to the `Free Megabytes` and `% Free Space` performance counters,
+which Windows updates only every 10-15 minutes and in whole megabytes. On Windows Server 2016, which lacks
+`GetDiskSpaceInformation`, `size_bytes` also falls back to the performance counter if a disk quota applies to the account.
+
+### Volume information
+The `disk` and `type` labels of `windows_logical_disk_info` are cached for up to 10 minutes.
+The other labels and `windows_logical_disk_readonly` are read on every scrape. `windows_logical_disk_readonly` is not
+reported for removable and CD-ROM drives without media.
 
 ### BitLocker status
 The `bitlocker_status` sub-collector reads the BitLocker status through `fveapi.dll`, the BitLocker API of Windows.
@@ -94,8 +103,8 @@ rate(windows_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2
 
 Logical Volume information
 ```
-windows_logical_disk_info{disk="0",filesystem="",serial_number="",type="",volume="HarddiskVolume2",volume_name=""} 1
-windows_logical_disk_info{disk="0",filesystem="",serial_number="",type="",volume="HarddiskVolume3",volume_name=""} 1
+windows_logical_disk_info{disk="0",filesystem="FAT32",serial_number="5C1A2B3D",type="fixed",volume="HarddiskVolume2",volume_name=""} 1
+windows_logical_disk_info{disk="0",filesystem="NTFS",serial_number="BC9D5FA8",type="fixed",volume="HarddiskVolume3",volume_name=""} 1
 windows_logical_disk_info{disk="0",filesystem="NTFS",serial_number="668EEC37",type="fixed",volume="C:",volume_name="Windows"} 1
 windows_logical_disk_info{disk="1",filesystem="NTFS",serial_number="50AE953B",type="fixed",volume="D:",volume_name="Temporary Storage"} 1
 windows_logical_disk_info{disk="1",filesystem="ReFS",serial_number="C69B59AD",type="fixed",volume="G:",volume_name="Volume"} 1

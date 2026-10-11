@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -97,49 +98,49 @@ func (c *Collector) buildLegacyNetworkAdapter() error {
 	return nil
 }
 
-func (c *Collector) collectLegacyNetworkAdapter(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectLegacyNetworkAdapter(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorLegacyNetworkAdapter.Collect(&c.perfDataObjectLegacyNetworkAdapter)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Legacy Network Adapter metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectLegacyNetworkAdapter {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesDropped,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterBytesDropped,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesReceived,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterBytesReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesSent,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterBytesSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesReceived,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterFramesReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesDropped,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterFramesDropped,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesSent,
 			prometheus.CounterValue,
 			data.LegacyNetworkAdapterFramesSent,

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -75,7 +76,7 @@ func (c *Collector) buildClrLocksAndThreads() error {
 
 	var err error
 
-	c.perfClrLocksAndThreads, err = newPerfCollector[perfDataClrLocksAndThreads](c.logger, ".NET CLR LocksAndThreads")
+	c.perfClrLocksAndThreads, err = newPerfCollector[perfDataClrLocksAndThreads](c.logger, c.perfQuery, ".NET CLR LocksAndThreads")
 
 	return err
 }
@@ -91,7 +92,7 @@ type perfDataClrLocksAndThreads struct {
 	TotalNumberofContentions         float64 `perfdata:"Total # of Contentions"`
 }
 
-func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrLocksAndThreads
 	if err := c.perfClrLocksAndThreads.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR LocksAndThreads: %w", err)
@@ -102,49 +103,49 @@ func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, _ tim
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.currentQueueLength,
 			prometheus.GaugeValue,
 			float64(process.CurrentQueueLength),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfCurrentLogicalThreads,
 			prometheus.GaugeValue,
 			float64(process.NumberofcurrentlogicalThreads),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfCurrentPhysicalThreads,
 			prometheus.GaugeValue,
 			float64(process.NumberofcurrentphysicalThreads),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfCurrentRecognizedThreads,
 			prometheus.GaugeValue,
 			float64(process.Numberofcurrentrecognizedthreads),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfTotalRecognizedThreads,
 			prometheus.CounterValue,
 			float64(process.Numberoftotalrecognizedthreads),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.queueLengthPeak,
 			prometheus.CounterValue,
 			float64(process.QueueLengthPeak),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalNumberOfContentions,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofContentions),

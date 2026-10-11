@@ -254,12 +254,19 @@ jobs:
             throw "Could not determine the latest release"
           }
 
+          # Packages up to 0.31.x stop the exporter with taskkill /T. It follows
+          # stale parent process IDs and can kill the runner agent, so upgrade
+          # from the first package without it until a newer release exists.
+          if ([Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1') -lt [Version]'0.32.0') {
+            $PreviousVersion = '0.32.0-beta.1'
+          }
+
           # Builds between tags carry the version of an older tag, so installing
           # them over the latest release would be a downgrade. Package the same
           # executable with a higher version for the upgrade test.
           $UpgradeMsi = $Msi
           $MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
-          if ([Version]$MsiVersion -le [Version]$PreviousVersion) {
+          if ([Version]$MsiVersion -le [Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1')) {
             .\installer\build.ps1 -PathToExecutable $Executable -Version 99.0.0 -Arch amd64
             $UpgradeMsi = Join-Path $env:RUNNER_TEMP 'windows_exporter-99.0.0-amd64.msi'
             Move-Item installer\windows_exporter-99.0.0-amd64.msi $UpgradeMsi
@@ -859,6 +866,18 @@ jobs:
 
               Start-Sleep -Seconds 2
           } while ($true)
+
+          # Storage Spaces Direct clusters have a Health resource (type "Health
+          # Service") that answers CLUSCTL_RESOURCE_GET_CLASS_INFO with only the
+          # class DWORD (#2669). S2D itself claims every disk of an allowed bus
+          # type, and marking the other VHDX disks as not claimable removes them
+          # from the host, which breaks the other steps. Disks from a loopback
+          # iSCSI target vanish when the node joins the cluster, because the
+          # iSCSI Target Server then only serves clustered targets. So register
+          # the resource directly. It stays offline without S2D.
+          if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
+              Add-ClusterResource -Name "Health" -ResourceType "Health Service" -Group "Cluster Group" | Out-Null
+          }
 
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight

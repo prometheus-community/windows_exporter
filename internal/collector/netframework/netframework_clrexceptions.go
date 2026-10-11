@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -57,7 +58,7 @@ func (c *Collector) buildClrExceptions() error {
 
 	var err error
 
-	c.perfClrExceptions, err = newPerfCollector[perfDataClrExceptions](c.logger, ".NET CLR Exceptions")
+	c.perfClrExceptions, err = newPerfCollector[perfDataClrExceptions](c.logger, c.perfQuery, ".NET CLR Exceptions")
 
 	return err
 }
@@ -70,7 +71,7 @@ type perfDataClrExceptions struct {
 	ThrowToCatchDepthPersec float64 `perfdata:"Throw To Catch Depth / sec"`
 }
 
-func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrExceptions
 	if err := c.perfClrExceptions.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Exceptions: %w", err)
@@ -81,28 +82,28 @@ func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, _ time.Dur
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfExceptionsThrown,
 			prometheus.CounterValue,
 			float64(process.NumberofExcepsThrown),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfFilters,
 			prometheus.CounterValue,
 			float64(process.NumberofFiltersPersec),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfFinally,
 			prometheus.CounterValue,
 			float64(process.NumberofFinallysPersec),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.throwToCatchDepth,
 			prometheus.CounterValue,
 			float64(process.ThrowToCatchDepthPersec),
