@@ -30273,22 +30273,6 @@
         },
         "links": [
             {
-                "asDropdown": true,
-                "icon": "external link",
-                "includeVars": true,
-                "keepTime": true,
-                "tags": [
-                    "prometheus",
-                    "windows",
-                    "windows_exporter"
-                ],
-                "targetBlank": false,
-                "title": "Windows Exporter",
-                "tooltip": "Dashboards for windows_exporter",
-                "type": "dashboards",
-                "url": ""
-            },
-            {
                 "asDropdown": false,
                 "icon": "doc",
                 "includeVars": false,

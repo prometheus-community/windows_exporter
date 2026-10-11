@@ -279,7 +279,7 @@ Every dashboard has a readable UID (`metadata.name`) built from
 
 `dashboardUID`, `dashboardTitle` and `dashboardDescription` override the UID,
 title and description of the full dashboard. `dashboardTags` sets the tags of
-all dashboards; each dashboard links to the others through a dropdown of
+all dashboards; each tab dashboard links to the others through a dropdown of
 dashboards with these tags, keeping the time range and variables. Set
 `enableTabDashboards: false` to render only the full dashboard. Give customized
 dashboards their own UIDs so they can be imported next to the sample dashboards

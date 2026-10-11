@@ -81,6 +81,9 @@ assert std.all([
   && std.startsWith(dashboard.metadata.name, 'windows-exporter-')
   for dashboard in [defaults[name] for name in std.objectFields(defaults) if name != 'windows-exporter.json']
 ]) : 'A tab dashboard differs from its tab';
+local linkTypes(dashboard) = [link.type for link in dashboard.spec.links];
+assert linkTypes(full) == ['link'] : 'full: got links ' + std.join(', ', linkTypes(full));
+assert linkTypes(defaults['windows-exporter-cpu.json']) == ['dashboards', 'link'] : 'cpu: got links ' + std.join(', ', linkTypes(defaults['windows-exporter-cpu.json']));
 local variableNames(dashboard) = [variable.spec.name for variable in dashboard.spec.variables];
 local annotationNames(dashboard) = [annotation.spec.name for annotation in dashboard.spec.annotations];
 local fleet = defaults['windows-exporter-fleet.json'];

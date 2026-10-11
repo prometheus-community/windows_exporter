@@ -80,7 +80,9 @@ function(config)
   local variables = (import 'variables.libsonnet')(on);
   local annotations = (import 'annotations.libsonnet')(on);
 
-  local new(uid, title, description, elements, layout) =
+  // Tab dashboards link to each other through a dropdown of the dashboards
+  // with the same tags; the full dashboard has the tabs instead.
+  local new(uid, title, description, elements, layout, dropdown=true) =
     // Keeps the variables that the panels reference, directly or through
     // other variables, and the annotations whose variables are kept.
     // Variables only reference variables defined before them.
@@ -98,30 +100,34 @@ function(config)
     + dashboard.spec.withDescription(description)
     + dashboard.spec.withEditable(true)
     + dashboard.spec.withLinks([
-      {
-        asDropdown: true,
-        icon: 'external link',
-        includeVars: true,
-        keepTime: true,
-        tags: config.dashboardTags,
-        targetBlank: false,
-        title: config.dashboardTitlePrefix,
-        tooltip: 'Dashboards for windows_exporter',
-        type: 'dashboards',
-        url: '',
-      },
-      {
-        asDropdown: false,
-        icon: 'doc',
-        includeVars: false,
-        keepTime: false,
-        tags: [],
-        targetBlank: true,
-        title: 'windows_exporter',
-        tooltip: '',
-        type: 'link',
-        url: 'https://github.com/prometheus-community/windows_exporter',
-      },
+      link
+      for link in [
+        if dropdown then {
+          asDropdown: true,
+          icon: 'external link',
+          includeVars: true,
+          keepTime: true,
+          tags: config.dashboardTags,
+          targetBlank: false,
+          title: config.dashboardTitlePrefix,
+          tooltip: 'Dashboards for windows_exporter',
+          type: 'dashboards',
+          url: '',
+        },
+        {
+          asDropdown: false,
+          icon: 'doc',
+          includeVars: false,
+          keepTime: false,
+          tags: [],
+          targetBlank: true,
+          title: 'windows_exporter',
+          tooltip: '',
+          type: 'link',
+          url: 'https://github.com/prometheus-community/windows_exporter',
+        },
+      ]
+      if link != null
     ])
     + dashboard.spec.withLiveNow(false)
     + dashboard.spec.withPreload(false)
@@ -161,6 +167,7 @@ function(config)
       config.dashboardDescription,
       std.foldl(function(elements, tab) elements + tab.elements, fullTabs, {}),
       b.tabs([tab.layout for tab in fullTabs]),
+      dropdown=false,
     ),
     tabs: if config.enableTabDashboards then {
       ['windows-exporter-' + slug(tab.layout.spec.title) + '.json']: new(

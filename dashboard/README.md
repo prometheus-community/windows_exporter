@@ -22,7 +22,7 @@ Import the JSON files through **Dashboards > New > Import** and pick the Prometh
 | Windows Exporter / `<tab>` | `windows-exporter-<tab>.json`, for example [windows-exporter-cpu.json](windows-exporter-cpu.json) | `windows-exporter-<tab>`, for example `windows-exporter-cpu` |
 
 The tab dashboards show only the variables their panels use.
-The **Windows Exporter** dropdown in the dashboard links opens the other imported dashboards and keeps the time range and variables.
+The **Windows Exporter** dropdown in the links of the tab dashboards opens the other imported dashboards and keeps the time range and variables.
 Before these UIDs, the full dashboard used the UID `Kdaassddw`; importing the new file creates a second dashboard, so delete the old one afterwards.
 
 ### Variables
