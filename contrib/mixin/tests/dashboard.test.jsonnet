@@ -3,8 +3,8 @@
 // empty. Run with jsonnet -J vendor tests/dashboard.test.jsonnet.
 local mixin = import '../mixin.libsonnet';
 
-local render(collectors) =
-  (mixin { _config+:: { collectors: collectors(super.collectors) } }).grafanaDashboards['windows-exporter.json'];
+local render(collectors, config={}) =
+  (mixin { _config+:: { collectors: collectors(super.collectors) } + config }).grafanaDashboards['windows-exporter.json'];
 local all(value) = function(collectors) { [name]: value for name in std.objectFields(collectors) };
 
 local placed(layout) =
@@ -36,6 +36,8 @@ local results = {
   storageSpacesOnly: summary(render(only({ storage_spaces: true }))).Disk,
   // A collectors object given without +: enables only the listed collectors.
   replaced: summary(render(function(_) { os: true, cpu: true })),
+  // Only collector tabs, for a compact dashboard.
+  collectorTabsOnly: summary(render(function(_) { os: true, cpu: true }, { enableFleetTab: false, enableOverviewTab: false })),
 };
 
 local expect(name, want) =
@@ -63,6 +65,10 @@ assert expect('replaced', {
   Exporter: exporter,
   Fleet: ['Summary', 'Hosts', 'Utilization'],
   Overview: ['Summary', 'CPU and memory'],
+});
+assert expect('collectorTabsOnly', {
+  CPU: ['Summary', 'Utilization', 'System calls and frequency'],
+  Exporter: exporter,
 });
 
 results

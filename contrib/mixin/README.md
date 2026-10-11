@@ -257,7 +257,8 @@ The checked-in JSON remains the reference for the rendered dashboard, including
 queries, IDs, variables, annotations, transformations, and tab/row layout.
 `mise run check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
 any drift. CI runs that check before the mixin tests. The dashboard uses its own
-variables for selectors; from `_config` it reads only `collectors`.
+variables for selectors; from `_config` it reads only `collectors`,
+`enableFleetTab` and `enableOverviewTab`.
 
 ### Collectors
 
@@ -275,6 +276,18 @@ object with `collectors:` enables only the listed collectors:
 (import 'mixin.libsonnet') {
   _config+:: {
     collectors+: { diskdrive: true, process: true, scheduled_task: true, update: true },
+  },
+}.grafanaDashboards['windows-exporter.json']
+```
+
+The Fleet and Overview tabs combine several collectors. For a compact
+dashboard with only the collector tabs and the Exporter tab, turn them off:
+
+```jsonnet
+(import 'mixin.libsonnet') {
+  _config+:: {
+    enableFleetTab: false,
+    enableOverviewTab: false,
   },
 }.grafanaDashboards['windows-exporter.json']
 ```

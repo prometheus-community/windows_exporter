@@ -1,7 +1,9 @@
 local b = import 'builders.libsonnet';
 local dashboard = b.dashboard;
 
-// config.collectors selects the collectors the dashboard renders, see config.libsonnet.
+// config.collectors selects the collectors the dashboard renders, and
+// config.enableFleetTab and config.enableOverviewTab the tabs across
+// collectors, see config.libsonnet.
 function(config)
   local known = std.objectFields((import '../config.libsonnet')._config.collectors);
   local unknown = std.setDiff(std.objectFields(config.collectors), known);
@@ -15,8 +17,8 @@ function(config)
   local tabs = [
     tab
     for tab in [
-      (import 'fleet.libsonnet')(on, config),
-      (import 'overview.libsonnet')(on),
+      if config.enableFleetTab then (import 'fleet.libsonnet')(on, config),
+      if config.enableOverviewTab then (import 'overview.libsonnet')(on),
       (import 'cpu.libsonnet')(on),
       (import 'memory.libsonnet')(on),
       (import 'disk.libsonnet')(on),
@@ -31,7 +33,7 @@ function(config)
       (import 'time.libsonnet')(on),
       (import 'exporter.libsonnet')(on),
     ]
-    if !tab.empty
+    if tab != null && !tab.empty
   ];
 
   local panelNames = std.flattenArrays([std.objectFields(tab.elements) for tab in tabs]);
