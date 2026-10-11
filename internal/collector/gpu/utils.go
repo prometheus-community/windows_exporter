@@ -20,6 +20,7 @@ package gpu
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
 )
@@ -83,4 +84,77 @@ func parseGPUCounterInstanceString(s string) Instance {
 	}
 
 	return instance
+}
+
+// instanceCache keeps the parsed counter instance names of the last scrape.
+// The same instances appear in every scrape while a GPU process or engine
+// exists, so they are only parsed once.
+type instanceCache struct {
+	mu      sync.Mutex
+	entries map[string]Instance
+}
+
+// instanceScrape parses the instance names of one scrape.
+type instanceScrape struct {
+	cache *instanceCache
+	// prev is the last committed generation. It is never modified, so it is
+	// read without holding mu.
+	prev map[string]Instance
+
+	mu   sync.Mutex
+	next map[string]Instance
+}
+
+func (c *instanceCache) begin() *instanceScrape {
+	c.mu.Lock()
+	prev := c.entries
+	c.mu.Unlock()
+
+	return &instanceScrape{cache: c, prev: prev, next: make(map[string]Instance, len(prev))}
+}
+
+func (c *instanceCache) reset() {
+	c.mu.Lock()
+	c.entries = nil
+	c.mu.Unlock()
+}
+
+// parse returns parseGPUCounterInstanceString(name), reusing the result of
+// the previous scrape.
+func (s *instanceScrape) parse(name string) Instance {
+	instance, ok := s.prev[name]
+
+	s.mu.Lock()
+	if !ok {
+		instance, ok = s.next[name]
+	}
+	s.mu.Unlock()
+
+	if !ok {
+		instance = parseGPUCounterInstanceString(name)
+	}
+
+	s.mu.Lock()
+	if s.next != nil {
+		s.next[name] = instance
+	}
+	s.mu.Unlock()
+
+	return instance
+}
+
+// commit makes the instances of this scrape the base of the next one.
+func (s *instanceScrape) commit() {
+	s.mu.Lock()
+	next := s.next
+	s.next = nil
+	s.mu.Unlock()
+
+	if next == nil {
+		return
+	}
+
+	s.cache.mu.Lock()
+	s.cache.entries = next
+	s.cache.mu.Unlock()
 }
