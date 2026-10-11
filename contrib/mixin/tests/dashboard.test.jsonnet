@@ -91,6 +91,13 @@ assert variableNames(fleet) == ['datasource', 'job', 'hostname'] : 'fleet: got v
 assert annotationNames(fleet) == ['Annotations & Alerts'] : 'fleet: got annotations ' + std.join(', ', annotationNames(fleet));
 assert std.length(std.findSubstr('/d/windows-exporter-overview?', std.manifestJson(fleet.spec.elements))) == 1 : 'fleet: hosts do not link to the Overview dashboard';
 assert std.length(std.findSubstr('dtab=Overview', std.manifestJson(full.spec.elements))) == 1 : 'full: hosts do not link to the Overview tab';
+// Without the Overview tab, hostnames in Fleet link nowhere.
+local withoutOverview = dashboards(function(collectors) collectors, { enableOverviewTab: false });
+assert std.all([
+  std.length(std.findSubstr('Show details for', std.manifestJson(dashboard.spec.elements))) == 0
+  for dashboard in [withoutOverview['windows-exporter.json'], withoutOverview['windows-exporter-fleet.json']]
+]) : 'fleet without overview: hostnames link to a missing Overview';
+assert !std.objectHas(withoutOverview, 'windows-exporter-overview.json') : 'fleet without overview: got an Overview dashboard';
 local cpu = defaults['windows-exporter-cpu.json'];
 assert variableNames(cpu) == ['datasource', 'job', 'hostname', 'instance'] : 'cpu: got variables ' + std.join(', ', variableNames(cpu));
 assert annotationNames(cpu) == ['Annotations & Alerts', 'Reboots'] : 'cpu: got annotations ' + std.join(', ', annotationNames(cpu));
