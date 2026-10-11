@@ -273,10 +273,10 @@ When the configuration of a service can't be read, `windows_service_start_mode` 
 
 ## New default sub-collectors
 
-| Collector   | New sub-collectors enabled by default           |
-|-------------|-------------------------------------------------|
-| `hyperv`    | `host`, `replica_vm`, `wmi_health`              |
-| `mscluster` | `shared_volumes`                                |
+| Collector   | New sub-collectors enabled by default                   |
+|-------------|---------------------------------------------------------|
+| `hyperv`    | `host`, `replica_vm`, `virtual_hard_disk`, `wmi_health` |
+| `mscluster` | `shared_volumes`                                        |
 
 These add new metrics. To keep the 0.31 set, list the sub-collectors explicitly with `--collector.hyperv.enabled` or `--collector.mscluster.enabled`.
 

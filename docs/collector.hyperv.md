@@ -12,7 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_hard_disk,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
 
 ## Metrics
 
@@ -400,6 +400,32 @@ Example alert:
     severity: critical
   annotations:
     summary: Hyper-V WMI is not responding on {{ $labels.instance }}
+```
+
+
+### Hyper-V Virtual Hard Disk
+
+Sub-collector `virtual_hard_disk`, enabled by default. It reports the size and provisioning type of every
+virtual hard disk (VHD, VHDX, VHD Set, checkpoint AVHDX) attached to a virtual machine on this host.
+The disks are listed with two WQL queries against the `root/virtualization/v2` namespace
+(`Msvm_ComputerSystem` and `Msvm_StorageAllocationSettingData`); the sizes are read with `virtdisk.dll`,
+the API behind `Get-VHD`. On a failover cluster, each node reports the virtual machines it currently owns.
+
+| Name                                               | Description                                                     | Type  | Labels                |
+|----------------------------------------------------|-----------------------------------------------------------------|-------|-----------------------|
+| `windows_hyperv_virtual_hard_disk_size_bytes`      | Maximum size of the virtual hard disk, as seen by the VM         | gauge | vm, vm_id, path, type |
+| `windows_hyperv_virtual_hard_disk_file_size_bytes` | Size of the virtual hard disk file on storage                    | gauge | vm, vm_id, path, type |
+
+`type` is `fixed` (thick provisioned), `dynamic` (thin provisioned), `differencing` (checkpoint or child disk)
+or `unknown`.
+
+Space promised to thin provisioned disks but not yet allocated:
+
+```promql
+sum by (instance) (
+  windows_hyperv_virtual_hard_disk_size_bytes{type="dynamic"}
+  - windows_hyperv_virtual_hard_disk_file_size_bytes{type="dynamic"}
+)
 ```
 
 
