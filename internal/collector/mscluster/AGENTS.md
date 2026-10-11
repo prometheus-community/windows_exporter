@@ -36,6 +36,8 @@
   a loopback iSCSI target (with `S2DBusTypes` limited to iSCSI) appear before
   `New-Cluster`, but the session and the target are gone after it: once the
   node is clustered, the iSCSI Target Server only serves clustered targets.
+  A clustered target needs a cluster disk for its files, and
+  `Get-ClusterAvailableDisk` does not list a host-mounted VHDX.
 - Property lists returned by the cluster service end with an extra
   `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
   the documentation miss this. The parser validates only the structure and

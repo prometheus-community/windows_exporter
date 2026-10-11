@@ -872,88 +872,6 @@ jobs:
               Add-ClusterResource -Name "Health" -ResourceType "Health Service" -Group "Cluster Group" | Out-Null
           }
 
-          # Temporary probe: can a clustered iSCSI target (network name plus a
-          # cluster disk) give the node iSCSI disks that S2D could claim?
-          & {
-              $ErrorActionPreference = "Continue"
-              . ./tools/vhd-lock.ps1
-
-              $clusterDisk = $null
-              $driveLetter = $null
-              try {
-                  $vhd = Join-Path $env:RUNNER_TEMP "probe-cluster-disk.vhdx"
-                  New-VHD -Path $vhd -Fixed -SizeBytes 2GB | Out-Null
-                  $disk = Invoke-WithVhdLock {
-                      $d = Mount-VHD $vhd -PassThru | Get-Disk
-                      $volume = Format-NewDisk $d "ProbeDisk"
-                      $script:probeDriveLetter = $volume.DriveLetter
-                      Get-Disk -Number $d.Number
-                  }
-                  $driveLetter = $script:probeDriveLetter
-                  "== Probe VHDX disk"
-                  $disk | Format-List Number, FriendlyName, BusType, UniqueId, PartitionStyle
-                  "== Get-ClusterAvailableDisk"
-                  Get-ClusterAvailableDisk | Format-Table Name, Number, Size, Partitions
-                  $candidate = Get-ClusterAvailableDisk | Where-Object Number -EQ $disk.Number
-                  if ($null -eq $candidate) {
-                      "The probe VHDX is not an available cluster disk"
-                  } else {
-                      $clusterDisk = $candidate | Add-ClusterDisk
-                      "Added cluster disk: $($clusterDisk.Name) state $($clusterDisk.State)"
-                  }
-              } catch {
-                  "Disk probe failed: $_"
-              }
-
-              try {
-                  "== Network name (client access point)"
-                  $role = Add-ClusterServerRole -Name "CIProbeName" -StaticAddress "198.51.100.20"
-                  Start-ClusterGroup -Name $role.Name -Wait 60 | Out-Null
-              } catch {
-                  "Network name probe failed: $_"
-              }
-              Get-ClusterGroup -Name "CIProbeName" -ErrorAction SilentlyContinue |
-                  Get-ClusterResource | Format-Table Name, State, ResourceType
-
-              if ($null -ne $clusterDisk) {
-                  try {
-                      "== Clustered iSCSI target"
-                      $result = Install-WindowsFeature -Name FS-iSCSITarget-Server
-                      "Install FS-iSCSITarget-Server: success $($result.Success), restart $($result.RestartNeeded)"
-                      $role = Add-ClusteriSCSITargetServerRole -Name "CIProbeTarget" -Storage $clusterDisk.Name -StaticAddress "198.51.100.21"
-                      Start-ClusterGroup -Name $role.Name -Wait 120 | Out-Null
-                      Get-ClusterGroup -Name $role.Name | Get-ClusterResource | Format-Table Name, State, ResourceType
-
-                      Set-Service -Name MSiSCSI -StartupType Automatic
-                      Start-Service -Name MSiSCSI
-                      $initiatorIqn = (Get-InitiatorPort | Where-Object ConnectionType -EQ "iSCSI" | Select-Object -First 1).NodeAddress
-                      New-IscsiServerTarget -TargetName "ciprobe" -ClusterGroupName $role.Name -InitiatorIds "IQN:$initiatorIqn" | Out-Null
-                      $path = "$($driveLetter):\probe-iscsi.vhdx"
-                      New-IscsiVirtualDisk -Path $path -SizeBytes 1GB | Out-Null
-                      Add-IscsiVirtualDiskTargetMapping -TargetName "ciprobe" -Path $path
-
-                      New-IscsiTargetPortal -TargetPortalAddress "198.51.100.21" -InitiatorPortalAddress "198.51.100.1" | Out-Null
-                      $target = Get-IscsiTarget | Where-Object NodeAddress -Like "*-ciprobe-target"
-                      Connect-IscsiTarget -NodeAddress $target.NodeAddress -TargetPortalAddress "198.51.100.21" -InitiatorPortalAddress "198.51.100.1" | Out-Null
-                      Update-HostStorageCache
-                      Start-Sleep -Seconds 5
-                      "== iSCSI disks seen by the node"
-                      Get-PhysicalDisk | Where-Object BusType -EQ "iSCSI" |
-                          Format-Table FriendlyName, DeviceId, BusType, Size, CanPool, CannotPoolReason
-                  } catch {
-                      "Clustered iSCSI target probe failed: $_"
-                  }
-              }
-
-              # Remove the probe again so the Go tests see the usual fixtures.
-              Get-IscsiSession -ErrorAction SilentlyContinue | Disconnect-IscsiTarget -Confirm:$false -ErrorAction SilentlyContinue
-              Remove-ClusterGroup -Name "CIProbeTarget" -RemoveResources -Force -ErrorAction SilentlyContinue
-              Remove-ClusterGroup -Name "CIProbeName" -RemoveResources -Force -ErrorAction SilentlyContinue
-              if ($null -ne $clusterDisk) {
-                  Remove-ClusterResource -Name $clusterDisk.Name -Force -ErrorAction SilentlyContinue
-              }
-          } *>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP "cluster-probe.log")
-
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
@@ -1788,13 +1706,6 @@ jobs:
           Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
           # CBS.log names the files that make role installation request a restart.
           Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
-
-      # Temporary: the setup step's output is too far from the end of the log
-      # to read.
-      - name: Show cluster probe
-        if: ${{ always() }}
-        shell: powershell
-        run: Get-Content (Join-Path $env:RUNNER_TEMP "cluster-probe.log") -ErrorAction SilentlyContinue
 
       - name: Upload test logs
         if: ${{ always() }}
