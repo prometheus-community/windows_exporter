@@ -114,6 +114,28 @@ func TestCollectorVirtualHardDisk(t *testing.T) {
 		require.Positive(t, metric.GetGauge().GetValue())
 		require.Less(t, metric.GetGauge().GetValue(), float64(1<<30))
 	}
+	// The first refresh runs during Build, so the first scrape has data.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds", nil); metric != nil {
+		require.InDelta(t, float64(time.Now().Unix()), metric.GetGauge().GetValue(), 300)
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_read_errors", nil); metric != nil {
+		require.InDelta(t, 0, metric.GetGauge().GetValue(), 0)
+	}
+}
+
+// TestVirtualHardDiskRefreshIntervalMustBePositive checks that an invalid
+// refresh interval stops the build instead of starting a busy loop.
+func TestVirtualHardDiskRefreshIntervalMustBePositive(t *testing.T) {
+	t.Parallel()
+
+	c := hyperv.New(&hyperv.Config{
+		CollectorsEnabled: []string{"virtual_hard_disk"},
+		VirtualHardDisk:   hyperv.VirtualHardDiskConfig{RefreshInterval: -time.Second},
+	})
+
+	require.ErrorContains(t, c.Build(slog.New(slog.DiscardHandler), nil), "refresh-interval must be positive")
+	require.NoError(t, c.Close())
 }
 
 // TestCollectorVirtualHardDiskCheckpoint checks the CI fixture VM

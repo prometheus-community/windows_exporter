@@ -59,7 +59,14 @@ const (
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"enabled"`
+	CollectorsEnabled []string              `yaml:"enabled"`
+	VirtualHardDisk   VirtualHardDiskConfig `yaml:"virtual-hard-disk"`
+}
+
+// VirtualHardDiskConfig configures the virtual_hard_disk sub-collector.
+type VirtualHardDiskConfig struct {
+	// RefreshInterval is the interval at which the disks are read in the background.
+	RefreshInterval time.Duration `yaml:"refresh-interval"`
 }
 
 //nolint:gochecknoglobals
@@ -84,6 +91,9 @@ var ConfigDefaults = Config{
 		subCollectorVirtualStorageDevice,
 		subCollectorVirtualSwitch,
 		subCollectorWMIHealth,
+	},
+	VirtualHardDisk: VirtualHardDiskConfig{
+		RefreshInterval: 5 * time.Minute,
 	},
 }
 
@@ -132,6 +142,10 @@ func New(config *Config) *Collector {
 		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
+	if config.VirtualHardDisk.RefreshInterval == 0 {
+		config.VirtualHardDisk.RefreshInterval = ConfigDefaults.VirtualHardDisk.RefreshInterval
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -151,6 +165,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.hyperv.enabled",
 		"Comma-separated list of collectors to use.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Flag(
+		"collector.hyperv.virtual-hard-disk.refresh-interval",
+		"Interval at which the virtual_hard_disk sub-collector reads the disks in the background. Scrapes publish the values of the last refresh.",
+	).Default(ConfigDefaults.VirtualHardDisk.RefreshInterval.String()).DurationVar(&c.config.VirtualHardDisk.RefreshInterval)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
@@ -251,7 +270,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		subCollectorVirtualHardDisk: {
 			build:   c.buildVirtualHardDisk,
 			collect: c.collectVirtualHardDisk,
-			close:   func() {},
+			close:   c.closeVirtualHardDisk,
 		},
 		subCollectorVirtualMachineHealthSummary: {
 			build:   c.buildVirtualMachineHealthSummary,

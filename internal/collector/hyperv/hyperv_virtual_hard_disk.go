@@ -31,9 +31,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// virtualHardDiskQueryTimeout bounds each WMI query, so a hung WMI service
-// fails the sub-collector instead of blocking the scrape.
+// virtualHardDiskQueryTimeout bounds each WMI query of a refresh. It also
+// bounds Close, which waits for a running query.
 const virtualHardDiskQueryTimeout = 10 * time.Second
+
+// virtualHardDiskFirstRefreshTimeout bounds how long Build waits for the first
+// refresh, so the first scrape after a start already has data.
+const virtualHardDiskFirstRefreshTimeout = 10 * time.Second
 
 // virtualHardDiskWorkers bounds how many disks are opened at once. Opening a
 // disk on a CSV takes a few milliseconds, so hosts with many disks read them
@@ -49,8 +53,12 @@ type collectorVirtualHardDisk struct {
 	virtualHardDiskVMQuery      mi.Query
 	virtualHardDiskSettingQuery mi.Query
 
-	virtualHardDiskSizeBytes     *prometheus.Desc
-	virtualHardDiskFileSizeBytes *prometheus.Desc
+	virtualHardDiskRefresher *virtualHardDiskRefresher
+
+	virtualHardDiskSizeBytes                   *prometheus.Desc
+	virtualHardDiskFileSizeBytes               *prometheus.Desc
+	virtualHardDiskReadErrors                  *prometheus.Desc
+	virtualHardDiskLastRefreshTimestampSeconds *prometheus.Desc
 }
 
 // msvmVirtualMachine is the part of Msvm_ComputerSystem needed to name a VM.
@@ -70,12 +78,16 @@ type msvmStorageAllocationSettingData struct {
 }
 
 func (c *Collector) buildVirtualHardDisk() error {
+	if c.config.VirtualHardDisk.RefreshInterval <= 0 {
+		return fmt.Errorf("collector.hyperv.virtual-hard-disk.refresh-interval must be positive, got %s", c.config.VirtualHardDisk.RefreshInterval)
+	}
+
 	if c.miSession == nil {
 		return mi.ErrNotInitialized
 	}
 
 	if err := virtdisk.Available(); err != nil {
-		return errors.Join(errors.ErrUnsupported, fmt.Errorf("virtdisk.dll: %w", err))
+		return fmt.Errorf("%w: virtdisk.dll: %w", errors.ErrUnsupported, err)
 	}
 
 	var err error
@@ -106,24 +118,53 @@ func (c *Collector) buildVirtualHardDisk() error {
 		labels,
 		nil,
 	)
+	c.virtualHardDiskReadErrors = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_hard_disk_read_errors"),
+		"Number of attached virtual hard disks that could not be read in the last refresh",
+		nil,
+		nil,
+	)
+	c.virtualHardDiskLastRefreshTimestampSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_hard_disk_last_refresh_timestamp_seconds"),
+		"Time of the last successful refresh of the virtual hard disk metrics",
+		nil,
+		nil,
+	)
+
+	c.virtualHardDiskRefresher = newVirtualHardDiskRefresher(c.logger, c.config.VirtualHardDisk.RefreshInterval, c.listVirtualHardDisks, virtdisk.GetInfo)
+	c.virtualHardDiskRefresher.start(virtualHardDiskFirstRefreshTimeout)
 
 	return nil
 }
 
-func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
+func (c *Collector) closeVirtualHardDisk() {
+	if c.virtualHardDiskRefresher != nil {
+		c.virtualHardDiskRefresher.stop()
+		c.virtualHardDiskRefresher = nil
+	}
+}
+
+func (c *Collector) listVirtualHardDisks() ([]attachedVirtualHardDisk, error) {
 	var vms []msvmVirtualMachine
 	if err := c.miSession.Query(&vms, mi.NamespaceRootVirtualizationV2, c.virtualHardDiskVMQuery, virtualHardDiskQueryTimeout); err != nil {
-		return fmt.Errorf("failed to query Msvm_ComputerSystem: %w", err)
+		return nil, fmt.Errorf("failed to query Msvm_ComputerSystem: %w", err)
 	}
 
 	var settings []msvmStorageAllocationSettingData
 	if err := c.miSession.Query(&settings, mi.NamespaceRootVirtualizationV2, c.virtualHardDiskSettingQuery, virtualHardDiskQueryTimeout); err != nil {
-		return fmt.Errorf("failed to query Msvm_StorageAllocationSettingData: %w", err)
+		return nil, fmt.Errorf("failed to query Msvm_StorageAllocationSettingData: %w", err)
 	}
 
-	results, err := readVirtualHardDisks(attachedVirtualHardDisks(vms, settings), virtualHardDiskWorkers, virtdisk.GetInfo)
+	return attachedVirtualHardDisks(vms, settings), nil
+}
 
-	for _, result := range results {
+// collectVirtualHardDisk publishes the result of the last background refresh.
+// Disks that can't be read are logged and counted, only a failed disk listing
+// is returned as an error.
+func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
+	snapshot := c.virtualHardDiskRefresher.get()
+
+	for _, result := range snapshot.results {
 		disk := result.disk
 		diskType := virtualHardDiskType(result.info.ProviderSubtype)
 
@@ -132,7 +173,17 @@ func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *
 		ch <- scrape.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
 	}
 
-	return err
+	if !snapshot.refreshed.IsZero() {
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskReadErrors, prometheus.GaugeValue, float64(snapshot.readErrors))
+
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskLastRefreshTimestampSeconds, prometheus.GaugeValue, float64(snapshot.refreshed.UnixNano())/1e9)
+	}
+
+	if snapshot.err != nil {
+		return fmt.Errorf("last virtual hard disk refresh failed: %w", snapshot.err)
+	}
+
+	return nil
 }
 
 type virtualHardDiskResult struct {

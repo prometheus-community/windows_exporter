@@ -28,7 +28,14 @@ import (
 )
 
 //nolint:gochecknoglobals
-var procCreateVirtualDisk = modVirtdisk.NewProc("CreateVirtualDisk")
+var (
+	procCreateVirtualDisk = modVirtdisk.NewProc("CreateVirtualDisk")
+
+	virtualStorageTypeVendorMicrosoft = windows.GUID{
+		Data1: 0xEC984AEC, Data2: 0xA0F9, Data3: 0x47E9,
+		Data4: [8]byte{0x90, 0x1F, 0x71, 0x41, 0x5A, 0x66, 0x34, 0x5B},
+	}
+)
 
 // createVirtualDiskParametersV2 is CREATE_VIRTUAL_DISK_PARAMETERS with
 // CREATE_VIRTUAL_DISK_VERSION_2, which VHDX requires. The union starts at offset 8.

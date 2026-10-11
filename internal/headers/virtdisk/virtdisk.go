@@ -51,12 +51,6 @@ const (
 	getVirtualDiskInfoProviderSubtype = 7 // GET_VIRTUAL_DISK_INFO_PROVIDER_SUBTYPE
 )
 
-//nolint:gochecknoglobals
-var virtualStorageTypeVendorMicrosoft = windows.GUID{
-	Data1: 0xEC984AEC, Data2: 0xA0F9, Data3: 0x47E9,
-	Data4: [8]byte{0x90, 0x1F, 0x71, 0x41, 0x5A, 0x66, 0x34, 0x5B},
-}
-
 // virtualStorageType is VIRTUAL_STORAGE_TYPE. The zero value is
 // VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN with VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN,
 // which lets OpenVirtualDisk detect VHD, VHDX and VHD Set files.

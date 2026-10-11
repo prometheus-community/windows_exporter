@@ -14,6 +14,10 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 Comma-separated list of collectors to use, for example:
 `--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_hard_disk,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
 
+### `--collector.hyperv.virtual-hard-disk.refresh-interval`
+Interval at which the `virtual_hard_disk` sub-collector reads the disks in the background, for example `10m`.
+Scrapes publish the values of the last refresh. Default: `5m`.
+
 ## Metrics
 
 ### Hyper-V Datastore
@@ -411,13 +415,23 @@ The disks are listed with two WQL queries against the `root/virtualization/v2` n
 (`Msvm_ComputerSystem` and `Msvm_StorageAllocationSettingData`); the sizes are read with `virtdisk.dll`,
 the API behind `Get-VHD`. On a failover cluster, each node reports the virtual machines it currently owns.
 
-| Name                                               | Description                                                     | Type  | Labels                |
-|----------------------------------------------------|-----------------------------------------------------------------|-------|-----------------------|
-| `windows_hyperv_virtual_hard_disk_size_bytes`      | Maximum size of the virtual hard disk, as seen by the VM         | gauge | vm, vm_id, path, type |
-| `windows_hyperv_virtual_hard_disk_file_size_bytes` | Size of the virtual hard disk file on storage                    | gauge | vm, vm_id, path, type |
+The disks are read in the background every `--collector.hyperv.virtual-hard-disk.refresh-interval` (default `5m`),
+so a scrape only publishes the last values and a slow or unreachable disk doesn't block the `hyperv` collector.
+The values can be up to one interval old. A disk that can't be read is logged and counted in
+`windows_hyperv_virtual_hard_disk_read_errors`; only a failed disk listing fails the collector.
+
+| Name                                                              | Description                                                                      | Type  | Labels                |
+|-------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|-----------------------|
+| `windows_hyperv_virtual_hard_disk_size_bytes`                     | Maximum size of the virtual hard disk, as seen by the VM                         | gauge | vm, vm_id, path, type |
+| `windows_hyperv_virtual_hard_disk_file_size_bytes`                | Size of the virtual hard disk file on storage                                    | gauge | vm, vm_id, path, type |
+| `windows_hyperv_virtual_hard_disk_read_errors`                    | Number of attached virtual hard disks that could not be read in the last refresh | gauge | None                  |
+| `windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds` | Time of the last successful refresh                                              | gauge | None                  |
 
 `type` is `fixed` (thick provisioned), `dynamic` (thin provisioned), `differencing` (checkpoint or child disk)
 or `unknown`.
+
+For a VM with checkpoints, `path` is the current `.avhdx` and `file_size_bytes` only counts that file.
+The parent disks aren't reported, so summing `file_size_bytes` per VM undercounts its storage.
 
 Space promised to thin provisioned disks but not yet allocated:
 
@@ -426,6 +440,16 @@ sum by (instance) (
   windows_hyperv_virtual_hard_disk_size_bytes{type="dynamic"}
   - windows_hyperv_virtual_hard_disk_file_size_bytes{type="dynamic"}
 )
+```
+
+Disks that could not be read, and stale data:
+
+```yaml
+- alert: HyperVVirtualHardDiskReadErrors
+  expr: windows_hyperv_virtual_hard_disk_read_errors > 0
+  for: 30m
+- alert: HyperVVirtualHardDiskStale
+  expr: time() - windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds > 3 * 300
 ```
 
 
