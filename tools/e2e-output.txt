@@ -189,16 +189,14 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_memory_cache_bytes_peak gauge
 # HELP windows_memory_cache_faults_total Number of faults which occur when a page sought in the file system cache is not found there and must be retrieved from elsewhere in memory (soft fault) or from disk (hard fault) (Cache Faults/sec)
 # TYPE windows_memory_cache_faults_total counter
-# HELP windows_memory_commit_limit (CommitLimit)
-# TYPE windows_memory_commit_limit gauge
+# HELP windows_memory_commit_limit_bytes Amount of virtual memory, in bytes, that can be committed without having to extend the paging file(s) (CommitLimit)
+# TYPE windows_memory_commit_limit_bytes gauge
 # HELP windows_memory_committed_bytes (CommittedBytes)
 # TYPE windows_memory_committed_bytes gauge
 # HELP windows_memory_demand_zero_faults_total The number of zeroed pages required to satisfy faults. Zeroed pages, pages emptied of previously stored data and filled with zeros, are a security feature of Windows that prevent processes from seeing data stored by earlier processes that used the memory space (Demand Zero Faults/sec)
 # TYPE windows_memory_demand_zero_faults_total counter
 # HELP windows_memory_free_and_zero_page_list_bytes The amount of physical memory, in bytes, that is assigned to the free and zero page lists. This memory does not contain cached data. It is immediately available for allocation to a process or for system use (FreeAndZeroPageListBytes)
 # TYPE windows_memory_free_and_zero_page_list_bytes gauge
-# HELP windows_memory_free_system_page_table_entries (FreeSystemPageTableEntries)
-# TYPE windows_memory_free_system_page_table_entries gauge
 # HELP windows_memory_modified_page_list_bytes The amount of physical memory, in bytes, that is assigned to the modified page list. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (ModifiedPageListBytes)
 # TYPE windows_memory_modified_page_list_bytes gauge
 # HELP windows_memory_page_faults_total Overall rate at which faulted pages are handled by the processor (Page Faults/sec)
@@ -221,6 +219,8 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_memory_process_memory_limit_bytes gauge
 # HELP windows_memory_standby_cache_core_bytes The amount of physical memory, in bytes, that is assigned to the core standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheCoreBytes)
 # TYPE windows_memory_standby_cache_core_bytes gauge
+# HELP windows_memory_standby_cache_lifetime_seconds The long-term average time, in seconds, that a page stays on the standby cache page lists before it is repurposed. Low values indicate memory pressure (LongTermAverageStandbyCacheLifetime)
+# TYPE windows_memory_standby_cache_lifetime_seconds gauge
 # HELP windows_memory_standby_cache_normal_priority_bytes The amount of physical memory, in bytes, that is assigned to the normal priority standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheNormalPriorityBytes)
 # TYPE windows_memory_standby_cache_normal_priority_bytes gauge
 # HELP windows_memory_standby_cache_reserve_bytes The amount of physical memory, in bytes, that is assigned to the reserve standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheReserveBytes)

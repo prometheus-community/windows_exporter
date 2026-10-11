@@ -58,7 +58,7 @@ function(on, config, overview=null)
         b.query.new('(max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~"$job"} / windows_memory_physical_total_bytes{job=~"$job"}))) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'G')
         + b.query.withInstant()
         + b.query.withFormat('table'),
-        b.query.new('(max by (instance) (100 * windows_memory_committed_bytes{job=~"$job"} / windows_memory_commit_limit{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'H')
+        b.query.new('(max by (instance) (100 * windows_memory_committed_bytes{job=~"$job"} / windows_memory_commit_limit_bytes{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'H')
         + b.query.withInstant()
         + b.query.withFormat('table'),
         b.query.new('(max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~"$job", volume!~"HarddiskVolume.*"} / windows_logical_disk_size_bytes{job=~"$job", volume!~"HarddiskVolume.*"}))) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'I')

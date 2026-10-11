@@ -12,7 +12,7 @@ tests:
     input_series:
       - series: 'windows_memory_committed_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
         values: '95x20 50x10'
-      - series: 'windows_memory_commit_limit{job="windows_exporter", instance="host:9182", cluster="a"}'
+      - series: 'windows_memory_commit_limit_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
         values: '100x31'
       - series: 'windows_logical_disk_read_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
         values: '0+12x20 252x10'
@@ -87,7 +87,7 @@ tests:
     input_series:
       - series: 'windows_memory_committed_bytes{job="windows_exporter", instance="host:9182"}'
         values: '90x20'
-      - series: 'windows_memory_commit_limit{job="windows_exporter", instance="host:9182"}'
+      - series: 'windows_memory_commit_limit_bytes{job="windows_exporter", instance="host:9182"}'
         values: '100x20'
       - series: 'windows_logical_disk_read_seconds_total{job="windows_exporter", instance="host:9182", volume="C:"}'
         values: '0+6x20'

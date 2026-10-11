@@ -6040,7 +6040,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "100 * windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "100 * windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit_bytes{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -6847,7 +6847,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit_bytes{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -10312,7 +10312,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(max by (instance) (100 * windows_memory_committed_bytes{job=~\"$job\"} / windows_memory_commit_limit{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "expr": "(max by (instance) (100 * windows_memory_committed_bytes{job=~\"$job\"} / windows_memory_commit_limit_bytes{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -18641,7 +18641,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_memory_commit_limit{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_memory_commit_limit_bytes{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "limit",
                                                 "range": true
