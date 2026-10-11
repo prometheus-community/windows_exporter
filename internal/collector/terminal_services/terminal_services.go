@@ -78,6 +78,9 @@ type Collector struct {
 
 	connectionBrokerEnabled bool
 
+	// perfDataQuery samples the session and Connection Broker objects together,
+	// so the collector waits only once for the other performance counter queries.
+	perfDataQuery                            *pdh.Query
 	perfDataCollectorTerminalServicesSession *pdh.Collector[perfDataCounterValuesTerminalServicesSession]
 	perfDataCollectorBroker                  *pdh.Collector[perfDataCounterValuesBroker]
 
@@ -126,18 +129,15 @@ func (c *Collector) GetName() string {
 func (c *Collector) Close() error {
 	c.perfDataCollectorTerminalServicesSession.Close()
 	c.perfDataCollectorBroker.Close()
+	c.perfDataQuery.Close()
 
 	// hServer is 0 if Build failed before opening the server.
 	if c.hServer == 0 || c.hServer == windows.InvalidHandle {
 		return nil
 	}
 
-	err := wtsapi32.WTSCloseServer(c.hServer)
+	wtsapi32.WTSCloseServer(c.hServer)
 	c.hServer = 0
-
-	if err != nil {
-		return fmt.Errorf("failed to close WTS server: %w", err)
-	}
 
 	return nil
 }
@@ -238,10 +238,15 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
+	c.perfDataQuery, err = pdh.NewQuery()
+	if err != nil {
+		return fmt.Errorf("failed to open Terminal Services performance counter query: %w", err)
+	}
+
 	c.connectionBrokerEnabled = isConnectionBrokerServer()
 
 	if c.connectionBrokerEnabled {
-		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](c.logger, pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
+		c.perfDataCollectorBroker, err = pdh.NewQueryCollector[perfDataCounterValuesBroker](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}
@@ -254,7 +259,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		return fmt.Errorf("failed to open WTS server: %w", err)
 	}
 
-	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](c.logger, pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewQueryCollector[perfDataCounterValuesTerminalServicesSession](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
@@ -269,6 +274,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	if err := c.collectWTSSessions(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
+	}
+
+	// The session and Connection Broker counters read this sample.
+	if err := c.perfDataQuery.Collect(); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting terminal services performance counters: %w", err))
+
+		return errors.Join(errs...)
 	}
 
 	if err := c.collectTSSessionCounters(ch); err != nil {
@@ -338,24 +350,24 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentPrivilegedTime,
-			data.Name,
 			"privileged",
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentProcessorTime,
-			data.Name,
 			"processor",
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentUserTime,
-			data.Name,
 			"user",
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(

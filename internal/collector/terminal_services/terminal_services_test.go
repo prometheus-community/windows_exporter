@@ -51,4 +51,10 @@ func TestCollector(t *testing.T) {
 	handles := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_handles", prometheus.Labels{"session_name": sessionName})
 	require.NotNil(t, handles)
 	require.Positive(t, handles.GetGauge().GetValue(), "RDP fixture has no session processes")
+
+	cpuTime := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_cpu_time_seconds_total", prometheus.Labels{
+		"mode":         "user",
+		"session_name": sessionName,
+	})
+	require.NotNil(t, cpuTime)
 }

@@ -43,9 +43,9 @@ None
 windows_remote_fx_net_udp_packets_sent_total{session_name="RDP-Tcp 0"} 0
 # HELP windows_terminal_services_cpu_time_seconds_total Total elapsed time that this process's threads have spent executing code.
 # TYPE windows_terminal_services_cpu_time_seconds_total counter
-windows_terminal_services_cpu_time_seconds_total{mode="RDP-Tcp 0",session_name="privileged"} 98.4843739
-windows_terminal_services_cpu_time_seconds_total{mode="RDP-Tcp 0",session_name="processor"} 620.4687488999999
-windows_terminal_services_cpu_time_seconds_total{mode="RDP-Tcp 0",session_name="user"} 521.9843741
+windows_terminal_services_cpu_time_seconds_total{mode="privileged",session_name="RDP-Tcp 0"} 98.4843739
+windows_terminal_services_cpu_time_seconds_total{mode="processor",session_name="RDP-Tcp 0"} 620.4687488999999
+windows_terminal_services_cpu_time_seconds_total{mode="user",session_name="RDP-Tcp 0"} 521.9843741
 # HELP windows_terminal_services_handles Total number of handles currently opened by this process. This number is the sum of the handles currently opened by each thread in this process.
 # TYPE windows_terminal_services_handles gauge
 windows_terminal_services_handles{session_name="RDP-Tcp 0"} 20999

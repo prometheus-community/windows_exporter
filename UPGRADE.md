@@ -249,6 +249,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_dbreplica_database_flow_control_wait_seconds` and `windows_mssql_dbreplica_group_commit_stall_seconds` are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly.
 - `windows_mssql_locks_count` is no longer divided by 1000.
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
+- `windows_terminal_services_cpu_time_seconds_total` has the session name in `session_name` and the CPU mode in `mode`. In 0.31 the two label values were swapped.
 - `windows_netframework_clrmemory_gc_time_percent` no longer overflows, and it is left out when Windows reports no base value. The `netframework` collector now reads the CLR counters through PDH instead of WMI; names, labels and types are unchanged.
 - The IIS URI cache flush and kernel cache item metrics read the right Windows counters, and the metadata cache hit metrics are no longer always `0`.
 - `windows_logical_disk_readonly`, the FSRM quota template information, the SMTP general failure totals and the Hyper-V root partition interrupt mappings were documented but never exported. They are exported now.
