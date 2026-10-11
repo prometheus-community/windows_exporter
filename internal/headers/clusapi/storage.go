@@ -100,11 +100,7 @@ func (c *Cluster) readResourcePartitions(name objectName, deadline time.Time) (_
 		return nil, fmt.Errorf("class information: %w", err)
 	}
 
-	if len(data) != 8 {
-		return nil, errors.New("invalid resource class information size")
-	}
-
-	if binary.LittleEndian.Uint32(data) != resourceClassStorage {
+	if class, _ := parseResourceClassInfo(data); class != resourceClassStorage {
 		return nil, nil
 	}
 
