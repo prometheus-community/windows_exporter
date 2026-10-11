@@ -772,15 +772,15 @@ jobs:
                   Add-IscsiVirtualDiskTargetMapping -TargetName "cis2d" -Path $path
               }
 
-              # Without an explicit portal the initiator connects to whatever
-              # addresses the target advertises, which fails for loopback.
-              New-IscsiTargetPortal -TargetPortalAddress 127.0.0.1 | Out-Null
+              # The target listens on the adapter addresses but not on 127.0.0.1,
+              # so connect through the address of the internal switch above.
+              New-IscsiTargetPortal -TargetPortalAddress 198.51.100.1 -InitiatorPortalAddress 198.51.100.1 | Out-Null
               $target = Get-IscsiTarget | Where-Object NodeAddress -like "*-cis2d-target"
               if ($null -eq $target) { throw "The loopback iSCSI target was not discovered" }
               Connect-IscsiTarget `
                   -NodeAddress $target.NodeAddress `
-                  -TargetPortalAddress 127.0.0.1 `
-                  -InitiatorPortalAddress 127.0.0.1 | Out-Null
+                  -TargetPortalAddress 198.51.100.1 `
+                  -InitiatorPortalAddress 198.51.100.1 | Out-Null
               Update-HostStorageCache
               $iscsiConnected = $true
           }
