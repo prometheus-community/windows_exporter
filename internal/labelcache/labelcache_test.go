@@ -16,6 +16,7 @@
 package labelcache_test
 
 import (
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -211,4 +212,117 @@ func BenchmarkMustNewConstMetric(b *testing.B) {
 			scrape.Commit()
 		}
 	})
+}
+
+//nolint:gochecknoglobals
+var (
+	processInfoDesc = prometheus.NewDesc("test_process_info", "test", []string{"process", "process_id", "creating_process_id", "process_group_id", "owner", "cmdline"}, nil)
+	processDescs    = func() []*prometheus.Desc {
+		descs := make([]*prometheus.Desc, 10)
+		for i := range descs {
+			descs[i] = prometheus.NewDesc("test_process_gauge_"+strconv.Itoa(i), "test", []string{"process", "process_id"}, nil)
+		}
+
+		return descs
+	}()
+)
+
+// benchmarkProcesses is the number of processes of the benchmarks, with 14
+// series each.
+const benchmarkProcesses = 1000
+
+// scrapeProcesses emits the series of processes like the process collector:
+// one info series, three counters by mode and ten gauges per process.
+func scrapeProcesses(cache *labelcache.Cache) {
+	const processes = benchmarkProcesses
+
+	scrape := cache.Begin()
+
+	for i := range processes {
+		name := "process" + strconv.Itoa(i%50)
+		pid := strconv.Itoa(1000 + i)
+
+		_ = scrape.MustNewConstMetric(processInfoDesc, prometheus.GaugeValue, 1, name, pid, "4", pid, `NT AUTHORITY\SYSTEM`, `C:\Windows\system32\svchost.exe -k netsvcs`)
+
+		for _, mode := range []string{"user", "privileged", "other"} {
+			_ = scrape.MustNewConstMetric(counterDesc, prometheus.CounterValue, 1, name, pid, mode)
+		}
+
+		for _, desc := range processDescs {
+			_ = scrape.MustNewConstMetric(desc, prometheus.GaugeValue, 1, name, pid)
+		}
+	}
+
+	scrape.Commit()
+}
+
+// BenchmarkRetained reports the heap a cache keeps between scrapes for 1000
+// processes with 14 series each.
+func BenchmarkRetained(b *testing.B) {
+	const processes = benchmarkProcesses
+
+	var stats runtime.MemStats
+
+	for b.Loop() {
+		runtime.GC()
+		runtime.ReadMemStats(&stats)
+		before := stats.HeapAlloc
+
+		cache := new(labelcache.Cache)
+		scrapeProcesses(cache)
+		scrapeProcesses(cache)
+
+		runtime.GC()
+		runtime.ReadMemStats(&stats)
+		b.ReportMetric(float64(stats.HeapAlloc-before)/(processes*14), "retained-B/series")
+		runtime.KeepAlive(cache)
+	}
+}
+
+// BenchmarkScrape measures one steady-state scrape of 1000 processes.
+func BenchmarkScrape(b *testing.B) {
+	var cache labelcache.Cache
+
+	scrapeProcesses(&cache)
+	b.ReportAllocs()
+
+	for b.Loop() {
+		scrapeProcesses(&cache)
+	}
+}
+
+// All series with the same label name and value share one pair. A pair stays
+// while any cached series uses it.
+func TestPairsShared(t *testing.T) {
+	t.Parallel()
+
+	var cache labelcache.Cache
+
+	scrape := cache.Begin()
+	cpu := write(t, scrape.MustNewConstMetric(counterDesc, prometheus.CounterValue, 1, "svchost", "1234", "user")).GetLabel()
+	handles := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "svchost", "1234")).GetLabel()
+	other := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "svchost", "5678")).GetLabel()
+	scrape.Commit()
+
+	// counterDesc has the const label "const", so its pairs are const, mode,
+	// process, process_id; gaugeDesc's are process, process_id.
+	require.Same(t, cpu[2], handles[0], "process pair shared")
+	require.Same(t, cpu[3], handles[1], "process_id pair shared")
+	require.Same(t, handles[0], other[0], "process pair shared across processes")
+	require.NotSame(t, handles[1], other[1])
+
+	// Only the gauge of process 1234 is reported: its pairs stay.
+	scrape = cache.Begin()
+	again := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 2, "svchost", "1234")).GetLabel()
+	scrape.Commit()
+
+	require.Same(t, handles[1], again[1])
+
+	// Process 5678 disappeared, so its process_id pair was dropped with it.
+	scrape = cache.Begin()
+	back := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "svchost", "5678")).GetLabel()
+	scrape.Commit()
+
+	require.NotSame(t, other[1], back[1])
+	require.Equal(t, other[1].GetValue(), back[1].GetValue())
 }
