@@ -52,7 +52,7 @@ func (c *Collector) buildClrInterop() error {
 
 	var err error
 
-	c.perfClrInterop, err = newPerfCollector[perfDataClrInterop](c.logger, ".NET CLR Interop")
+	c.perfClrInterop, err = newPerfCollector[perfDataClrInterop](c.logger, c.perfQuery, ".NET CLR Interop")
 
 	return err
 }

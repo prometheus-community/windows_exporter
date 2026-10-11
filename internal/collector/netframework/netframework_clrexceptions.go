@@ -58,7 +58,7 @@ func (c *Collector) buildClrExceptions() error {
 
 	var err error
 
-	c.perfClrExceptions, err = newPerfCollector[perfDataClrExceptions](c.logger, ".NET CLR Exceptions")
+	c.perfClrExceptions, err = newPerfCollector[perfDataClrExceptions](c.logger, c.perfQuery, ".NET CLR Exceptions")
 
 	return err
 }

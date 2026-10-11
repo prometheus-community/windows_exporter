@@ -107,7 +107,7 @@ func (c *Collector) buildClrMemory() error {
 
 	var err error
 
-	c.perfClrMemory, err = newPerfCollector[perfDataClrMemory](c.logger, ".NET CLR Memory")
+	c.perfClrMemory, err = newPerfCollector[perfDataClrMemory](c.logger, c.perfQuery, ".NET CLR Memory")
 
 	return err
 }

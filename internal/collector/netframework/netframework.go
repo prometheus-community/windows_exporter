@@ -77,11 +77,15 @@ type Collector struct {
 	// labels keeps the label pairs of the series of the last scrape. The
 	// counters change on every scrape, but their process labels stay the
 	// same while the process runs.
-	labels                 labelcache.Cache
-	config                 Config
-	logger                 *slog.Logger
-	perfFrequency          float64
-	closeFns               []func()
+	labels        labelcache.Cache
+	config        Config
+	logger        *slog.Logger
+	perfFrequency float64
+	closeFns      []func()
+	// perfQuery samples the counters of all enabled sub-collectors at once.
+	// The .NET CLR counter provider serves one query at a time and walks
+	// every .NET process for each, so separate queries wait for each other.
+	perfQuery              *pdh.Query
 	perfClrExceptions      perfCollector[perfDataClrExceptions]
 	perfClrInterop         perfCollector[perfDataClrInterop]
 	perfClrJIT             perfCollector[perfDataClrJIT]
@@ -210,6 +214,9 @@ func (c *Collector) Close() error {
 	c.collectorFns = nil
 	c.labels.Reset()
 
+	c.perfQuery.Close()
+	c.perfQuery = nil
+
 	return nil
 }
 
@@ -228,6 +235,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		c.perfFrequency = float64(frequency)
+	}
+
+	var err error
+
+	c.perfQuery, err = pdh.NewQuery()
+	if err != nil {
+		return fmt.Errorf("failed to open .NET CLR performance counter query: %w", err)
 	}
 
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, maxScrapeDuration time.Duration) error, 0, len(c.config.CollectorsEnabled))
@@ -340,6 +354,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	// The sub-collectors read this sample. Without any .NET process there is
+	// no data; the sub-collectors report that themselves.
+	if c.perfQuery != nil {
+		if err := c.perfQuery.Collect(); err != nil && !errors.Is(err, pdh.ErrNoData) {
+			return fmt.Errorf("failed to collect .NET CLR performance counters: %w", err)
+		}
+	}
+
 	scrape := c.labels.Begin()
 	defer scrape.Commit()
 
@@ -354,10 +376,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return g.Wait()
 }
 
-// newPerfCollector retains ownership of partially initialized PDH queries.
-// Missing objects are optional; missing individual counters remain errors.
-func newPerfCollector[T any](logger *slog.Logger, object string) (perfCollector[T], error) {
-	c, err := pdh.NewCollector[T](logger, pdh.CounterTypeRaw, object, pdh.InstancesAll)
+// newPerfCollector adds the counters of object to query and retains
+// ownership of partially initialized collectors. Missing objects are optional;
+// missing individual counters remain errors.
+func newPerfCollector[T any](logger *slog.Logger, query *pdh.Query, object string) (perfCollector[T], error) {
+	c, err := pdh.NewQueryCollector[T](logger, query, pdh.CounterTypeRaw, object, pdh.InstancesAll)
 	if err == nil {
 		return c, nil
 	}
