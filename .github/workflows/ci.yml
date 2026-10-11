@@ -243,6 +243,9 @@ jobs:
       # upgrade from the latest release, repair, uninstall and a fresh install,
       # with an independent windows_exporter.exe that must survive.
       - name: Test installer
+        # A passing run takes about a minute. Fail a hang with its log
+        # instead of waiting for the job timeout.
+        timeout-minutes: 10
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION

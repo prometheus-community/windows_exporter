@@ -28,15 +28,15 @@ var procGetSystemFirmwareTable = kernel32.NewProc("GetSystemFirmwareTable")
 // SMBIOS table provider signature ('RSMB').
 const firmwareTableProviderSigRSMB uint32 = 0x52534D42
 
-// GetSMBIOSSystemInfo retrieves the SMBIOS Type 1 (System Information) data
-// using the GetSystemFirmwareTable Win32 API.  No WMI dependency.
-func GetSMBIOSSystemInfo() (*SMBIOSSystemInfo, error) {
+// GetSMBIOSInfo retrieves the SMBIOS BIOS, System, Baseboard and Chassis
+// information using the GetSystemFirmwareTable Win32 API.  No WMI dependency.
+func GetSMBIOSInfo() (*SMBIOSInfo, error) {
 	data, err := getSystemFirmwareTable(firmwareTableProviderSigRSMB, 0)
 	if err != nil {
 		return nil, fmt.Errorf("GetSystemFirmwareTable: %w", err)
 	}
 
-	return parseSMBIOSSystemInfo(data)
+	return parseSMBIOSInfo(data)
 }
 
 // getSystemFirmwareTable wraps the GetSystemFirmwareTable Win32 API.

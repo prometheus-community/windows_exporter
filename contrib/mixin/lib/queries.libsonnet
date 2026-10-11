@@ -18,7 +18,7 @@ function(c)
         self.metric('windows_logical_disk_size_bytes', [c.volumeSelector])
       ),
     memoryCommitted:
-      self.ratio(self.metric('windows_memory_committed_bytes'), self.metric('windows_memory_commit_limit')),
+      self.ratio(self.metric('windows_memory_committed_bytes'), self.metric('windows_memory_commit_limit_bytes')),
     diskLatency(direction):
       self.ratio(
         self.rate('windows_logical_disk_%s_seconds_total' % direction, [c.volumeSelector]),

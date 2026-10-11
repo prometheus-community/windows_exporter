@@ -132,7 +132,7 @@ function(on)
       b.panel.new(16, 'Commit used', 'stat')
       + b.panel.withDescription('Committed virtual memory as a share of the commit limit (physical memory + page files). Allocations fail at 100%.')
       + b.panel.withQueries([
-        b.query.new('100 * windows_memory_committed_bytes{job=~"$job", instance="$instance"} / windows_memory_commit_limit{job=~"$job", instance="$instance"}', 'A'),
+        b.query.new('100 * windows_memory_committed_bytes{job=~"$job", instance="$instance"} / windows_memory_commit_limit_bytes{job=~"$job", instance="$instance"}', 'A'),
       ])
       + b.panel.withDefaults({
         decimals: 1,

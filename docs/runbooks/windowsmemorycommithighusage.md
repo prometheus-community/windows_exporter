@@ -16,7 +16,7 @@ when some physical memory remains available.
 ## Diagnosis
 
 1. Inspect `windows:memory_committed:ratio`, `windows_memory_committed_bytes`,
-   and `windows_memory_commit_limit`. Determine whether committed bytes increased
+   and `windows_memory_commit_limit_bytes`. Determine whether committed bytes increased
    or the limit decreased.
 2. In Task Manager or Resource Monitor, inspect per-process commit size and look
    for persistent growth. Check recent workload and deployment changes.

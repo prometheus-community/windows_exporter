@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Hyper-V, logical disk queue, cache, IIS output cache, scheduled task or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Hyper-V, logical disk queue, cache, IIS output cache, memory, scheduled task or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You chart SQL Server latencies, SQL Server lock counts or DHCP denials                         | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
@@ -200,6 +200,13 @@ Renamed:
 |------------------------------------------------------|----------------------------------------------------------------|------------------------------------|
 | `windows_hyperv_virtual_storage_device_throughput`   | `windows_hyperv_virtual_storage_device_throughput_total`       | Now a counter, use `rate()`        |
 | `windows_filetime_mtime_timestamp_seconds`           | `windows_file_mtime_timestamp_seconds`                         | See [filetime](#filetime-collector-removed) |
+| `windows_memory_commit_limit`                        | `windows_memory_commit_limit_bytes`                            | Unit suffix added, same value      |
+
+Removed:
+
+| Metric                                            | Reason                                                                 |
+|---------------------------------------------------|------------------------------------------------------------------------|
+| `windows_memory_free_system_page_table_entries`   | Saturates near 2^32 on 64-bit Windows, where system PTEs are not a scarce resource |
 
 Deprecated. These are still exported in 0.32 and will be removed in a later release:
 
