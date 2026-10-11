@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -417,329 +418,329 @@ func (c *Collector) buildDataStore() error {
 	return nil
 }
 
-func (c *Collector) collectDataStore(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorDataStore.Collect(&c.perfDataObjectDataStore)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V DataStore metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectDataStore {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreFragmentationRatio,
 			prometheus.GaugeValue,
 			data.DataStoreFragmentationRatio,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreSectorSize,
 			prometheus.GaugeValue,
 			data.DataStoreSectorSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreDataAlignment,
 			prometheus.GaugeValue,
 			data.DataStoreDataAlignment,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCurrentReplayLogSize,
 			prometheus.GaugeValue,
 			data.DataStoreCurrentReplayLogSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreAvailableEntries,
 			prometheus.GaugeValue,
 			data.DataStoreAvailableEntries,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreEmptyEntries,
 			prometheus.GaugeValue,
 			data.DataStoreEmptyEntries,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreFreeBytes,
 			prometheus.GaugeValue,
 			data.DataStoreFreeBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreDataEnd,
 			prometheus.GaugeValue,
 			data.DataStoreDataEnd,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreFileObjects,
 			prometheus.GaugeValue,
 			data.DataStoreFileObjects,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreObjectTables,
 			prometheus.GaugeValue,
 			data.DataStoreObjectTables,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreKeyTables,
 			prometheus.GaugeValue,
 			data.DataStoreKeyTables,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreFileDataSize,
 			prometheus.GaugeValue,
 			data.DataStoreFileDataSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreTableDataSize,
 			prometheus.GaugeValue,
 			data.DataStoreTableDataSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreNamesSize,
 			prometheus.GaugeValue,
 			data.DataStoreNamesSize,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreNumberOfKeys,
 			prometheus.GaugeValue,
 			data.DataStoreNumberOfKeys,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReconnectLatencyMicro,
 			prometheus.GaugeValue,
 			data.DataStoreReconnectLatencyMicro,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreDisconnectCount,
 			prometheus.CounterValue,
 			data.DataStoreDisconnectCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToFileByteLatency,
 			prometheus.GaugeValue,
 			data.DataStoreWriteToFileByteLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToFileByteCount,
 			prometheus.CounterValue,
 			data.DataStoreWriteToFileByteCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToFileCount,
 			prometheus.CounterValue,
 			data.DataStoreWriteToFileCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromFileByteLatency,
 			prometheus.GaugeValue,
 			data.DataStoreReadFromFileByteLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromFileByteCount,
 			prometheus.CounterValue,
 			data.DataStoreReadFromFileByteCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromFileCount,
 			prometheus.CounterValue,
 			data.DataStoreReadFromFileCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToStorageByteLatency,
 			prometheus.GaugeValue,
 			data.DataStoreWriteToStorageByteLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToStorageByteCount,
 			prometheus.CounterValue,
 			data.DataStoreWriteToStorageByteCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToStorageCount,
 			prometheus.CounterValue,
 			data.DataStoreWriteToStorageCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromStorageByteLatency,
 			prometheus.GaugeValue,
 			data.DataStoreReadFromStorageByteLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromStorageByteCount,
 			prometheus.CounterValue,
 			data.DataStoreReadFromStorageByteCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromStorageCount,
 			prometheus.CounterValue,
 			data.DataStoreReadFromStorageCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitByteLatency,
 			prometheus.GaugeValue,
 			data.DataStoreCommitByteLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitByteCount,
 			prometheus.CounterValue,
 			data.DataStoreCommitByteCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitCount,
 			prometheus.CounterValue,
 			data.DataStoreCommitCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCacheUpdateOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreCacheUpdateOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCacheUpdateOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreCacheUpdateOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreCommitOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreCommitOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCompactOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreCompactOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCompactOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreCompactOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreLoadFileOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreLoadFileOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreLoadFileOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreLoadFileOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreRemoveOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreRemoveOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreRemoveOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreRemoveOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreQuerySizeOperationLatency,
 			prometheus.GaugeValue,
 			data.DataStoreQuerySizeOperationLatency,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreQuerySizeOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreQuerySizeOperationCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreSetOperationLatencyMicro,
 			prometheus.GaugeValue,
 			data.DataStoreSetOperationLatencyMicro,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dataStoreSetOperationCount,
 			prometheus.CounterValue,
 			data.DataStoreSetOperationCount,

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -84,7 +85,7 @@ type perfDataClrRemoting struct {
 	TotalRemoteCalls               float64 `perfdata:"Total Remote Calls"`
 }
 
-func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrRemoting
 	if err := c.perfClrRemoting.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Remoting: %w", err)
@@ -95,42 +96,42 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, _ time.Durat
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.channels,
 			prometheus.CounterValue,
 			float64(process.Channels),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.contextBoundClassesLoaded,
 			prometheus.GaugeValue,
 			float64(process.ContextBoundClassesLoaded),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.contextBoundObjects,
 			prometheus.CounterValue,
 			float64(process.ContextBoundObjectsAllocPersec),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.contextProxies,
 			prometheus.CounterValue,
 			float64(process.ContextProxies),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.contexts,
 			prometheus.GaugeValue,
 			float64(process.Contexts),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalRemoteCalls,
 			prometheus.CounterValue,
 			float64(process.TotalRemoteCalls),

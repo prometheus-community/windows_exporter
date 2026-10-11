@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -97,49 +98,49 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualNetworkAdapter(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualNetworkAdapter(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualNetworkAdapter.Collect(&c.perfDataObjectVirtualNetworkAdapter)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectVirtualNetworkAdapter {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterBytesReceived,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterBytesReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterBytesSent,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterBytesSent,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterDroppedPacketsIncoming,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterDroppedPacketsOutgoing,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterPacketsReceived,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualNetworkAdapterPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualNetworkAdapterPacketsSent,

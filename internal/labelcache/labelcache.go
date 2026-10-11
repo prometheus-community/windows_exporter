@@ -104,6 +104,10 @@ func (c *Cache) Reset() {
 // Commit makes the series of this scrape the base of the next one. Series of
 // the previous scrape that this scrape didn't report are dropped.
 func (s *Scrape) Commit() {
+	if s == nil {
+		return
+	}
+
 	s.mu.Lock()
 	next := s.next
 	s.next = nil
@@ -133,11 +137,12 @@ func (s *Scrape) Commit() {
 }
 
 // MustNewConstMetric is prometheus.MustNewConstMetric, but it reuses the label
-// pairs of the series from the previous scrape.
+// pairs of the series from the previous scrape. A nil Scrape creates the metric
+// without the cache.
 //
 //nolint:ireturn // Const metrics have no exported type.
 func (s *Scrape) MustNewConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labelValues ...string) prometheus.Metric {
-	if len(labelValues) > maxLabels {
+	if s == nil || len(labelValues) > maxLabels {
 		return prometheus.MustNewConstMetric(desc, valueType, value, append([]string(nil), labelValues...)...)
 	}
 

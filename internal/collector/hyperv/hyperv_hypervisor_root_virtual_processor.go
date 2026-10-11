@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -82,7 +83,7 @@ func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 	return nil
 }
 
-func (c *Collector) collectHypervisorRootVirtualProcessor(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHypervisorRootVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorHypervisorRootVirtualProcessor.Collect(&c.perfDataObjectHypervisorRootVirtualProcessor)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Root Virtual Processor metrics: %w", err)
@@ -97,35 +98,35 @@ func (c *Collector) collectHypervisorRootVirtualProcessor(ch chan<- prometheus.M
 
 		coreID := parts[2]
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorRootVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorRootVirtualProcessorGuestRunTimePercent,
 			coreID, "guest_run",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorRootVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorRootVirtualProcessorHypervisorRunTimePercent,
 			coreID, "hypervisor",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorRootVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorRootVirtualProcessorRemoteRunTimePercent,
 			coreID, "remote",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorRootVirtualProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorRootVirtualProcessorTotalRunTimePercent,
 			coreID,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.hypervisorRootVirtualProcessorCPUWaitTimePerDispatch,
 			prometheus.CounterValue,
 			data.HypervisorRootVirtualProcessorCPUWaitTimePerDispatch,

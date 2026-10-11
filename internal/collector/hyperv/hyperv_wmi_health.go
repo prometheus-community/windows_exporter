@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -79,7 +80,7 @@ func (c *Collector) buildWMIHealth() error {
 
 // collectWMIHealth reports 1 if a minimal query against the Hyper-V WMI
 // namespace succeeds and 0 otherwise.
-func (c *Collector) collectWMIHealth(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWMIHealth(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	var dst []msvmComputerSystem
 
 	healthValue := 1.0
@@ -90,7 +91,7 @@ func (c *Collector) collectWMIHealth(ch chan<- prometheus.Metric) error {
 		healthValue = 0.0
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.wmiHealth,
 		prometheus.GaugeValue,
 		healthValue,

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -63,7 +64,7 @@ type perfDataClrInterop struct {
 	Numberofmarshalling float64 `perfdata:"# of marshalling"`
 }
 
-func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrInterop
 	if err := c.perfClrInterop.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Interop: %w", err)
@@ -74,21 +75,21 @@ func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, _ time.Durati
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfCCWs,
 			prometheus.CounterValue,
 			float64(process.NumberofCCWs),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfMarshalling,
 			prometheus.CounterValue,
 			float64(process.Numberofmarshalling),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfStubs,
 			prometheus.CounterValue,
 			float64(process.NumberofStubs),

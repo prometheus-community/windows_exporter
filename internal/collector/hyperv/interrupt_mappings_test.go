@@ -32,7 +32,7 @@ func TestRootPartitionInterruptMappings(t *testing.T) {
 	c.buildHypervisorRootPartitionDescriptors()
 	c.perfDataCollectorHypervisorRootPartition = interruptMappingFixture{}
 	metrics := make(chan prometheus.Metric, 100)
-	require.NoError(t, c.collectHypervisorRootPartition(metrics))
+	require.NoError(t, c.collectHypervisorRootPartition(metrics, nil))
 	close(metrics)
 
 	found := false

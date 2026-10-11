@@ -24,6 +24,7 @@ import (
 	"log/slog"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -105,7 +106,7 @@ func (c *Collector) buildHost() error {
 	return nil
 }
 
-func (c *Collector) collectHost(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHost(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorLogicalProcessor.Collect(&c.perfDataObjectLogicalProcessor)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Logical Processor metrics: %w", err)
@@ -125,7 +126,7 @@ func (c *Collector) collectHost(ch chan<- prometheus.Metric) error {
 			processorCount := float64(vm.ProcessorCount)
 			totalVirtualCoreCount += processorCount
 
-			ch <- prometheus.MustNewConstMetric(
+			ch <- scrape.MustNewConstMetric(
 				c.vmProcessorCount,
 				prometheus.GaugeValue,
 				processorCount,
@@ -134,13 +135,13 @@ func (c *Collector) collectHost(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hostLogicalProcessorCount,
 		prometheus.GaugeValue,
 		logicalCoreCount,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.totalVMProcessorCount,
 		prometheus.GaugeValue,
 		totalVirtualCoreCount,

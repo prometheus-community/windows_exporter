@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -105,7 +106,7 @@ type perfDataClrLoading struct {
 	Totalappdomainsunloaded   float64 `perfdata:"Total appdomains unloaded"`
 }
 
-func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrLoading
 	if err := c.perfClrLoading.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Loading: %w", err)
@@ -116,63 +117,63 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, _ time.Durati
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.bytesInLoaderHeap,
 			prometheus.GaugeValue,
 			float64(process.BytesinLoaderHeap),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.currentAppDomains,
 			prometheus.GaugeValue,
 			float64(process.Currentappdomains),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.currentAssemblies,
 			prometheus.GaugeValue,
 			float64(process.CurrentAssemblies),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.currentClassesLoaded,
 			prometheus.GaugeValue,
 			float64(process.CurrentClassesLoaded),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalAppDomains,
 			prometheus.CounterValue,
 			float64(process.TotalAppdomains),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalAppDomainsUnloaded,
 			prometheus.CounterValue,
 			float64(process.Totalappdomainsunloaded),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalAssemblies,
 			prometheus.CounterValue,
 			float64(process.TotalAssemblies),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalClassesLoaded,
 			prometheus.CounterValue,
 			float64(process.TotalClassesLoaded),
 			process.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.totalNumberOfLoadFailures,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofLoadFailures),
