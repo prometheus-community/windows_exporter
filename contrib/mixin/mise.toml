@@ -44,7 +44,7 @@ description = "Regenerate the dashboards and fail on uncommitted changes"
 depends = ["dashboard"]
 run = '''
 set -eu
-git add --intent-to-add -- {{vars.dashboards}}
+git add --intent-to-add -- {{vars.dashboards}}/windows-exporter-*.json
 git diff --exit-code -- {{vars.dashboards}}
 '''
 

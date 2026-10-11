@@ -261,8 +261,8 @@ inside WSL; mise supplies the tool binaries on `PATH`.
 
 The checked-in JSON remains the reference for the rendered dashboards, including
 queries, IDs, variables, annotations, transformations, and tab/row layout.
-`mise run check-dashboards` regenerates them and runs `git diff --exit-code`, displaying
-any drift. CI runs that check before the mixin tests. The dashboard uses its own
+`mise run check-dashboards` regenerates them, marks new dashboard files with
+`git add --intent-to-add` and runs `git diff --exit-code`, displaying any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
 `enableFleetTab`, `enableOverviewTab`, `enableTabDashboards` and the dashboard
 metadata below.

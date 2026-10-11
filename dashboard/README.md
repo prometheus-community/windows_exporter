@@ -95,7 +95,7 @@ mise run dashboard
 
 `mise run dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboards.
 `mise run lint` fails if the committed JSON files differ from the generated ones.
-`mise run check-dashboards` rebuilds it and runs `git diff --exit-code`, as CI does before the mixin tests.
+`mise run check-dashboards` rebuilds them and runs `git diff --exit-code`, as CI does before the mixin tests.
 Check new or changed queries in Grafana before you open a pull request, for example by importing the files into a local Grafana 13.
 
 ![Screenshot of the Fleet tab.](dashboard-fleet.png)

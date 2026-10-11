@@ -83,6 +83,8 @@ function(config)
   // Tab dashboards link to each other through a dropdown of the dashboards
   // with the same tags; the full dashboard has the tabs instead.
   local new(uid, title, description, elements, layout, dropdown=true) =
+    // Grafana rejects longer dashboard UIDs.
+    assert std.length(uid) <= 40 : 'Dashboard UID ' + uid + ' is longer than 40 characters; shorten dashboardUIDPrefix or dashboardUID';
     // Keeps the variables that the panels reference, directly or through
     // other variables, and the annotations whose variables are kept.
     // Variables only reference variables defined before them.
