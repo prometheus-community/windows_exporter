@@ -888,11 +888,28 @@ jobs:
                   # rejects unless the cluster allows every bus type.
                   (Get-Cluster).S2DBusTypes = [uint32]::MaxValue
 
-                  Enable-ClusterStorageSpacesDirect `
-                      -AutoConfig:$false `
-                      -CacheState Disabled `
-                      -SkipEligibilityChecks `
-                      -Confirm:$false
+                  # Enable-ClusterStorageSpacesDirect can wait indefinitely for the
+                  # disks to be claimed, so bound it and log its progress.
+                  $enable = Start-Job -ScriptBlock {
+                      Import-Module FailoverClusters
+                      Enable-ClusterStorageSpacesDirect `
+                          -AutoConfig:$false `
+                          -CacheState Disabled `
+                          -SkipEligibilityChecks `
+                          -Confirm:$false `
+                          -Verbose 4>&1 | ForEach-Object { "$_" }
+                  }
+
+                  $finished = Wait-Job $enable -Timeout 240
+                  Receive-Job $enable -ErrorAction Continue
+                  if ($null -eq $finished) {
+                      Stop-Job $enable
+                      throw "Enable-ClusterStorageSpacesDirect did not finish within 4 minutes"
+                  }
+
+                  if ($enable.State -ne "Completed") {
+                      throw "Enable-ClusterStorageSpacesDirect ended in state $($enable.State)"
+                  }
 
                   $uniqueIds = @($physicalDisks | ForEach-Object UniqueId)
                   $poolDisks = @(Get-StorageSubSystem -FriendlyName "Clustered Windows Storage*" |
