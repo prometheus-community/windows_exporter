@@ -772,15 +772,24 @@ jobs:
                   Add-IscsiVirtualDiskTargetMapping -TargetName "cis2d" -Path $path
               }
 
+              # Without an explicit portal the initiator connects to whatever
+              # addresses the target advertises, which fails for loopback.
               New-IscsiTargetPortal -TargetPortalAddress 127.0.0.1 | Out-Null
               $target = Get-IscsiTarget | Where-Object NodeAddress -like "*-cis2d-target"
               if ($null -eq $target) { throw "The loopback iSCSI target was not discovered" }
-              Connect-IscsiTarget -NodeAddress $target.NodeAddress | Out-Null
+              Connect-IscsiTarget `
+                  -NodeAddress $target.NodeAddress `
+                  -TargetPortalAddress 127.0.0.1 `
+                  -InitiatorPortalAddress 127.0.0.1 | Out-Null
               Update-HostStorageCache
               $iscsiConnected = $true
           }
           catch {
               $iscsiError = $_
+              Get-IscsiServerTarget -ErrorAction SilentlyContinue | Format-List TargetName, Status, InitiatorIds, LunMappings
+              Get-IscsiTargetPortal -ErrorAction SilentlyContinue | Format-Table TargetPortalAddress, TargetPortalPortNumber, InitiatorPortalAddress
+              Get-NetTCPConnection -LocalPort 3260 -ErrorAction SilentlyContinue | Format-Table LocalAddress, LocalPort, State
+              "iSCSI setup failed: $iscsiError" | Add-Content -Path (Join-Path $env:RUNNER_TEMP "s2d-setup.log")
           }
 
           # A Cluster Name needs a static address on a routed client network and a
