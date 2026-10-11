@@ -528,6 +528,19 @@ func FuzzParseSMBIOSInfo(f *testing.F) {
 
 	f.Add(slices.Concat(header, tableData))
 
+	// Seed with every parsed structure type and a partial BIOS release.
+	f.Add(buildRSMB(
+		smbiosStruct(0, 0x1A, map[int]byte{0x04: 1, 0x05: 2, 0x08: 3, 0x14: 2, 0x15: 17}, "Vendor", "1.0", "01/01/2024"),
+		smbiosStruct(127, 4, nil),
+		smbiosStruct(1, 0x1B, map[int]byte{0x04: 1, 0x19: 2, 0x1A: 3}, "Maker", "SKU", "Family"),
+		smbiosStruct(2, 0x0F, map[int]byte{0x04: 1, 0x08: 2}, "Board", "Tag"),
+		smbiosStruct(3, 0x15, map[int]byte{0x04: 1, 0x05: 0x17}, "Chassis"),
+	))
+	f.Add(buildRSMB(
+		smbiosStruct(0, 0x15, map[int]byte{0x04: 1, 0x14: 2}, "Vendor"),
+		smbiosStruct(1, 0x08, map[int]byte{0x04: 1}, "Maker"),
+	))
+
 	// Also seed with an empty input and a truncated one.
 	f.Add([]byte{})
 	f.Add(header[:4])

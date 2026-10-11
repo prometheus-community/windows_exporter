@@ -18,6 +18,8 @@
 package dmi_test
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
@@ -42,6 +44,13 @@ func TestCollector(t *testing.T) {
 		labels[label.GetName()] = label.GetValue()
 	}
 
+	require.ElementsMatch(t, []string{
+		"bios_date", "bios_release", "bios_vendor", "bios_version",
+		"board_asset_tag", "board_name", "board_serial", "board_vendor", "board_version",
+		"chassis_asset_tag", "chassis_serial", "chassis_vendor", "chassis_version",
+		"product_family", "product_name", "product_serial", "product_sku",
+		"product_uuid", "product_version", "system_vendor",
+	}, slices.Collect(maps.Keys(labels)), "windows_dmi_info must carry node_exporter's node_dmi_info label names")
 	require.NotEmpty(t, labels["product_uuid"], "SMBIOS system UUID is empty: %s", metric)
 	require.NotEmpty(t, labels["bios_vendor"], "SMBIOS BIOS vendor is empty: %s", metric)
 }

@@ -116,10 +116,9 @@ func (s smbiosStructure) stringAt(offset int) string {
 // parseSMBIOSInfo parses the raw RSMB firmware table and extracts the
 // Type 0 (BIOS), Type 1 (System), Type 2 (Baseboard) and Type 3 (Chassis)
 // structures. Only the first structure of each type is used, matching the
-// Linux kernel. Type 1 is required; the others are optional. Like the old
-// parser and the Linux kernel for SMBIOS 2.x tables, the walk continues past
-// the Type 127 end-of-table marker, since some firmware places structures
-// after it.
+// Linux kernel. Type 1 is required; the others are optional. The walk
+// continues past the Type 127 end-of-table marker, as the Linux kernel does
+// for SMBIOS 2.x tables, since some firmware places structures after it.
 func parseSMBIOSInfo(data []byte) (*SMBIOSInfo, error) {
 	if len(data) < rawSMBIOSDataHeaderSize {
 		return nil, errors.New("SMBIOS data too short for header")
@@ -178,7 +177,7 @@ func parseSMBIOSInfo(data []byte) (*SMBIOSInfo, error) {
 			break
 		}
 
-		if !seen[structType] {
+		if structType <= smbiosTypeChassis && !seen[structType] {
 			s := smbiosStructure{
 				formatted: tableData[offset : offset+structLen],
 				strs:      extractStrings(tableData[stringsStart:stringsEnd]),
