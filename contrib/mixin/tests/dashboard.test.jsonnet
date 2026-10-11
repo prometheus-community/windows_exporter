@@ -1,6 +1,7 @@
-// Renders the dashboard for several collector selections and checks that every
-// layout reference has an element, every element is placed and no tab or row is
-// empty. Run with jsonnet -J vendor tests/dashboard.test.jsonnet.
+// Renders the dashboards for several collector selections and checks that every
+// layout reference has an element, every element is placed, no tab or row is
+// empty and every tab dashboard matches its tab. Run with
+// jsonnet -J vendor tests/dashboard.test.jsonnet.
 local mixin = import '../mixin.libsonnet';
 
 local render(collectors, config={}) =
@@ -54,6 +55,59 @@ assert metadata.metadata.name == 'custom-uid' : 'metadata: got UID ' + metadata.
 assert metadata.spec.title == 'Custom title' : 'metadata: got title ' + metadata.spec.title;
 assert metadata.spec.description == 'Custom description' : 'metadata: got description ' + metadata.spec.description;
 assert metadata.spec.tags == ['prometheus', 'windows', 'windows_exporter', 'custom'] : 'metadata: got tags ' + std.manifestJson(metadata.spec.tags);
+
+// Every tab renders as a dashboard of its own with the panels and rows of that
+// tab and only the variables its panels use.
+local dashboards(collectors, config={}) = (mixin { _config+:: { collectors: collectors(super.collectors) } + config }).grafanaDashboards;
+local defaults = dashboards(function(collectors) collectors);
+local full = defaults['windows-exporter.json'];
+assert full.metadata.name == 'windows-exporter-full' : 'full: got UID ' + full.metadata.name;
+assert full.spec.title == 'Windows Exporter / Full' : 'full: got title ' + full.spec.title;
+assert std.objectFields(defaults) == [
+  'windows-exporter-cpu.json',
+  'windows-exporter-disk.json',
+  'windows-exporter-exporter.json',
+  'windows-exporter-fleet.json',
+  'windows-exporter-memory.json',
+  'windows-exporter-network.json',
+  'windows-exporter-overview.json',
+  'windows-exporter-services.json',
+  'windows-exporter.json',
+] : 'tab dashboards: got ' + std.join(', ', std.objectFields(defaults));
+assert std.all([
+  local tab = std.filter(function(tab) tab.spec.title == dashboard.spec.title[std.length('Windows Exporter / '):], full.spec.layout.spec.tabs)[0];
+  dashboard.spec.layout == tab.spec.layout
+  && std.objectFields(dashboard.spec.elements) == std.set(placed(tab.spec.layout))
+  && std.startsWith(dashboard.metadata.name, 'windows-exporter-')
+  for dashboard in [defaults[name] for name in std.objectFields(defaults) if name != 'windows-exporter.json']
+]) : 'A tab dashboard differs from its tab';
+local linkTypes(dashboard) = [link.type for link in dashboard.spec.links];
+assert linkTypes(full) == ['link'] : 'full: got links ' + std.join(', ', linkTypes(full));
+assert linkTypes(defaults['windows-exporter-cpu.json']) == ['dashboards', 'link'] : 'cpu: got links ' + std.join(', ', linkTypes(defaults['windows-exporter-cpu.json']));
+local variableNames(dashboard) = [variable.spec.name for variable in dashboard.spec.variables];
+local annotationNames(dashboard) = [annotation.spec.name for annotation in dashboard.spec.annotations];
+local fleet = defaults['windows-exporter-fleet.json'];
+assert variableNames(fleet) == ['datasource', 'job', 'hostname'] : 'fleet: got variables ' + std.join(', ', variableNames(fleet));
+assert annotationNames(fleet) == ['Annotations & Alerts'] : 'fleet: got annotations ' + std.join(', ', annotationNames(fleet));
+assert std.length(std.findSubstr('/d/windows-exporter-overview?', std.manifestJson(fleet.spec.elements))) == 1 : 'fleet: hosts do not link to the Overview dashboard';
+assert std.length(std.findSubstr('dtab=Overview', std.manifestJson(full.spec.elements))) == 1 : 'full: hosts do not link to the Overview tab';
+// Without the Overview tab, hostnames in Fleet link nowhere.
+local withoutOverview = dashboards(function(collectors) collectors, { enableOverviewTab: false });
+assert std.all([
+  std.length(std.findSubstr('Show details for', std.manifestJson(dashboard.spec.elements))) == 0
+  for dashboard in [withoutOverview['windows-exporter.json'], withoutOverview['windows-exporter-fleet.json']]
+]) : 'fleet without overview: hostnames link to a missing Overview';
+assert !std.objectHas(withoutOverview, 'windows-exporter-overview.json') : 'fleet without overview: got an Overview dashboard';
+local cpu = defaults['windows-exporter-cpu.json'];
+assert variableNames(cpu) == ['datasource', 'job', 'hostname', 'instance'] : 'cpu: got variables ' + std.join(', ', variableNames(cpu));
+assert annotationNames(cpu) == ['Annotations & Alerts', 'Reboots'] : 'cpu: got annotations ' + std.join(', ', annotationNames(cpu));
+local processes = dashboards(only({ process: true }))['windows-exporter-processes.json'];
+assert variableNames(processes) == ['datasource', 'job', 'hostname', 'instance', 'process', 'process_top'] : 'processes: got variables ' + std.join(', ', variableNames(processes));
+local custom = dashboards(function(collectors) collectors, { dashboardUIDPrefix: 'win', dashboardTitlePrefix: 'Windows' });
+assert custom['windows-exporter-cpu.json'].metadata.name == 'win-cpu' : 'custom prefix: got UID ' + custom['windows-exporter-cpu.json'].metadata.name;
+assert custom['windows-exporter-cpu.json'].spec.title == 'Windows / CPU' : 'custom prefix: got title ' + custom['windows-exporter-cpu.json'].spec.title;
+assert custom['windows-exporter.json'].metadata.name == 'win-full' : 'custom prefix: got full UID ' + custom['windows-exporter.json'].metadata.name;
+assert std.objectFields(dashboards(function(collectors) collectors, { enableTabDashboards: false })) == ['windows-exporter.json'] : 'enableTabDashboards: false renders tab dashboards';
 
 assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
 assert expect('defaults', {

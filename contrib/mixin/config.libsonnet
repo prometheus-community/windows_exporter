@@ -11,11 +11,19 @@
     // Requires the time collector with its ntp subcollector enabled.
     enableTime: false,
 
-    // Grafana dashboard metadata. dashboardUID is the v2 metadata.name; change
-    // it to import the dashboard next to the sample one.
-    dashboardUID: 'Kdaassddw',
-    dashboardTitle: 'Windows Exporter',
+    // Grafana dashboard metadata. A UID is the v2 metadata.name; change the
+    // UIDs to import the dashboards next to the sample ones.
+    // Every tab also renders as a dashboard of its own with the UID
+    // <dashboardUIDPrefix>-<tab> and the title "<dashboardTitlePrefix> / <tab>",
+    // for example windows-exporter-cpu and "Windows Exporter / CPU".
+    enableTabDashboards: true,
+    dashboardUIDPrefix: 'windows-exporter',
+    dashboardTitlePrefix: 'Windows Exporter',
+    // The full dashboard has all tabs.
+    dashboardUID: self.dashboardUIDPrefix + '-full',
+    dashboardTitle: self.dashboardTitlePrefix + ' / Full',
     dashboardDescription: 'Fleet overview and per-host details for Windows hosts monitored by windows_exporter.',
+    // The dashboards link to each other through their tags.
     dashboardTags: ['prometheus', 'windows', 'windows_exporter'],
 
     // Dashboard tabs that don't belong to a single collector. Turn them off

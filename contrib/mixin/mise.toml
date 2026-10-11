@@ -8,7 +8,7 @@
 [vars]
 sources = "*.libsonnet *.jsonnet lib/*.libsonnet rules/*.libsonnet alerts/*.libsonnet dashboards/*.libsonnet tests/*.libsonnet tests/*.jsonnet"
 fmt_flags = "-n 2 --max-blank-lines 2 --string-style s --comment-style s"
-dashboard = "../../dashboard/windows-exporter-dashboard.json"
+dashboards = "../../dashboard"
 
 [tasks.generate]
 description = "Generate Prometheus rules, alerts, and the dashboard"
@@ -27,24 +27,35 @@ description = "Install dashboard Jsonnet libraries"
 run = "jb install"
 
 [tasks.dashboard]
-description = "Regenerate the committed Grafana dashboard"
+description = "Regenerate the committed Grafana dashboards"
 alias = "dashboards"
 depends = ["vendor"]
 run = '''
 set -eu
-trap 'rm -f {{vars.dashboard}}.tmp' EXIT
-jsonnet -J vendor -S dashboard.jsonnet > {{vars.dashboard}}.tmp
-mv {{vars.dashboard}}.tmp {{vars.dashboard}}
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+jsonnet -J vendor -S -m "$out" dashboard.jsonnet > /dev/null
+rm -f {{vars.dashboards}}/windows-exporter-*.json
+cp "$out"/*.json {{vars.dashboards}}/
 '''
 
 [tasks.check-dashboards]
-description = "Regenerate the dashboard and fail on uncommitted changes"
+description = "Regenerate the dashboards and fail on uncommitted changes"
 depends = ["dashboard"]
-run = "git diff --exit-code -- {{vars.dashboard}}"
+run = '''
+set -eu
+git add --intent-to-add -- {{vars.dashboards}}/windows-exporter-*.json
+git diff --exit-code -- {{vars.dashboards}}
+'''
 
 [tasks.lint-dashboards]
-description = "Lint the committed dashboard in strict mode"
-run = "dashboard-linter lint --strict --config .dashboard-lint.yaml {{vars.dashboard}}"
+description = "Lint the committed dashboards in strict mode"
+run = '''
+set -eu
+for file in {{vars.dashboards}}/windows-exporter-*.json; do
+  dashboard-linter lint --strict --config .dashboard-lint.yaml "$file"
+done
+'''
 
 [tasks.fmt]
 description = "Format all mixin Jsonnet sources"
@@ -59,15 +70,24 @@ run = [
 ]
 
 [tasks.lint]
-description = "Check Jsonnet formatting, dashboard drift, and Prometheus rules"
+description = "Check Jsonnet formatting and lint, dashboard drift, and Prometheus rules"
 depends = ["rules", "custom-rules", "vendor", "lint-dashboards"]
 run = '''
 set -eu
 for file in {{vars.sources}}; do
   jsonnetfmt {{vars.fmt_flags}} "$file" | diff -u "$file" -
+  jsonnet-lint -J vendor "$file"
 done
-jsonnet -J vendor -S dashboard.jsonnet | diff -u {{vars.dashboard}} - \
-  || { echo "{{vars.dashboard}} is out of date; run mise run dashboard"; exit 1; }
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+jsonnet -J vendor -S -m "$out" dashboard.jsonnet > /dev/null
+(cd "$out" && ls windows-exporter-*.json) > "$out/generated"
+(cd {{vars.dashboards}} && ls windows-exporter-*.json) | diff -u "$out/generated" - \
+  || { echo "{{vars.dashboards}} has missing or stale dashboards; run mise run dashboard"; exit 1; }
+for file in $(cat "$out/generated"); do
+  diff -u {{vars.dashboards}}/"$file" "$out/$file" \
+    || { echo "{{vars.dashboards}}/$file is out of date; run mise run dashboard"; exit 1; }
+done
 promtool check rules windows_rules.yaml windows_alerts.yaml tests/custom_rules.yaml tests/custom_alerts.yaml
 pint --offline lint windows_rules.yaml windows_alerts.yaml
 pint --offline lint tests/custom_rules.yaml tests/custom_alerts.yaml
