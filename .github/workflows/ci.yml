@@ -901,7 +901,8 @@ jobs:
                   }
 
                   $finished = Wait-Job $enable -Timeout 240
-                  Receive-Job $enable -ErrorAction Continue
+                  Receive-Job $enable -ErrorAction Continue 2>&1 |
+                      Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP "s2d-setup.log") -Append
                   if ($null -eq $finished) {
                       Stop-Job $enable
                       throw "Enable-ClusterStorageSpacesDirect did not finish within 4 minutes"
@@ -924,6 +925,8 @@ jobs:
               }
               catch {
                   Write-Host "::warning::Storage Spaces Direct setup failed: $_"
+                  "Storage Spaces Direct setup failed: $_" |
+                      Add-Content -Path (Join-Path $env:RUNNER_TEMP "s2d-setup.log")
               }
           }
 
@@ -1769,6 +1772,20 @@ jobs:
           Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
           # CBS.log names the files that make role installation request a restart.
           Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
+
+      # Temporary: the setup step's output is too far from the end of the log
+      # to read on failed runs.
+      - name: Show Storage Spaces Direct state
+        if: ${{ always() }}
+        shell: powershell
+        run: |
+          Get-Content (Join-Path $env:RUNNER_TEMP "s2d-setup.log") -ErrorAction SilentlyContinue
+          Get-Cluster -ErrorAction SilentlyContinue | Format-List Name, S2DEnabled, S2DBusTypes
+          Get-ClusterStorageSpacesDirect -ErrorAction SilentlyContinue | Format-List
+          Get-ClusterResource -ErrorAction SilentlyContinue | Format-Table Name, State, OwnerGroup, ResourceType
+          Get-StoragePool -ErrorAction SilentlyContinue | Format-Table FriendlyName, IsPrimordial, HealthStatus, OperationalStatus
+          Get-PhysicalDisk | Format-Table FriendlyName, DeviceId, BusType, CanPool, CannotPoolReason, HealthStatus
+          & (Join-Path $env:ProgramFiles "containerd\crictl.exe") --runtime-endpoint $env:CRI_ENDPOINT ps -a
 
       - name: Upload test logs
         if: ${{ always() }}
