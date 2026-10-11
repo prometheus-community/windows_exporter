@@ -29,7 +29,6 @@ var (
 
 	procGetDynamicTimeZoneInformationSys = modkernel32.NewProc("GetDynamicTimeZoneInformation")
 	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
-	procGetTickCount                     = modkernel32.NewProc("GetTickCount64")
 	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
 	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
 )
@@ -80,10 +79,4 @@ func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint3
 		uintptr(unsafe.Pointer(utcFileTime)))
 
 	return uint32(ret)
-}
-
-func GetTickCount64() uint64 {
-	ret, _, _ := procGetTickCount.Call()
-
-	return uint64(ret)
 }
