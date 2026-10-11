@@ -749,6 +749,40 @@ jobs:
               New-NetIPAddress -InterfaceIndex $adapter.ifIndex -IPAddress "198.51.100.1" -PrefixLength 24 | Out-Null
           }
 
+          # Storage Spaces Direct gets disks from a loopback iSCSI target (see
+          # below). The iSCSI Target cmdlets need a cluster group once the node
+          # is in a cluster, so the target is created first.
+          $iscsiConnected = $false
+          $iscsiError = $null
+          try {
+              $result = Install-WindowsFeature -Name FS-iSCSITarget-Server
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "The iSCSI Target Server could not be installed without a restart"
+              }
+
+              Set-Service -Name MSiSCSI -StartupType Automatic
+              Start-Service -Name MSiSCSI
+              $initiatorIqn = (Get-InitiatorPort | Where-Object ConnectionType -eq "iSCSI" | Select-Object -First 1).NodeAddress
+              if (-not $initiatorIqn) { throw "No iSCSI initiator port found" }
+
+              New-IscsiServerTarget -TargetName "cis2d" -InitiatorIds "IQN:$initiatorIqn" | Out-Null
+              foreach ($i in 1..3) {
+                  $path = Join-Path $env:RUNNER_TEMP "s2d-iscsi-$i.vhdx"
+                  New-IscsiVirtualDisk -Path $path -SizeBytes 10GB | Out-Null
+                  Add-IscsiVirtualDiskTargetMapping -TargetName "cis2d" -Path $path
+              }
+
+              New-IscsiTargetPortal -TargetPortalAddress 127.0.0.1 | Out-Null
+              $target = Get-IscsiTarget | Where-Object NodeAddress -like "*-cis2d-target"
+              if ($null -eq $target) { throw "The loopback iSCSI target was not discovered" }
+              Connect-IscsiTarget -NodeAddress $target.NodeAddress | Out-Null
+              Update-HostStorageCache
+              $iscsiConnected = $true
+          }
+          catch {
+              $iscsiError = $_
+          }
+
           # A Cluster Name needs a static address on a routed client network and a
           # DNS registration; the DHCP-only runner network provides neither. Keep
           # the cluster without an administrative access point and add workload
@@ -870,28 +904,9 @@ jobs:
           if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
               $s2dLog = Join-Path $env:RUNNER_TEMP "s2d-setup.log"
               try {
-                  $result = Install-WindowsFeature -Name FS-iSCSITarget-Server
-                  if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                      throw "The iSCSI Target Server could not be installed without a restart"
+                  if (-not $iscsiConnected) {
+                      throw "The loopback iSCSI disks are not available: $iscsiError"
                   }
-
-                  Set-Service -Name MSiSCSI -StartupType Automatic
-                  Start-Service -Name MSiSCSI
-                  $initiatorIqn = (Get-InitiatorPort | Where-Object ConnectionType -eq "iSCSI" | Select-Object -First 1).NodeAddress
-                  if (-not $initiatorIqn) { throw "No iSCSI initiator port found" }
-
-                  New-IscsiServerTarget -TargetName "cis2d" -InitiatorIds "IQN:$initiatorIqn" | Out-Null
-                  foreach ($i in 1..3) {
-                      $path = Join-Path $env:RUNNER_TEMP "s2d-iscsi-$i.vhdx"
-                      New-IscsiVirtualDisk -Path $path -SizeBytes 10GB | Out-Null
-                      Add-IscsiVirtualDiskTargetMapping -TargetName "cis2d" -Path $path
-                  }
-
-                  New-IscsiTargetPortal -TargetPortalAddress 127.0.0.1 | Out-Null
-                  $target = Get-IscsiTarget | Where-Object NodeAddress -like "*-cis2d-target"
-                  if ($null -eq $target) { throw "The loopback iSCSI target was not discovered" }
-                  Connect-IscsiTarget -NodeAddress $target.NodeAddress | Out-Null
-                  Update-HostStorageCache
 
                   $deadline = (Get-Date).AddSeconds(60)
                   do {
