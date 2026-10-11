@@ -168,7 +168,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	)
 	c.connectionBrokerPerformance = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_broker_performance_total"),
-		"The number of connections handled by the Connection Broker since the service started, by result. connection=\"Pending\" is deprecated: it is the current number of pending connections, use windows_terminal_services_connection_broker_pending_connections instead.",
+		"The number of connections handled by the Connection Broker since the service started, by result.",
 		[]string{"connection"},
 		nil,
 	)
@@ -481,14 +481,6 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 		c.connectionBrokerPendingConnections,
 		prometheus.GaugeValue,
 		c.perfDataObjectBroker[0].PendingConnections,
-	)
-
-	// Deprecated: Pending Connections is a current count, not a counter.
-	ch <- prometheus.MustNewConstMetric(
-		c.connectionBrokerPerformance,
-		prometheus.CounterValue,
-		c.perfDataObjectBroker[0].PendingConnections,
-		"Pending",
 	)
 
 	ch <- prometheus.MustNewConstMetric(

@@ -215,7 +215,6 @@ Deprecated. These are still exported in 0.32 and will be removed in a later rele
 | `windows_logical_disk_avg_write_requests_queued`                   | `rate(windows_logical_disk_write_seconds_total[5m])`      |
 | `windows_cache_data_map_hits_percent`                              | `windows_cache_data_map_hits_total`                       |
 | `windows_scheduled_task_last_result`                               | `windows_scheduled_task_last_result_status`               |
-| `windows_terminal_services_connection_broker_performance_total{connection="Pending"}` | `windows_terminal_services_connection_broker_pending_connections` (gauge) |
 
 The deprecated Hyper-V storage latency and queue gauges and the logical disk `avg_*_requests_queued` gauges never held current values.
 They exported a running sum that only grows, so graphs of them rise steadily. The replacements give the actual average latency and queue length.
@@ -240,6 +239,7 @@ Label changes on existing metrics:
 - `windows_os_info` has an `installation_type` label, for example `Server` or `Client`.
 - The `windows_netframework_clrmemory_*` metrics have a `process_id` label.
 - In the `windows_hyperv_dynamic_memory_vm_*` metrics, unnamed VM instances have `vm="(unknown)"` (or `(unknown)#N`) instead of `vm="------"`.
+- `windows_terminal_services_connection_broker_performance_total` no longer has a `connection="Pending"` series. It was the current number of pending connections, published as a counter. Use the gauge `windows_terminal_services_connection_broker_pending_connections`.
 - `windows_terminal_services_cpu_time_seconds_total` has the CPU mode in `mode` and the session name in `session_name`. In 0.31 the two label values were swapped, so queries that filter on either label need updating.
 
 Retired: `windows_net_route_info` was documented but never exported. It was removed from the documentation.
