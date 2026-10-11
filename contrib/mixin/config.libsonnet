@@ -11,6 +11,11 @@
     // Requires the time collector with its ntp subcollector enabled.
     enableTime: false,
 
+    // Dashboard tabs that don't belong to a single collector. Turn them off
+    // for a compact dashboard with only the collector tabs.
+    enableFleetTab: true,
+    enableOverviewTab: true,
+
     // Collectors enabled on the windows_exporter targets, by collector name.
     // The dashboard only renders the tabs, rows and panels of enabled
     // collectors. The defaults match the exporter's default collectors.
