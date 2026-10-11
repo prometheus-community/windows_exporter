@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/virtdisk"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
@@ -109,7 +110,7 @@ func (c *Collector) buildVirtualHardDisk() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	var vms []msvmVirtualMachine
 	if err := c.miSession.Query(&vms, mi.NamespaceRootVirtualizationV2, c.virtualHardDiskVMQuery, virtualHardDiskQueryTimeout); err != nil {
 		return fmt.Errorf("failed to query Msvm_ComputerSystem: %w", err)
@@ -126,9 +127,9 @@ func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric) error {
 		disk := result.disk
 		diskType := virtualHardDiskType(result.info.ProviderSubtype)
 
-		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(result.info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType)
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(result.info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType)
 
-		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
 	}
 
 	return err
