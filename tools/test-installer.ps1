@@ -16,7 +16,10 @@ Param (
     # Executable packaged in $Msi and $UpgradeMsi.
     [Parameter(Mandatory = $true)]
     [String] $Executable,
-    # Release to upgrade from, for example 0.31.8.
+    # Release to upgrade from, for example 0.32.0-beta.1. Packages up to 0.31.x
+    # stop every windows_exporter.exe with taskkill /T, which also ends
+    # unrelated processes whose stale parent process ID matches, like the
+    # runner agent of a CI job.
     [Parameter(Mandatory = $true)]
     [String] $PreviousVersion,
     [Parameter(Mandatory = $false)]
@@ -144,57 +147,6 @@ function Assert-ForeignAlive([String] $Operation) {
     Wait-HttpOk -Port $foreignPort -Path '/health' -TimeoutSeconds 10 | Out-Null
 }
 
-# Packages up to 0.31.x stop the exporter with taskkill /T, which also ends
-# every process whose parent process ID is the ID of a windows_exporter.exe.
-# Windows keeps the parent ID after the parent exited and reuses IDs, so an
-# unrelated process can look like a child of an exporter. When that process is
-# the runner agent, the job dies with "The hosted runner lost communication
-# with the server". Give the exporters new IDs until no process claims one of
-# them as its parent. A process that started after the exporter, like the
-# conhost.exe of the independent instance, is a real child and does no harm.
-function Get-AdoptedProcess {
-    $exporterStart = @{}
-    foreach ($exporter in Get-Process -Name windows_exporter -ErrorAction SilentlyContinue) {
-        $exporterStart[[UInt32] $exporter.Id] = $exporter.StartTime
-    }
-
-    return @(Get-CimInstance -ClassName Win32_Process | Where-Object {
-            $exporterStart.ContainsKey($_.ParentProcessId) -and
-            -not $exporterStart.ContainsKey($_.ProcessId) -and
-            $_.CreationDate -lt $exporterStart[$_.ParentProcessId]
-        })
-}
-
-function Reset-AdoptedProcess {
-    for ($attempt = 0; ; $attempt++) {
-        $adopted = @(Get-AdoptedProcess)
-        if ($adopted.Count -eq 0) {
-            return
-        }
-
-        if ($attempt -ge 5) {
-            throw "processes still claim a windows_exporter.exe as their parent: $($adopted.Name -join ', ')"
-        }
-
-        foreach ($process in $adopted) {
-            Write-Host "::warning::$($process.Name) (PID $($process.ProcessId)) has the PID of a windows_exporter.exe as its parent ID and would be killed by taskkill /T, restarting that windows_exporter.exe"
-        }
-
-        $parentIds = @($adopted | ForEach-Object ParentProcessId)
-        if ((Test-ForeignAlive) -and $parentIds -contains $script:foreign.Id) {
-            Stop-Process -Id $script:foreign.Id -Force
-            $script:foreign.WaitForExit()
-            Start-Foreign
-        }
-
-        $serviceId = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").ProcessId
-        if ($parentIds -contains $serviceId) {
-            Restart-Service -Name $serviceName
-            Assert-ServiceRunning | Out-Null
-        }
-    }
-}
-
 try {
     Write-Step "Install the previous release $PreviousVersion"
     $previousMsi = Join-Path $WorkDir "windows_exporter-$PreviousVersion-amd64.msi"
@@ -232,7 +184,6 @@ try {
 
     Write-Step 'Upgrade to this build'
     Start-Foreign
-    Reset-AdoptedProcess
     Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"")
     $metrics = Assert-ServiceRunning
     Assert-InstalledExecutable
@@ -246,14 +197,9 @@ try {
         throw 'the upgraded service does not use the kept configuration'
     }
 
-    # The previous package removes itself with its own logic. Up to 0.31.x that
-    # stops every windows_exporter.exe, as documented in UPGRADE.md.
-    if (Test-ForeignAlive) {
-        Write-Host 'the independent windows_exporter.exe survived the upgrade'
-    } else {
-        Write-Host "::notice::the $PreviousVersion package stopped the independent windows_exporter.exe during the upgrade"
-        Start-Foreign
-    }
+    # The previous package removes itself with its own logic, so it must be
+    # 0.32.0-beta.0 or newer to leave the independent instance running.
+    Assert-ForeignAlive -Operation 'upgrade'
     Write-Host '::endgroup::'
 
     Write-Step 'Repair this build'
