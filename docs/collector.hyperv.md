@@ -2,11 +2,11 @@
 
 The hyperv collector exposes metrics about the Hyper-V hypervisor
 
-|                     |                      |
-|---------------------|----------------------|
-| Metric name prefix  | `hyperv`             |
-| Source              | Performance counters |
-| Enabled by default? | No                   |
+|                     |                                                                              |
+|---------------------|------------------------------------------------------------------------------|
+| Metric name prefix  | `hyperv`                                                                     |
+| Source              | Performance counters, Hyper-V WMI (`root/virtualization/v2`), `virtdisk.dll` |
+| Enabled by default? | No                                                                           |
 
 ## Flags
 
@@ -406,7 +406,7 @@ Example alert:
 ### Hyper-V Virtual Hard Disk
 
 Sub-collector `virtual_hard_disk`, enabled by default. It reports the size and provisioning type of every
-virtual hard disk (VHD, VHDX, VHD Set, checkpoint AVHDX) attached to a virtual machine on this host.
+virtual hard disk (VHD, VHDX, checkpoint AVHDX) attached to a virtual machine on this host.
 The disks are listed with two WQL queries against the `root/virtualization/v2` namespace
 (`Msvm_ComputerSystem` and `Msvm_StorageAllocationSettingData`); the sizes are read with `virtdisk.dll`,
 the API behind `Get-VHD`. On a failover cluster, each node reports the virtual machines it currently owns.
