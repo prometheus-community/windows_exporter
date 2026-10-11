@@ -144,6 +144,50 @@ function Assert-ForeignAlive([String] $Operation) {
     Wait-HttpOk -Port $foreignPort -Path '/health' -TimeoutSeconds 10 | Out-Null
 }
 
+# Packages up to 0.31.x stop the exporter with taskkill /T, which also ends
+# every process whose parent process ID is the ID of a windows_exporter.exe.
+# Windows keeps the parent ID after the parent exited and reuses IDs, so an
+# unrelated process can look like a child of an exporter. When that process is
+# the runner agent, the job dies with "The hosted runner lost communication
+# with the server". Give the exporters new IDs until no process claims one of
+# them as its parent.
+function Get-AdoptedProcess {
+    $exporterIds = @(Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | ForEach-Object Id)
+    return @(Get-CimInstance -ClassName Win32_Process | Where-Object {
+            $exporterIds -contains $_.ParentProcessId -and $exporterIds -notcontains $_.ProcessId
+        })
+}
+
+function Reset-AdoptedProcess {
+    for ($attempt = 0; ; $attempt++) {
+        $adopted = Get-AdoptedProcess
+        if ($adopted.Count -eq 0) {
+            return
+        }
+
+        if ($attempt -ge 5) {
+            throw "processes still claim a windows_exporter.exe as their parent: $($adopted.Name -join ', ')"
+        }
+
+        foreach ($process in $adopted) {
+            Write-Host "::warning::$($process.Name) (PID $($process.ProcessId)) has the PID of a windows_exporter.exe as its parent ID and would be killed by taskkill /T, restarting that windows_exporter.exe"
+        }
+
+        $parentIds = @($adopted | ForEach-Object ParentProcessId)
+        if ((Test-ForeignAlive) -and $parentIds -contains $script:foreign.Id) {
+            Stop-Process -Id $script:foreign.Id -Force
+            $script:foreign.WaitForExit()
+            Start-Foreign
+        }
+
+        $serviceId = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").ProcessId
+        if ($parentIds -contains $serviceId) {
+            Restart-Service -Name $serviceName
+            Assert-ServiceRunning | Out-Null
+        }
+    }
+}
+
 try {
     Write-Step "Install the previous release $PreviousVersion"
     $previousMsi = Join-Path $WorkDir "windows_exporter-$PreviousVersion-amd64.msi"
@@ -181,6 +225,7 @@ try {
 
     Write-Step 'Upgrade to this build'
     Start-Foreign
+    Reset-AdoptedProcess
     Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"")
     $metrics = Assert-ServiceRunning
     Assert-InstalledExecutable
