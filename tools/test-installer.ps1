@@ -150,11 +150,18 @@ function Assert-ForeignAlive([String] $Operation) {
 # unrelated process can look like a child of an exporter. When that process is
 # the runner agent, the job dies with "The hosted runner lost communication
 # with the server". Give the exporters new IDs until no process claims one of
-# them as its parent.
+# them as its parent. A process that started after the exporter, like the
+# conhost.exe of the independent instance, is a real child and does no harm.
 function Get-AdoptedProcess {
-    $exporterIds = @(Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | ForEach-Object Id)
+    $exporterStart = @{}
+    foreach ($exporter in Get-Process -Name windows_exporter -ErrorAction SilentlyContinue) {
+        $exporterStart[[UInt32] $exporter.Id] = $exporter.StartTime
+    }
+
     return @(Get-CimInstance -ClassName Win32_Process | Where-Object {
-            $exporterIds -contains $_.ParentProcessId -and $exporterIds -notcontains $_.ProcessId
+            $exporterStart.ContainsKey($_.ParentProcessId) -and
+            -not $exporterStart.ContainsKey($_.ProcessId) -and
+            $_.CreationDate -lt $exporterStart[$_.ParentProcessId]
         })
 }
 
