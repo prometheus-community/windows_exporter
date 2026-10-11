@@ -786,10 +786,12 @@ jobs:
           }
           catch {
               $iscsiError = $_
-              Get-IscsiServerTarget -ErrorAction SilentlyContinue | Format-List TargetName, Status, InitiatorIds, LunMappings
-              Get-IscsiTargetPortal -ErrorAction SilentlyContinue | Format-Table TargetPortalAddress, TargetPortalPortNumber, InitiatorPortalAddress
-              Get-NetTCPConnection -LocalPort 3260 -ErrorAction SilentlyContinue | Format-Table LocalAddress, LocalPort, State
-              "iSCSI setup failed: $iscsiError" | Add-Content -Path (Join-Path $env:RUNNER_TEMP "s2d-setup.log")
+              & {
+                  "iSCSI setup failed: $iscsiError"
+                  Get-IscsiServerTarget -ErrorAction SilentlyContinue | Format-List TargetName, Status, InitiatorIds, LunMappings
+                  Get-IscsiTargetPortal -ErrorAction SilentlyContinue | Format-Table TargetPortalAddress, TargetPortalPortNumber, InitiatorPortalAddress
+                  Get-NetTCPConnection -LocalPort 3260 -ErrorAction SilentlyContinue | Format-Table LocalAddress, LocalPort, State
+              } | Out-String -Width 300 | Add-Content -Path (Join-Path $env:RUNNER_TEMP "s2d-setup.log")
           }
 
           # A Cluster Name needs a static address on a routed client network and a
