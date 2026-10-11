@@ -274,7 +274,7 @@ func BenchmarkRetained(b *testing.B) {
 
 		runtime.GC()
 		runtime.ReadMemStats(&stats)
-		b.ReportMetric(float64(stats.HeapAlloc-before)/(processes*14), "retained-B/series")
+		b.ReportMetric(float64(int64(stats.HeapAlloc)-int64(before))/(processes*14), "retained-B/series")
 		runtime.KeepAlive(cache)
 	}
 }
@@ -325,4 +325,36 @@ func TestPairsShared(t *testing.T) {
 
 	require.NotSame(t, other[1], back[1])
 	require.Equal(t, other[1].GetValue(), back[1].GetValue())
+}
+
+// A call with too few label values must still panic when a series with
+// empty trailing values is cached.
+func TestShortKeyCardinality(t *testing.T) {
+	t.Parallel()
+
+	var cache labelcache.Cache
+
+	scrape := cache.Begin()
+	_ = scrape.MustNewConstMetric(counterDesc, prometheus.CounterValue, 1, "a", "b", "")
+
+	require.Panics(t, func() { scrape.MustNewConstMetric(counterDesc, prometheus.CounterValue, 1, "a", "b") })
+	scrape.Commit()
+}
+
+// After Commit, a scrape no longer adds series to the cache.
+func TestCommittedScrape(t *testing.T) {
+	t.Parallel()
+
+	var cache labelcache.Cache
+
+	scrape := cache.Begin()
+	first := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "1")).GetLabel()
+	scrape.Commit()
+
+	late := write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "2")).GetLabel()
+
+	next := cache.Begin()
+	require.Same(t, first[0], write(t, next.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "1")).GetLabel()[0])
+	require.NotSame(t, late[1], write(t, next.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "2")).GetLabel()[1], "late series was not cached")
+	next.Commit()
 }

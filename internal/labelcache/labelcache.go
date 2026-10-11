@@ -45,7 +45,10 @@ const (
 // shortKey and longKey identify a series. They are fixed-size arrays, so
 // building and looking up a key doesn't allocate.
 type shortKey struct {
-	desc   *prometheus.Desc
+	desc *prometheus.Desc
+	// n keeps a call with too few label values from matching a series whose
+	// trailing values are empty; prometheus must reject it.
+	n      int
 	values [shortLabels]string
 }
 
@@ -110,7 +113,7 @@ type Cache struct {
 	generation uint64
 	short      seriesMap[shortKey]
 	long       seriesMap[longKey]
-	pairs      map[pairKey]*pair
+	pairs      map[pairKey]pair
 	// resets counts Reset calls, so that a scrape begun before a Reset doesn't
 	// add series afterwards.
 	resets uint64
@@ -121,6 +124,10 @@ type Scrape struct {
 	cache      *Cache
 	generation uint64
 	resets     uint64
+	// committed is set by Commit under the cache lock. Later calls create
+	// metrics without the cache, so they can't add series to the set the
+	// commit decided.
+	committed bool
 }
 
 // Begin starts a scrape. Call Commit when it is done.
@@ -155,6 +162,12 @@ func (s *Scrape) Commit() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if s.committed {
+		return
+	}
+
+	s.committed = true
+
 	if c.resets != s.resets {
 		return
 	}
@@ -167,10 +180,16 @@ func (s *Scrape) Commit() {
 func (c *Cache) release(labels []*dto.LabelPair) {
 	for _, lp := range labels {
 		k := pairKey{name: lp.GetName(), value: lp.GetValue()}
-		if p, ok := c.pairs[k]; ok {
-			if p.refs--; p.refs <= 0 {
-				delete(c.pairs, k)
-			}
+
+		p, ok := c.pairs[k]
+		if !ok {
+			continue
+		}
+
+		if p.refs--; p.refs <= 0 {
+			delete(c.pairs, k)
+		} else {
+			c.pairs[k] = p
 		}
 	}
 }
@@ -179,7 +198,7 @@ func (c *Cache) release(labels []*dto.LabelPair) {
 // name and value. The caller holds mu and stores the series.
 func (c *Cache) intern(labels []*dto.LabelPair) []*dto.LabelPair {
 	if c.pairs == nil {
-		c.pairs = make(map[pairKey]*pair)
+		c.pairs = make(map[pairKey]pair)
 	}
 
 	interned := make([]*dto.LabelPair, len(labels))
@@ -189,11 +208,11 @@ func (c *Cache) intern(labels []*dto.LabelPair) []*dto.LabelPair {
 
 		p, ok := c.pairs[pk]
 		if !ok {
-			p = &pair{pair: lp}
-			c.pairs[pk] = p
+			p = pair{pair: lp}
 		}
 
 		p.refs++
+		c.pairs[pk] = p
 		interned[i] = p.pair
 	}
 
@@ -211,7 +230,7 @@ func (s *Scrape) MustNewConstMetric(desc *prometheus.Desc, valueType prometheus.
 	}
 
 	if len(labelValues) <= shortLabels {
-		k := shortKey{desc: desc}
+		k := shortKey{desc: desc, n: len(labelValues)}
 		copy(k.values[:], labelValues)
 
 		return mustNewConstMetric(s, &s.cache.short, k, desc, valueType, value, labelValues)
@@ -230,7 +249,7 @@ func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *pro
 	c := s.cache
 
 	c.mu.Lock()
-	if c.resets == s.resets {
+	if c.resets == s.resets && !s.committed {
 		if labels, ok := m.get(k, s.generation); ok {
 			c.mu.Unlock()
 
@@ -251,7 +270,7 @@ func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *pro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.resets != s.resets {
+	if c.resets != s.resets || s.committed {
 		return metric
 	}
 
