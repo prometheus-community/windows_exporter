@@ -34,6 +34,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/enummetric"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -64,10 +65,20 @@ type Collector struct {
 	apiStateValues     map[uint32]string
 	apiStartModeValues map[uint32]string
 
+	// stateNames and startModeNames are the sorted values of apiStateValues and
+	// apiStartModeValues, in the order of the series in stateCache and startModeCache.
+	stateNames     []string
+	startModeNames []string
+
 	state     *prometheus.Desc
 	processID *prometheus.Desc
 	info      *prometheus.Desc
 	startMode *prometheus.Desc
+
+	// stateCache and startModeCache reuse the state and start_mode series of
+	// each service across scrapes. They are most of the series of this collector.
+	stateCache     *enummetric.Cache
+	startModeCache *enummetric.Cache
 
 	// serviceConfigPoolBytes is a pool of byte slices used to avoid allocations
 	// ref: https://victoriametrics.com/blog/go-sync-pool/
@@ -215,19 +226,22 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		windows.SERVICE_SYSTEM_START: "system",
 	}
 
-	startModes := slices.Sorted(maps.Values(c.apiStartModeValues))
+	c.stateNames = slices.Sorted(maps.Values(c.apiStateValues))
+	c.startModeNames = slices.Sorted(maps.Values(c.apiStartModeValues))
+	c.stateCache = enummetric.New(c.state, c.stateNames)
+	c.startModeCache = enummetric.New(c.startMode, c.startModeNames)
 
 	for _, startMode := range c.config.ServiceStartModeInclude {
-		if !slices.Contains(startModes, startMode) {
+		if !slices.Contains(c.startModeNames, startMode) {
 			return fmt.Errorf("unknown start mode: %s. Possible values: %s", startMode,
-				strings.Join(startModes, ", "),
+				strings.Join(c.startModeNames, ", "),
 			)
 		}
 	}
 
 	c.allStartModesIncluded = true
 
-	for _, startMode := range startModes {
+	for _, startMode := range c.startModeNames {
 		if !slices.Contains(c.config.ServiceStartModeInclude, startMode) {
 			c.allStartModesIncluded = false
 		}
@@ -289,7 +303,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		})
 	}
 
-	return g.Wait()
+	err = g.Wait()
+
+	// Drop the cached series of services that were removed or not collected.
+	c.stateCache.Sweep()
+	c.startModeCache.Sweep()
+
+	return err
 }
 
 func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service serviceEntry) {
@@ -389,42 +409,12 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceE
 		serviceConfig.BinaryPathName,
 	)
 
-	var (
-		isCurrentStartMode float64
-		isCurrentState     float64
-	)
-
 	if serviceStartMode != "" {
-		for _, startMode := range c.apiStartModeValues {
-			isCurrentStartMode = 0.0
-			if startMode == serviceStartMode {
-				isCurrentStartMode = 1.0
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.startMode,
-				prometheus.GaugeValue,
-				isCurrentStartMode,
-				serviceName,
-				startMode,
-			)
-		}
+		c.startModeCache.Collect(ch, serviceName, slices.Index(c.startModeNames, serviceStartMode))
 	}
 
-	for state, stateValue := range c.apiStateValues {
-		isCurrentState = 0.0
-		if state == service.status.CurrentState {
-			isCurrentState = 1.0
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.state,
-			prometheus.GaugeValue,
-			isCurrentState,
-			serviceName,
-			stateValue,
-		)
-	}
+	// An unknown state reports 0 for every state.
+	c.stateCache.Collect(ch, serviceName, slices.Index(c.stateNames, c.apiStateValues[service.status.CurrentState]))
 
 	if service.status.ProcessId == 0 {
 		return nil
