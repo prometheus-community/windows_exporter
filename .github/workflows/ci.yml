@@ -1781,6 +1781,18 @@ jobs:
           # CBS.log names the files that make role installation request a restart.
           Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
 
+      # Temporary: the setup step's output is too far from the end of the log
+      # to read.
+      - name: Show Storage Spaces Direct state
+        if: ${{ always() }}
+        shell: powershell
+        run: |
+          Get-Content (Join-Path $env:RUNNER_TEMP "s2d-setup.log") -ErrorAction SilentlyContinue
+          Get-Cluster -ErrorAction SilentlyContinue | Format-List Name, S2DEnabled, S2DBusTypes
+          Get-ClusterResource -ErrorAction SilentlyContinue | Format-Table Name, State, OwnerGroup, ResourceType
+          Get-StoragePool -ErrorAction SilentlyContinue | Format-Table FriendlyName, IsPrimordial, HealthStatus, OperationalStatus
+          Get-PhysicalDisk | Format-Table FriendlyName, DeviceId, BusType, CanPool, CannotPoolReason, HealthStatus
+
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
