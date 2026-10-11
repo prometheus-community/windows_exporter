@@ -34,6 +34,14 @@ func BenchmarkCollector(b *testing.B) {
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, terminal_services.New, nil)
 
+	// Pending Connections is a current count, published as the pending
+	// connections gauge, not as a series of the connection counter.
+	for _, metric := range metrics["windows_terminal_services_connection_broker_performance_total"].GetMetric() {
+		for _, label := range metric.GetLabel() {
+			require.False(t, label.GetName() == "connection" && label.GetValue() == "Pending", "connection_broker_performance_total must not have a Pending series")
+		}
+	}
+
 	userName := os.Getenv("WINDOWS_EXPORTER_TEST_RDP_USER")
 	if userName == "" {
 		return
@@ -51,4 +59,10 @@ func TestCollector(t *testing.T) {
 	handles := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_handles", prometheus.Labels{"session_name": sessionName})
 	require.NotNil(t, handles)
 	require.Positive(t, handles.GetGauge().GetValue(), "RDP fixture has no session processes")
+
+	cpuTime := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_cpu_time_seconds_total", prometheus.Labels{
+		"mode":         "user",
+		"session_name": sessionName,
+	})
+	require.NotNil(t, cpuTime)
 }

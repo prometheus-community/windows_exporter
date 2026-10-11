@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Hyper-V, logical disk queue, cache, IIS output cache or scheduled task metrics        | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Hyper-V, logical disk queue, cache, IIS output cache, scheduled task or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You chart SQL Server latencies, SQL Server lock counts or DHCP denials                         | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
@@ -239,6 +239,8 @@ Label changes on existing metrics:
 - `windows_os_info` has an `installation_type` label, for example `Server` or `Client`.
 - The `windows_netframework_clrmemory_*` metrics have a `process_id` label.
 - In the `windows_hyperv_dynamic_memory_vm_*` metrics, unnamed VM instances have `vm="(unknown)"` (or `(unknown)#N`) instead of `vm="------"`.
+- `windows_terminal_services_connection_broker_performance_total` no longer has a `connection="Pending"` series. It was the current number of pending connections, published as a counter. Use the gauge `windows_terminal_services_connection_broker_pending_connections`.
+- `windows_terminal_services_cpu_time_seconds_total` has the CPU mode in `mode` and the session name in `session_name`. In 0.31 the two label values were swapped, so queries that filter on either label need updating.
 
 Retired: `windows_net_route_info` was documented but never exported. It was removed from the documentation.
 
