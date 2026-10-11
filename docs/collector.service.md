@@ -28,6 +28,15 @@ Comma separated list of service start modes to include.
 Possible values: auto, boot, manual, disabled, system.
 Recommended to keep down number of returned metrics. Default: `auto,boot,manual,disabled,system`
 
+## Configuration cache
+
+The service configuration (display name, start mode, path and account, used by
+`windows_service_info` and `windows_service_start_mode`) is cached between scrapes.
+The cache is dropped whenever anything below the registry key
+`HKLM\SYSTEM\CurrentControlSet\Services` changes, for example after `sc config`, a change
+in the Services console or a service being installed or removed, and at the latest every
+10 minutes. The service state and process are queried on every scrape.
+
 ## Metrics
 
 | Name                         | Description                                                                                   | Type  | Labels                                |

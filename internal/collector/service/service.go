@@ -78,6 +78,9 @@ type Collector struct {
 	queryAllServicesMu     sync.Mutex
 	queryAllServicesBuffer []byte
 
+	// configCache caches the service configurations between scrapes.
+	configCache serviceConfigCache
+
 	// allStartModesIncluded is true if ServiceStartModeInclude contains every start mode.
 	// Only then services with an unknown start mode are collected.
 	allStartModesIncluded bool
@@ -264,11 +267,23 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.serviceManagerHandle = &mgr.Mgr{Handle: handle}
 
+	if err := c.configCache.init(); err != nil {
+		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
+			slog.Any("err", err),
+		)
+	}
+
 	return nil
 }
 
 func (c *Collector) Close() error {
 	c.metricCache.Reset()
+
+	if err := c.configCache.close(); err != nil {
+		c.logger.Warn("Failed to close the service configuration cache",
+			slog.Any("err", err),
+		)
+	}
 
 	if c.serviceManagerHandle == nil {
 		return nil
@@ -291,6 +306,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	services, err := c.queryAllServices()
 	if err != nil {
 		return fmt.Errorf("failed to query all services: %w", err)
+	}
+
+	if reason, err := c.configCache.refresh(); err != nil {
+		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
+			slog.Any("err", err),
+		)
+	} else if reason != "" {
+		c.logger.Debug("Service configuration cache invalidated",
+			slog.String("reason", reason),
+		)
 	}
 
 	scrape := c.metricCache.Begin()
@@ -340,41 +365,9 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *metriccac
 func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *metriccache.Scrape[string, serviceValues], service serviceEntry) error {
 	serviceName := service.name
 
-	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
+	serviceConfig, configAvailable, err := c.getCachedServiceConfig(serviceName)
 	if err != nil {
-		return fmt.Errorf("invalid service name: %w", err)
-	}
-
-	// Open connection for service handler.
-	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
-	if err != nil {
-		return fmt.Errorf("failed to open service: %w", err)
-	}
-
-	// Create handle for each service.
-	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
-	defer func(serviceManager *mgr.Service) {
-		if err := serviceManager.Close(); err != nil {
-			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
-				slog.Any("err", err),
-				slog.String("service", serviceName),
-			)
-		}
-	}(serviceManager)
-
-	// Get Service Configuration.
-	serviceConfig, err := c.getServiceConfig(serviceManager)
-	configAvailable := err == nil
-
-	if err != nil {
-		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
-			return fmt.Errorf("failed to get service configuration: %w", err)
-		}
-
-		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
-			slog.Any("err", err),
-			slog.String("service", serviceName),
-		)
+		return err
 	}
 
 	// serviceStartMode stays empty if the service configuration is not available.
@@ -596,6 +589,49 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// queryServiceConfig opens the service and queries its configuration.
+// configAvailable is false if the service has no readable configuration.
+func (c *Collector) queryServiceConfig(serviceName string) (mgr.Config, bool, error) {
+	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
+	if err != nil {
+		return mgr.Config{}, false, fmt.Errorf("invalid service name: %w", err)
+	}
+
+	// Open connection for service handler.
+	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
+	if err != nil {
+		return mgr.Config{}, false, fmt.Errorf("failed to open service: %w", err)
+	}
+
+	// Create handle for each service.
+	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
+	defer func(serviceManager *mgr.Service) {
+		if err := serviceManager.Close(); err != nil {
+			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
+				slog.Any("err", err),
+				slog.String("service", serviceName),
+			)
+		}
+	}(serviceManager)
+
+	// Get Service Configuration.
+	serviceConfig, err := c.getServiceConfig(serviceManager)
+	if err != nil {
+		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
+			return mgr.Config{}, false, fmt.Errorf("failed to get service configuration: %w", err)
+		}
+
+		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
+			slog.Any("err", err),
+			slog.String("service", serviceName),
+		)
+
+		return mgr.Config{}, false, nil
+	}
+
+	return serviceConfig, true, nil
 }
 
 func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
