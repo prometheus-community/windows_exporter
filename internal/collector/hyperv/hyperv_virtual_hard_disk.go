@@ -26,12 +26,18 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/virtdisk"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // virtualHardDiskQueryTimeout bounds each WMI query, so a hung WMI service
 // fails the sub-collector instead of blocking the scrape.
 const virtualHardDiskQueryTimeout = 10 * time.Second
+
+// virtualHardDiskWorkers bounds how many disks are opened at once. Opening a
+// disk on a CSV takes a few milliseconds, so hosts with many disks read them
+// in parallel.
+const virtualHardDiskWorkers = 8
 
 // virtualHardDiskResourceSubType marks virtual hard disks. ISO and floppy
 // images share ResourceType 31 and differ only in ResourceSubType.
@@ -114,24 +120,63 @@ func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to query Msvm_StorageAllocationSettingData: %w", err)
 	}
 
-	var errs []error
+	results, err := readVirtualHardDisks(attachedVirtualHardDisks(vms, settings), virtualHardDiskWorkers, virtdisk.GetInfo)
 
-	for _, disk := range attachedVirtualHardDisks(vms, settings) {
-		info, err := virtdisk.GetInfo(disk.Path)
-		if err != nil {
-			errs = append(errs, err)
+	for _, result := range results {
+		disk := result.disk
+		diskType := virtualHardDiskType(result.info.ProviderSubtype)
 
-			continue
-		}
+		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(result.info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType)
 
-		diskType := virtualHardDiskType(info.ProviderSubtype)
-
-		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType)
-
-		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
+		ch <- prometheus.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
 	}
 
-	return errors.Join(errs...)
+	return err
+}
+
+type virtualHardDiskResult struct {
+	disk attachedVirtualHardDisk
+	info virtdisk.Info
+}
+
+// readVirtualHardDisks reads the disks with at most workers calls of getInfo
+// at once. A disk that fails is left out and its error, or a recovered panic,
+// is returned joined with the others; the order of the disks is kept.
+func readVirtualHardDisks(disks []attachedVirtualHardDisk, workers int, getInfo func(path string) (virtdisk.Info, error)) ([]virtualHardDiskResult, error) {
+	infos := make([]virtdisk.Info, len(disks))
+	read := make([]bool, len(disks))
+	slots := make(chan struct{}, workers)
+
+	var group recovery.Group
+
+	for i, disk := range disks {
+		slots <- struct{}{}
+
+		group.Go(func() error {
+			defer func() { <-slots }()
+
+			info, err := getInfo(disk.Path)
+			if err != nil {
+				return err
+			}
+
+			infos[i], read[i] = info, true
+
+			return nil
+		})
+	}
+
+	err := group.Wait()
+
+	results := make([]virtualHardDiskResult, 0, len(disks))
+
+	for i, disk := range disks {
+		if read[i] {
+			results = append(results, virtualHardDiskResult{disk: disk, info: infos[i]})
+		}
+	}
+
+	return results, err
 }
 
 type attachedVirtualHardDisk struct {

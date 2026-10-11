@@ -18,7 +18,11 @@
 package hyperv
 
 import (
+	"errors"
+	"fmt"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/virtdisk"
 	"github.com/stretchr/testify/require"
@@ -103,4 +107,70 @@ func TestVirtualHardDiskType(t *testing.T) {
 	require.Equal(t, "differencing", virtualHardDiskType(virtdisk.ProviderSubtypeDifferencing))
 	require.Equal(t, "unknown", virtualHardDiskType(0))
 	require.Equal(t, "unknown", virtualHardDiskType(99))
+}
+
+func TestReadVirtualHardDisks(t *testing.T) {
+	t.Parallel()
+
+	disks := make([]attachedVirtualHardDisk, 20)
+	for i := range disks {
+		disks[i] = attachedVirtualHardDisk{VMID: "id", VMName: "vm", Path: fmt.Sprintf(`C:\disk%d.vhdx`, i)}
+	}
+
+	errBroken := errors.New("broken")
+
+	var running, maxRunning atomic.Int32
+
+	getInfo := func(path string) (virtdisk.Info, error) {
+		current := running.Add(1)
+		defer running.Add(-1)
+
+		for {
+			highest := maxRunning.Load()
+			if current <= highest || maxRunning.CompareAndSwap(highest, current) {
+				break
+			}
+		}
+
+		time.Sleep(5 * time.Millisecond)
+
+		if path == `C:\disk7.vhdx` {
+			return virtdisk.Info{}, fmt.Errorf("%s: %w", path, errBroken)
+		}
+
+		if path == `C:\disk9.vhdx` {
+			panic("boom")
+		}
+
+		return virtdisk.Info{VirtualSize: uint64(len(path)), ProviderSubtype: virtdisk.ProviderSubtypeDynamic}, nil
+	}
+
+	results, err := readVirtualHardDisks(disks, 4, getInfo)
+
+	// One disk fails, one panics: both are reported, the others are read.
+	require.ErrorIs(t, err, errBroken)
+	require.ErrorContains(t, err, `C:\disk7.vhdx`)
+	require.ErrorContains(t, err, "boom")
+	require.Len(t, results, len(disks)-2)
+
+	for _, result := range results {
+		require.NotEqual(t, `C:\disk7.vhdx`, result.disk.Path)
+		require.NotEqual(t, `C:\disk9.vhdx`, result.disk.Path)
+		require.Equal(t, uint64(len(result.disk.Path)), result.info.VirtualSize)
+	}
+
+	require.LessOrEqual(t, maxRunning.Load(), int32(4), "more disks were opened at once than allowed")
+	require.Greater(t, maxRunning.Load(), int32(1), "disks were not opened in parallel")
+}
+
+func TestReadVirtualHardDisksEmpty(t *testing.T) {
+	t.Parallel()
+
+	results, err := readVirtualHardDisks(nil, 4, func(string) (virtdisk.Info, error) {
+		t.Fatal("no disk to read")
+
+		return virtdisk.Info{}, nil
+	})
+	require.NoError(t, err)
+	require.Empty(t, results)
 }
