@@ -34,6 +34,14 @@ func BenchmarkCollector(b *testing.B) {
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, terminal_services.New, nil)
 
+	// Pending Connections is a current count, published as the pending
+	// connections gauge, not as a series of the connection counter.
+	for _, metric := range metrics["windows_terminal_services_connection_broker_performance_total"].GetMetric() {
+		for _, label := range metric.GetLabel() {
+			require.False(t, label.GetName() == "connection" && label.GetValue() == "Pending", "connection_broker_performance_total must not have a Pending series")
+		}
+	}
+
 	userName := os.Getenv("WINDOWS_EXPORTER_TEST_RDP_USER")
 	if userName == "" {
 		return
