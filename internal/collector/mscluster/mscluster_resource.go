@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,6 +37,12 @@ type resourceSource interface {
 
 type collectorResource struct {
 	resourceSource resourceSource
+
+	// resourceMetricCache reuses the metrics of unchanged resources. Each
+	// resource publishes 16 series plus one owner node series per node, and
+	// building them is most of the allocations of a scrape. The values are
+	// still read through ClusAPI on every scrape.
+	resourceMetricCache metriccache.Cache[string, resourceCacheValue]
 
 	resourceCharacteristics        *prometheus.Desc
 	resourceDeadlockTimeout        *prometheus.Desc
@@ -203,6 +210,9 @@ func (c *Collector) buildResourceDescriptors() {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier build.
+	c.resourceMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -217,58 +227,146 @@ func (c *Collector) collectResource(ch chan<- prometheus.Metric, maxScrapeDurati
 	return c.publishResources(ch, resources, nodeNames, resultErr)
 }
 
+// resourceFieldCount is the number of DWORD properties of each resource.
+const resourceFieldCount = 15
+
+// resourceCacheValue holds every input of the cached metrics of a resource
+// besides its name, which is the key.
+type resourceCacheValue struct {
+	resourceType string
+	ownerGroup   string
+	ownerNode    string
+	// NodeNames encodes the node names with appendKeyString.
+	nodeNames string
+	values    [resourceFieldCount]uint32
+}
+
 func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []clusapi.Resource, nodeNames []string, resultErr error) error {
+	fieldNames := [resourceFieldCount]string{
+		"Characteristics",
+		"DeadlockTimeout",
+		"EmbeddedFailureAction",
+		"Flags",
+		"IsAlivePollInterval",
+		"LooksAlivePollInterval",
+		"MonitorProcessId",
+		"PendingTimeout",
+		"ResourceClass",
+		"RestartAction",
+		"RestartDelay",
+		"RestartPeriod",
+		"RestartThreshold",
+		"RetryPeriodOnFailure",
+		"State",
+	}
+	fieldDescs := [resourceFieldCount]*prometheus.Desc{
+		c.resourceCharacteristics,
+		c.resourceDeadlockTimeout,
+		c.resourceEmbeddedFailureAction,
+		c.resourceFlags,
+		c.resourceIsAlivePollInterval,
+		c.resourceLooksAlivePollInterval,
+		c.resourceMonitorProcessId,
+		c.resourcePendingTimeout,
+		c.resourceResourceClass,
+		c.resourceRestartAction,
+		c.resourceRestartDelay,
+		c.resourceRestartPeriod,
+		c.resourceRestartThreshold,
+		c.resourceRetryPeriodOnFailure,
+		c.resourceState,
+	}
+
+	var nodeNamesKey []byte
+	for _, nodeName := range nodeNames {
+		nodeNamesKey = appendKeyString(nodeNamesKey, nodeName)
+	}
+
+	nodeNamesValue := string(nodeNamesKey)
+	scrape := c.resourceMetricCache.Begin()
+
 	for _, resource := range resources {
 		if !resource.IdentityValid {
 			continue
 		}
 
-		fields := []struct {
-			name string
-			desc *prometheus.Desc
-		}{
-			{"Characteristics", c.resourceCharacteristics},
-			{"DeadlockTimeout", c.resourceDeadlockTimeout},
-			{"EmbeddedFailureAction", c.resourceEmbeddedFailureAction},
-			{"Flags", c.resourceFlags},
-			{"IsAlivePollInterval", c.resourceIsAlivePollInterval},
-			{"LooksAlivePollInterval", c.resourceLooksAlivePollInterval},
-			{"MonitorProcessId", c.resourceMonitorProcessId},
-			{"PendingTimeout", c.resourcePendingTimeout},
-			{"ResourceClass", c.resourceResourceClass},
-			{"RestartAction", c.resourceRestartAction},
-			{"RestartDelay", c.resourceRestartDelay},
-			{"RestartPeriod", c.resourceRestartPeriod},
-			{"RestartThreshold", c.resourceRestartThreshold},
-			{"RetryPeriodOnFailure", c.resourceRetryPeriodOnFailure},
-			{"State", c.resourceState},
+		value := resourceCacheValue{
+			resourceType: resource.Type,
+			ownerGroup:   resource.OwnerGroup,
+			ownerNode:    resource.OwnerNode,
+			nodeNames:    nodeNamesValue,
 		}
-		for _, field := range fields {
-			value, exists := resource.Values[field.name]
+
+		complete := true
+
+		for index, name := range fieldNames {
+			raw, exists := resource.Values[name]
 			if !exists {
-				resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: missing DWORD property %s", resource.Name, field.name))
+				complete = false
 
-				continue
+				break
 			}
 
-			ch <- prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, float64(value), resource.Type, resource.OwnerGroup, resource.Name)
+			value.values[index] = raw
 		}
 
-		// MSCluster_Resource.Subclass is NULL for every resource (seen on
-		// Windows Server 2022, also for IP Address resources whose class
-		// information carries CLUS_RESSUBCLASS_NETWORK_INTERNET_PROTOCOL), so
-		// the WMI collector always published 0. Keep that series unchanged.
-		ch <- prometheus.MustNewConstMetric(c.resourceSubClass, prometheus.GaugeValue, 0, resource.Type, resource.OwnerGroup, resource.Name)
+		if !complete {
+			// A resource with missing fields is not cached, so that it
+			// reports its errors on every scrape.
+			for index, name := range fieldNames {
+				raw, exists := resource.Values[name]
+				if !exists {
+					resultErr = errors.Join(resultErr, fmt.Errorf("resource %q: missing DWORD property %s", resource.Name, name))
 
-		for _, nodeName := range nodeNames {
-			value := 0.0
-			if resource.OwnerNode == nodeName {
-				value = 1
+					continue
+				}
+
+				ch <- prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw), resource.Type, resource.OwnerGroup, resource.Name)
 			}
 
-			ch <- prometheus.MustNewConstMetric(c.resourceOwnerNode, prometheus.GaugeValue, value, resource.Type, resource.OwnerGroup, nodeName, resource.Name)
+			for _, metric := range c.resourceNodeMetrics(nil, resource, nodeNames) {
+				ch <- metric
+			}
+
+			continue
+		}
+
+		metrics := scrape.Get(resource.Name, value, func() []prometheus.Metric {
+			metrics := make([]prometheus.Metric, 0, resourceFieldCount+1+len(nodeNames))
+			for index, raw := range value.values {
+				metrics = append(metrics, prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw), resource.Type, resource.OwnerGroup, resource.Name))
+			}
+
+			return c.resourceNodeMetrics(metrics, resource, nodeNames)
+		})
+
+		for _, metric := range metrics {
+			ch <- metric
 		}
 	}
 
+	commitScrape(scrape, len(resources), resultErr)
+
 	return resultErr
+}
+
+// resourceNodeMetrics appends the subclass metric and the owner node metrics
+// of a resource, one per node, to metrics.
+func (c *Collector) resourceNodeMetrics(metrics []prometheus.Metric, resource clusapi.Resource, nodeNames []string) []prometheus.Metric {
+	// MSCluster_Resource.Subclass is NULL for every resource (seen on
+	// Windows Server 2022, also for IP Address resources whose class
+	// information carries CLUS_RESSUBCLASS_NETWORK_INTERNET_PROTOCOL), so
+	// the WMI collector always published 0. Keep that series unchanged.
+	metrics = append(metrics, prometheus.MustNewConstMetric(c.resourceSubClass, prometheus.GaugeValue, 0, resource.Type, resource.OwnerGroup, resource.Name))
+
+	for _, nodeName := range nodeNames {
+		value := 0.0
+		if resource.OwnerNode == nodeName {
+			value = 1
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(c.resourceOwnerNode, prometheus.GaugeValue, value, resource.Type, resource.OwnerGroup, nodeName, resource.Name))
+	}
+
+	return metrics
 }
