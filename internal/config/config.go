@@ -41,9 +41,14 @@ type configFile struct {
 	} `yaml:"collectors"`
 	Collector collector.Config `yaml:"collector"`
 	Log       struct {
-		Level  string `yaml:"level"`
-		Format string `yaml:"format"`
-		File   string `yaml:"file"`
+		Level    string `yaml:"level"`
+		Format   string `yaml:"format"`
+		File     string `yaml:"file"`
+		Rotation struct {
+			MaxSize    string `yaml:"max-size"`
+			MaxBackups string `yaml:"max-backups"`
+			Compress   bool   `yaml:"compress"`
+		} `yaml:"rotation"`
 	} `yaml:"log"`
 	Process struct {
 		Priority    string `yaml:"priority"`
