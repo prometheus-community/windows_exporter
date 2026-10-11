@@ -32,9 +32,9 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils/enummetric"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -65,20 +65,10 @@ type Collector struct {
 	apiStateValues     map[uint32]string
 	apiStartModeValues map[uint32]string
 
-	// stateNames and startModeNames are the sorted values of apiStateValues and
-	// apiStartModeValues, in the order of the series in stateCache and startModeCache.
-	stateNames     []string
-	startModeNames []string
-
 	state     *prometheus.Desc
 	processID *prometheus.Desc
 	info      *prometheus.Desc
 	startMode *prometheus.Desc
-
-	// stateCache and startModeCache reuse the state and start_mode series of
-	// each service across scrapes. They are most of the series of this collector.
-	stateCache     *enummetric.Cache
-	startModeCache *enummetric.Cache
 
 	// serviceConfigPoolBytes is a pool of byte slices used to avoid allocations
 	// ref: https://victoriametrics.com/blog/go-sync-pool/
@@ -91,6 +81,30 @@ type Collector struct {
 	// allStartModesIncluded is true if ServiceStartModeInclude contains every start mode.
 	// Only then services with an unknown start mode are collected.
 	allStartModesIncluded bool
+
+	// metricCache reuses the metrics of services whose values did not change since
+	// the last scrape. Each service publishes up to 14 series, and building them is
+	// most of the allocations of a scrape.
+	metricCache metriccache.Cache[string, serviceValues]
+}
+
+// serviceValues holds the inputs of the metrics of a service besides its name.
+type serviceValues struct {
+	state       uint32
+	startMode   string
+	displayName string
+	runAs       string
+	pathName    string
+	processID   uint32
+	// processStartTime is the creation time of the process in nanoseconds,
+	// or 0 if it is unknown and the process metric is not published.
+	processStartTime uint64
+}
+
+// lockedScrape serializes the access of the collect workers to a scrape of the metric cache.
+type lockedScrape struct {
+	mu     sync.Mutex
+	scrape metriccache.Scrape[string, serviceValues]
 }
 
 // serviceEntry is a copy of an [windows.ENUM_SERVICE_STATUS_PROCESS], which
@@ -175,6 +189,9 @@ func (c *Collector) GetName() string {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
+
 	c.serviceConfigPoolBytes = sync.Pool{
 		New: func() any {
 			return new([]byte)
@@ -226,22 +243,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		windows.SERVICE_SYSTEM_START: "system",
 	}
 
-	c.stateNames = slices.Sorted(maps.Values(c.apiStateValues))
-	c.startModeNames = slices.Sorted(maps.Values(c.apiStartModeValues))
-	c.stateCache = enummetric.New(c.state, c.stateNames)
-	c.startModeCache = enummetric.New(c.startMode, c.startModeNames)
+	startModes := slices.Sorted(maps.Values(c.apiStartModeValues))
 
 	for _, startMode := range c.config.ServiceStartModeInclude {
-		if !slices.Contains(c.startModeNames, startMode) {
+		if !slices.Contains(startModes, startMode) {
 			return fmt.Errorf("unknown start mode: %s. Possible values: %s", startMode,
-				strings.Join(c.startModeNames, ", "),
+				strings.Join(startModes, ", "),
 			)
 		}
 	}
 
 	c.allStartModesIncluded = true
 
-	for _, startMode := range c.startModeNames {
+	for _, startMode := range startModes {
 		if !slices.Contains(c.config.ServiceStartModeInclude, startMode) {
 			c.allStartModesIncluded = false
 		}
@@ -259,6 +273,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 }
 
 func (c *Collector) Close() error {
+	c.metricCache.Reset()
+
 	if c.serviceManagerHandle == nil {
 		return nil
 	}
@@ -282,6 +298,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
+	scrape := &lockedScrape{scrape: c.metricCache.Begin()}
+
 	servicesCh := make(chan serviceEntry, len(services))
 
 	for _, service := range services {
@@ -296,7 +314,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	for range 4 {
 		g.Go(func() error {
 			for service := range servicesCh {
-				c.collectWorker(ch, service)
+				c.collectWorker(ch, scrape, service)
 			}
 
 			return nil
@@ -305,19 +323,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	err = g.Wait()
 
-	// Drop the cached series of services that were removed or not collected.
-	c.stateCache.Sweep()
-	c.startModeCache.Sweep()
+	// Services that were not collected in this scrape are dropped from the cache.
+	scrape.scrape.Commit()
 
 	return err
 }
 
-func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service serviceEntry) {
+func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *lockedScrape, service serviceEntry) {
 	if c.config.ServiceExclude.MatchString(service.name) || !c.config.ServiceInclude.MatchString(service.name) {
 		return
 	}
 
-	if err := c.collectService(ch, service); err != nil {
+	if err := c.collectService(ch, scrape, service); err != nil {
 		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
 			slog.Any("err", err),
 			slog.String("service", service.name),
@@ -325,7 +342,7 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service serviceEn
 	}
 }
 
-func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceEntry) error {
+func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *lockedScrape, service serviceEntry) error {
 	serviceName := service.name
 
 	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
@@ -399,40 +416,108 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceE
 		return nil
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	values := serviceValues{
+		state:       service.status.CurrentState,
+		startMode:   serviceStartMode,
+		displayName: serviceConfig.DisplayName,
+		runAs:       serviceConfig.ServiceStartName,
+		pathName:    serviceConfig.BinaryPathName,
+		processID:   service.status.ProcessId,
+	}
+
+	if values.processID != 0 {
+		values.processStartTime = c.processStartTime(serviceName, values.processID)
+	}
+
+	scrape.mu.Lock()
+	metrics, ok := scrape.scrape.Load(serviceName, values)
+	scrape.mu.Unlock()
+
+	if !ok {
+		metrics = c.serviceMetrics(serviceName, values)
+
+		scrape.mu.Lock()
+		scrape.scrape.Store(serviceName, values, metrics)
+		scrape.mu.Unlock()
+	}
+
+	for _, metric := range metrics {
+		ch <- metric
+	}
+
+	return nil
+}
+
+// serviceMetrics builds the metrics of a service.
+func (c *Collector) serviceMetrics(serviceName string, values serviceValues) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, 2+len(c.apiStartModeValues)+len(c.apiStateValues))
+
+	metrics = append(metrics, prometheus.MustNewConstMetric(
 		c.info,
 		prometheus.GaugeValue,
 		1.0,
 		serviceName,
-		serviceConfig.DisplayName,
-		serviceConfig.ServiceStartName,
-		serviceConfig.BinaryPathName,
+		values.displayName,
+		values.runAs,
+		values.pathName,
+	))
+
+	var (
+		isCurrentStartMode float64
+		isCurrentState     float64
 	)
 
-	if serviceStartMode != "" {
-		c.startModeCache.Collect(ch, serviceName, slices.Index(c.startModeNames, serviceStartMode))
+	if values.startMode != "" {
+		for _, startMode := range c.apiStartModeValues {
+			isCurrentStartMode = 0.0
+			if startMode == values.startMode {
+				isCurrentStartMode = 1.0
+			}
+
+			metrics = append(metrics, prometheus.MustNewConstMetric(
+				c.startMode,
+				prometheus.GaugeValue,
+				isCurrentStartMode,
+				serviceName,
+				startMode,
+			))
+		}
 	}
 
-	// An unknown state reports 0 for every state.
-	c.stateCache.Collect(ch, serviceName, slices.Index(c.stateNames, c.apiStateValues[service.status.CurrentState]))
+	for state, stateValue := range c.apiStateValues {
+		isCurrentState = 0.0
+		if state == values.state {
+			isCurrentState = 1.0
+		}
 
-	if service.status.ProcessId == 0 {
-		return nil
-	}
-
-	processID := strconv.FormatUint(uint64(service.status.ProcessId), 10)
-
-	processStartTime, err := c.getProcessStartTime(service.status.ProcessId)
-	if err == nil {
-		ch <- prometheus.MustNewConstMetric(
-			c.processID,
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.state,
 			prometheus.GaugeValue,
-			float64(processStartTime/1_000_000_000),
+			isCurrentState,
 			serviceName,
-			processID,
-		)
+			stateValue,
+		))
+	}
 
-		return nil
+	if values.processStartTime == 0 {
+		return metrics
+	}
+
+	return append(metrics, prometheus.MustNewConstMetric(
+		c.processID,
+		prometheus.GaugeValue,
+		float64(values.processStartTime/1_000_000_000),
+		serviceName,
+		strconv.FormatUint(uint64(values.processID), 10),
+	))
+}
+
+// processStartTime returns the creation time of the process of a service in
+// nanoseconds, or 0 if it can't be determined.
+func (c *Collector) processStartTime(serviceName string, processID uint32) uint64 {
+	processStartTime, err := c.getProcessStartTime(processID)
+	if err == nil {
+		return processStartTime
 	}
 
 	logLevel := slog.LevelWarn
@@ -448,7 +533,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceE
 		slog.Any("err", err),
 	)
 
-	return nil
+	return 0
 }
 
 // queryAllServices returns all service states of the current Windows system

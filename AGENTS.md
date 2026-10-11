@@ -107,10 +107,6 @@ exercised a live Windows role.
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
   `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
   never `0` (no MI timeout), so one stalled provider cannot block startup.
-- For enum-style series (one series per state, 1 for the current state and 0
-  for the others), use [`internal/utils/enummetric`](internal/utils/enummetric)
-  instead of building every series with `prometheus.MustNewConstMetric` on each
-  scrape. Call `Sweep` once after each scrape so removed objects are dropped.
 - Release resources after partial initialization and on error paths. A non-nil
   PDH collector returned with an error still belongs to the caller and must be
   closed. Sub-collector cleanup closures must read the initialized field when
