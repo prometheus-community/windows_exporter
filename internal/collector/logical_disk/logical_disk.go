@@ -19,13 +19,11 @@ package logical_disk
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -34,7 +32,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -89,6 +86,13 @@ type Collector struct {
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
+	metricsEnabled   bool
+	bitlockerEnabled bool
+
+	volumeInfo *volumeInfoReader
+	// lastMountErr is the last logged error of getAllMountedVolumes.
+	lastMountErr string
+
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
 	freeSpace        *prometheus.Desc
@@ -109,15 +113,6 @@ type Collector struct {
 	writeTime        *prometheus.Desc
 
 	bitlockerStatus *prometheus.Desc
-}
-
-type volumeInfo struct {
-	diskIDs      string
-	filesystem   string
-	serialNumber string
-	label        string
-	volumeType   string
-	readonly     float64
 }
 
 func New(config *Config) *Collector {
@@ -212,6 +207,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	c.metricsEnabled = slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics)
+	c.bitlockerEnabled = slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker)
+	c.volumeInfo = newVolumeInfoReader()
+
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
@@ -291,14 +290,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.freeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "free_bytes"),
-		"Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)",
+		"Free space in bytes",
 		[]string{"volume"},
 		nil,
 	)
 
 	c.totalSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
-		"Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)",
+		"Total space in bytes",
 		[]string{"volume"},
 		nil,
 	)
@@ -358,31 +357,36 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	var info volumeInfo
-
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect LogicalDisk metrics: %w", err)
 	}
 
+	// The performance counters don't depend on the mount points. Volumes that can't be
+	// resolved fall back to their instance name.
 	volumes, err := getAllMountedVolumes()
-	if err != nil {
-		return fmt.Errorf("failed to get volumes: %w", err)
-	}
+	c.logMountError(err)
+
+	c.volumeInfo.beginScrape()
+	defer c.volumeInfo.endScrape()
 
 	for _, data := range c.perfDataObject {
 		if c.config.VolumeExclude.MatchString(data.Name) || !c.config.VolumeInclude.MatchString(data.Name) {
 			continue
 		}
 
-		info, err = getVolumeInfo(volumes, data.Name)
-		if err != nil {
+		info, err := c.volumeInfo.read(volumes, data.Name, c.metricsEnabled)
+		if c.volumeInfo.shouldWarn(data.Name, err) {
 			c.logger.Warn("failed to get volume information for "+data.Name,
+				slog.Any("err", err),
+			)
+		} else if err != nil {
+			c.logger.Debug("failed to get volume information for "+data.Name,
 				slog.Any("err", err),
 			)
 		}
 
-		if err == nil {
+		if info.hasReadonly {
 			ch <- prometheus.MustNewConstMetric(c.readOnly, prometheus.GaugeValue, info.readonly, data.Name)
 		}
 
@@ -398,7 +402,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			info.serialNumber,
 		)
 
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		if c.metricsEnabled {
+			// The Free Megabytes counter is cached by Windows and only updated every 10-15 minutes,
+			// in whole megabytes. It's the fallback if the volume can't be queried directly.
+			freeBytes, sizeBytes := data.FreeSpace*1024*1024, data.PercentFreeSpace*1024*1024
+			if info.hasSpace {
+				freeBytes, sizeBytes = info.freeBytes, info.sizeBytes
+			}
+
 			ch <- prometheus.MustNewConstMetric(
 				c.requestsQueued,
 				prometheus.GaugeValue,
@@ -469,14 +480,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			ch <- prometheus.MustNewConstMetric(
 				c.freeSpace,
 				prometheus.GaugeValue,
-				data.FreeSpace*1024*1024,
+				freeBytes,
 				data.Name,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.totalSpace,
 				prometheus.GaugeValue,
-				data.PercentFreeSpace*1024*1024,
+				sizeBytes,
 				data.Name,
 			)
 
@@ -516,12 +527,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			)
 		}
 
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
+		if c.bitlockerEnabled {
 			c.collectBitlocker(ch, volumes, data.Name, false)
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
+	if c.bitlockerEnabled {
 		// Locked BitLocker volumes have no LogicalDisk performance instance.
 		seen := make(map[string]struct{}, len(c.perfDataObject))
 		for _, data := range c.perfDataObject {
@@ -546,6 +557,26 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	}
 
 	return nil
+}
+
+// logMountError logs an error of getAllMountedVolumes. Repeats of the last error are logged at debug level.
+func (c *Collector) logMountError(err error) {
+	if err == nil {
+		c.lastMountErr = ""
+
+		return
+	}
+
+	level := slog.LevelWarn
+	if msg := err.Error(); msg == c.lastMountErr {
+		level = slog.LevelDebug
+	} else {
+		c.lastMountErr = msg
+	}
+
+	c.logger.Log(context.Background(), level, "failed to get the mount points of all volumes",
+		slog.Any("err", err),
+	)
 }
 
 // collectBitlocker emits the BitLocker status of a volume. With lockedOnly,
@@ -610,147 +641,40 @@ func getFveVolumeName(volumes map[string]string, volume string) string {
 	return `\\.\` + volume
 }
 
-func getDriveType(driveType uint32) string {
-	switch driveType {
-	case windows.DRIVE_UNKNOWN:
-		return "unknown"
-	case windows.DRIVE_NO_ROOT_DIR:
-		return "norootdir"
-	case windows.DRIVE_REMOVABLE:
-		return "removable"
-	case windows.DRIVE_FIXED:
-		return "fixed"
-	case windows.DRIVE_REMOTE:
-		return "remote"
-	case windows.DRIVE_CDROM:
-		return "cdrom"
-	case windows.DRIVE_RAMDISK:
-		return "ramdisk"
-	default:
-		return "unknown"
-	}
-}
-
-// diskExtentSize Size of the DiskExtent structure in bytes.
-const diskExtentSize = 24
-
-// getDiskIDByVolume returns the disk ID for a given volume.
-func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, error) {
-	volumePath := rootDrive
-
-	// If rootDrive is a NTFS directory, convert it to a volume GUID.
-	if volumeGUID, ok := volumes[rootDrive]; ok {
-		// GetVolumeNameForVolumeMountPoint returns the volume GUID path as \\?\Volume{GUID}\
-		// According https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol#remarks
-		// Win32 Drive Namespace is prefixed with \\.\, so we need to remove the \\?\ prefix.
-		volumePath, _ = strings.CutPrefix(volumeGUID, `\\?\`)
-	}
-
-	volumePathPtr := windows.StringToUTF16Ptr(`\\.\` + volumePath)
-
-	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
-	// use 0 as access mode to avoid admin permission.
-	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
-	attr := uint32(windows.FILE_ATTRIBUTE_READONLY)
-
-	volumeHandle, err := windows.CreateFile(volumePathPtr, 0, mode, nil, windows.OPEN_EXISTING, attr, 0)
-	if err != nil {
-		return volumeInfo{}, fmt.Errorf("could not open volume for %s: %w", rootDrive, err)
-	}
-
-	defer func(fd windows.Handle) {
-		_ = windows.Close(fd)
-	}(volumeHandle)
-
-	controlCode := uint32(5636096) // IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
-	volumeDiskExtents := make([]byte, 16*1024)
-
-	var bytesReturned uint32
-
-	err = windows.DeviceIoControl(volumeHandle, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
-	if err != nil {
-		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
-	}
-
-	numDiskIDs := uint(binary.LittleEndian.Uint32(volumeDiskExtents))
-	if numDiskIDs < 1 {
-		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
-	}
-
-	diskIDs := make([]string, numDiskIDs)
-
-	for i := range numDiskIDs {
-		diskIDs[i] = strconv.FormatUint(uint64(binary.LittleEndian.Uint32(volumeDiskExtents[8+i*diskExtentSize:])), 10)
-	}
-
-	slices.Sort(diskIDs)
-	diskIDs = slices.Compact(diskIDs)
-
-	volumeInformationRootDrive := volumePath + `\`
-
-	if strings.Contains(volumePath, `Volume`) {
-		volumeInformationRootDrive = `\\?\` + volumeInformationRootDrive
-	}
-
-	volumeInformationRootDrivePtr := windows.StringToUTF16Ptr(volumeInformationRootDrive)
-	driveType := windows.GetDriveType(volumeInformationRootDrivePtr)
-	volBufLabel := make([]uint16, windows.MAX_PATH+1)
-	volSerialNum := uint32(0)
-	fsFlags := uint32(0)
-	volBufType := make([]uint16, windows.MAX_PATH+1)
-
-	err = windows.GetVolumeInformation(
-		volumeInformationRootDrivePtr,
-		&volBufLabel[0], uint32(len(volBufLabel)),
-		&volSerialNum, nil, &fsFlags,
-		&volBufType[0], uint32(len(volBufType)),
-	)
-	if err != nil {
-		if driveType == windows.DRIVE_CDROM || driveType == windows.DRIVE_REMOVABLE {
-			return volumeInfo{}, nil
-		}
-
-		return volumeInfo{}, fmt.Errorf("could not get volume information for %s: %w", volumeInformationRootDrive, err)
-	}
-
-	return volumeInfo{
-		diskIDs:      strings.Join(diskIDs, ";"),
-		volumeType:   getDriveType(driveType),
-		label:        windows.UTF16PtrToString(&volBufLabel[0]),
-		filesystem:   windows.UTF16PtrToString(&volBufType[0]),
-		serialNumber: fmt.Sprintf("%X", volSerialNum),
-		readonly:     utils.BoolToFloat(fsFlags&windows.FILE_READ_ONLY_VOLUME != 0),
-	}, nil
-}
-
+// getAllMountedVolumes maps each mount point (e.g. C: or C:\mnt\data) to its volume GUID path.
+// A volume whose mount points can't be read is skipped and reported in the returned error,
+// together with the mount points of all other volumes.
 func getAllMountedVolumes() (map[string]string, error) {
 	guidBuf := make([]uint16, windows.MAX_PATH+1)
 	guidBufLen := uint32(len(guidBuf))
 
+	volumes := map[string]string{}
+
 	hFindVolume, err := windows.FindFirstVolume(&guidBuf[0], guidBufLen)
 	if err != nil {
-		return nil, fmt.Errorf("FindFirstVolume: %w", err)
+		return volumes, fmt.Errorf("FindFirstVolume: %w", err)
 	}
 
 	defer func() {
 		_ = windows.FindVolumeClose(hFindVolume)
 	}()
 
-	volumes := map[string]string{}
+	var errs []error
 
 	for ; ; err = windows.FindNextVolume(hFindVolume, &guidBuf[0], guidBufLen) {
 		if err != nil {
-			switch {
-			case errors.Is(err, windows.ERROR_NO_MORE_FILES):
-				return volumes, nil
-			default:
-				return nil, fmt.Errorf("FindNextVolume: %w", err)
+			if !errors.Is(err, windows.ERROR_NO_MORE_FILES) {
+				errs = append(errs, fmt.Errorf("FindNextVolume: %w", err))
 			}
+
+			return volumes, errors.Join(errs...)
 		}
 
 		mountPoints, err := getVolumeMountPaths(&guidBuf[0], windows.GetVolumePathNamesForVolumeName)
 		if err != nil {
-			return nil, fmt.Errorf("GetVolumePathNamesForVolumeName: %w", err)
+			errs = append(errs, fmt.Errorf("GetVolumePathNamesForVolumeName(%s): %w", windows.UTF16ToString(guidBuf), err))
+
+			continue
 		}
 
 		volumeName := strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)

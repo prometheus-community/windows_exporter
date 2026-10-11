@@ -37,8 +37,8 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 | `windows_logical_disk_writes_total`              | Rate of write operations on the disk                                                                                      | counter | `volume`                                                          |
 | `windows_logical_disk_read_seconds_total`        | Seconds the disk was busy servicing read requests                                                                         | counter | `volume`                                                          |
 | `windows_logical_disk_write_seconds_total`       | Seconds the disk was busy servicing write requests                                                                        | counter | `volume`                                                          |
-| `windows_logical_disk_free_bytes`                | Unused space of the disk in bytes (not real time, updates every 10-15 min)                                                | gauge   | `volume`                                                          |
-| `windows_logical_disk_size_bytes`                | Total size of the disk in bytes (not real time, updates every 10-15 min)                                                  | gauge   | `volume`                                                          |
+| `windows_logical_disk_free_bytes`                | Unused space of the disk in bytes                                                                                         | gauge   | `volume`                                                          |
+| `windows_logical_disk_size_bytes`                | Total size of the disk in bytes                                                                                           | gauge   | `volume`                                                          |
 | `windows_logical_disk_idle_seconds_total`        | Seconds the disk was idle (not servicing read/write requests)                                                             | counter | `volume`                                                          |
 | `windows_logical_disk_split_ios_total`           | Number of I/Os to the disk split into multiple I/Os                                                                       | counter | `volume`                                                          |
 | `windows_logical_disk_read_latency_seconds_total` | Shows the average time, in seconds, of a read operation from the disk                                                     | counter | `volume`                                                          |
@@ -61,9 +61,12 @@ rate(windows_logical_disk_read_seconds_total[5m])
 rate(windows_logical_disk_write_seconds_total[5m])
 ```
 
-### Warning about size metrics
-The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
-This is the same behavior as the Windows performance counters.
+### Size metrics
+The `free_bytes` and `size_bytes` metrics are read from the volume on every scrape (`GetDiskFreeSpaceEx`).
+If the volume can't be queried, they fall back to the `Free Megabytes` and `% Free Space` performance counters,
+which Windows updates only every 10-15 minutes and in whole megabytes.
+
+If NTFS disk quotas apply to the account running windows_exporter, `size_bytes` is reduced to its quota.
 
 ### BitLocker status
 The `bitlocker_status` sub-collector reads the BitLocker status through `fveapi.dll`, the BitLocker API of Windows.
