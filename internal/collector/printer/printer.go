@@ -26,6 +26,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/winspool"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -74,6 +75,16 @@ type Collector struct {
 	printerStatus    *prometheus.Desc
 	printerJobStatus *prometheus.Desc
 	printerJobCount  *prometheus.Desc
+
+	// metricCache reuses the printer status series of printers whose status did
+	// not change since the last scrape. Each printer publishes one series per
+	// printerStatusMap entry. Job counts change and are built on every scrape.
+	metricCache metriccache.Cache[string, printerValues]
+}
+
+// printerValues holds the inputs of the cached metrics of a printer besides its name.
+type printerValues struct {
+	status uint16
 }
 
 func New(config *Config) *Collector {
@@ -133,6 +144,8 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 }
 
 func (c *Collector) Close() error {
+	c.metricCache.Reset()
+
 	return nil
 }
 
@@ -156,6 +169,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
+
 	return nil
 }
 
@@ -170,6 +186,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	if err != nil {
 		return fmt.Errorf("failed to enumerate printers: %w", err)
 	}
+
+	scrape := c.metricCache.Begin()
 
 	var errs []error
 
@@ -194,21 +212,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			continue
 		}
 
-		currentStatus := printerStatus(printer.Status, jobs)
+		values := printerValues{
+			status: printerStatus(printer.Status, jobs),
+		}
 
-		for status, statusName := range printerStatusMap {
-			isCurrentStatus := 0.0
-			if status == currentStatus {
-				isCurrentStatus = 1.0
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.printerStatus,
-				prometheus.GaugeValue,
-				isCurrentStatus,
-				printer.Name,
-				statusName,
-			)
+		for _, metric := range scrape.Get(printer.Name, values, func() []prometheus.Metric {
+			return c.printerStatusMetrics(printer.Name, values)
+		}) {
+			ch <- metric
 		}
 
 		for status, count := range groupJobsByStatus(jobs) {
@@ -222,7 +233,32 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		}
 	}
 
+	// Printers that were not collected in this scrape are dropped from the cache.
+	scrape.Commit()
+
 	return errors.Join(errs...)
+}
+
+// printerStatusMetrics builds the status series of a printer.
+func (c *Collector) printerStatusMetrics(printerName string, values printerValues) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, len(printerStatusMap))
+
+	for status, statusName := range printerStatusMap {
+		isCurrentStatus := 0.0
+		if status == values.status {
+			isCurrentStatus = 1.0
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.printerStatus,
+			prometheus.GaugeValue,
+			isCurrentStatus,
+			printerName,
+			statusName,
+		))
+	}
+
+	return metrics
 }
 
 // printerJobs returns the jobs of the printer in queue order.
