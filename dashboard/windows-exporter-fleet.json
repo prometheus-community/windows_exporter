@@ -1,0 +1,2741 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "windows-exporter-fleet"
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "builtIn": true,
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "legacyOptions": {
+                        "type": "dashboard"
+                    },
+                    "name": "Annotations & Alerts",
+                    "query": {
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "group": "grafana",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            }
+        ],
+        "cursorSync": "Crosshair",
+        "description": "Health, utilization and stopped services of all Windows hosts monitored by windows_exporter.",
+        "editable": true,
+        "elements": {
+            "panel-2": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance, product, version) (windows_os_info{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (time() - windows_system_boot_time_timestamp{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (windows_cpu_logical_processor{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "E"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (windows_memory_physical_total_bytes{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "F"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"}))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "G"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (100 * windows_memory_committed_bytes{job=~\"$job\"} / windows_memory_commit_limit{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "H"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"}))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "I"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(sum by (instance) (windows_service_state{job=~\"$job\", state=\"running\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "J"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, name) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "K"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (windows_system_processes{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "L"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "(max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~\"$job\", volume=\"C:\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume=\"C:\"}))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "M"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "instance",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 10": true,
+                                                "Time 11": true,
+                                                "Time 12": true,
+                                                "Time 13": true,
+                                                "Time 2": true,
+                                                "Time 3": true,
+                                                "Time 4": true,
+                                                "Time 5": true,
+                                                "Time 6": true,
+                                                "Time 7": true,
+                                                "Time 8": true,
+                                                "Time 9": true,
+                                                "Value #A": true,
+                                                "Value #B": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #C": 4,
+                                                "Value #D": 5,
+                                                "Value #E": 6,
+                                                "Value #F": 7,
+                                                "Value #G": 8,
+                                                "Value #H": 9,
+                                                "Value #I": 11,
+                                                "Value #J": 12,
+                                                "Value #K": 13,
+                                                "Value #L": 14,
+                                                "Value #M": 10,
+                                                "hostname": 0,
+                                                "instance": 1,
+                                                "product": 2,
+                                                "version": 3
+                                            },
+                                            "renameByName": {
+                                                "Value #C": "Uptime",
+                                                "Value #D": "CPUs",
+                                                "Value #E": "CPU",
+                                                "Value #F": "Memory",
+                                                "Value #G": "Memory used",
+                                                "Value #H": "Commit used",
+                                                "Value #I": "Fullest volume",
+                                                "Value #J": "Services up",
+                                                "Value #K": "Auto stopped",
+                                                "Value #L": "Processes",
+                                                "Value #M": "C: used",
+                                                "hostname": "Hostname",
+                                                "instance": "Instance",
+                                                "product": "OS",
+                                                "version": "Version"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "One row per scraped host. Click a hostname to open its details. C: used is the usage of the C: volume, usually the system drive; Fullest volume is the most used volume with a drive letter. Services up counts running services; Auto stopped counts services with start mode auto that are not running.",
+                    "id": 2,
+                    "links": [],
+                    "title": "Hosts",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    }
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "hostname"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "links",
+                                                "value": [
+                                                    {
+                                                        "title": "Show details for ${__data.fields.hostname}",
+                                                        "url": "/d/windows-exporter-overview?${__url_time_range}&${datasource:queryparam}&${job:queryparam}&var-hostname=$__all&var-instance=${__data.fields.instance}"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.width",
+                                                "value": 180
+                                            },
+                                            {
+                                                "id": "custom.filterable",
+                                                "value": true
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #C"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "dtdurations"
+                                            },
+                                            {
+                                                "id": "custom.width",
+                                                "value": 90
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "instance"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.width",
+                                                "value": 140
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "product"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.width",
+                                                "value": 160
+                                            },
+                                            {
+                                                "id": "custom.filterable",
+                                                "value": true
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "version"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.width",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "custom.filterable",
+                                                "value": true
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #D"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "none"
+                                            },
+                                            {
+                                                "id": "custom.width",
+                                                "value": 60
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #E"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #F"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            },
+                                            {
+                                                "id": "custom.width",
+                                                "value": 90
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #G"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #H"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #I"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #M"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percent"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 100
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #J"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "none"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #K"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "none"
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 1
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            },
+                                            {
+                                                "id": "noValue",
+                                                "value": "0"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #L"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "none"
+                                            },
+                                            {
+                                                "id": "custom.width",
+                                                "value": 90
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": [
+                                        "CPUs",
+                                        "Memory",
+                                        "Processes"
+                                    ],
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": true
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Hostname"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-250": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts that match the Job and Hostname selection and report windows_os_hostname.",
+                    "id": 250,
+                    "links": [],
+                    "title": "Hosts",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-251": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((up{job=~\"$job\"} == 0) and on (instance) last_over_time(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}[1d])) or (0 * count(up{job=~\"$job\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Selected hosts whose last scrape failed. Hosts stay selectable for one day after they stop reporting.",
+                    "id": 251,
+                    "links": [],
+                    "title": "Hosts down",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-252": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1))) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts whose CPU usage is above the cpuHighUsageThreshold of the WindowsCPUHighUsage alert. The alert also requires 15 minutes above it.",
+                    "id": 252,
+                    "links": [],
+                    "title": "CPU > 90%",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-253": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"})) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts whose physical memory usage is above the memoryHighUsageThreshold of the WindowsMemoryHighUsage alert. The alert also requires 15 minutes above it.",
+                    "id": 253,
+                    "links": [],
+                    "title": "RAM > 90%",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-254": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((min by (instance) (100 * windows_logical_disk_free_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"}) < 10) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts with at least one volume with less than 10% free space, the diskFreeWarningThreshold of the WindowsDiskAlmostFull alert. HarddiskVolume* volumes without a drive letter are ignored.",
+                    "id": 254,
+                    "links": [],
+                    "title": "Low disk",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-255": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count((count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, name) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Hosts with at least one service with start mode auto that is not running. Delayed-start and trigger-start services can show up here until they start.",
+                    "id": 255,
+                    "links": [],
+                    "title": "Auto stopped",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-3": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Shows the 25 highest hosts at each point in time.",
+                    "id": 3,
+                    "links": [],
+                    "title": "CPU utilization",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "max": 100,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percent"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-4": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"}))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Shows the 25 highest hosts at each point in time.",
+                    "id": 4,
+                    "links": [],
+                    "title": "Memory utilization",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "max": 100,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percent"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-5": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (max by (instance) (100 * (1 - windows_logical_disk_free_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"} / windows_logical_disk_size_bytes{job=~\"$job\", volume!~\"HarddiskVolume.*\"}))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Usage of the fullest volume per host. Shows the 25 highest hosts at each point in time.",
+                    "id": 5,
+                    "links": [],
+                    "title": "Fullest volume",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "dashed"
+                                        }
+                                    },
+                                    "max": 100,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 80
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 90
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percent"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-6": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (sum by (instance) (rate(windows_net_bytes_sent_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}} sent",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (sum by (instance) (rate(windows_net_bytes_received_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}} received",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Sum over all interfaces. Received is drawn below the axis. Shows the 25 highest hosts at each point in time.",
+                    "id": 6,
+                    "links": [],
+                    "title": "Network throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* received$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-7": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (sum by (instance) (rate(windows_logical_disk_write_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}} write",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (sum by (instance) (rate(windows_logical_disk_read_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}} read",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Sum over all volumes. Read is drawn below the axis. Shows the 25 highest hosts at each point in time.",
+                    "id": 7,
+                    "links": [],
+                    "title": "Disk throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "Bps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* read$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-8": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, (sum by (instance) (rate(windows_net_packets_received_errors_total{job=~\"$job\"}[$__rate_interval]) + rate(windows_net_packets_received_discarded_total{job=~\"$job\"}[$__rate_interval]) + rate(windows_net_packets_outbound_errors_total{job=~\"$job\"}[$__rate_interval]) + rate(windows_net_packets_outbound_discarded_total{job=~\"$job\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Sum over all interfaces of received and outbound errors and discards. Shows the 25 highest hosts at each point in time.",
+                    "id": 8,
+                    "links": [],
+                    "title": "Network errors and discards",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "pps"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-9": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(25, max by (instance) (rate(windows_net_bytes_total{job=~\"$job\"}[$__rate_interval]) / (windows_net_current_bandwidth_bytes{job=~\"$job\"} > 0)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{hostname}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Utilization of the busiest interface of each host: bytes sent and received per second against its current bandwidth. Unlike the throughput sum, it shows a single saturated interface on a host with several. Shows the 25 highest hosts at each point in time.",
+                    "id": 9,
+                    "links": [],
+                    "title": "Busiest interface",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "dashed"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 0.8
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 0.9
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "RowsLayout",
+            "spec": {
+                "rows": [
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-250"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-251"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-252"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-253"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-254"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-255"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 20,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Summary"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-2"
+                                                },
+                                                "height": 10,
+                                                "width": 24,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Hosts"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-3"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-4"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-5"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Utilization"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-6"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-9"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-7"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-8"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Network and disk"
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [
+            {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
+                "asDropdown": false,
+                "icon": "doc",
+                "includeVars": false,
+                "keepTime": false,
+                "tags": [],
+                "targetBlank": true,
+                "title": "windows_exporter",
+                "tooltip": "",
+                "type": "link",
+                "url": "https://github.com/prometheus-community/windows_exporter"
+            }
+        ],
+        "liveNow": false,
+        "preload": false,
+        "tags": [
+            "prometheus",
+            "windows",
+            "windows_exporter"
+        ],
+        "timeSettings": {
+            "autoRefresh": "1m",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "fiscalYearStartMonth": 0,
+            "from": "now-3h",
+            "hideTimepicker": false,
+            "to": "now"
+        },
+        "title": "Windows Exporter / Fleet",
+        "variables": [
+            {
+                "kind": "DatasourceVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Data source",
+                    "multi": false,
+                    "name": "datasource",
+                    "options": [],
+                    "pluginId": "prometheus",
+                    "refresh": "onDashboardLoad",
+                    "regex": "",
+                    "skipUrlSync": false
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname, job)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Job",
+                    "multi": true,
+                    "name": "job",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname, job)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Hostname",
+                    "multi": true,
+                    "name": "hostname",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            }
+        ]
+    }
+}

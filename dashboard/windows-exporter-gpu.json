@@ -1,0 +1,3578 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "windows-exporter-gpu"
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "builtIn": true,
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "legacyOptions": {
+                        "type": "dashboard"
+                    },
+                    "name": "Annotations & Alerts",
+                    "query": {
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "group": "grafana",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            },
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "enable": true,
+                    "hide": false,
+                    "iconColor": "orange",
+                    "legacyOptions": {
+                        "expr": "windows_system_boot_time_timestamp{job=~\"$job\", instance=\"$instance\"} * 1000 > $__from < $__to",
+                        "step": "1m",
+                        "tagKeys": "instance",
+                        "textFormat": "",
+                        "titleFormat": "Reboot",
+                        "useValueForTime": "on"
+                    },
+                    "name": "Reboots",
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            }
+        ],
+        "cursorSync": "Crosshair",
+        "description": "GPU utilization, memory, sensors and top processes of one Windows host.",
+        "editable": true,
+        "elements": {
+            "panel-120": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} temperature",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_warning_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} throttling threshold",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_max_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} maximum",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Current GPU temperature, driver-reported throttling threshold and maximum temperature in degrees Celsius. Sustained readings near the warning threshold can indicate insufficient cooling. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.",
+                    "id": 120,
+                    "links": [],
+                    "title": "GPU temperature",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "celsius"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-121": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} fan",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_max_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} maximum",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Current and maximum main-fan speed in revolutions per minute. A supported fan can report zero when stopped under light load. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.",
+                    "id": 121,
+                    "links": [],
+                    "title": "GPU fan speed",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "rotrpm"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-122": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_power_usage_ratio{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} power",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Current GPU power draw as a fraction of the driver-reported maximum power (TDP). This is a ratio, not an absolute measurement in watts. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.",
+                    "id": 122,
+                    "links": [],
+                    "title": "GPU power usage",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-123": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} memory clock",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} maximum",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Current and maximum non-overclocked GPU memory clock in hertz. Clocks can fall at idle; correlate drops under load with temperature and power. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.",
+                    "id": 123,
+                    "links": [],
+                    "title": "GPU memory clock",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "hertz"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-124": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} engine {{eng}} clock",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} engine {{eng}} maximum",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Current and maximum non-overclocked frequency per GPU engine in hertz. Only engines with a reported maximum clock are exposed, typically the 3D engine. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.",
+                    "id": 124,
+                    "links": [],
+                    "title": "GPU engine clock",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "hertz"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-125": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, phys) (windows_gpu_adapter_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} committed",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total committed GPU memory per physical GPU in bytes. Commitment is a separate accounting measure from dedicated or shared memory residency; do not add these series together.",
+                    "id": 125,
+                    "links": [],
+                    "title": "GPU committed memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-126": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (luid, phys) (windows_gpu_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} local",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (luid, phys) (windows_gpu_non_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} GPU {{phys}} non-local",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Local and non-local adapter memory usage in bytes, summed across memory partitions for each physical GPU. These describe memory locality and overlap the dedicated/shared accounting views.",
+                    "id": 126,
+                    "links": [],
+                    "title": "GPU local and non-local memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-127": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_dedicated_system_memory_size_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} dedicated system capacity",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "System memory dedicated to each GPU in bytes. This capacity is distinct from dedicated video memory and the shared system memory pool; it can be zero on discrete adapters.",
+                    "id": 127,
+                    "links": [],
+                    "title": "GPU dedicated system memory capacity",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-128": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (sum by (process_id) (windows_gpu_process_memory_shared_bytes{job=~\"$job\", instance=\"$instance\"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_shared_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Top ten processes at each point in time by shared GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.",
+                    "id": 128,
+                    "links": [],
+                    "title": "Top 10 processes by shared GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-129": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (sum by (process_id) (windows_gpu_process_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Top ten processes at each point in time by committed GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.",
+                    "id": 129,
+                    "links": [],
+                    "title": "Top 10 processes by committed GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-130": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (sum by (process_id) (windows_gpu_process_memory_local_bytes{job=~\"$job\", instance=\"$instance\"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_local_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Top ten processes at each point in time by local GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.",
+                    "id": 130,
+                    "links": [],
+                    "title": "Top 10 processes by local GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-131": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (sum by (process_id) (windows_gpu_process_memory_non_local_bytes{job=~\"$job\", instance=\"$instance\"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_non_local_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Top ten processes at each point in time by non-local GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.",
+                    "id": 131,
+                    "links": [],
+                    "title": "Top 10 processes by non-local GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-184": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Utilization of the busiest engine on the busiest GPU.",
+                    "id": 184,
+                    "links": [],
+                    "title": "Utilization",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "decimals": 1,
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 0.8
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 0.9
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-185": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(max by (luid) (windows_gpu_adapter_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Dedicated GPU memory in use, summed over all GPUs.",
+                    "id": 185,
+                    "links": [],
+                    "title": "VRAM used",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "decimals": 1,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-186": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(max by (luid) (windows_gpu_adapter_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"})) / (sum(max by (luid) (windows_gpu_dedicated_video_memory_size_bytes{job=~\"$job\", instance=\"$instance\"})) > 0)",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Dedicated GPU memory in use as a share of the dedicated video memory of all GPUs.",
+                    "id": 186,
+                    "links": [],
+                    "title": "VRAM usage",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "decimals": 1,
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 0.8
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 0.9
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-187": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(max by (luid) (windows_gpu_adapter_memory_shared_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "System memory used by the GPUs, summed over all GPUs.",
+                    "id": 187,
+                    "links": [],
+                    "title": "Shared memory",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "decimals": 1,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-188": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max(windows_gpu_temperature_celsius{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Temperature of the hottest GPU. Requires WDDM 2.4 or newer and driver support.",
+                    "id": 188,
+                    "links": [],
+                    "title": "Temperature",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 80
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 90
+                                            }
+                                        ]
+                                    },
+                                    "unit": "celsius"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-189": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max(windows_gpu_power_usage_ratio{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Highest GPU power draw as a fraction of the driver-reported maximum power (TDP). Requires WDDM 2.4 or newer and driver support.",
+                    "id": 189,
+                    "links": [],
+                    "title": "Power usage",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "decimals": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-57": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1)",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_adapter_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_dedicated_video_memory_size_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_adapter_memory_shared_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "E"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_shared_system_memory_size_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "F"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "luid",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true,
+                                                "Time 4": true,
+                                                "Time 5": true,
+                                                "Time 6": true,
+                                                "Value #A": true,
+                                                "luid": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #B": 1,
+                                                "Value #C": 2,
+                                                "Value #D": 3,
+                                                "Value #E": 4,
+                                                "Value #F": 5,
+                                                "name": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #B": "Utilization",
+                                                "Value #C": "Dedicated memory used",
+                                                "Value #D": "Dedicated memory",
+                                                "Value #E": "Shared memory used",
+                                                "Value #F": "Shared memory",
+                                                "name": "GPU"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Needs the gpu collector, which is not enabled by default. Utilization is the busiest engine of the GPU.",
+                    "id": 57,
+                    "links": [],
+                    "title": "GPUs",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    }
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #B"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percentunit"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 1
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green"
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 80
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 90
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "continuous-GrYlRd"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #C"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #D"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #E"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #F"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": []
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-58": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} {{engtype}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Busiest engine of each engine type, as in Task Manager.",
+                    "id": 58,
+                    "links": [],
+                    "title": "GPU utilization by engine type",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-59": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_adapter_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} dedicated used",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_dedicated_video_memory_size_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} dedicated size",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_adapter_memory_shared_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} shared used",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (luid) (windows_gpu_shared_system_memory_size_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{name}} shared size",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Dedicated (video) and shared (system) memory in use, against the size of each pool.",
+                    "id": 59,
+                    "links": [],
+                    "title": "GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* size"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.fillOpacity",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "custom.lineStyle",
+                                                "value": {
+                                                    "dash": [
+                                                        10,
+                                                        10
+                                                    ],
+                                                    "fill": "dash"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-60": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Busiest GPU engine used by each process. Process names need the process collector; otherwise only the PID is shown.",
+                    "id": 60,
+                    "links": [],
+                    "title": "Top 10 processes by GPU utilization",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true,
+                                    "sortBy": "Mean",
+                                    "sortDesc": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-61": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, (sum by (process_id) (windows_gpu_process_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_dedicated_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Process names need the process collector; otherwise only the PID is shown.",
+                    "id": 61,
+                    "links": [],
+                    "title": "Top 10 processes by dedicated GPU memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true,
+                                    "sortBy": "Mean",
+                                    "sortDesc": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "RowsLayout",
+            "spec": {
+                "rows": [
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-184"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-185"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-186"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-187"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-188"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-189"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 20,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Summary"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-57"
+                                                },
+                                                "height": 5,
+                                                "width": 24,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-58"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 5
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-59"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 5
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-125"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 13
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-126"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 13
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-127"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 13
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Adapters"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-120"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-121"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-122"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-123"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-124"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Sensors and clocks"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-60"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-61"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-128"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-129"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-130"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 16
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-131"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 16
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Processes"
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [
+            {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
+                "asDropdown": false,
+                "icon": "doc",
+                "includeVars": false,
+                "keepTime": false,
+                "tags": [],
+                "targetBlank": true,
+                "title": "windows_exporter",
+                "tooltip": "",
+                "type": "link",
+                "url": "https://github.com/prometheus-community/windows_exporter"
+            }
+        ],
+        "liveNow": false,
+        "preload": false,
+        "tags": [
+            "prometheus",
+            "windows",
+            "windows_exporter"
+        ],
+        "timeSettings": {
+            "autoRefresh": "1m",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "fiscalYearStartMonth": 0,
+            "from": "now-3h",
+            "hideTimepicker": false,
+            "to": "now"
+        },
+        "title": "Windows Exporter / GPU",
+        "variables": [
+            {
+                "kind": "DatasourceVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Data source",
+                    "multi": false,
+                    "name": "datasource",
+                    "options": [],
+                    "pluginId": "prometheus",
+                    "refresh": "onDashboardLoad",
+                    "regex": "",
+                    "skipUrlSync": false
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname, job)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Job",
+                    "multi": true,
+                    "name": "job",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname, job)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Hostname",
+                    "multi": true,
+                    "name": "hostname",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Instance",
+                    "multi": false,
+                    "name": "instance",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            }
+        ]
+    }
+}

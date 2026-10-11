@@ -1,0 +1,2555 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "windows-exporter-hyper-v"
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "builtIn": true,
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "legacyOptions": {
+                        "type": "dashboard"
+                    },
+                    "name": "Annotations & Alerts",
+                    "query": {
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "group": "grafana",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            },
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "enable": true,
+                    "hide": false,
+                    "iconColor": "orange",
+                    "legacyOptions": {
+                        "expr": "windows_system_boot_time_timestamp{job=~\"$job\", instance=\"$instance\"} * 1000 > $__from < $__to",
+                        "step": "1m",
+                        "tagKeys": "instance",
+                        "textFormat": "",
+                        "titleFormat": "Reboot",
+                        "useValueForTime": "on"
+                    },
+                    "name": "Reboots",
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            }
+        ],
+        "cursorSync": "Crosshair",
+        "description": "Hyper-V virtual machines, virtual disks, switches and network adapters of one Windows host.",
+        "editable": true,
+        "elements": {
+            "panel-63": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_hyperv_virtual_machine_health_total_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Needs the hyperv collector, which is not enabled by default.",
+                    "id": 63,
+                    "links": [],
+                    "title": "Virtual machines",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-64": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_hyperv_virtual_machine_health_total_count{job=~\"$job\", instance=\"$instance\", state=\"critical\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of Hyper-V virtual machines reporting critical health. Inspect the affected VM and Hyper-V event logs; this requires the optional hyperv collector.",
+                    "id": 64,
+                    "links": [],
+                    "title": "VMs in critical health",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-65": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_wmi_health{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Whether the Hyper-V WMI namespace answers. When it stops answering, Hyper-V Manager and Failover Cluster Manager usually cannot manage the host.",
+                    "id": 65,
+                    "links": [],
+                    "title": "Hyper-V WMI",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "0": {
+                                                    "index": 0,
+                                                    "text": "not responding"
+                                                },
+                                                "1": {
+                                                    "index": 1,
+                                                    "text": "ok"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "red",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "green",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": ""
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-66": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of host logical processors reported by Hyper-V. Use this as capacity context for host and virtual processor load; this requires the optional hyperv collector.",
+                    "id": 66,
+                    "links": [],
+                    "title": "Logical processors",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-67": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_total_vm_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Virtual processors assigned to all VMs.",
+                    "id": 67,
+                    "links": [],
+                    "title": "Virtual processors",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-68": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_total_vm_processor_count{job=~\"$job\", instance=\"$instance\"} / windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Virtual processors assigned to VMs per logical processor of the host.",
+                    "id": 68,
+                    "links": [],
+                    "title": "vCPU per logical CPU",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "decimals": 2,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-69": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (state) (rate(windows_hyperv_hypervisor_logical_processor_time_total{job=~\"$job\", instance=\"$instance\", state!=\"idle\"}[$__rate_interval])) / scalar(count(windows_hyperv_hypervisor_logical_processor_time_total{job=~\"$job\", instance=\"$instance\", state=\"idle\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{state}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Share of all logical processors spent running guest code (VMs and the root partition) and in the hypervisor. With Hyper-V enabled, the CPU tab only sees the root partition.",
+                    "id": 69,
+                    "links": [],
+                    "title": "Host CPU time by state",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 40,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "normal"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-70": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / scalar(max(windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Virtual processor run time of each VM as a share of all logical processors of the host.",
+                    "id": 70,
+                    "links": [],
+                    "title": "CPU usage per VM",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 40,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "normal"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true,
+                                    "sortBy": "Mean",
+                                    "sortDesc": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-72": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_dynamic_memory_vm_physical_bytes{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Physical memory currently assigned to each VM with dynamic memory.",
+                    "id": 72,
+                    "links": [],
+                    "title": "Memory assigned to VMs",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 40,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "normal"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true,
+                                    "sortBy": "Mean",
+                                    "sortDesc": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-73": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_dynamic_memory_vm_pressure_current_ratio{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Memory a VM needs as a share of the memory it has. Above 100% the VM needs more memory than it is assigned.",
+                    "id": 73,
+                    "links": [],
+                    "title": "VM memory pressure",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "dashed"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-74": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_hyperv_dynamic_memory_balancer_available_memory_bytes{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "{{balancer}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Memory the dynamic memory balancer can still hand out to VMs.",
+                    "id": 74,
+                    "links": [],
+                    "title": "Memory available for VMs",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-76": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_bytes_written{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} write",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_bytes_read{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} read",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Reads are drawn below the axis.",
+                    "id": 76,
+                    "links": [],
+                    "title": "Virtual disk throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "Bps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* read$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-77": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_operations_written_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} write",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_operations_read_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} read",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Reads are drawn below the axis.",
+                    "id": 77,
+                    "links": [],
+                    "title": "Virtual disk IOPS",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "iops"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* read$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-78": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} latency",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_error_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0",
+                                                "instant": false,
+                                                "legendFormat": "{{device}} errors",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Average I/O latency of each virtual disk: the total I/O latency divided by the number of completed I/O transfers. Errors use the right axis.",
+                    "id": 78,
+                    "links": [],
+                    "title": "Virtual disk latency and errors",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "s"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* errors"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "ops"
+                                            },
+                                            {
+                                                "id": "custom.axisPlacement",
+                                                "value": "right"
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "fixedColor": "red",
+                                                    "mode": "fixed"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-80": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_vswitch_bytes_sent_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) * 8",
+                                                "instant": false,
+                                                "legendFormat": "{{vswitch}} sent",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_vswitch_bytes_received_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) * 8",
+                                                "instant": false,
+                                                "legendFormat": "{{vswitch}} received",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Received traffic is drawn below the axis.",
+                    "id": 80,
+                    "links": [],
+                    "title": "Virtual switch throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* received$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-81": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_vswitch_dropped_packets_incoming_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{vswitch}} incoming",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_vswitch_dropped_packets_outcoming_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "{{vswitch}} outgoing",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Incoming and outgoing packets dropped per second by each Hyper-V virtual switch. Correlate sustained drops with network load, resource pressure and switch policies; this requires the optional hyperv collector.",
+                    "id": 81,
+                    "links": [],
+                    "title": "Virtual switch dropped packets",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "pps"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-82": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_network_adapter_sent_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) * 8",
+                                                "instant": false,
+                                                "legendFormat": "{{adapter}} sent",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_hyperv_virtual_network_adapter_received_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) * 8",
+                                                "instant": false,
+                                                "legendFormat": "{{adapter}} received",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Received traffic is drawn below the axis.",
+                    "id": 82,
+                    "links": [],
+                    "title": "VM network adapter throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* received$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "RowsLayout",
+            "spec": {
+                "rows": [
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-63"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-64"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-65"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-66"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-67"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-68"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 20,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Summary"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-69"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-70"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "CPU"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-72"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-73"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-74"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Memory"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-76"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-77"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-78"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Storage"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-80"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-81"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-82"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Network"
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [
+            {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
+                "asDropdown": false,
+                "icon": "doc",
+                "includeVars": false,
+                "keepTime": false,
+                "tags": [],
+                "targetBlank": true,
+                "title": "windows_exporter",
+                "tooltip": "",
+                "type": "link",
+                "url": "https://github.com/prometheus-community/windows_exporter"
+            }
+        ],
+        "liveNow": false,
+        "preload": false,
+        "tags": [
+            "prometheus",
+            "windows",
+            "windows_exporter"
+        ],
+        "timeSettings": {
+            "autoRefresh": "1m",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "fiscalYearStartMonth": 0,
+            "from": "now-3h",
+            "hideTimepicker": false,
+            "to": "now"
+        },
+        "title": "Windows Exporter / Hyper-V",
+        "variables": [
+            {
+                "kind": "DatasourceVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Data source",
+                    "multi": false,
+                    "name": "datasource",
+                    "options": [],
+                    "pluginId": "prometheus",
+                    "refresh": "onDashboardLoad",
+                    "regex": "",
+                    "skipUrlSync": false
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname, job)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Job",
+                    "multi": true,
+                    "name": "job",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname, job)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Hostname",
+                    "multi": true,
+                    "name": "hostname",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Instance",
+                    "multi": false,
+                    "name": "instance",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            }
+        ]
+    }
+}

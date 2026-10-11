@@ -202,16 +202,22 @@ Fork users should override `runbookURLPattern` to match their published URL.
 
 ## Dashboard
 
-`grafanaDashboards` contains `windows-exporter.json`, the sample dashboard in
-[dashboard/windows-exporter-dashboard.json](../../dashboard/windows-exporter-dashboard.json).
-It is a Grafana v2 dashboard with tabs and needs Grafana 13 or later. See the
-[dashboard documentation](../../dashboard/README.md) for its content.
+`grafanaDashboards` contains `windows-exporter.json`, the full sample dashboard
+with all tabs in
+[dashboard/windows-exporter-dashboard.json](../../dashboard/windows-exporter-dashboard.json),
+and a shorter dashboard per tab, such as `windows-exporter-cpu.json`, in
+[dashboard](../../dashboard). They are Grafana v2 dashboards and need Grafana 13
+or later. See the [dashboard documentation](../../dashboard/README.md) for their
+content.
 
 The dashboard uses additive builders with [grafonnet](https://github.com/grafana/grafonnet),
 pinned in `jsonnetfile.json`:
 
-- `dashboards/windows-exporter.libsonnet` composes the dashboard, with one source
-  file per tab for its panels, queries, rows, and grid positions.
+- `dashboards/windows-exporter.libsonnet` composes the full dashboard and the
+  dashboard of each tab, with one source file per tab for its panels, queries,
+  rows, and grid positions. A tab dashboard keeps only the variables its panels
+  reference, directly or through other variables, and the annotations of those
+  variables.
 - `dashboards/builders.libsonnet` uses Grafonnet's native `apps.dashboard.v2`
   builders for the dashboard and layout and wraps its Prometheus query builders
   into the v2 panel/query-group schema.
@@ -242,40 +248,55 @@ b.panel.new(200, 'CPU usage', 'timeseries')
 + b.panel.withDefaults({ unit: 'percentunit', min: 0, max: 1 })
 ```
 
-Regenerate the committed file after changing the dashboard source:
+Regenerate the committed files after changing the dashboard source:
 
 ```sh
 mise run dashboard
 ```
 
-This runs `jb install` and writes `../../dashboard/windows-exporter-dashboard.json`.
+This runs `jb install` and writes `../../dashboard/windows-exporter-*.json`.
 `mise run dashboards` is an alias. `mise run generate` builds both the rules and the
 dashboard, while `mise run rules` builds only the rules. The same commands work
 inside WSL; mise supplies the tool binaries on `PATH`.
 
-The checked-in JSON remains the reference for the rendered dashboard, including
+The checked-in JSON remains the reference for the rendered dashboards, including
 queries, IDs, variables, annotations, transformations, and tab/row layout.
-`mise run check-dashboards` regenerates it and runs `git diff --exit-code`, displaying
+`mise run check-dashboards` regenerates them and runs `git diff --exit-code`, displaying
 any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
-`enableFleetTab`, `enableOverviewTab` and the dashboard metadata below.
+`enableFleetTab`, `enableOverviewTab`, `enableTabDashboards` and the dashboard
+metadata below.
 
 ### Metadata
 
-`dashboardUID`, `dashboardTitle`, `dashboardDescription` and `dashboardTags`
-set the dashboard's UID (`metadata.name`), title, description and tags. Give a
-customized dashboard its own UID so it can be imported next to the sample
-dashboard instead of replacing it:
+Every dashboard has a readable UID (`metadata.name`) built from
+`dashboardUIDPrefix`, and a title built from `dashboardTitlePrefix`:
+
+| Dashboard | UID | Title |
+| --- | --- | --- |
+| Full, all tabs | `windows-exporter-full` | Windows Exporter / Full |
+| One tab | `windows-exporter-<tab>`, for example `windows-exporter-cpu` or `windows-exporter-scheduled-tasks` | Windows Exporter / `<tab>` |
+
+`dashboardUID`, `dashboardTitle` and `dashboardDescription` override the UID,
+title and description of the full dashboard. `dashboardTags` sets the tags of
+all dashboards; each dashboard links to the others through a dropdown of
+dashboards with these tags, keeping the time range and variables. Set
+`enableTabDashboards: false` to render only the full dashboard. Give customized
+dashboards their own UIDs so they can be imported next to the sample dashboards
+instead of replacing them:
 
 ```jsonnet
 (import 'mixin.libsonnet') {
   _config+:: {
-    dashboardUID: 'windows-compact',
-    dashboardTitle: 'Windows (compact)',
+    dashboardUIDPrefix: 'windows-compact',
+    dashboardTitlePrefix: 'Windows (compact)',
     dashboardTags+: ['compact'],
   },
-}.grafanaDashboards['windows-exporter.json']
+}.grafanaDashboards
 ```
+
+In the Fleet dashboard, a hostname links to the Overview dashboard; in the full
+dashboard, it links to the Overview tab.
 
 ### Collectors
 
@@ -309,7 +330,7 @@ dashboard with only the collector tabs and the Exporter tab, turn them off:
 }.grafanaDashboards['windows-exporter.json']
 ```
 
-The committed sample dashboard enables every collector. The Fleet hosts table
+The committed sample dashboards enable every collector. The Fleet hosts table
 always queries the default collectors; its columns stay empty for collectors
 that are turned off. Tab sources are
 functions of `on(collector)`; return `null` instead of a row, a `[id, width,
@@ -347,8 +368,8 @@ committed dashboard JSON or its own workflow file, and can also be started
 manually. It caches pinned tool binaries and runs the same `mise run test` checks
 used locally.
 
-Run `mise run lint-dashboards` to lint just the committed dashboard. `.dashboard-lint.yaml`
-documents exceptions for the sample dashboard's single-host selection, fleet
+Run `mise run lint-dashboards` to lint just the committed dashboards. `.dashboard-lint.yaml`
+documents exceptions for the sample dashboards' single-host selection, fleet
 queries, editable state, and the service table without numeric units. All panels
 include descriptions; missing titles or descriptions fail validation, including
 warnings.

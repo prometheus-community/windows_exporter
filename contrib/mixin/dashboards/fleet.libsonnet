@@ -8,7 +8,9 @@ local volumeFree = '100 * windows_logical_disk_free_bytes{job=~"$job", volume!~"
 local attention = [{ color: 'green', value: null }, { color: 'orange', value: 1 }];
 
 // config supplies the alert thresholds, so a counter turns orange when the matching alert condition holds.
-function(on, config)
+// Hostnames link to the Overview tab of this dashboard, or to the dashboard with
+// the UID overview when it is given.
+function(on, config, overview=null)
   b.tab(
     'Fleet',
     b.rows([
@@ -176,7 +178,7 @@ function(on, config)
               value: [
                 {
                   title: 'Show details for ${__data.fields.hostname}',
-                  url: '/d/${__dashboard.uid}?${__url_time_range}&${datasource:queryparam}&${job:queryparam}&var-hostname=$__all&var-instance=${__data.fields.instance}&dtab=Overview',
+                  url: '/d/' + (if overview == null then '${__dashboard.uid}' else overview) + '?${__url_time_range}&${datasource:queryparam}&${job:queryparam}&var-hostname=$__all&var-instance=${__data.fields.instance}' + (if overview == null then '&dtab=Overview' else ''),
                 },
               ],
             },

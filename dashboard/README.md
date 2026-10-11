@@ -1,6 +1,7 @@
-## Sample dashboard for Windows Exporter
+## Sample dashboards for Windows Exporter
 
-[windows-exporter-dashboard.json](windows-exporter-dashboard.json) is a Grafana dashboard for hosts monitored by windows_exporter.
+[windows-exporter-dashboard.json](windows-exporter-dashboard.json) is a Grafana dashboard for hosts monitored by windows_exporter, with all tabs described below.
+Each tab is also a shorter dashboard of its own, such as [windows-exporter-cpu.json](windows-exporter-cpu.json) or [windows-exporter-fleet.json](windows-exporter-fleet.json).
 It was originally inspired by [this dashboard in Chinese](https://grafana.com/grafana/dashboards/10467-windows-exporter-for-prometheus-dashboard-cn-v20230531/)
 and takes several ideas from Grafana's [windows-observ-lib](https://github.com/grafana/jsonnet-libs/tree/master/windows-observ-lib).
 
@@ -13,7 +14,16 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
 
-Import the JSON file through **Dashboards > New > Import** and pick the Prometheus data source in the **Data source** variable.
+Import the JSON files through **Dashboards > New > Import** and pick the Prometheus data source in the **Data source** variable.
+
+| Dashboard | File | UID |
+|-----------|------|-----|
+| Windows Exporter / Full | [windows-exporter-dashboard.json](windows-exporter-dashboard.json) | `windows-exporter-full` |
+| Windows Exporter / `<tab>` | `windows-exporter-<tab>.json`, for example [windows-exporter-cpu.json](windows-exporter-cpu.json) | `windows-exporter-<tab>`, for example `windows-exporter-cpu` |
+
+The tab dashboards show only the variables their panels use.
+The **Windows Exporter** dropdown in the dashboard links opens the other imported dashboards and keeps the time range and variables.
+Before these UIDs, the full dashboard used the UID `Kdaassddw`; importing the new file creates a second dashboard, so delete the old one afterwards.
 
 ### Variables
 
@@ -22,7 +32,7 @@ Import the JSON file through **Dashboards > New > Import** and pick the Promethe
 | Data source       | The Prometheus data source to query.                                        |
 | Job               | One or more scrape jobs.                                                    |
 | Hostname          | Narrows the fleet overview and the instance list to the selected hostnames. |
-| Instance          | The host shown in all tabs except Fleet.                                    |
+| Instance          | The host shown in all tabs and dashboards except Fleet.                     |
 | Volume            | Volumes shown in the Overview and Disk tabs. `HarddiskVolume*` are hidden.  |
 | Network interface | Interfaces shown in the Overview and Network tabs.                          |
 | Process           | One or more process names shown in the Processes tab, or All.               |
@@ -50,7 +60,7 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | Time     | Time zone, clock sync source, NTP time sources, clock offset and NTP round-trip delay.                                                                              |
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |
 
-Click a hostname in the Fleet tab to open that host in the Overview tab.
+Click a hostname in the Fleet tab to open that host in the Overview tab. In the Fleet dashboard, it opens the Overview dashboard.
 
 Each per-host tab starts with a row of current values, each with a sparkline
 of the time range behind it. Green, orange and red show health against fixed
@@ -66,15 +76,15 @@ appear. I/O graphs combine read, write and other operations per process.
 
 ### Changing the dashboard
 
-Don't edit the JSON file by hand. It is generated from Jsonnet with [grafonnet](https://github.com/grafana/grafonnet) as part of the [windows_exporter mixin](../contrib/mixin):
+Don't edit the JSON files by hand. They are generated from Jsonnet with [grafonnet](https://github.com/grafana/grafonnet) as part of the [windows_exporter mixin](../contrib/mixin):
 
-- [dashboards/windows-exporter.libsonnet](../contrib/mixin/dashboards/windows-exporter.libsonnet) composes the dashboard from one file per tab.
+- [dashboards/windows-exporter.libsonnet](../contrib/mixin/dashboards/windows-exporter.libsonnet) composes the dashboards from one file per tab.
 - [dashboards/builders.libsonnet](../contrib/mixin/dashboards/builders.libsonnet) holds the panel, query, and layout builders.
 - [dashboards/styles.libsonnet](../contrib/mixin/dashboards/styles.libsonnet) shares the visualization defaults.
 
 The generator writes the v2 schema directly, so it needs neither Grafana nor Prometheus.
 Install [mise](https://mise.jdx.dev/) and Go, then install the pinned tools and
-regenerate the file in `contrib/mixin` (use WSL on Windows):
+regenerate the files in `contrib/mixin` (use WSL on Windows):
 
 ```sh
 cd contrib/mixin
@@ -83,10 +93,10 @@ mise install
 mise run dashboard
 ```
 
-`mise run dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboard.
-`mise run lint` fails if the committed JSON file differs from the generated one.
+`mise run dashboard` runs `jb install` to fetch grafonnet into `contrib/mixin/vendor` and renders the dashboards.
+`mise run lint` fails if the committed JSON files differ from the generated ones.
 `mise run check-dashboards` rebuilds it and runs `git diff --exit-code`, as CI does before the mixin tests.
-Check new or changed queries in Grafana before you open a pull request, for example by importing the file into a local Grafana 13.
+Check new or changed queries in Grafana before you open a pull request, for example by importing the files into a local Grafana 13.
 
 ![Screenshot of the Fleet tab.](dashboard-fleet.png)
 

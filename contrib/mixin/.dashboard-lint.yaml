@@ -1,42 +1,34 @@
-# Keep exceptions scoped to the existing sample dashboard and panels.
+# Exceptions apply to all sample dashboards; entries without a dashboard
+# match every dashboard title.
 exclusions:
   target-promql-rule:
     reason: dashboard-linter 0.3.0's v2 adapter omits custom variable current values and options, so the numeric process_top value becomes a vector identifier. These queries are validated against live Prometheus with limits 5, 10 and 20.
     entries:
-      - dashboard: Windows Exporter
-        panel: Process CPU usage
-      - dashboard: Windows Exporter
-        panel: Process working set
-      - dashboard: Windows Exporter
-        panel: Process private bytes
-      - dashboard: Windows Exporter
-        panel: Process I/O throughput
-      - dashboard: Windows Exporter
-        panel: Process threads
-      - dashboard: Windows Exporter
-        panel: Process handles
-      - dashboard: Windows Exporter
-        panel: Process I/O operations
-      - dashboard: Windows Exporter
-        panel: Process page faults
+      - panel: Process CPU usage
+      - panel: Process working set
+      - panel: Process private bytes
+      - panel: Process I/O throughput
+      - panel: Process threads
+      - panel: Process handles
+      - panel: Process I/O operations
+      - panel: Process page faults
   target-instance-rule:
     reason: Fleet panels intentionally span instances; per-host panels use an exact matcher for the single-select instance variable.
     entries:
-      - dashboard: Windows Exporter
+      - {}
   template-instance-rule:
     reason: Per-host tabs require one instance, so the instance variable has neither multi-select nor an All value.
     entries:
-      - dashboard: Windows Exporter
+      - {}
   template-job-rule:
     reason: Grafana expands All to the discovered job values rather than using a custom .+ wildcard.
     entries:
-      - dashboard: Windows Exporter
+      - {}
   uneditable-dashboard:
     reason: This sample dashboard is editable so users can adapt it to their environment.
     entries:
-      - dashboard: Windows Exporter
+      - {}
   panel-units-rule:
     reason: This table displays service names and states; the numeric query value is hidden.
     entries:
-      - dashboard: Windows Exporter
-        panel: Automatic services not running
+      - panel: Automatic services not running

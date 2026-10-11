@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - contrib/mixin/**
-      - dashboard/windows-exporter-dashboard.json
+      - dashboard/*.json
       - .github/workflows/mixin.yml
   push:
     branches:
@@ -13,7 +13,7 @@ on:
       - main
     paths:
       - contrib/mixin/**
-      - dashboard/windows-exporter-dashboard.json
+      - dashboard/*.json
       - .github/workflows/mixin.yml
   workflow_dispatch:
 

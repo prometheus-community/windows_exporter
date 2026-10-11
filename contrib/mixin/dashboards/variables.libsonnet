@@ -70,9 +70,6 @@ function(on) [variable for variable in [
   new('instance', 'label_values(windows_os_hostname{job=~"$job", hostname=~"$hostname"}, instance)')
   + query.spec.withLabel('Instance')
   ,
-  new('show_hostname', 'label_values(windows_os_hostname{job=~"$job", instance="$instance"}, hostname)')
-  + query.spec.withHide('hideVariable')
-  ,
   if on('logical_disk') then new('volume', 'label_values(windows_logical_disk_size_bytes{job=~"$job", instance="$instance"}, volume)')
                              + query.spec.withCurrent({
                                text: [

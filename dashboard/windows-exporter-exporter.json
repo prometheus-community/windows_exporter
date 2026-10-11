@@ -1,0 +1,3205 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "windows-exporter-exporter"
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "builtIn": true,
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "legacyOptions": {
+                        "type": "dashboard"
+                    },
+                    "name": "Annotations & Alerts",
+                    "query": {
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "group": "grafana",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            },
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "enable": true,
+                    "hide": false,
+                    "iconColor": "orange",
+                    "legacyOptions": {
+                        "expr": "windows_system_boot_time_timestamp{job=~\"$job\", instance=\"$instance\"} * 1000 > $__from < $__to",
+                        "step": "1m",
+                        "tagKeys": "instance",
+                        "textFormat": "",
+                        "titleFormat": "Reboot",
+                        "useValueForTime": "on"
+                    },
+                    "name": "Reboots",
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            }
+        ],
+        "cursorSync": "Crosshair",
+        "description": "Scrape status, collector health and resource usage of windows_exporter on one host.",
+        "editable": true,
+        "elements": {
+            "panel-100": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_collector_duration_seconds{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "{{collector}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Time each collector spent per scrape. Compare against the scrape timeout.",
+                    "id": 100,
+                    "links": [],
+                    "title": "Collector duration",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 40,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "normal"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "s"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true,
+                                    "sortBy": "Mean",
+                                    "sortDesc": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-101": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"} and on (collector) (min_over_time(windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"}[$__range] @ end()) == 0)",
+                                                "instant": false,
+                                                "legendFormat": "{{collector}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Collectors that failed at least once in the selected time range.",
+                    "id": 101,
+                    "links": [],
+                    "title": "Collector failures",
+                    "vizConfig": {
+                        "group": "state-timeline",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "fillOpacity": 90,
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineWidth": 0,
+                                        "spanNulls": false
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "0": {
+                                                    "color": "red",
+                                                    "index": 0,
+                                                    "text": "failed"
+                                                },
+                                                "1": {
+                                                    "color": "green",
+                                                    "index": 1,
+                                                    "text": "ok"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "red",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "green",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "none"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "alignValue": "left",
+                                "legend": {
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": false
+                                },
+                                "mergeValues": false,
+                                "rowHeight": 1,
+                                "showValue": "never",
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "single",
+                                    "sort": "none"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-102": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "1 - windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"} and on (collector) (max_over_time(windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"}[$__range] @ end()) == 1)",
+                                                "instant": false,
+                                                "legendFormat": "{{collector}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Collectors that hit the collector timeout at least once in the selected time range.",
+                    "id": 102,
+                    "links": [],
+                    "title": "Collector timeouts",
+                    "vizConfig": {
+                        "group": "state-timeline",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "fillOpacity": 90,
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineWidth": 0,
+                                        "spanNulls": false
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "0": {
+                                                    "color": "red",
+                                                    "index": 0,
+                                                    "text": "timed out"
+                                                },
+                                                "1": {
+                                                    "color": "green",
+                                                    "index": 1,
+                                                    "text": "in time"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "red",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "green",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "none"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "alignValue": "left",
+                                "legend": {
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": false
+                                },
+                                "mergeValues": false,
+                                "rowHeight": 1,
+                                "showValue": "never",
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "single",
+                                    "sort": "none"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-104": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "CPU",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / on (instance) sum by (instance) (rate(promhttp_metric_handler_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "instant": false,
+                                                "legendFormat": "CPU per scrape",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "CPU time used by the exporter process, as a share of one core. CPU usage grows with the number of scrapes, for example when two Prometheus jobs scrape the same exporter; CPU per scrape (right axis) does not.",
+                    "id": 104,
+                    "links": [],
+                    "title": "Exporter CPU usage",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "CPU per scrape"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "s"
+                                            },
+                                            {
+                                                "id": "custom.axisPlacement",
+                                                "value": "right"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-105": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "process_resident_memory_bytes{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "working set",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "process_virtual_memory_bytes{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "private bytes",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_memstats_heap_inuse_bytes{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "Go heap in use",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Working set and private bytes of the exporter process, and the Go heap in use. Steady growth points to a leak.",
+                    "id": 105,
+                    "links": [],
+                    "title": "Exporter memory",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-106": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "process_open_fds{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "open handles",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Open handles of the exporter process (process_open_fds). Steady growth points to a handle leak.",
+                    "id": 106,
+                    "links": [],
+                    "title": "Exporter handles",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-107": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_sched_goroutines_running_goroutines{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "running",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_sched_goroutines_runnable_goroutines{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "runnable",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_sched_goroutines_waiting_goroutines{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "waiting",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_goroutines{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "total",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Steady growth of goroutines points to a goroutine leak. The states need an exporter build with the Go scheduler metrics; the total line works with every build. The \"not in Go\" state is left out: since 0.32 a Go runtime bug (golang/go#82136) counts each WMI callback from a Windows thread once and never subtracts it, so it keeps growing without a leak.",
+                    "id": 107,
+                    "links": [],
+                    "title": "Goroutines by state",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 40,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "normal"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "total"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "fixedColor": "text",
+                                                    "mode": "fixed"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.stacking",
+                                                "value": {
+                                                    "group": "B",
+                                                    "mode": "none"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.fillOpacity",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "custom.lineStyle",
+                                                "value": {
+                                                    "dash": [
+                                                        10,
+                                                        10
+                                                    ],
+                                                    "fill": "dash"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-108": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(go_sched_goroutines_created_goroutines_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "goroutines created/s",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "go_threads{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "OS threads",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Goroutines started per second, and OS threads owned by the Go runtime. Goroutines created needs an exporter build with the Go scheduler metrics.",
+                    "id": 108,
+                    "links": [],
+                    "title": "Goroutines created and threads",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "OS threads"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.axisPlacement",
+                                                "value": "right"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-109": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "histogram_quantile(0.99, sum by (le) (rate(go_sched_latencies_seconds_bucket{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])))",
+                                                "instant": false,
+                                                "legendFormat": "p99",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "histogram_quantile(0.5, sum by (le) (rate(go_sched_latencies_seconds_bucket{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])))",
+                                                "instant": false,
+                                                "legendFormat": "p50",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Time goroutines wait in the runnable state before they run. High values mean the exporter does not get enough CPU. Needs an exporter build with the Go scheduler metrics.",
+                    "id": 109,
+                    "links": [],
+                    "title": "Scheduler latency",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "s"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-110": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(go_gc_duration_seconds_sum{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(go_gc_duration_seconds_count{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "average pause",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(go_gc_duration_seconds_count{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "GC runs",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Average GC pause and GC runs per second.",
+                    "id": 110,
+                    "links": [],
+                    "title": "Garbage collection",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "s"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "GC runs"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "ops"
+                                            },
+                                            {
+                                                "id": "custom.axisPlacement",
+                                                "value": "right"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-111": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "instant": false,
+                                                "legendFormat": "allocated",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Bytes allocated on the Go heap per second. Spikes line up with expensive collectors.",
+                    "id": 111,
+                    "links": [],
+                    "title": "Allocation rate",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "Bps"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [],
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-90": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "up{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Result of the last scrape by Prometheus.",
+                    "id": 90,
+                    "links": [],
+                    "title": "Scrape status",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "0": {
+                                                    "index": 0,
+                                                    "text": "down"
+                                                },
+                                                "1": {
+                                                    "index": 1,
+                                                    "text": "up"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "red",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "green",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": ""
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-91": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_build_info{job=~\"$job\", instance=\"$instance\", version!=\"\"} or on (instance) label_replace(windows_exporter_build_info{job=~\"$job\", instance=\"$instance\"}, \"version\", \"$1\", \"revision\", \"(.{7}).*\")",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Builds without a version show the first seven characters of the Git revision.",
+                    "id": 91,
+                    "links": [],
+                    "title": "Exporter version",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": ""
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "none",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "/^version$/",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "value",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-92": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "time() - process_start_time_seconds{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Time since the exporter process started. A short uptime on a host with a long uptime means the exporter restarted.",
+                    "id": 92,
+                    "links": [],
+                    "title": "Exporter uptime",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "orange",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "text",
+                                                "value": 3600
+                                            }
+                                        ]
+                                    },
+                                    "unit": "dtdurations"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-93": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"} == 0) or vector(0)",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of collectors that failed on the latest scrape, including timeouts. The graph shows the count over the selected time range.",
+                    "id": 93,
+                    "links": [],
+                    "title": "Failed collectors",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "decimals": 0,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "none"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-94": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"} == 1) or vector(0)",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of collectors that timed out on the latest scrape. The graph shows the count over the selected time range.",
+                    "id": 94,
+                    "links": [],
+                    "title": "Timed-out collectors",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "decimals": 0,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "none"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-95": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "scrape_samples_scraped{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of metric samples returned before Prometheus metric relabeling. Changes can reflect collector configuration or changing device/process counts; unexpected drops should be checked against scrape and collector success.",
+                    "id": 95,
+                    "links": [],
+                    "title": "Samples per scrape",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-96": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "scrape_duration_seconds{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "Prometheus",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_scrape_duration_seconds{job=~\"$job\", instance=\"$instance\"}",
+                                                "instant": false,
+                                                "legendFormat": "exporter",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Scrape duration measured by Prometheus and by the exporter. It must stay below the scrape timeout of the job.",
+                    "id": 96,
+                    "links": [],
+                    "title": "Scrape duration",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "s"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-97": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (code) (rate(promhttp_metric_handler_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0",
+                                                "instant": false,
+                                                "legendFormat": "HTTP {{code}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (cause) (rate(promhttp_metric_handler_errors_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) > 0",
+                                                "instant": false,
+                                                "legendFormat": "{{cause}} errors",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Scrape requests by HTTP status code, and errors while gathering or encoding metrics. More requests than one per scrape interval mean several jobs or Prometheus servers scrape this exporter.",
+                    "id": 97,
+                    "links": [],
+                    "title": "HTTP requests to /metrics",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "reqps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* errors"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "fixedColor": "red",
+                                                    "mode": "fixed"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-99": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_collector_success{job=~\"$job\", instance=\"$instance\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_exporter_collector_duration_seconds{job=~\"$job\", instance=\"$instance\"}",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "collector",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true,
+                                                "__name__": true,
+                                                "__name__ 1": true,
+                                                "__name__ 2": true,
+                                                "__name__ 3": true,
+                                                "instance": true,
+                                                "instance 1": true,
+                                                "instance 2": true,
+                                                "instance 3": true,
+                                                "job": true,
+                                                "job 1": true,
+                                                "job 2": true,
+                                                "job 3": true,
+                                                "port": true,
+                                                "port 1": true,
+                                                "port 2": true,
+                                                "port 3": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 1,
+                                                "Value #B": 2,
+                                                "Value #C": 3,
+                                                "collector": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "Status",
+                                                "Value #B": "Timeout",
+                                                "Value #C": "Duration",
+                                                "collector": "Collector"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Latest success, timeout and duration for each enabled collector. Success is 1 for a completed collection and 0 for a failure; timeout is 1 when the scrape budget was exceeded. Disabled collectors are absent.",
+                    "id": 99,
+                    "links": [],
+                    "title": "Collectors",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    }
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #A"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "color": "red",
+                                                                "index": 0,
+                                                                "text": "failed"
+                                                            },
+                                                            "1": {
+                                                                "color": "green",
+                                                                "index": 1,
+                                                                "text": "ok"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #B"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "color": "green",
+                                                                "index": 0,
+                                                                "text": "no"
+                                                            },
+                                                            "1": {
+                                                                "color": "red",
+                                                                "index": 1,
+                                                                "text": "yes"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Value #C"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "s"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": true,
+                                        "displayName": "Duration"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "RowsLayout",
+            "spec": {
+                "rows": [
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-90"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-91"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-92"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-93"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-94"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-95"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 20,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Summary"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-96"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-97"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Scrape"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-99"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-100"
+                                                },
+                                                "height": 8,
+                                                "width": 16,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-101"
+                                                },
+                                                "height": 9,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-102"
+                                                },
+                                                "height": 9,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Collectors"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-104"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-105"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-106"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-107"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 0,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-108"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 8,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-109"
+                                                },
+                                                "height": 8,
+                                                "width": 8,
+                                                "x": 16,
+                                                "y": 8
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-110"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 16
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-111"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 16
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Process and Go runtime"
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [
+            {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
+                "asDropdown": false,
+                "icon": "doc",
+                "includeVars": false,
+                "keepTime": false,
+                "tags": [],
+                "targetBlank": true,
+                "title": "windows_exporter",
+                "tooltip": "",
+                "type": "link",
+                "url": "https://github.com/prometheus-community/windows_exporter"
+            }
+        ],
+        "liveNow": false,
+        "preload": false,
+        "tags": [
+            "prometheus",
+            "windows",
+            "windows_exporter"
+        ],
+        "timeSettings": {
+            "autoRefresh": "1m",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "fiscalYearStartMonth": 0,
+            "from": "now-3h",
+            "hideTimepicker": false,
+            "to": "now"
+        },
+        "title": "Windows Exporter / Exporter",
+        "variables": [
+            {
+                "kind": "DatasourceVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Data source",
+                    "multi": false,
+                    "name": "datasource",
+                    "options": [],
+                    "pluginId": "prometheus",
+                    "refresh": "onDashboardLoad",
+                    "regex": "",
+                    "skipUrlSync": false
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname, job)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Job",
+                    "multi": true,
+                    "name": "job",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname, job)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Hostname",
+                    "multi": true,
+                    "name": "hostname",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Instance",
+                    "multi": false,
+                    "name": "instance",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            }
+        ]
+    }
+}

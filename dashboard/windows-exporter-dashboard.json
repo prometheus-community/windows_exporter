@@ -2,7 +2,7 @@
     "apiVersion": "dashboard.grafana.app/v2",
     "kind": "Dashboard",
     "metadata": {
-        "name": "Kdaassddw"
+        "name": "windows-exporter-full"
     },
     "spec": {
         "annotations": [
@@ -30273,6 +30273,22 @@
         },
         "links": [
             {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
                 "asDropdown": false,
                 "icon": "doc",
                 "includeVars": false,
@@ -30311,7 +30327,7 @@
             "hideTimepicker": false,
             "to": "now"
         },
-        "title": "Windows Exporter",
+        "title": "Windows Exporter / Full",
         "variables": [
             {
                 "kind": "DatasourceVariable",
@@ -30433,39 +30449,6 @@
                         "spec": {
                             "qryType": 1,
                             "query": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
-                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
-                        },
-                        "version": "v0"
-                    },
-                    "refresh": "onTimeRangeChanged",
-                    "regex": "",
-                    "skipUrlSync": false,
-                    "sort": "alphabeticalAsc"
-                }
-            },
-            {
-                "kind": "QueryVariable",
-                "spec": {
-                    "allowCustomValue": true,
-                    "current": {
-                        "text": "",
-                        "value": ""
-                    },
-                    "definition": "label_values(windows_os_hostname{job=~\"$job\", instance=\"$instance\"}, hostname)",
-                    "hide": "hideVariable",
-                    "includeAll": false,
-                    "multi": false,
-                    "name": "show_hostname",
-                    "options": [],
-                    "query": {
-                        "datasource": {
-                            "name": "${datasource}"
-                        },
-                        "group": "prometheus",
-                        "kind": "DataQuery",
-                        "spec": {
-                            "qryType": 1,
-                            "query": "label_values(windows_os_hostname{job=~\"$job\", instance=\"$instance\"}, hostname)",
                             "refId": "PrometheusVariableQueryEditor-VariableQuery"
                         },
                         "version": "v0"
