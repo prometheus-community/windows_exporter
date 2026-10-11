@@ -994,28 +994,6 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "go_sched_goroutines_not_in_go_goroutines{job=~\"$job\", instance=\"$instance\"}",
-                                                "instant": false,
-                                                "legendFormat": "not in Go",
-                                                "range": true
-                                            },
-                                            "version": "v0"
-                                        },
-                                        "refId": "D"
-                                    }
-                                },
-                                {
-                                    "kind": "PanelQuery",
-                                    "spec": {
-                                        "hidden": false,
-                                        "query": {
-                                            "datasource": {
-                                                "name": "${datasource}"
-                                            },
-                                            "group": "prometheus",
-                                            "kind": "DataQuery",
-                                            "spec": {
-                                                "editorMode": "code",
                                                 "expr": "go_goroutines{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "total",
@@ -1023,7 +1001,7 @@
                                             },
                                             "version": "v0"
                                         },
-                                        "refId": "E"
+                                        "refId": "D"
                                     }
                                 }
                             ],
@@ -1031,7 +1009,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Steady growth of goroutines points to a goroutine leak. Goroutines that stay \"not in Go\" sit in a system call, for example a collector waiting on WMI or PDH. The states need an exporter build with the Go scheduler metrics; the total line works with every build. Since 0.32, \"not in Go\" keeps growing even without a leak: a Go runtime bug (golang/go#82136) counts each WMI callback from a Windows thread once and never subtracts it. Use the total line to spot a leak instead.",
+                    "description": "Steady growth of goroutines points to a goroutine leak. The states need an exporter build with the Go scheduler metrics; the total line works with every build. The \"not in Go\" state is left out: since 0.32 a Go runtime bug (golang/go#82136) counts each WMI callback from a Windows thread once and never subtracts it, so it keeps growing without a leak.",
                     "id": 107,
                     "links": [],
                     "title": "Goroutines by state",
