@@ -87,6 +87,16 @@ function Invoke-Msiexec([String] $Name, [String[]] $Arguments) {
     Write-Host "  msiexec $Name took $([Math]::Round(((Get-Date) - $since).TotalSeconds, 1)) s, exit code $($process.ExitCode)"
     Write-Host "  runner after: $(Get-RunnerProcess)"
     Write-MsiexecDiagnostic -Log $log -Since $since
+
+    # The package disables the Restart Manager, so no operation may shut down
+    # applications that hold its files.
+    if (Test-Path $log) {
+        $shutdown = Select-String -Path $log -Encoding unicode -Pattern 'RESTART MANAGER: Successfully shut down'
+        if ($null -ne $shutdown) {
+            throw "msiexec $Name let the Restart Manager shut down applications, see $log"
+        }
+    }
+
     # 3010 means success, but a restart is required.
     if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
         throw "msiexec $Name failed with exit code $($process.ExitCode), see $log"
