@@ -32,7 +32,10 @@
   with only 4 bytes, like the Health resource of S2D clusters (#2669). S2D
   itself cannot be enabled on the runner: it claims every VHDX disk of the
   other steps, and `Set-ClusterStorageSpacesDirectDisk -CanBeClaimed $false`
-  removes those disks from the host instead of leaving them alone.
+  removes those disks from the host instead of leaving them alone. Disks from
+  a loopback iSCSI target (with `S2DBusTypes` limited to iSCSI) appear before
+  `New-Cluster`, but the session and the target are gone after it: once the
+  node is clustered, the iSCSI Target Server only serves clustered targets.
 - Property lists returned by the cluster service end with an extra
   `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
   the documentation miss this. The parser validates only the structure and
