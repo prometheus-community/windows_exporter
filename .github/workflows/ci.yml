@@ -862,13 +862,43 @@ jobs:
 
           # Storage Spaces Direct adds the Health resource (type "Health Service").
           # It answers CLUSCTL_RESOURCE_GET_CLASS_INFO with only the class DWORD
-          # (#2669). The default S2DBusTypes leave the VHDX disks ("File Backed
-          # Virtual") of the other steps unclaimed; allowing them made S2D claim
-          # the storage pool disks of setup-storage-pool.
+          # (#2669). S2D gets VHDX disks of its own. It claims every disk of an
+          # allowed bus type, so all other disks are marked as not claimable;
+          # without that it took the GitHubActions storage pool disks.
           if ($null -eq (Get-ClusterResource -Name "Health" -ErrorAction SilentlyContinue)) {
               try {
-                  # Enable-ClusterStorageSpacesDirect can wait indefinitely for
-                  # disks, so bound it and log its progress.
+                  $s2dDisks = @(1..3 | ForEach-Object { Join-Path $env:RUNNER_TEMP "s2d-$_.vhdx" })
+                  $diskpartScript = Join-Path $env:RUNNER_TEMP "s2d-diskpart.txt"
+                  $s2dDisks | ForEach-Object {
+                      "create vdisk file=`"$_`" maximum=10240 type=expandable"
+                      "attach vdisk"
+                  } | Set-Content -Path $diskpartScript -Encoding ascii
+
+                  . ./tools/vhd-lock.ps1
+                  Invoke-WithVhdLock {
+                      diskpart /s $diskpartScript
+                      if ($LASTEXITCODE -ne 0) { throw "diskpart failed to attach the S2D disks" }
+                      Update-HostStorageCache
+                  }
+
+                  $diskNumbers = @($s2dDisks | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
+                  $physicalDisks = @(Get-PhysicalDisk | Where-Object { [int]$_.DeviceId -in $diskNumbers })
+                  $physicalDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
+
+                  $uniqueIds = @($physicalDisks | ForEach-Object UniqueId)
+                  $otherDisks = @(Get-PhysicalDisk | Where-Object { $_.UniqueId -notin $uniqueIds })
+                  $otherDisks | Format-Table FriendlyName, DeviceId, BusType, UniqueId
+                  Set-ClusterStorageSpacesDirectDisk `
+                      -CanBeClaimed $false `
+                      -PhysicalDiskIds @($otherDisks | ForEach-Object UniqueId) `
+                      -Confirm:$false
+
+                  # VHDX disks report BusType "File Backed Virtual", which S2D
+                  # rejects unless the cluster allows every bus type.
+                  (Get-Cluster).S2DBusTypes = [uint32]::MaxValue
+
+                  # Enable-ClusterStorageSpacesDirect can wait indefinitely for the
+                  # disks to be claimed, so bound it and log its progress.
                   $enable = Start-Job -ScriptBlock {
                       Import-Module FailoverClusters
                       Enable-ClusterStorageSpacesDirect `
@@ -890,6 +920,16 @@ jobs:
                   if ($enable.State -ne "Completed") {
                       throw "Enable-ClusterStorageSpacesDirect ended in state $($enable.State)"
                   }
+
+                  $poolDisks = @(Get-StorageSubSystem -FriendlyName "Clustered Windows Storage*" |
+                      Get-PhysicalDisk |
+                      Where-Object { $_.UniqueId -in $uniqueIds -and $_.CanPool })
+                  $poolDisks | Format-Table FriendlyName, DeviceId, BusType, CanPool
+
+                  New-StoragePool `
+                      -FriendlyName "CIS2D" `
+                      -StorageSubSystemFriendlyName "Clustered Windows Storage*" `
+                      -PhysicalDisks $poolDisks | Out-Null
               }
               catch {
                   Write-Host "::warning::Storage Spaces Direct setup failed: $_"
