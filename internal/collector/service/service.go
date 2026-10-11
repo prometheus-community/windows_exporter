@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
@@ -267,7 +268,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.serviceManagerHandle = &mgr.Mgr{Handle: handle}
 
-	if err := c.configCache.init(); err != nil {
+	if err := c.configCache.init(registry.LOCAL_MACHINE, servicesKeyPath); err != nil {
 		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
 			slog.Any("err", err),
 		)
@@ -308,13 +309,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
-	if reason, err := c.configCache.refresh(); err != nil {
+	if dropped, err := c.configCache.refresh(); err != nil {
 		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
 			slog.Any("err", err),
 		)
-	} else if reason != "" {
-		c.logger.Debug("Service configuration cache invalidated",
-			slog.String("reason", reason),
+	} else if dropped > 0 {
+		c.logger.Debug("Dropped changed service configurations from the cache",
+			slog.Int("count", dropped),
 		)
 	}
 
