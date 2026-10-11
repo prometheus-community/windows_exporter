@@ -209,10 +209,12 @@ func (c *Collector) collectBootTime(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to get system boot time: %w", err)
 	}
 
+	// Whole seconds keep the value stable when the kernel moves the boot time
+	// by a sub-second clock correction.
 	ch <- prometheus.MustNewConstMetric(
 		c.bootTime,
 		prometheus.GaugeValue,
-		float64(bootTime.UnixNano())/1e9,
+		float64(bootTime.Unix()),
 	)
 
 	return nil
