@@ -27,6 +27,11 @@
   two groups (`CIResources`, `CIFailedResources`) on a private network of an
   internal Hyper-V switch; the parity tests require them. It has no clustered
   disks, so shared volume parity still compares empty sets.
+  The "Cluster Group" also holds an offline "Health Service" resource
+  without Storage Spaces Direct. It answers `CLUSCTL_RESOURCE_GET_CLASS_INFO`
+  with only 4 bytes, like the Health resource of S2D clusters (#2669). S2D
+  itself cannot be enabled on the runner: its VHDX disks look the same as
+  those of other steps, and S2D claims all of them.
 - Property lists returned by the cluster service end with an extra
   `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
   the documentation miss this. The parser validates only the structure and
