@@ -12,13 +12,13 @@ Enabled by default? | No
 
 ### `--collector.scheduled_task.include`
 
-If given, the path of the task needs to match the include regular expression in order for the corresponding metrics to be reported.
+If given, the path of the task needs to match the include regular expression in order for the corresponding metrics to be reported. Default: `.+`
 
 E.G. `--collector.scheduled_task.include="Firefox.*"`
 
 ### `--collector.scheduled_task.exclude`
 
-If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported.
+If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported. Default: empty
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 

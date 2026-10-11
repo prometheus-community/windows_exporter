@@ -12,30 +12,30 @@ The service collector exposes metrics about Windows Services
 
 ### `--collector.service.include`
 
-Regexp of service to exclude. Service name (not the display name!) must both
+Regular expression of service to include. Service name (not the display name!) must both
 match `include` and not match `exclude` to be included.
-Recommended to keep down number of returned metrics.
+Recommended to keep down number of returned metrics. Default: `.+`
 
 ### `--collector.service.exclude`
 
-Regexp of service to include. Process name (not the display name!) must both
+Regular expression of service to exclude. Service name (not the display name!) must both
 match `include` and not match `exclude` to be included.
-Recommended to keep down number of returned metrics.
+Recommended to keep down number of returned metrics. Default: empty
 
 ### `--collector.service.start-mode-include`
 
 Comma separated list of service start modes to include.
-Possible values: auto, manual, disabled, system.
-Recommended to keep down number of returned metrics.
+Possible values: auto, boot, manual, disabled, system.
+Recommended to keep down number of returned metrics. Default: `auto,boot,manual,disabled,system`
 
 ## Metrics
 
 | Name                         | Description                                                                                   | Type  | Labels                                |
 |------------------------------|-----------------------------------------------------------------------------------------------|-------|---------------------------------------|
-| `windows_service_info`       | Contains service information run as user in labels, constant 1                                | gauge | name, display_name, path_name, run_as |
+| `windows_service_info`       | Contains service information run as user in labels, constant 1                                | gauge | name, display_name, run_as, path_name |
 | `windows_service_start_mode` | The start mode of the service, 1 if the current start mode, 0 otherwise                       | gauge | name, start_mode                      |
 | `windows_service_state`      | The state of the service, 1 if the current state, 0 otherwise                                 | gauge | name, state                           |
-| `windows_service_process`    | Process of started service. The value is the creation time of the process as a unix timestamp | gauge | name, process_id                      |
+| `windows_service_process`    | Process of started service. The value is the creation time of the process as a Unix timestamp | gauge | name, process_id                      |
 
 ### States
 
@@ -47,7 +47,6 @@ A service can be in the following states:
 - `continue pending`
 - `pause pending`
 - `paused`
-- `unknown`
 
 ### Start modes
 

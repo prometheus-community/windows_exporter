@@ -65,7 +65,7 @@ Name | Description | Type | Labels
 ### Example metric
 Show rate of device authentications in AD FS:
 ```
-rate(windows_adfs_device_authentications)[2m]
+rate(windows_adfs_device_authentications_total[2m])
 ```
 
 ## Useful queries
@@ -73,13 +73,13 @@ rate(windows_adfs_device_authentications)[2m]
 |Query|Description|
 |---|----|
 |`rate(windows_adfs_oauth_password_grant_requests_failure_total[5m])`| Rate of OAuth requests failing due to bad client/resource values|
-|`rate(windows_adfs_userpassword_authentications_failures_total[5m])`| Rate of `/adfs/oauth2/token/` requests failing due to bad username/password values (possible credential spraying)|
+|`rate(windows_adfs_userpassword_authentications_failure_total[5m])`| Rate of `/adfs/oauth2/token/` requests failing due to bad username/password values (possible credential spraying)|
 
 ## Alerting examples
 **prometheus.rules**
 ```yaml
   - alert: "HighExtranetLockouts"
-    expr: "rate(windows_adfs_extranet_account_lockouts)[2m] > 100"
+    expr: "rate(windows_adfs_extranet_account_lockouts_total[2m]) > 100"
     for: "10m"
     labels:
       severity: "high"

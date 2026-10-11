@@ -24,13 +24,13 @@ A failed read is retried on the next scrape.
 
 Regular expression of processes to include. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
-metrics.
+metrics. Default: `.+`
 
 ### `--collector.process.exclude`
 
 Regular expression of processes to exclude. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
-metrics.
+metrics. Default: empty
 
 ### `--collector.process.iis`
 
@@ -41,7 +41,7 @@ Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Ju
 
 ### `--collector.process.cmdline`
 
-Enables the `cmdline` label for the process metrics.
+Enables the `cmdline` label of the `windows_process_info` metric.
 This label contains the command line used to start the process.
 Enabled by default, and can be turned off with `--no-collector.process.cmdline`.
 

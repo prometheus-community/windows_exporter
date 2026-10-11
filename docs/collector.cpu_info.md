@@ -17,7 +17,7 @@ None
 
 | Name                                       | Description                          | Type  | Labels                                                       |
 |--------------------------------------------|--------------------------------------|-------|--------------------------------------------------------------|
-| `windows_cpu_info`                         | Labelled CPU information             | gauge | `architecture`, `description`, `device_id`, `family`, `name` |
+| `windows_cpu_info`                         | Labelled CPU information             | gauge | `architecture`, `device_id`, `description`, `family`, `name` |
 | `windows_cpu_info_core`              | Number of cores per CPU              | gauge | `device_id`                                                  |
 | `windows_cpu_info_enabled_core`      | Number of enabled cores per CPU      | gauge | `device_id`                                                  |
 | `windows_cpu_info_l2_cache_size`           | Size of L2 cache per CPU             | gauge | `device_id`                                                  |

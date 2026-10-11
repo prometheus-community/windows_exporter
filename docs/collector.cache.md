@@ -27,6 +27,7 @@ Name | Description | Type | Labels
 `windows_cache_data_flushes_total`              | Number of times the file system cache has flushed its contents to disk as the result of a request to flush or to satisfy a write-through file write request. | counter | None
 `windows_cache_data_flush_pages_total`          | Number of pages the file system cache has flushed to disk as a result of a request to flush or to satisfy a write-through file write request.  | counter | None
 `windows_cache_data_map_hits_total`             | Number of data maps in the file system cache that could be resolved without having to retrieve a page from the disk, because the page was already in physical memory. | counter | None
+`windows_cache_data_map_hits_percent`           | Deprecated: raw data-map hit count, not a percentage. Use `windows_cache_data_map_hits_total`. | gauge | None
 `windows_cache_data_map_pins_total`             | Number of data maps in the file system cache that resulted in pinning a page in main memory, an action usually preparatory to writing to the file on disk. | counter | None
 `windows_cache_data_maps_total`                 | Number of times that a file system such as NTFS, maps a page of a file into the file system cache to read the page. | counter | None
 `windows_cache_dirty_pages`                     | Number of dirty pages on the system cache. | gauge | None

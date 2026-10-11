@@ -5,8 +5,8 @@ The pagefile collector exposes metrics about the pagefile usage
 |||
 -|-
 Metric name prefix  | `pagefile`
-Classes             | [`Win32_OperatingSystem`](https://msdn.microsoft.com/en-us/library/aa394239)
-Enabled by default? | Yes
+Data source         | Performance counter `Paging File`, `GetPerformanceInfo`
+Enabled by default? | No
 
 ## Flags
 

@@ -5,7 +5,7 @@ The remote_fx collector exposes Performance Counters regarding the RemoteFX prot
 |||
 -|-
 Metric name prefix  | `remote_fx`
-Data source         | Perflib
+Data source         | Performance Data
 Classes             | [`Win32_PerfRawData_Counters_RemoteFXNetwork`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxnetwork/), [`Win32_PerfRawData_Counters_RemoteFXGraphics`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxgraphics), [more info...](https://docs.microsoft.com/en-us/azure/virtual-desktop/remotefx-graphics-performance-counters)
 Enabled by default? | No
 
@@ -28,9 +28,9 @@ Name | Description | Type | Labels
 `windows_remote_fx_net_sent_bytes_total` | Total bytes sent over the network session. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
-`windows_remote_fx_net_loss_rate` | Network packet loss rate detected over the RemoteFX session, expressed as a percentage. | counter | `session_name`
-`windows_remote_fx_net_fec_rate` | Forward Error Correction (FEC) rate applied to packets sent over the RemoteFX session, expressed as a percentage. | counter | `session_name`
-`windows_remote_fx_net_retransmission_rate` Rate of packets retransmitted over the RemoteFX session, expressed as a percentage. | counter | `session_name`
+`windows_remote_fx_net_loss_rate` | Network packet loss rate detected over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
+`windows_remote_fx_net_fec_rate` | Forward Error Correction (FEC) rate applied to packets sent over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
+`windows_remote_fx_net_retransmission_rate` | Rate of packets retransmitted over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
 
 
 

@@ -1,12 +1,12 @@
-# cpu collector
+# CPU collector
 
-The cpu collector exposes metrics about CPU usage
+The CPU collector exposes metrics about CPU usage
 
 |||
 -|-
 Metric name prefix  | `cpu`
 Data source         | Perflib
-Counters            | `ProcessorInformation` (Windows Server 2008R2 and later) `Processor` (older versions)
+Counters            | `Processor Information`
 Enabled by default? | Yes
 
 ## Flags
@@ -18,7 +18,7 @@ These metrics are available on all versions of Windows:
 
 | Name                                             | Description                                                                                                                                                                                                                                                                                                                         | Type    | Labels          |
 |--------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|-----------------|
-| `windows_cpu_logical_processor`                  | Number of installed logical processors                                                                                                                                                                                                                                                                                              | counter | `core`, `state` |
+| `windows_cpu_logical_processor`                  | Number of installed logical processors                                                                                                                                                                                                                                                                                              | gauge   | None            |
 | `windows_cpu_cstate_seconds_total`               | Time spent in low-power idle states                                                                                                                                                                                                                                                                                                 | counter | `core`, `state` |
 | `windows_cpu_time_total`                         | Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)                                                                                                                                                                                                                                               | counter | `core`, `mode`  |
 | `windows_cpu_interrupts_total`                   | Total number of received and serviced hardware interrupts                                                                                                                                                                                                                                                                           | counter | `core`          |
@@ -40,7 +40,7 @@ windows_cpu_core_frequency_mhz{instance="localhost"}
 ```
 
 ## Useful queries
-Show cpu usage by mode.
+Show CPU usage by mode.
 ```
 sum by (mode) (irate(windows_cpu_time_total{instance="localhost"}[5m]))
 ```

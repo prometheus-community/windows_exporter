@@ -15,13 +15,17 @@ Enabled by default? | Yes
 
 If given, an interface name needs to match the include regular expression in order for the corresponding metrics to be reported
 
+Default: `.+`
+
 ### `--collector.net.nic-exclude`
 
 If given, an interface name needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported
 
 ### `--collector.net.enabled`
 
-Comma-separated list of collectors to use. Defaults to all, if not specified. Supported values are: `metrics`, `nic_addresses`.
+Comma-separated list of collectors to use. Defaults to all, if not specified. Supported values are: `metrics`, `nic_info`.
+
+Default: `metrics,nic_info`
 
 ## Metrics
 
