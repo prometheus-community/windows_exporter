@@ -299,6 +299,82 @@ func BenchmarkResourcePublication(b *testing.B) {
 	}
 }
 
+func TestResourceMetricCache(t *testing.T) {
+	c := New(&Config{CollectorsEnabled: []string{subCollectorResource}})
+	c.buildResourceDescriptors()
+
+	publish := func(resource clusapi.Resource, nodeNames ...string) ([]prometheus.Metric, error) {
+		ch := make(chan prometheus.Metric, 100)
+		err := c.publishResources(ch, []clusapi.Resource{resource}, nodeNames, nil)
+
+		close(ch)
+
+		var metrics []prometheus.Metric
+		for metric := range ch {
+			metrics = append(metrics, metric)
+		}
+
+		return metrics, err
+	}
+
+	resource := resourceFixture()
+
+	first, err := publish(resource, "nodeA", "nodeB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := publish(resource, "nodeA", "nodeB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(first) != 18 || len(second) != len(first) || first[0] != second[0] {
+		t.Fatal("did not reuse the metrics of an unchanged resource")
+	}
+
+	// A changed value, owner node or node list builds new metrics.
+	resource.Values = maps.Clone(resource.Values)
+	resource.Values["State"] = 2
+	resource.OwnerNode = "nodeC"
+
+	third, err := publish(resource, "nodeA", "nodeB", "nodeC")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	families, err := gatherPublished(t, func(ch chan<- prometheus.Metric) error {
+		for _, metric := range third {
+			ch <- metric
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if families["windows_mscluster_resource_state"].GetMetric()[0].GetGauge().GetValue() != 2 {
+		t.Fatal("reused the metrics of a changed resource")
+	}
+
+	for _, metric := range families["windows_mscluster_resource_owner_node"].GetMetric() {
+		if hosted := metricLabels(metric)["node_name"] == "nodeC"; (metric.GetGauge().GetValue() == 1) != hosted {
+			t.Fatal("reused the owner node of a changed resource")
+		}
+	}
+
+	// A resource with missing fields reports them on every scrape.
+	delete(resource.Values, "Flags")
+
+	for range 2 {
+		metrics, err := publish(resource, "nodeA")
+		if err == nil || len(metrics) != 16 {
+			t.Fatalf("missing field: %d metrics, %v", len(metrics), err)
+		}
+	}
+}
+
 func TestResourceLargeClusterGather(t *testing.T) {
 	resources := make([]clusapi.Resource, 81)
 	for index := range resources {

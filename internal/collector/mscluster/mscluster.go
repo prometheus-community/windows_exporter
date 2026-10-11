@@ -129,10 +129,10 @@ func (c *Collector) Close() error {
 	return c.closeSources()
 }
 
-// closeSources releases the ClusAPI sources. A source whose Close fails is
-// dropped as well: the clusapi.Cluster has already released its handle, and a
-// later Build must be able to create new sources (Grafana Alloy rebuilds
-// collectors in place).
+// closeSources releases the ClusAPI sources and drops the cached metrics. A
+// source whose Close fails is dropped as well: the clusapi.Cluster has already
+// released its handle, and a later Build must be able to create new sources
+// (Grafana Alloy rebuilds collectors in place).
 func (c *Collector) closeSources() error {
 	var errs []error
 
@@ -154,6 +154,12 @@ func (c *Collector) closeSources() error {
 	closeSource(c.resourceSource, func() { c.resourceSource = nil })
 	closeSource(c.resourceGroupSource, func() { c.resourceGroupSource = nil })
 	closeSource(c.sharedVolumesSource, func() { c.sharedVolumesSource = nil })
+
+	c.clusterMetricCache.Reset()
+	c.networkMetricCache.Reset()
+	c.nodeMetricCache.Reset()
+	c.resourceMetricCache.Reset()
+	c.resourceGroupMetricCache.Reset()
 
 	return errors.Join(errs...)
 }

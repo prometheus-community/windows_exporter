@@ -44,3 +44,10 @@
 - Use `ClusterOpenEnum` and the `Open*Ex` functions (Windows Server 2008 R2+),
   not `ClusterOpenEnumEx` (Windows Server 2016+), to keep Windows Server
   2012 R2 support.
+- Cluster, network, node, group and resource metrics are reused between
+  scrapes through `internal/metriccache` when every input is unchanged. A
+  cache value must hold every input of the cached series: field values and
+  whether each field is published (`appendObjectFieldsKey`, which resolves the
+  build-dependent rules of `objectField`), owner node and node names. Objects
+  with missing fields are not cached, so they report the same errors on every
+  scrape. Shared volume sizes change constantly and are not cached.
