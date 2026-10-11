@@ -70,12 +70,13 @@ run = [
 ]
 
 [tasks.lint]
-description = "Check Jsonnet formatting, dashboard drift, and Prometheus rules"
+description = "Check Jsonnet formatting and lint, dashboard drift, and Prometheus rules"
 depends = ["rules", "custom-rules", "vendor", "lint-dashboards"]
 run = '''
 set -eu
 for file in {{vars.sources}}; do
   jsonnetfmt {{vars.fmt_flags}} "$file" | diff -u "$file" -
+  jsonnet-lint -J vendor "$file"
 done
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT

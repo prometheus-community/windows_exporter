@@ -346,8 +346,9 @@ Install Python 3, run `mise install`, then run:
 mise run test
 ```
 
-This checks Jsonnet formatting, checks that the committed dashboard is up to
-date, runs `dashboard-linter lint --strict`, validates generated rules with
+This checks Jsonnet formatting, runs `jsonnet-lint` on the Jsonnet sources to
+find unused variables and references to missing fields, checks that the
+committed dashboards are up to date, runs `dashboard-linter lint --strict`, validates generated rules with
 `promtool`, runs `pint --offline lint`, and evaluates the rules against synthetic
 time series.
 Tests cover all 25 recordings, alert timing and recovery, threshold
