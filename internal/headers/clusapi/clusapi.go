@@ -515,14 +515,10 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 	}
 
 	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
-	switch {
-	case err != nil:
+	if err != nil {
 		resultErr = errors.Join(resultErr, fmt.Errorf("class information: %w", err))
-	case len(data) != 8:
-		resultErr = errors.Join(resultErr, errors.New("invalid resource class information size"))
-	default:
-		resource.Values["ResourceClass"] = binary.LittleEndian.Uint32(data)
-		resource.Values["Subclass"] = binary.LittleEndian.Uint32(data[4:])
+	} else {
+		resource.Values["ResourceClass"], resource.Values["Subclass"] = parseResourceClassInfo(data)
 	}
 
 	// The property lists normally carry the type; only ask separately without it.
@@ -546,6 +542,24 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 	resource.IdentityValid = true
 
 	return resultErr
+}
+
+// parseResourceClassInfo decodes CLUS_RESOURCE_CLASS_INFO. Some resource DLLs,
+// such as the Storage Spaces Direct Health Service, succeed but return less
+// than the full structure; the WMI provider reports their ResourceClass as
+// CLUS_RESCLASS_UNKNOWN (0), so missing fields decode as 0 instead of failing.
+func parseResourceClassInfo(data []byte) (uint32, uint32) {
+	var class, subclass uint32
+
+	if len(data) >= 4 {
+		class = binary.LittleEndian.Uint32(data)
+	}
+
+	if len(data) >= 8 {
+		subclass = binary.LittleEndian.Uint32(data[4:])
+	}
+
+	return class, subclass
 }
 
 func resourceBuffer(handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {

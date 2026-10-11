@@ -19,7 +19,6 @@ package clusapi
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -163,11 +162,9 @@ func (c *Cluster) resourceClass(name string, deadline time.Time) (_ uint32, resu
 		return 0, fmt.Errorf("class information: %w", err)
 	}
 
-	if len(data) != 8 {
-		return 0, errors.New("invalid resource class information size")
-	}
+	class, _ := parseResourceClassInfo(data)
 
-	return binary.LittleEndian.Uint32(data), nil
+	return class, nil
 }
 
 // readClusterName calls GetClusterInformation without CLUSTERVERSIONINFO.

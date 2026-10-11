@@ -269,3 +269,26 @@ func TestUnopenedClusterExpiredBudget(t *testing.T) {
 		t.Fatal("unopened cluster was not closed")
 	}
 }
+
+func TestParseResourceClassInfo(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		data     []byte
+		class    uint32
+		subclass uint32
+	}{
+		{"complete", []byte{1, 0, 0, 0, 0, 0, 0, 0x80}, 1, 0x80000000},
+		// The Storage Spaces Direct Health Service resource returns a short
+		// buffer; WMI reports its ResourceClass as 0.
+		{"empty", nil, 0, 0},
+		{"class only", []byte{2, 0, 0, 0}, 2, 0},
+		{"truncated class", []byte{1, 0}, 0, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			class, subclass := parseResourceClassInfo(test.data)
+			if class != test.class || subclass != test.subclass {
+				t.Fatalf("class=%#x subclass=%#x, want %#x/%#x", class, subclass, test.class, test.subclass)
+			}
+		})
+	}
+}
