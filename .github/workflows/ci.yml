@@ -782,6 +782,25 @@ jobs:
                   -TargetPortalAddress 198.51.100.1 `
                   -InitiatorPortalAddress 198.51.100.1 | Out-Null
               Update-HostStorageCache
+
+              $deadline = (Get-Date).AddSeconds(60)
+              do {
+                  $iscsiDisks = @(Get-PhysicalDisk | Where-Object BusType -eq "iSCSI")
+                  if ($iscsiDisks.Count -ge 3) { break }
+                  Start-Sleep -Seconds 2
+                  Update-HostStorageCache
+              } while ((Get-Date) -lt $deadline)
+
+              & {
+                  "Before New-Cluster:"
+                  Get-IscsiSession | Format-List TargetNodeAddress, IsConnected, NumberOfConnections, SessionIdentifier
+                  Get-IscsiServerTarget | Format-List TargetName, Status, InitiatorIds, LunMappings
+                  Get-Disk | Format-Table Number, FriendlyName, BusType, OperationalStatus, IsOffline, Size
+              } | Out-String -Width 300 | Add-Content -Path (Join-Path $env:RUNNER_TEMP "s2d-setup.log")
+
+              if ($iscsiDisks.Count -ne 3) {
+                  throw "Expected three iSCSI disks after connecting, found $($iscsiDisks.Count)"
+              }
               $iscsiConnected = $true
           }
           catch {
@@ -929,6 +948,12 @@ jobs:
                   Get-PhysicalDisk | Format-Table FriendlyName, DeviceId, BusType, CanPool, CannotPoolReason, UniqueId |
                       Out-String -Width 300 | Tee-Object -FilePath $s2dLog -Append
                   if ($iscsiDisks.Count -ne 3) {
+                      & {
+                          "After New-Cluster:"
+                          Get-IscsiSession | Format-List TargetNodeAddress, IsConnected, NumberOfConnections
+                          Get-IscsiServerTarget | Format-List TargetName, Status
+                          Get-Disk | Format-Table Number, FriendlyName, BusType, OperationalStatus, IsOffline, Size
+                      } | Out-String -Width 300 | Add-Content -Path $s2dLog
                       throw "Expected three iSCSI disks, found $($iscsiDisks.Count)"
                   }
 
