@@ -303,6 +303,12 @@ func setField(miTag string, field reflect.Value, element *Element) error {
 		}
 
 		field.Set(reflect.ValueOf(element.getUint16Array()))
+	case ValueTypeSTRINGA:
+		if field.Type() != reflect.TypeFor[[]string]() {
+			return fmt.Errorf("cannot unmarshal STRINGA into field of type %s, expected []string", field.Type())
+		}
+
+		field.Set(reflect.ValueOf(element.getStringArray()))
 	default:
 		return fmt.Errorf("unsupported value type: %d", element.valueType)
 	}
