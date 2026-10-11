@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
@@ -39,6 +40,8 @@ const (
 	diskExtentsHeaderSize = 8
 	// diskExtentSize is the size of the DISK_EXTENT structure in bytes.
 	diskExtentSize = 24
+	// maxDiskExtents bounds the buffer for the disk extents of a volume, against a bogus count from a driver.
+	maxDiskExtents = 1024
 
 	// staticVolumeInfoMaxAge bounds how long the disk IDs and the drive type of a volume are reused.
 	// Disk numbers can change while a volume stays mounted, e.g. after an iSCSI or USB reconnect.
@@ -57,8 +60,9 @@ type volumeInfo struct {
 
 	freeBytes float64
 	sizeBytes float64
-	// hasSpace is false if freeBytes and sizeBytes are unknown.
-	hasSpace bool
+	// hasFreeBytes and hasSizeBytes are false if freeBytes or sizeBytes are unknown.
+	hasFreeBytes bool
+	hasSizeBytes bool
 }
 
 // volumeState is what volumeInfoReader keeps per volume between scrapes.
@@ -166,16 +170,20 @@ func (r *volumeInfoReader) read(mountedVolumes map[string]string, name string, w
 	var errs []error
 
 	if !state.hasStatic || state.devicePath != devicePath || r.now().Sub(state.readAt) >= staticVolumeInfoMaxAge {
-		state.hasStatic = false
+		driveType := windows.GetDriveType(rootPathPtr)
 
 		diskIDs, err := r.readDiskIDs(devicePath)
-		if err != nil {
+		if err != nil && !isMediaOptional(driveType) {
+			state.hasStatic = false
+
 			errs = append(errs, fmt.Errorf("could not identify physical drive for %s: %w", name, err))
 		} else {
+			// Removable and CD-ROM drives without media have no disk extents. They are cached
+			// without disk IDs, to not open the drive on every scrape.
 			state.hasStatic = true
 			state.devicePath = devicePath
 			state.diskIDs = diskIDs
-			state.driveType = windows.GetDriveType(rootPathPtr)
+			state.driveType = driveType
 			state.readAt = r.now()
 		}
 	}
@@ -192,9 +200,12 @@ func (r *volumeInfoReader) read(mountedVolumes map[string]string, name string, w
 	info.volumeType = getDriveType(driveType)
 
 	// Removable and CD-ROM drives may have no media or no recognized file system.
-	mediaOptional := driveType == windows.DRIVE_CDROM || driveType == windows.DRIVE_REMOVABLE
+	mediaOptional := isMediaOptional(driveType)
 
 	var serialNumber, fsFlags uint32
+
+	// The buffers are reused, so a call that doesn't write them must not return the previous volume's values.
+	r.label[0], r.fsName[0] = 0, 0
 
 	err = windows.GetVolumeInformation(
 		rootPathPtr,
@@ -217,31 +228,62 @@ func (r *volumeInfoReader) read(mountedVolumes map[string]string, name string, w
 	info.hasReadonly = true
 
 	if withSpace {
-		var callerFreeBytes, sizeBytes, freeBytes uint64
-
-		// The free bytes are those of the volume. The total bytes are reduced to the quota
-		// if NTFS disk quotas apply to the account of windows_exporter.
-		err = windows.GetDiskFreeSpaceEx(rootPathPtr, &callerFreeBytes, &sizeBytes, &freeBytes)
-
-		switch {
-		case err != nil:
-			if !mediaOptional {
-				errs = append(errs, fmt.Errorf("could not get free space for %s: %w", rootPath, err))
-			}
-		case freeBytes <= sizeBytes:
-			info.freeBytes = float64(freeBytes)
-			info.sizeBytes = float64(sizeBytes)
-			info.hasSpace = true
+		err = readSpace(rootPathPtr, &info)
+		if err != nil && !mediaOptional {
+			errs = append(errs, fmt.Errorf("could not get free space for %s: %w", rootPath, err))
 		}
 	}
 
 	return info, errors.Join(errs...)
 }
 
+// readSpace reads the free and total bytes of the volume with the root path rootPathPtr into info.
+// Both are those of the whole volume, regardless of disk quotas of the account running windows_exporter.
+func readSpace(rootPathPtr *uint16, info *volumeInfo) error {
+	space, err := kernel32.GetDiskSpaceInformation(rootPathPtr)
+	if err == nil {
+		unitSize := space.AllocationUnitSize()
+		info.freeBytes = float64(space.ActualAvailableAllocationUnits * unitSize)
+		info.sizeBytes = float64(space.ActualTotalAllocationUnits * unitSize)
+		info.hasFreeBytes = true
+		info.hasSizeBytes = true
+
+		return nil
+	}
+
+	if !errors.Is(err, kernel32.ErrDiskSpaceInformationUnavailable) {
+		return err
+	}
+
+	// Windows Server 2016 lacks GetDiskSpaceInformationW. GetDiskFreeSpaceEx reports the free bytes
+	// of the volume, but reduces the total bytes to the quota of the caller, if any.
+	var callerFreeBytes, callerSizeBytes, freeBytes uint64
+
+	err = windows.GetDiskFreeSpaceEx(rootPathPtr, &callerFreeBytes, &callerSizeBytes, &freeBytes)
+	if err != nil {
+		return err
+	}
+
+	info.freeBytes = float64(freeBytes)
+	info.hasFreeBytes = true
+
+	// A quota limits the free bytes of the caller. Without one, the total bytes are those of the volume.
+	if callerFreeBytes == freeBytes {
+		info.sizeBytes = float64(callerSizeBytes)
+		info.hasSizeBytes = true
+	}
+
+	return nil
+}
+
+func isMediaOptional(driveType uint32) bool {
+	return driveType == windows.DRIVE_CDROM || driveType == windows.DRIVE_REMOVABLE
+}
+
 // getVolumePaths returns the paths to open the volume name with CreateFile and to pass to
 // GetVolumeInformation and GetDiskFreeSpaceEx, which require the root directory.
 func getVolumePaths(mountedVolumes map[string]string, name string) (string, string) {
-	// GetVolumePathNamesForVolumeName returns the volume GUID path as \\?\Volume{GUID}.
+	// FindFirstVolume and FindNextVolume return the volume GUID path as \\?\Volume{GUID}.
 	// According to https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol#remarks
 	// a volume is opened in the Win32 device namespace \\.\, so the \\?\ prefix is replaced.
 	if volumeGUID, ok := mountedVolumes[name]; ok {
@@ -265,8 +307,8 @@ func (r *volumeInfoReader) readDiskIDs(devicePath string) (string, error) {
 		return "", fmt.Errorf("invalid device path %q: %w", devicePath, err)
 	}
 
-	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
-	// use 0 as access mode to avoid admin permission.
+	// The share mode has to allow all access, to not block other users of the volume.
+	// An access mode of 0 queries the volume without requiring read access.
 	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
 
 	volumeHandle, err := windows.CreateFile(devicePathPtr, 0, mode, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_READONLY, 0)
@@ -278,19 +320,34 @@ func (r *volumeInfoReader) readDiskIDs(devicePath string) (string, error) {
 		_ = windows.Close(fd)
 	}(volumeHandle)
 
-	for {
+	return queryDiskIDs(&r.extents, func(buf []byte) (uint32, error) {
 		var bytesReturned uint32
 
-		err = windows.DeviceIoControl(volumeHandle, ioctlVolumeGetVolumeDiskExtents, nil, 0,
-			&r.extents[0], uint32(len(r.extents)), &bytesReturned, nil)
+		err := windows.DeviceIoControl(volumeHandle, ioctlVolumeGetVolumeDiskExtents, nil, 0,
+			&buf[0], uint32(len(buf)), &bytesReturned, nil)
+
+		return bytesReturned, err
+	})
+}
+
+// queryDiskIDs returns the disk IDs of the VOLUME_DISK_EXTENTS structure that query writes into
+// the buffer. It grows the buffer if query returns ERROR_MORE_DATA.
+func queryDiskIDs(buf *[]byte, query func([]byte) (uint32, error)) (string, error) {
+	for {
+		bytesReturned, err := query(*buf)
 		if errors.Is(err, windows.ERROR_MORE_DATA) {
 			// The buffer holds NumberOfDiskExtents.
-			required := diskExtentsHeaderSize + int(binary.LittleEndian.Uint32(r.extents))*diskExtentSize
-			if required <= len(r.extents) {
+			numDiskExtents := binary.LittleEndian.Uint32(*buf)
+			if numDiskExtents > maxDiskExtents {
+				return "", fmt.Errorf("too many disk extents: %d", numDiskExtents)
+			}
+
+			required := diskExtentsHeaderSize + int(numDiskExtents)*diskExtentSize
+			if required <= len(*buf) {
 				return "", fmt.Errorf("invalid required disk extents buffer size: %d", required)
 			}
 
-			r.extents = make([]byte, required)
+			*buf = make([]byte, required)
 
 			continue
 		}
@@ -299,7 +356,11 @@ func (r *volumeInfoReader) readDiskIDs(devicePath string) (string, error) {
 			return "", err
 		}
 
-		return parseDiskIDs(r.extents[:bytesReturned])
+		if int(bytesReturned) > len(*buf) {
+			return "", fmt.Errorf("invalid disk extents size: %d", bytesReturned)
+		}
+
+		return parseDiskIDs((*buf)[:bytesReturned])
 	}
 }
 

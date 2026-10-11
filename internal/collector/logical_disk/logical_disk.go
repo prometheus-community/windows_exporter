@@ -406,8 +406,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			// The Free Megabytes counter is cached by Windows and only updated every 10-15 minutes,
 			// in whole megabytes. It's the fallback if the volume can't be queried directly.
 			freeBytes, sizeBytes := data.FreeSpace*1024*1024, data.PercentFreeSpace*1024*1024
-			if info.hasSpace {
-				freeBytes, sizeBytes = info.freeBytes, info.sizeBytes
+			if info.hasFreeBytes {
+				freeBytes = info.freeBytes
+			}
+
+			if info.hasSizeBytes {
+				sizeBytes = info.sizeBytes
 			}
 
 			ch <- prometheus.MustNewConstMetric(
@@ -628,17 +632,9 @@ func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volumes map[st
 // getFveVolumeName returns the name of a volume in the Win32 device namespace,
 // as required by fveapi.dll.
 func getFveVolumeName(volumes map[string]string, volume string) string {
-	// The volume GUID path (\\?\Volume{GUID}) is known for every mounted volume, including mount points.
-	if volumeGUID, ok := volumes[volume]; ok {
-		return `\\.\` + strings.TrimPrefix(volumeGUID, `\\?\`)
-	}
+	devicePath, _ := getVolumePaths(volumes, volume)
 
-	// Volumes without a mount point are reported by their device name, e.g. HarddiskVolume1.
-	if strings.HasPrefix(volume, "HarddiskVolume") {
-		return `\\.\GLOBALROOT\Device\` + volume
-	}
-
-	return `\\.\` + volume
+	return devicePath
 }
 
 // getAllMountedVolumes maps each mount point (e.g. C: or C:\mnt\data) to its volume GUID path.

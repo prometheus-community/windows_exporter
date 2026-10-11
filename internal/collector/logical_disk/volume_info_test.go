@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func diskExtents(count uint32, diskIDs ...uint32) []byte {
@@ -68,6 +69,61 @@ func TestParseDiskIDs(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestQueryDiskIDs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("grows buffer", func(t *testing.T) {
+		t.Parallel()
+
+		extents := diskExtents(5, 4, 3, 2, 1, 0)
+		buf := make([]byte, diskExtentsHeaderSize+4*diskExtentSize)
+		calls := 0
+
+		got, err := queryDiskIDs(&buf, func(out []byte) (uint32, error) {
+			calls++
+
+			if len(out) < len(extents) {
+				binary.LittleEndian.PutUint32(out, 5)
+
+				return diskExtentsHeaderSize + diskExtentSize, windows.ERROR_MORE_DATA
+			}
+
+			return uint32(copy(out, extents)), nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, "0;1;2;3;4", got)
+		require.Equal(t, 2, calls)
+		require.Len(t, buf, len(extents))
+	})
+
+	t.Run("bogus extent count", func(t *testing.T) {
+		t.Parallel()
+
+		buf := make([]byte, diskExtentsHeaderSize+diskExtentSize)
+
+		_, err := queryDiskIDs(&buf, func(out []byte) (uint32, error) {
+			binary.LittleEndian.PutUint32(out, 0xFFFFFFFF)
+
+			return uint32(len(out)), windows.ERROR_MORE_DATA
+		})
+		require.ErrorContains(t, err, "too many disk extents")
+		require.Len(t, buf, diskExtentsHeaderSize+diskExtentSize)
+	})
+
+	t.Run("more data without growth", func(t *testing.T) {
+		t.Parallel()
+
+		buf := make([]byte, diskExtentsHeaderSize+diskExtentSize)
+
+		_, err := queryDiskIDs(&buf, func(out []byte) (uint32, error) {
+			binary.LittleEndian.PutUint32(out, 1)
+
+			return uint32(len(out)), windows.ERROR_MORE_DATA
+		})
+		require.Error(t, err)
+	})
 }
 
 func TestGetVolumePaths(t *testing.T) {
@@ -145,9 +201,17 @@ func TestVolumeInfoReaderSystemDrive(t *testing.T) {
 	require.Equal(t, "fixed", info.volumeType)
 	require.NotEmpty(t, info.filesystem)
 	require.True(t, info.hasReadonly)
-	require.True(t, info.hasSpace)
+	require.True(t, info.hasFreeBytes)
+	require.True(t, info.hasSizeBytes)
 	require.Positive(t, info.sizeBytes)
 	require.LessOrEqual(t, info.freeBytes, info.sizeBytes)
+
+	// Without disk quotas, the values match GetDiskFreeSpaceEx. The free bytes may change in between.
+	var callerFreeBytes, sizeBytes, freeBytes uint64
+
+	require.NoError(t, windows.GetDiskFreeSpaceEx(windows.StringToUTF16Ptr(systemDrive+`\`), &callerFreeBytes, &sizeBytes, &freeBytes))
+	require.InDelta(t, float64(sizeBytes), info.sizeBytes, 0)
+	require.InDelta(t, float64(freeBytes), info.freeBytes, 64*1024*1024)
 
 	state := r.volumes[systemDrive]
 	require.True(t, state.hasStatic)
@@ -161,7 +225,20 @@ func TestVolumeInfoReaderSystemDrive(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "cached", info.diskIDs)
-	require.False(t, info.hasSpace)
+	require.False(t, info.hasFreeBytes)
+	require.False(t, info.hasSizeBytes)
+
+	// Another volume under the same name invalidates the cached disk IDs.
+	r.beginScrape()
+	info, err = r.read(map[string]string{systemDrive: `\\?\Volume{00000000-0000-0000-0000-000000000000}`}, systemDrive, false)
+	r.endScrape()
+
+	require.Error(t, err)
+	require.Empty(t, info.diskIDs)
+	require.False(t, r.volumes[systemDrive].hasStatic)
+
+	state.hasStatic = true
+	state.diskIDs = "cached"
 
 	now = now.Add(staticVolumeInfoMaxAge)
 
