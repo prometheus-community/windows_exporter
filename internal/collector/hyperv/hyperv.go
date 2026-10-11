@@ -46,6 +46,7 @@ const (
 	subCollectorHypervisorVirtualProcessor       = "hypervisor_virtual_processor"
 	subCollectorLegacyNetworkAdapter             = "legacy_network_adapter"
 	subCollectorReplicaVM                        = "replica_vm"
+	subCollectorVirtualHardDisk                  = "virtual_hard_disk"
 	subCollectorVirtualMachineHealthSummary      = "virtual_machine_health_summary"
 	subCollectorVirtualMachineVidPartition       = "virtual_machine_vid_partition"
 	subCollectorVirtualNetworkAdapter            = "virtual_network_adapter"
@@ -73,6 +74,7 @@ var ConfigDefaults = Config{
 		subCollectorHypervisorVirtualProcessor,
 		subCollectorLegacyNetworkAdapter,
 		subCollectorReplicaVM,
+		subCollectorVirtualHardDisk,
 		subCollectorVirtualMachineHealthSummary,
 		subCollectorVirtualMachineVidPartition,
 		subCollectorVirtualNetworkAdapter,
@@ -96,6 +98,7 @@ type Collector struct {
 	collectorHypervisorVirtualProcessor
 	collectorLegacyNetworkAdapter
 	collectorReplicaVM
+	collectorVirtualHardDisk
 	collectorVirtualMachineHealthSummary
 	collectorVirtualMachineVidPartition
 	collectorVirtualNetworkAdapter
@@ -237,6 +240,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			collect: c.collectReplicaVM,
 			// Close the collector created by build, not the nil one bound at this point.
 			close: func() { c.perfDataCollectorReplicaVM.Close() },
+		},
+		subCollectorVirtualHardDisk: {
+			build:   c.buildVirtualHardDisk,
+			collect: c.collectVirtualHardDisk,
+			close:   func() {},
 		},
 		subCollectorVirtualMachineHealthSummary: {
 			build:   c.buildVirtualMachineHealthSummary,

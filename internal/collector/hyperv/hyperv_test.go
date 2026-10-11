@@ -98,6 +98,23 @@ func TestCollectorLegacyNetworkAdapter(t *testing.T) {
 	}
 }
 
+// TestCollectorVirtualHardDisk checks the disk of the CI fixture VM, which is
+// created with New-VM -NewVHDSizeBytes 1GB (a dynamic VHDX).
+func TestCollectorVirtualHardDisk(t *testing.T) {
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk"}})
+
+	labels := prometheus.Labels{"vm": "GitHubActions", "type": "dynamic"}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
+		require.InDelta(t, 1<<30, metric.GetGauge().GetValue(), 0)
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_file_size_bytes", labels); metric != nil {
+		require.Positive(t, metric.GetGauge().GetValue())
+		require.Less(t, metric.GetGauge().GetValue(), float64(1<<30))
+	}
+}
+
 // TestCloseReleasesQuery ensures Close releases the PDH queries of the sub-collectors.
 func TestCloseReleasesQuery(t *testing.T) {
 	t.Parallel()
