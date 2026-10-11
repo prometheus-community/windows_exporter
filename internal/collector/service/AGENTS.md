@@ -16,3 +16,6 @@
 - The cache tests use a temporary key below `HKEY_CURRENT_USER`, so they run
   without elevation. Registry write times have a coarse resolution; sleep before
   a write that must get a newer time.
+- `TestCollectorPicksUpConfigChanges` creates a real service and changes it
+  through the SCM. It needs an elevated process: it skips locally without one
+  and fails in CI, where `service` is in `WINDOWS_EXPORTER_TEST_COLLECTORS`.
