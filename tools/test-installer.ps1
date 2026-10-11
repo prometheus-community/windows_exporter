@@ -16,7 +16,10 @@ Param (
     # Executable packaged in $Msi and $UpgradeMsi.
     [Parameter(Mandatory = $true)]
     [String] $Executable,
-    # Release to upgrade from, for example 0.31.8.
+    # Release to upgrade from, for example 0.32.0-beta.1. Packages up to 0.31.x
+    # stop every windows_exporter.exe with taskkill /T, which also ends
+    # unrelated processes whose stale parent process ID matches, like the
+    # runner agent of a CI job.
     [Parameter(Mandatory = $true)]
     [String] $PreviousVersion,
     [Parameter(Mandatory = $false)]
@@ -194,14 +197,9 @@ try {
         throw 'the upgraded service does not use the kept configuration'
     }
 
-    # The previous package removes itself with its own logic. Up to 0.31.x that
-    # stops every windows_exporter.exe, as documented in UPGRADE.md.
-    if (Test-ForeignAlive) {
-        Write-Host 'the independent windows_exporter.exe survived the upgrade'
-    } else {
-        Write-Host "::notice::the $PreviousVersion package stopped the independent windows_exporter.exe during the upgrade"
-        Start-Foreign
-    }
+    # The previous package removes itself with its own logic, so it must be
+    # 0.32.0-beta.0 or newer to leave the independent instance running.
+    Assert-ForeignAlive -Operation 'upgrade'
     Write-Host '::endgroup::'
 
     Write-Step 'Repair this build'

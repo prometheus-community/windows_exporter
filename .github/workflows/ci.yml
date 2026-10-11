@@ -254,12 +254,19 @@ jobs:
             throw "Could not determine the latest release"
           }
 
+          # Packages up to 0.31.x stop the exporter with taskkill /T. It follows
+          # stale parent process IDs and can kill the runner agent, so upgrade
+          # from the first package without it until a newer release exists.
+          if ([Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1') -lt [Version]'0.32.0') {
+            $PreviousVersion = '0.32.0-beta.1'
+          }
+
           # Builds between tags carry the version of an older tag, so installing
           # them over the latest release would be a downgrade. Package the same
           # executable with a higher version for the upgrade test.
           $UpgradeMsi = $Msi
           $MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
-          if ([Version]$MsiVersion -le [Version]$PreviousVersion) {
+          if ([Version]$MsiVersion -le [Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1')) {
             .\installer\build.ps1 -PathToExecutable $Executable -Version 99.0.0 -Arch amd64
             $UpgradeMsi = Join-Path $env:RUNNER_TEMP 'windows_exporter-99.0.0-amd64.msi'
             Move-Item installer\windows_exporter-99.0.0-amd64.msi $UpgradeMsi

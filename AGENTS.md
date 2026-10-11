@@ -33,7 +33,10 @@ their runtime behavior.
   packaging, deployment examples, CI fixtures and end-to-end helpers. The CI
   package job validates installer changes with
   [`tools/test-installer.ps1`](tools/test-installer.ps1), which installs the
-  service for real. Never run it on a developer machine.
+  service for real. Never run it on a developer machine. Never upgrade from a
+  0.31.x package there: its `taskkill /T` follows stale parent process IDs and
+  can kill the runner agent, which fails the job with "The hosted runner lost
+  communication with the server" and no logs.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
