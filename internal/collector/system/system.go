@@ -18,12 +18,13 @@
 package system
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/ntdll"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -37,11 +38,9 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI metrics.
+// A Collector is a Prometheus Collector for System performance counter metrics.
 type Collector struct {
 	config Config
-
-	bootTimeTimestamp float64
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
@@ -85,25 +84,25 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.bootTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
-		"Unix timestamp of system boot time",
+		"Unix timestamp of last system boot. Follows clock corrections.",
 		nil,
 		nil,
 	)
 	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
-		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
+		"Total number of context switches",
 		nil,
 		nil,
 	)
 	c.exceptionDispatchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exception_dispatches_total"),
-		"Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)",
+		"Total number of exceptions dispatched",
 		nil,
 		nil,
 	)
 	c.processes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes"),
-		"Current number of processes (WMI source: PerfOS_System.Processes)",
+		"Current number of processes",
 		nil,
 		nil,
 	)
@@ -116,24 +115,22 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.processorQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processor_queue_length"),
-		"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
+		"Length of processor queue",
 		nil,
 		nil,
 	)
 	c.systemCallsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "system_calls_total"),
-		"Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)",
+		"Total number of system calls",
 		nil,
 		nil,
 	)
 	c.threads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
-		"Current number of threads (WMI source: PerfOS_System.Threads)",
+		"Current number of threads",
 		nil,
 		nil,
 	)
-
-	c.bootTimeTimestamp = float64(uint64(time.Now().UnixMilli())-kernel32.GetTickCount64()) / 1000
 
 	var err error
 
@@ -148,11 +145,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	// The boot time does not depend on the performance counters.
+	bootTimeErr := c.collectBootTime(ch)
+
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect System metrics: %w", err)
+		return errors.Join(bootTimeErr, fmt.Errorf("failed to collect System metrics: %w", err))
 	} else if len(c.perfDataObject) == 0 {
-		return fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected)
+		return errors.Join(bootTimeErr, fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -191,12 +191,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		c.perfDataObject[0].Threads,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
-		c.bootTime,
-		prometheus.GaugeValue,
-		c.bootTimeTimestamp,
-	)
-
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.
 	// https://techcommunity.microsoft.com/t5/windows-blog-archive/pushing-the-limits-of-windows-processes-and-threads/ba-p/723824
 	// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
@@ -204,6 +198,23 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		c.processesLimit,
 		prometheus.GaugeValue,
 		float64(4294967295),
+	)
+
+	return bootTimeErr
+}
+
+func (c *Collector) collectBootTime(ch chan<- prometheus.Metric) error {
+	bootTime, err := ntdll.BootTime()
+	if err != nil {
+		return fmt.Errorf("failed to get system boot time: %w", err)
+	}
+
+	// Whole seconds keep the value stable when the kernel moves the boot time
+	// by a sub-second clock correction.
+	ch <- prometheus.MustNewConstMetric(
+		c.bootTime,
+		prometheus.GaugeValue,
+		float64(bootTime.Unix()),
 	)
 
 	return nil
