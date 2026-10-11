@@ -215,6 +215,7 @@ Deprecated. These are still exported in 0.32 and will be removed in a later rele
 | `windows_logical_disk_avg_write_requests_queued`                   | `rate(windows_logical_disk_write_seconds_total[5m])`      |
 | `windows_cache_data_map_hits_percent`                              | `windows_cache_data_map_hits_total`                       |
 | `windows_scheduled_task_last_result`                               | `windows_scheduled_task_last_result_status`               |
+| `windows_terminal_services_connection_broker_performance_total{connection="Pending"}` | `windows_terminal_services_connection_broker_pending_connections` (gauge) |
 
 The deprecated Hyper-V storage latency and queue gauges and the logical disk `avg_*_requests_queued` gauges never held current values.
 They exported a running sum that only grows, so graphs of them rise steadily. The replacements give the actual average latency and queue length.

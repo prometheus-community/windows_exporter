@@ -27,6 +27,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -89,21 +91,28 @@ type Collector struct {
 
 	hServer windows.Handle
 
-	sessionInfo                 *prometheus.Desc
-	connectionBrokerPerformance *prometheus.Desc
-	handleCount                 *prometheus.Desc
-	pageFaultsPerSec            *prometheus.Desc
-	pageFileBytes               *prometheus.Desc
-	pageFileBytesPeak           *prometheus.Desc
-	percentCPUTime              *prometheus.Desc
-	poolNonPagedBytes           *prometheus.Desc
-	poolPagedBytes              *prometheus.Desc
-	privateBytes                *prometheus.Desc
-	threadCount                 *prometheus.Desc
-	virtualBytes                *prometheus.Desc
-	virtualBytesPeak            *prometheus.Desc
-	workingSet                  *prometheus.Desc
-	workingSetPeak              *prometheus.Desc
+	// sessionCache reuses the session_info state series of sessions whose
+	// name, user, host and state did not change.
+	sessionCache metriccache.Cache[uint32, sessionValues]
+	// labels reuses the label pairs of the per-session counter series.
+	labels labelcache.Cache
+
+	sessionInfo                        *prometheus.Desc
+	connectionBrokerPerformance        *prometheus.Desc
+	connectionBrokerPendingConnections *prometheus.Desc
+	handleCount                        *prometheus.Desc
+	pageFaultsPerSec                   *prometheus.Desc
+	pageFileBytes                      *prometheus.Desc
+	pageFileBytesPeak                  *prometheus.Desc
+	percentCPUTime                     *prometheus.Desc
+	poolNonPagedBytes                  *prometheus.Desc
+	poolPagedBytes                     *prometheus.Desc
+	privateBytes                       *prometheus.Desc
+	threadCount                        *prometheus.Desc
+	virtualBytes                       *prometheus.Desc
+	virtualBytesPeak                   *prometheus.Desc
+	workingSet                         *prometheus.Desc
+	workingSetPeak                     *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -131,6 +140,9 @@ func (c *Collector) Close() error {
 	c.perfDataCollectorBroker.Close()
 	c.perfDataQuery.Close()
 
+	c.sessionCache.Reset()
+	c.labels.Reset()
+
 	// hServer is 0 if Build failed before opening the server.
 	if c.hServer == 0 || c.hServer == windows.InvalidHandle {
 		return nil
@@ -145,6 +157,9 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	c.sessionCache.Reset()
+	c.labels.Reset()
+
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
 		"Terminal Services sessions info",
@@ -153,8 +168,14 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	)
 	c.connectionBrokerPerformance = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_broker_performance_total"),
-		"The total number of connections handled by the Connection Brokers since the service started.",
+		"The number of connections handled by the Connection Broker since the service started, by result. connection=\"Pending\" is deprecated: it is the current number of pending connections, use windows_terminal_services_connection_broker_pending_connections instead.",
 		[]string{"connection"},
+		nil,
+	)
+	c.connectionBrokerPendingConnections = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "connection_broker_pending_connections"),
+		"The number of redirected connections pending completion from the Remote Desktop Session Host servers in the farm.",
+		nil,
 		nil,
 	)
 	c.handleCount = prometheus.NewDesc(
@@ -248,10 +269,18 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	if c.connectionBrokerEnabled {
 		c.perfDataCollectorBroker, err = pdh.NewQueryCollector[perfDataCounterValuesBroker](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
 		if err != nil {
-			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
+			// The service can be installed while its counters are not registered or
+			// unreadable. Keep the session metrics and skip only the broker metrics.
+			c.logger.Warn("failed to create Remote Desktop Connection Broker Counterset collector, skipping Connection Broker performance metrics",
+				slog.Any("err", err),
+			)
+
+			c.perfDataCollectorBroker.Close()
+			c.perfDataCollectorBroker = nil
+			c.connectionBrokerEnabled = false
 		}
 	} else {
-		logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+		c.logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
 	}
 
 	c.hServer, err = wtsapi32.WTSOpenServer("")
@@ -305,6 +334,9 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 		return fmt.Errorf("failed to collect Terminal Services Session metrics: %w", err)
 	}
 
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	names := make(map[string]bool)
 
 	for _, data := range c.perfDataObjectTerminalServicesSession {
@@ -320,35 +352,35 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 
 		names[n] = true
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.handleCount,
 			prometheus.GaugeValue,
 			data.HandleCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.pageFaultsPerSec,
 			prometheus.CounterValue,
 			data.PageFaultsPersec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.pageFileBytes,
 			prometheus.GaugeValue,
 			data.PageFileBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.pageFileBytesPeak,
 			prometheus.GaugeValue,
 			data.PageFileBytesPeak,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentPrivilegedTime,
@@ -356,7 +388,7 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentProcessorTime,
@@ -364,7 +396,7 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
 			data.PercentUserTime,
@@ -372,56 +404,56 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.poolNonPagedBytes,
 			prometheus.GaugeValue,
 			data.PoolNonpagedBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.poolPagedBytes,
 			prometheus.GaugeValue,
 			data.PoolPagedBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.privateBytes,
 			prometheus.GaugeValue,
 			data.PrivateBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.threadCount,
 			prometheus.GaugeValue,
 			data.ThreadCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualBytes,
 			prometheus.GaugeValue,
 			data.VirtualBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualBytesPeak,
 			prometheus.GaugeValue,
 			data.VirtualBytesPeak,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.workingSet,
 			prometheus.GaugeValue,
 			data.WorkingSet,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.workingSetPeak,
 			prometheus.GaugeValue,
 			data.WorkingSetPeak,
@@ -446,6 +478,13 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 	)
 
 	ch <- prometheus.MustNewConstMetric(
+		c.connectionBrokerPendingConnections,
+		prometheus.GaugeValue,
+		c.perfDataObjectBroker[0].PendingConnections,
+	)
+
+	// Deprecated: Pending Connections is a current count, not a counter.
+	ch <- prometheus.MustNewConstMetric(
 		c.connectionBrokerPerformance,
 		prometheus.CounterValue,
 		c.perfDataObjectBroker[0].PendingConnections,
@@ -468,6 +507,10 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)
 	}
 
+	scrape := c.sessionCache.Begin()
+	// Sessions that were not collected in this scrape are dropped from the cache.
+	defer scrape.Commit()
+
 	for _, session := range sessions {
 		// only connect metrics for remote named sessions
 		n := strings.ReplaceAll(session.SessionName, "#", " ")
@@ -477,27 +520,56 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 
 		userName := session.UserName
 		if session.DomainName != "" {
-			userName = fmt.Sprintf("%s\\%s", session.DomainName, session.UserName)
+			userName = session.DomainName + "\\" + session.UserName
 		}
 
-		for stateID, stateName := range wtsapi32.WTSSessionStates {
-			isState := 0.0
-			if session.State == stateID {
-				isState = 1.0
-			}
+		values := sessionValues{
+			name:  n,
+			user:  userName,
+			host:  session.HostName,
+			state: session.State,
+		}
 
-			ch <- prometheus.MustNewConstMetric(
-				c.sessionInfo,
-				prometheus.GaugeValue,
-				isState,
-				n,
-				userName,
-				session.HostName,
-				stateName,
-				strconv.Itoa(int(session.SessionID)),
-			)
+		for _, metric := range scrape.Get(session.SessionID, values, func() []prometheus.Metric {
+			return c.sessionInfoMetrics(session.SessionID, values)
+		}) {
+			ch <- metric
 		}
 	}
 
 	return nil
+}
+
+// sessionValues are the inputs of the session_info series of a session.
+type sessionValues struct {
+	name  string
+	user  string
+	host  string
+	state wtsapi32.WTSConnectState
+}
+
+// sessionInfoMetrics builds the session_info state series of a session.
+func (c *Collector) sessionInfoMetrics(sessionID uint32, values sessionValues) []prometheus.Metric {
+	id := strconv.FormatUint(uint64(sessionID), 10)
+	metrics := make([]prometheus.Metric, 0, len(wtsapi32.WTSSessionStates))
+
+	for stateID, stateName := range wtsapi32.WTSSessionStates {
+		isState := 0.0
+		if values.state == stateID {
+			isState = 1.0
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.sessionInfo,
+			prometheus.GaugeValue,
+			isState,
+			values.name,
+			values.user,
+			values.host,
+			stateName,
+			id,
+		))
+	}
+
+	return metrics
 }
