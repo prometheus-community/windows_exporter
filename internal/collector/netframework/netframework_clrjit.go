@@ -58,7 +58,7 @@ func (c *Collector) buildClrJIT() error {
 
 	var err error
 
-	c.perfClrJIT, err = newPerfCollector[perfDataClrJIT](c.logger, ".NET CLR Jit")
+	c.perfClrJIT, err = newPerfCollector[perfDataClrJIT](c.logger, c.perfQuery, ".NET CLR Jit")
 
 	return err
 }

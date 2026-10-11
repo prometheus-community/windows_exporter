@@ -88,7 +88,7 @@ func (c *Collector) buildClrLoading() error {
 
 	var err error
 
-	c.perfClrLoading, err = newPerfCollector[perfDataClrLoading](c.logger, ".NET CLR Loading")
+	c.perfClrLoading, err = newPerfCollector[perfDataClrLoading](c.logger, c.perfQuery, ".NET CLR Loading")
 
 	return err
 }

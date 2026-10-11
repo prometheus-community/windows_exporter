@@ -58,7 +58,7 @@ func (c *Collector) buildClrSecurity() error {
 
 	var err error
 
-	c.perfClrSecurity, err = newPerfCollector[perfDataClrSecurity](c.logger, ".NET CLR Security")
+	c.perfClrSecurity, err = newPerfCollector[perfDataClrSecurity](c.logger, c.perfQuery, ".NET CLR Security")
 
 	return err
 }

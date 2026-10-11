@@ -76,7 +76,7 @@ func (c *Collector) buildClrLocksAndThreads() error {
 
 	var err error
 
-	c.perfClrLocksAndThreads, err = newPerfCollector[perfDataClrLocksAndThreads](c.logger, ".NET CLR LocksAndThreads")
+	c.perfClrLocksAndThreads, err = newPerfCollector[perfDataClrLocksAndThreads](c.logger, c.perfQuery, ".NET CLR LocksAndThreads")
 
 	return err
 }

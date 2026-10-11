@@ -70,7 +70,7 @@ func (c *Collector) buildClrRemoting() error {
 
 	var err error
 
-	c.perfClrRemoting, err = newPerfCollector[perfDataClrRemoting](c.logger, ".NET CLR Remoting")
+	c.perfClrRemoting, err = newPerfCollector[perfDataClrRemoting](c.logger, c.perfQuery, ".NET CLR Remoting")
 
 	return err
 }
