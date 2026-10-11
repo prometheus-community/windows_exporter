@@ -278,8 +278,9 @@ func TestParseResourceClassInfo(t *testing.T) {
 		subclass uint32
 	}{
 		{"complete", []byte{1, 0, 0, 0, 0, 0, 0, 0x80}, 1, 0x80000000},
-		// The Storage Spaces Direct Health Service resource returns a short
-		// buffer; WMI reports its ResourceClass as 0.
+		// Captured from the Storage Spaces Direct Health Service resource: only
+		// the class DWORD, without the subclass. WMI reports ResourceClass 0.
+		{"health service", []byte{0, 0, 0, 0}, 0, 0},
 		{"empty", nil, 0, 0},
 		{"class only", []byte{2, 0, 0, 0}, 2, 0},
 		{"truncated class", []byte{1, 0}, 0, 0},

@@ -545,9 +545,10 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 }
 
 // parseResourceClassInfo decodes CLUS_RESOURCE_CLASS_INFO. Some resource DLLs,
-// such as the Storage Spaces Direct Health Service, succeed but return less
-// than the full structure; the WMI provider reports their ResourceClass as
-// CLUS_RESCLASS_UNKNOWN (0), so missing fields decode as 0 instead of failing.
+// such as the Storage Spaces Direct Health Service, succeed but return only
+// the class DWORD without the subclass; the WMI provider reports their
+// ResourceClass as CLUS_RESCLASS_UNKNOWN (0), so missing fields decode as 0
+// instead of failing.
 func parseResourceClassInfo(data []byte) (uint32, uint32) {
 	var class, subclass uint32
 
