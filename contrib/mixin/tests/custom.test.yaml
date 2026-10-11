@@ -14,11 +14,11 @@ tests:
     input_series:
       - series: 'windows_memory_committed_bytes{job="windows-custom", instance="host:9182", cluster="test"}'
         values: '85x20'
-      - series: 'windows_memory_commit_limit{job="windows-custom", instance="host:9182", cluster="test"}'
+      - series: 'windows_memory_commit_limit_bytes{job="windows-custom", instance="host:9182", cluster="test"}'
         values: '100x20'
       - series: 'windows_memory_committed_bytes{job="windows-custom", instance="host:9182", cluster="prod"}'
         values: '99x20'
-      - series: 'windows_memory_commit_limit{job="windows-custom", instance="host:9182", cluster="prod"}'
+      - series: 'windows_memory_commit_limit_bytes{job="windows-custom", instance="host:9182", cluster="prod"}'
         values: '100x20'
       - series: 'windows_logical_disk_read_seconds_total{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
         values: '0+3.6x20'

@@ -259,7 +259,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"} / windows_memory_commit_limit_bytes{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -801,7 +801,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_memory_commit_limit{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_memory_commit_limit_bytes{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "limit",
                                                 "range": true
