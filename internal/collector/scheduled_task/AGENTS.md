@@ -28,8 +28,8 @@ which an unprivileged user can read.
   The default exclude is `/Microsoft/.+` for that reason; keep `ConfigDefaults`
   and the flag default in sync through `defaultTaskExclude`.
 - `taskReader` carries the task and folder filters and which properties to
-  read. With `skip-missed-runs`, `NumberOfMissedRuns` is neither read nor
-  published, which saves its two RPCs per task.
+  read. `NumberOfMissedRuns` is only read and published with `missed-runs`
+  (off by default), which saves its two RPCs per task.
 - The fake native task in `scheduled_task_native_test.go` counts reads per
   vtable slot; extend those assertions when adding a property read.
 - To find slow calls, time each call type over a full enumeration on a live
@@ -83,7 +83,7 @@ of them empty), about 150 ms per scrape without filters.
   `internal/mi` in-process for the same 207 tasks, whatever properties are
   selected, plus ~120 ms for last result and missed runs. The work moves into
   `WmiPrvSE` (up to ~30% of one core while querying).
-- `missed_runs` can be dropped with `skip-missed-runs`. Not taken yet: a cache
+- `missed_runs` is opt-in through `missed-runs`. Not taken yet: a cache
   duration that serves the last task list.
 - Profiling the exporter with pprof on Windows attributes the time blocked in
   these COM calls to `runtime.cgocall`; that is waiting, not exporter CPU. The

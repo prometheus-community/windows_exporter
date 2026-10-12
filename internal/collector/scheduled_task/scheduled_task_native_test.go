@@ -166,7 +166,7 @@ func TestFetchTasksFilters(t *testing.T) {
 		config *Config
 		paths  []string
 	}{
-		{name: "defaults", paths: []string{"/Included/Task", "/Included/Excluded", "/Other/Task"}},
+		{name: "defaults", config: &Config{}, paths: []string{"/Included/Task", "/Included/Excluded", "/Other/Task"}},
 		{
 			name:   "include",
 			config: &Config{TaskInclude: regexp.MustCompile(`^/Included/`)},
@@ -203,6 +203,8 @@ func TestFetchTasksFilters(t *testing.T) {
 			collection, _ := fakeTaskCollection(items, false, &collectionsReleased)
 			tasks := ScheduledTasks{}
 
+			tc.config.MissedRuns = true
+
 			err := New(tc.config).taskReader().fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), &tasks)
 			require.NoError(t, err)
 			require.Equal(t, len(fakes), released)
@@ -220,7 +222,7 @@ func TestFetchTasksFilters(t *testing.T) {
 				require.Equal(t, reads, task.reads[taskSlotMissedRuns], task.path)
 			}
 
-			families := gatherTaskMetrics(t, nil, tasks)
+			families := gatherTaskMetrics(t, tc.config, tasks)
 			if len(tc.paths) == 0 {
 				require.Empty(t, families)
 
@@ -297,19 +299,20 @@ func TestFetchTasksInFolderReadsPublishedProperties(t *testing.T) {
 		require.Equal(t, missedRuns, task.reads[taskSlotMissedRuns], task.path)
 	}
 
-	missedRuns := gatherTaskMetrics(t, nil, tasks)["windows_scheduled_task_missed_runs"]
+	missedRuns := gatherTaskMetrics(t, &Config{MissedRuns: true}, tasks)["windows_scheduled_task_missed_runs"]
 	require.NotNil(t, missedRuns)
 	require.Len(t, missedRuns.GetMetric(), 1)
 	require.Equal(t, "/Folder/Ran", missedRuns.GetMetric()[0].GetLabel()[0].GetValue())
 	require.InDelta(t, 2, missedRuns.GetMetric()[0].GetGauge().GetValue(), 0)
 }
 
+// Missed runs are not read or published by default.
 func TestFetchTasksInFolderSkipsMissedRuns(t *testing.T) {
 	var released, collectionsReleased int
 
 	task := &fakeTask{path: `\Task`, state: int32(TASK_STATE_READY), result: 1, missed: 2}
 	collection, _ := fakeTaskCollection([]*ole.Object{task.object(&released)}, false, &collectionsReleased)
-	config := &Config{SkipMissedRuns: true}
+	config := &Config{}
 	tasks := ScheduledTasks{}
 
 	require.NoError(t, New(config).taskReader().fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), &tasks))

@@ -18,7 +18,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
 | You query Hyper-V, logical disk queue, cache, IIS output cache, memory, scheduled task or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
-| You enable the `scheduled_task` collector and use tasks below `\Microsoft\`                     | Set `--collector.scheduled_task.exclude`                                | [scheduled_task collector](#scheduled_task-collector)             |
+| You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, SQL Server lock counts or DHCP denials                         | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
@@ -183,7 +183,8 @@ They are most of the tasks and folders of an installation, and skipping their fo
 | Every task, as in 0.31            | `--collector.scheduled_task.exclude=""`, or `exclude: ""` in the configuration file                              |
 | Windows tasks except some folders | The folders to exclude, e.g. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag\|Diagnosis)/.+"`  |
 
-The new `--collector.scheduled_task.skip-missed-runs` flag drops `windows_scheduled_task_missed_runs`, which costs two Task Scheduler requests per task and scrape.
+`windows_scheduled_task_missed_runs` is only reported with the new `--collector.scheduled_task.missed-runs` flag (`missed-runs: true` in the configuration file).
+Reading it costs two Task Scheduler requests per task and scrape, about a quarter of a scrape.
 
 ## GPU collector
 
@@ -339,7 +340,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
 - `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
 - New field in `collector.Config`: `StorageSpaces`.
-- `scheduled_task.ConfigDefaults.TaskExclude`, also used when `scheduled_task.Config.TaskExclude` is nil, now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.SkipMissedRuns`.
+- `scheduled_task.ConfigDefaults.TaskExclude`, also used when `scheduled_task.Config.TaskExclude` is nil, now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.MissedRuns`, false by default.
 - `collector.Config.ThermalZone` was removed together with the `thermalzone` collector.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.
 - `Collection.Close` now releases all collector resources, including PDH queries and worker goroutines. Call it when you discard a collection, for example on a configuration reload.

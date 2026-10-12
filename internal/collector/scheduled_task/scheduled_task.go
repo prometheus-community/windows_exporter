@@ -39,9 +39,9 @@ import (
 const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude    *regexp.Regexp `yaml:"exclude"`
-	TaskInclude    *regexp.Regexp `yaml:"include"`
-	SkipMissedRuns bool           `yaml:"skip-missed-runs"`
+	TaskExclude *regexp.Regexp `yaml:"exclude"`
+	TaskInclude *regexp.Regexp `yaml:"include"`
+	MissedRuns  bool           `yaml:"missed-runs"`
 }
 
 // defaultTaskExclude excludes the tasks of Windows itself, which are most of
@@ -50,9 +50,9 @@ const defaultTaskExclude = "/Microsoft/.+"
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	TaskExclude:    regexp.MustCompile("^(?:" + defaultTaskExclude + ")$"),
-	TaskInclude:    types.RegExpAny,
-	SkipMissedRuns: false,
+	TaskExclude: regexp.MustCompile("^(?:" + defaultTaskExclude + ")$"),
+	TaskInclude: types.RegExpAny,
+	MissedRuns:  false,
 }
 
 type Collector struct {
@@ -159,10 +159,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(".+").StringVar(&taskInclude)
 
 	app.Flag(
-		"collector.scheduled_task.skip-missed-runs",
-		"Do not read or publish windows_scheduled_task_missed_runs. "+
+		"collector.scheduled_task.missed-runs",
+		"Read and publish windows_scheduled_task_missed_runs. "+
 			"Reading the missed runs of a task costs the Task Scheduler service two requests per scrape.",
-	).Default(strconv.FormatBool(ConfigDefaults.SkipMissedRuns)).BoolVar(&c.config.SkipMissedRuns)
+	).Default(strconv.FormatBool(ConfigDefaults.MissedRuns)).BoolVar(&c.config.MissedRuns)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
@@ -271,7 +271,7 @@ func (c *Collector) taskReader() taskReader {
 	return taskReader{
 		includeTask:   c.includeTask,
 		includeFolder: c.folderFilter.includeFolder,
-		missedRuns:    !c.config.SkipMissedRuns,
+		missedRuns:    c.config.MissedRuns,
 	}
 }
 
@@ -351,7 +351,7 @@ func (c *Collector) taskMetrics(task ScheduledTask) []prometheus.Metric {
 		task.Path,
 	))
 
-	if c.config.SkipMissedRuns {
+	if !c.config.MissedRuns {
 		return metrics
 	}
 

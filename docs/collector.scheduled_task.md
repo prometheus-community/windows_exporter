@@ -41,14 +41,13 @@ the default. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
 alternatives) are recognized for exclude, and a literal folder prefix for include.
 Errors reading folders that are not walked are not reported.
 
-### `--collector.scheduled_task.skip-missed-runs`
+### `--collector.scheduled_task.missed-runs`
 
-If set, the collector does not read or report
-`windows_scheduled_task_missed_runs`. Reading the missed runs of a task costs
-the Task Scheduler service two requests per scrape, about a quarter of a
-scrape. With this flag, the dashboards show 0 missed runs and an empty table of tasks
-with missed runs.
-Default: `false`
+If set, the collector reads and reports `windows_scheduled_task_missed_runs`.
+Reading the missed runs of a task costs the Task Scheduler service two requests
+per scrape, about a quarter of a scrape, and the service computes every missed
+run time to count them. Without this flag, the dashboards show 0 missed runs
+and an empty table of tasks with missed runs. Default: `false`
 
 ## Metrics
 
@@ -56,7 +55,7 @@ Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
 `windows_scheduled_task_last_result_status` | The last result status of a scheduled task, 1 if the current status, 0 otherwise | gauge | task, status
-`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run; omitted with `--collector.scheduled_task.skip-missed-runs` | gauge | task
+`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run; only with `--collector.scheduled_task.missed-runs` | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
 
 For the values of the `state` and `status` labels, see below.

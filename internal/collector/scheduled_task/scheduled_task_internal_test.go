@@ -114,7 +114,7 @@ func TestCollectMetrics(t *testing.T) {
 				MissedRunsCount: 3,
 				LastTaskResult:  TaskResult(tc.result),
 			}
-			families := gatherTaskMetrics(t, nil, ScheduledTasks{task})
+			families := gatherTaskMetrics(t, &Config{MissedRuns: true}, ScheduledTasks{task})
 
 			states := families["windows_scheduled_task_state"]
 			require.NotNil(t, states)
@@ -244,7 +244,7 @@ func TestCollectMetricsCache(t *testing.T) {
 		{Path: "/Added", State: TASK_STATE_QUEUED, LastTaskResult: SCHED_S_TASK_QUEUED},
 	}
 
-	c := New(nil)
+	c := New(&Config{MissedRuns: true})
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	var previous map[string][]prometheus.Metric
