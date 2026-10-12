@@ -78,7 +78,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -163,7 +163,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -251,7 +251,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -339,7 +339,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"optional_installation\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"optional_installation\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -674,17 +674,6 @@
                                         "inspect": false,
                                         "minWidth": 60
                                     },
-                                    "mappings": [
-                                        {
-                                            "options": {
-                                                "0": {
-                                                    "index": 0,
-                                                    "text": "unknown"
-                                                }
-                                            },
-                                            "type": "value"
-                                        }
-                                    ],
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -693,10 +682,35 @@
                                                 "value": null
                                             }
                                         ]
-                                    },
-                                    "unit": "dateTimeFromNow"
+                                    }
                                 },
                                 "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Published"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "dateTimeFromNow"
+                                            },
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "index": 0,
+                                                                "text": "unknown"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
                                     {
                                         "matcher": {
                                             "id": "byName",
