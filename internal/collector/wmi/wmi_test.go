@@ -38,6 +38,18 @@ func BenchmarkCollector(b *testing.B) {
 	})
 }
 
+// BenchmarkCollectorProcess runs a query returning one instance per process,
+// so that the cost of many series per scrape shows.
+func BenchmarkCollectorProcess(b *testing.B) {
+	queries := `[{"name":"process","class":"Win32_Process","label_properties":[{"name":"ProcessId"},{"name":"Name"}],"properties":[{"name":"WorkingSetSize"},{"name":"ThreadCount"},{"name":"HandleCount"}]}]`
+
+	testutils.FuncBenchmarkCollector(b, wmi.Name, wmi.NewWithFlags, func(app *kingpin.Application) {
+		// The queries are only read by the application action, which runs on parse.
+		_, err := app.Parse([]string{"--collector.wmi.queries", queries})
+		require.NoError(b, err)
+	})
+}
+
 func TestCollector(t *testing.T) {
 	t.Parallel()
 
