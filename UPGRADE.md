@@ -178,10 +178,10 @@ Other changes:
 `--collector.scheduled_task.exclude` now defaults to `/Microsoft/.+`. The tasks of Windows itself, below `\Microsoft\`, are no longer reported unless you set the flag.
 They are most of the tasks and folders of an installation, and skipping their folders makes a scrape several times faster.
 
-| You want                          | Set                                                                                         |
-|-----------------------------------|---------------------------------------------------------------------------------------------|
-| Every task, as in 0.31            | `--collector.scheduled_task.exclude=""`                                                     |
-| Some Windows tasks                | The folders to exclude, e.g. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag\|Diagnosis)/.+"` |
+| You want                          | Set                                                                                                              |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------------|
+| Every task, as in 0.31            | `--collector.scheduled_task.exclude=""`, or `exclude: ""` in the configuration file                              |
+| Windows tasks except some folders | The folders to exclude, e.g. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag\|Diagnosis)/.+"` |
 
 The new `--collector.scheduled_task.skip-missed-runs` flag drops `windows_scheduled_task_missed_runs`, which costs two Task Scheduler requests per task and scrape.
 
@@ -339,7 +339,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
 - `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
 - New field in `collector.Config`: `StorageSpaces`.
-- `scheduled_task.Config.TaskExclude` left nil now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.SkipMissedRuns`.
+- `scheduled_task.ConfigDefaults.TaskExclude`, also used when `scheduled_task.Config.TaskExclude` is nil, now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.SkipMissedRuns`.
 - `collector.Config.ThermalZone` was removed together with the `thermalzone` collector.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.
 - `Collection.Close` now releases all collector resources, including PDH queries and worker goroutines. Call it when you discard a collection, for example on a configuration reload.

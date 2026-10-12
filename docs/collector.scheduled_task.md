@@ -24,11 +24,13 @@ The default excludes the tasks of Windows itself, below `/Microsoft/`. They are
 most of the tasks and folders of an installation and rarely worth alerting on.
 To report every task, set the flag to an empty value:
 
-E.G. `--collector.scheduled_task.exclude=""`
+E.G. `--collector.scheduled_task.exclude=""`, or `exclude: ""` below
+`collector.scheduled_task` in the configuration file. A key without a value
+keeps the default.
 
-To report some Windows tasks, list the folders to exclude instead. Tasks in
-folders that are not listed are reported, including folders that a Windows
-update adds:
+To report Windows tasks except some folders, list the folders to exclude
+instead. Tasks in folders that are not listed are reported, including folders
+that a Windows update adds:
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag|Diagnosis|WindowsUpdate)/.+"`
 
@@ -44,7 +46,8 @@ Errors reading folders that are not walked are not reported.
 If set, the collector does not read or report
 `windows_scheduled_task_missed_runs`. Reading the missed runs of a task costs
 the Task Scheduler service two requests per scrape, about a quarter of a
-scrape. The missed runs panels of the dashboards show no data with this flag.
+scrape. With this flag, the dashboards show 0 missed runs and an empty table of tasks
+with missed runs.
 Default: `false`
 
 ## Metrics
@@ -110,6 +113,8 @@ A task can be in the following states:
 
 
 ### Example metric
+
+This Windows task is only reported with `--collector.scheduled_task.exclude=""`.
 
 ```
 windows_scheduled_task_last_result{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1

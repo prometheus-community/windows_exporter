@@ -50,6 +50,13 @@ func TestFolderFilter(t *testing.T) {
 		{
 			name:     "flag defaults",
 			include:  flag(".+"),
+			exclude:  flag(defaultTaskExclude),
+			included: []string{"/Other"},
+			skipped:  []string{"/Microsoft", "/Microsoft/Windows"},
+		},
+		{
+			name:     "empty exclude",
+			include:  flag(".+"),
 			exclude:  flag(""),
 			included: []string{"/Microsoft", "/Other"},
 		},
