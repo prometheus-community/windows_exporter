@@ -489,3 +489,37 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+// TestParseEmptyValue verifies that an empty value in the configuration file
+// replaces a flag's non-empty default instead of keeping it.
+func TestParseEmptyValue(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name      string
+		config    string
+		extraArgs []string
+		want      string
+	}{
+		{name: "default", config: "collector:\n  scheduled_task:\n", want: "/Microsoft/.+"},
+		{name: "empty string", config: "collector:\n  scheduled_task:\n    exclude: \"\"\n", want: ""},
+		{
+			name: "CLI overrides config", config: "collector:\n  scheduled_task:\n    exclude: /Vendor/.+\n",
+			extraArgs: []string{"--collector.scheduled_task.exclude="}, want: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tc.config), 0o600))
+
+			app := kingpin.New("test", "test")
+			app.Flag("config.file", "config").String()
+			collector.NewWithFlags(app)
+
+			require.NoError(t, config.Parse(app, append([]string{"--config.file=" + path}, tc.extraArgs...)))
+			require.Equal(t, tc.want, app.GetFlag("collector.scheduled_task.exclude").Model().Value.String())
+		})
+	}
+}
