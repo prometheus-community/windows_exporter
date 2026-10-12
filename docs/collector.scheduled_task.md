@@ -45,8 +45,8 @@ Errors reading folders that are not walked are not reported.
 
 If set, the collector reads and reports `windows_scheduled_task_missed_runs`.
 Reading the missed runs of a task costs the Task Scheduler service two requests
-per scrape, about a quarter of a scrape, and the service computes every missed
-run time to count them. Without this flag, the dashboards show 0 missed runs
+per scrape, about a quarter of a scrape, and the service lists the start time
+of every missed run to count them. Without this flag, the dashboards show 0 missed runs
 and an empty table of tasks with missed runs. Default: `false`
 
 ## Metrics
