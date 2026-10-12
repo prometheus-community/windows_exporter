@@ -84,7 +84,7 @@ func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 	root := fakeTaskFolder(emptyTasks, folders, nil)
 	tasks := ScheduledTasks{}
 
-	err := fetchTasksRecursively(root, `\`, includeAllTasks, &tasks)
+	err := fetchTasksRecursively(root, `\`, includeAllTasks, includeAllTasks, &tasks)
 	require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 	require.Equal(t, []int64{1, 2, 3}, *attempted)
 	require.Len(t, tasks, 2)
@@ -93,6 +93,47 @@ func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 	require.Equal(t, 2, tasksReleased)
 	require.Equal(t, 2, foldersReleased)
 	require.Equal(t, 6, collectionsReleased)
+}
+
+func TestFetchTasksRecursivelySkipsFilteredFolders(t *testing.T) {
+	var released, collectionsReleased, foldersReleased, listedMicrosoft, listedVendor int
+
+	fakes := []*fakeTask{
+		{path: `\Microsoft\Task`, state: int32(TASK_STATE_READY)},
+		{path: `\Vendor\Task`, state: int32(TASK_STATE_READY)},
+		{path: `\Task`, state: int32(TASK_STATE_READY)},
+	}
+
+	folder := func(path string, task *fakeTask, listed *int) *ole.Object {
+		tasks, _ := fakeTaskCollection([]*ole.Object{task.object(&released)}, false, &collectionsReleased)
+		folders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+
+		return &fakeTaskFolderAt(path, tasks, folders, &foldersReleased, listed).Object
+	}
+
+	subfolders, _ := fakeTaskCollection([]*ole.Object{
+		folder(`\Microsoft`, fakes[0], &listedMicrosoft),
+		folder(`\Vendor`, fakes[1], &listedVendor),
+	}, false, &collectionsReleased)
+	rootTasks, _ := fakeTaskCollection([]*ole.Object{fakes[2].object(&released)}, false, &collectionsReleased)
+	root := fakeTaskFolderAt(`\`, rootTasks, subfolders, nil, nil)
+
+	c := New(&Config{TaskExclude: regexp.MustCompile(`^(?:/Microsoft/.+)$`)})
+	filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
+	tasks := ScheduledTasks{}
+
+	require.NoError(t, fetchTasksRecursively(root, `\`, c.includeTask, filter.includeFolder, &tasks))
+	require.Equal(t, ScheduledTasks{
+		{Path: "/Task", State: TASK_STATE_READY},
+		{Path: "/Vendor/Task", State: TASK_STATE_READY},
+	}, tasks)
+
+	// The excluded folder is released without listing its tasks or subfolders.
+	require.Zero(t, listedMicrosoft)
+	require.Equal(t, 2, listedVendor)
+	require.Equal(t, 2, foldersReleased)
+	require.Zero(t, fakes[0].reads[taskSlotPath])
+	require.Equal(t, 1, fakes[1].reads[taskSlotState])
 }
 
 func TestFetchTasksFilters(t *testing.T) {
@@ -275,7 +316,19 @@ func fakeTaskCollection(items []*ole.Object, countError bool, released *int) (*o
 }
 
 func fakeTaskFolder(tasks, folders *ole.Object, released *int) *taskschd.TaskFolder {
+	return fakeTaskFolderAt("", tasks, folders, released, nil)
+}
+
+// fakeTaskFolderAt returns a folder with the given path that counts the
+// listings of its tasks and subfolders in listed when it is not nil.
+func fakeTaskFolderAt(path string, tasks, folders *ole.Object, released, listed *int) *taskschd.TaskFolder {
 	var methods [15]uintptr
+
+	count := func() {
+		if listed != nil {
+			*listed++
+		}
+	}
 
 	methods[2] = windows.NewCallback(func(uintptr) uintptr {
 		if released != nil {
@@ -284,17 +337,17 @@ func fakeTaskFolder(tasks, folders *ole.Object, released *int) *taskschd.TaskFol
 
 		return 0
 	})
-	methods[8] = windows.NewCallback(func(_ uintptr, out *uintptr) uintptr {
-		*out = 0 // A null BSTR is a valid empty string.
-
-		return 0
-	})
+	methods[8] = (&fakeTask{}).stringGetter(8, &path) // A null BSTR is a valid empty string.
 	methods[10] = windows.NewCallback(func(_ uintptr, _ uintptr, out **ole.Object) uintptr {
+		count()
+
 		*out = folders
 
 		return 0
 	})
 	methods[14] = windows.NewCallback(func(_ uintptr, _ uintptr, out **ole.Object) uintptr {
+		count()
+
 		*out = tasks
 
 		return 0
@@ -390,7 +443,7 @@ func includeAllTasks(string) bool { return true }
 // BenchmarkGetScheduledTasks measures the Task Scheduler reads without metric creation.
 func BenchmarkGetScheduledTasks(b *testing.B) {
 	for b.Loop() {
-		if _, err := getScheduledTasks(includeAllTasks); err != nil {
+		if _, err := getScheduledTasks(includeAllTasks, includeAllTasks); err != nil {
 			b.Fatal(err)
 		}
 	}

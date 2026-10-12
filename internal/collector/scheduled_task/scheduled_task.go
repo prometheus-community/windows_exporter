@@ -57,6 +57,9 @@ type Collector struct {
 	missedRuns       *prometheus.Desc
 	state            *prometheus.Desc
 
+	// folderFilter skips folders that cannot hold tasks passing the filters.
+	folderFilter folderFilter
+
 	// metricCache reuses the metrics of tasks whose values did not change since
 	// the last scrape. Each task publishes 19 series, and building them is most
 	// of the allocations of a scrape.
@@ -208,6 +211,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
+
 	// Cached metrics refer to the descriptors of an earlier Build.
 	c.metricCache.Reset()
 
@@ -228,7 +233,7 @@ var TASK_RESULT_STATUSES = []string{
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	scheduledTasks, err := getScheduledTasks(c.includeTask)
+	scheduledTasks, err := getScheduledTasks(c.includeTask, c.folderFilter.includeFolder)
 	if errors.Is(err, errTasksSkipped) {
 		// Tasks and folders that can't be read are skipped, the other tasks are still collected.
 		c.logger.Warn("failed to read some scheduled tasks",
@@ -337,7 +342,8 @@ func (c *Collector) taskMetrics(task ScheduledTask) []prometheus.Metric {
 var errTasksSkipped = errors.New("tasks skipped")
 
 // getScheduledTasks returns the tasks whose slash-separated paths pass include.
-func getScheduledTasks(include func(path string) bool) (ScheduledTasks, error) {
+// It does not walk the subfolders whose slash-separated paths fail includeFolder.
+func getScheduledTasks(include, includeFolder func(path string) bool) (ScheduledTasks, error) {
 	// COM initialization and every interface call stay on the same OS thread.
 	runtime.LockOSThread()
 
@@ -366,7 +372,7 @@ func getScheduledTasks(include func(path string) bool) (ScheduledTasks, error) {
 	defer root.Release()
 
 	tasks := ScheduledTasks{}
-	if err := fetchTasksRecursively(root, `\`, include, &tasks); err != nil {
+	if err := fetchTasksRecursively(root, `\`, include, includeFolder, &tasks); err != nil {
 		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
 	}
 
@@ -408,8 +414,11 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) b
 }
 
 // fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
+// Subfolders that fail includeFolder are not walked, which saves two round trips
+// to the Task Scheduler service per folder.
 func fetchTasksRecursively(
-	folder *taskschd.TaskFolder, folderPath string, include func(path string) bool, scheduledTasks *ScheduledTasks,
+	folder *taskschd.TaskFolder, folderPath string, include, includeFolder func(path string) bool,
+	scheduledTasks *ScheduledTasks,
 ) error {
 	errs := []error{}
 	if err := fetchTasksInFolder(folder, include, scheduledTasks); err != nil {
@@ -429,12 +438,14 @@ func fetchTasksRecursively(
 			continue
 		}
 
-		subfolderPath := folderPath
-		if path, err := subfolder.Path(); err == nil {
-			subfolderPath = path
+		subfolderPath, err := subfolder.Path()
+		if err != nil {
+			subfolderPath = folderPath
+		} else if !includeFolder(strings.ReplaceAll(subfolderPath, "\\", "/")) {
+			continue
 		}
 
-		if err := fetchTasksRecursively(subfolder, subfolderPath, include, scheduledTasks); err != nil {
+		if err := fetchTasksRecursively(subfolder, subfolderPath, include, includeFolder, scheduledTasks); err != nil {
 			errs = append(errs, err)
 		}
 	}

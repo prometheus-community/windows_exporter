@@ -20,6 +20,14 @@ which an unprivileged user can read.
 - Read only the properties that are published, apply the include/exclude
   filter to the path before any service read, and keep property reads
   conditional on whether the metric that uses them is emitted.
+- `folderFilter` skips subfolders whose tasks the include/exclude expressions
+  reject whatever their names are, by analyzing the parsed expressions. It must
+  stay conservative: when in doubt, walk the folder. A Windows 11 desktop has
+  about 150 folders for about 200 tasks, and listing the tasks and subfolders of
+  each costs ~0.15 ms per call, so `exclude=/Microsoft/.+` saves most of a scrape.
+- A persistent COM connection across scrapes saves only ~1.7 ms of ~145 ms
+  (measured 2026-10). Per-task reads dominate: `NumberOfMissedRuns` ~0.3 ms
+  (more for disabled tasks), `State` and `LastTaskResult` ~0.13 ms each.
 - The fake native task in `scheduled_task_native_test.go` counts reads per
   vtable slot; extend those assertions when adding a property read.
 - To find slow calls, time each call type over a full enumeration on a live

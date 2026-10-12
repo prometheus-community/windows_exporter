@@ -22,6 +22,12 @@ If given, the path of the task needs to *not* match the exclude regular expressi
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 
+Each task folder costs the Task Scheduler service two requests per scrape. The
+collector does not read folders whose tasks the include and exclude expressions
+reject whatever their names are, such as everything below `/Microsoft/` in the
+example above. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
+alternatives) are recognized for exclude, and a literal folder prefix for include.
+
 ## Metrics
 
 Name | Description | Type | Labels
