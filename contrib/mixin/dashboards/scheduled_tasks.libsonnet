@@ -3,6 +3,7 @@ local metric(name, labels='') = 'windows_scheduled_task_' + name + '{job=~"$job"
 // Disabled tasks do not run, so their results and missed runs need no attention.
 local enabled(expr) = expr + ' and on (task) ' + metric('state', 'state!="disabled"') + ' == 1';
 local requirement = ' Requires the scheduled_task collector, which is not enabled by default.';
+local missedRunsRequirement = ' Missed runs need --collector.scheduled_task.missed-runs, which is off by default.';
 // Counts fall back to 0 only while the collector reports tasks, so a missing collector shows no data.
 local orZero = ' or (0 * count(' + metric('state') + '))';
 local table(id, title, description, queries, columns, unit='short') =
@@ -62,14 +63,15 @@ function(on)
       b.stat(191, 'Running', 'Tasks that are running now.' + requirement, 'sum(' + metric('state', 'state="running"') + ')' + orZero),
       b.stat(192, 'Disabled', 'Tasks that are disabled and do not run.' + requirement, 'sum(' + metric('state', 'state="disabled"') + ')' + orZero),
       b.stat(193, 'Unknown code', 'Enabled tasks whose last result code has no named status. This is usually a non-zero exit code of the task or a Task Scheduler error, so check the task history.' + requirement, 'count(' + enabled(metric('last_result_status', 'status="unknown"') + ' == 1') + ')' + orZero, steps=[{ color: 'green', value: null }, { color: 'orange', value: 1 }]),
-      b.stat(194, 'Missed runs', 'Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep.' + requirement, 'count(' + enabled(metric('missed_runs') + ' > 0') + ')' + orZero),
+      // Falls back to 0 only while missed runs are collected, so the stat shows no data without the flag.
+      b.stat(194, 'Missed runs', 'Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep.' + requirement + missedRunsRequirement, 'count(' + enabled(metric('missed_runs') + ' > 0') + ') or (0 * count(' + metric('missed_runs') + '))'),
       b.stat(195, 'Never run', 'Tasks that have not run since they were registered.' + requirement, 'sum(' + metric('last_result_status', 'status="has_not_run"') + ')' + orZero),
 
       table(196, 'Tasks with an unknown result code', 'Enabled tasks whose last result code has no named status, usually a non-zero exit code of the task or a Task Scheduler error.', [
         { refId: 'A', expr: 'max by (task) (' + enabled(metric('last_result_status', 'status="unknown"') + ' == 1') + ')' },
       ], [['task', 'Task']], unit='none'),
 
-      table(197, 'Tasks with missed runs', 'Enabled tasks that missed at least one scheduled run, with the number of missed runs reported by Task Scheduler.', [
+      table(197, 'Tasks with missed runs', 'Enabled tasks that missed at least one scheduled run, with the number of missed runs reported by Task Scheduler.' + missedRunsRequirement, [
         { refId: 'A', expr: 'max by (task) (' + enabled(metric('missed_runs') + ' > 0') + ')' },
       ], [['task', 'Task'], ['Value', 'Missed runs']])
       + b.panel.withOptions({ sortBy: [{ desc: true, displayName: 'Missed runs' }] }),
@@ -100,7 +102,7 @@ function(on)
         ],
       }),
 
-      table(199, 'Tasks', 'All tasks with their state, last result and missed runs. Tasks that never ran report no missed runs.', [
+      table(199, 'Tasks', 'All tasks with their state, last result and missed runs. Missed runs need --collector.scheduled_task.missed-runs, and tasks that never ran report none.', [
         { refId: 'A', expr: 'max by (task, state, status) ((' + metric('state') + ' == 1) * on (task) group_left (status) (' + metric('last_result_status') + ' == 1))' },
         { refId: 'B', expr: 'max by (task) (' + metric('missed_runs') + ')' },
       ], [['task', 'Task'], ['state', 'State'], ['status', 'Last result'], ['Value #B', 'Missed runs']])
