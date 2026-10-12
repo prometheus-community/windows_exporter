@@ -48,6 +48,7 @@ const (
 	openVirtualDiskVersion2      = 2          // OPEN_VIRTUAL_DISK_VERSION_2
 
 	getVirtualDiskInfoSize            = 1 // GET_VIRTUAL_DISK_INFO_SIZE
+	getVirtualDiskInfoParentLocation  = 3 // GET_VIRTUAL_DISK_INFO_PARENT_LOCATION
 	getVirtualDiskInfoProviderSubtype = 7 // GET_VIRTUAL_DISK_INFO_PROVIDER_SUBTYPE
 )
 
@@ -100,30 +101,9 @@ func Available() error {
 // and returns its size and provider subtype. It works on disks attached to
 // running virtual machines.
 func GetInfo(path string) (Info, error) {
-	pathPtr, err := windows.UTF16PtrFromString(path)
+	handle, err := open(path)
 	if err != nil {
-		return Info{}, fmt.Errorf("virtual disk %s: %w", path, err)
-	}
-
-	var (
-		storageType virtualStorageType
-		handle      windows.Handle
-	)
-
-	// GetInfoOnly opens a disk that is in use by a running virtual machine,
-	// like Get-VHD does.
-	params := openVirtualDiskParametersV2{Version: openVirtualDiskVersion2, GetInfoOnly: 1}
-
-	ret, _, _ := procOpenVirtualDisk.Call(
-		uintptr(unsafe.Pointer(&storageType)),
-		uintptr(unsafe.Pointer(pathPtr)),
-		virtualDiskAccessNone,
-		openVirtualDiskFlagNoParents,
-		uintptr(unsafe.Pointer(&params)),
-		uintptr(unsafe.Pointer(&handle)),
-	)
-	if ret != 0 {
-		return Info{}, fmt.Errorf("OpenVirtualDisk %s: %w", path, windows.Errno(ret))
+		return Info{}, err
 	}
 
 	defer func() { _ = windows.CloseHandle(handle) }()
@@ -143,6 +123,123 @@ func GetInfo(path string) (Info, error) {
 		PhysicalSize:    binary.LittleEndian.Uint64(size.Union[8:16]),
 		ProviderSubtype: binary.LittleEndian.Uint32(subtype.Union[0:4]),
 	}, nil
+}
+
+// ParentLocations returns the paths at which the parent of the differencing
+// disk at path is stored, as recorded in the disk. Disks without a parent
+// return none.
+func ParentLocations(path string) ([]string, error) {
+	handle, err := open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() { _ = windows.CloseHandle(handle) }()
+
+	subtype, err := getInformation(handle, getVirtualDiskInfoProviderSubtype)
+	if err != nil {
+		return nil, fmt.Errorf("GetVirtualDiskInformation provider subtype %s: %w", path, err)
+	}
+
+	if binary.LittleEndian.Uint32(subtype.Union[0:4]) != ProviderSubtypeDifferencing {
+		return nil, nil
+	}
+
+	// GET_VIRTUAL_DISK_INFO with ParentLocation: the 8-byte aligned union starts
+	// at offset 8 with the BOOL ParentResolved, followed by the MULTI_SZ
+	// ParentLocationBuffer. A uint64 buffer keeps the alignment.
+	buffer := make([]uint64, 512)
+
+	for range 4 {
+		bytes := unsafe.Slice((*byte)(unsafe.Pointer(&buffer[0])), len(buffer)*8)
+		binary.LittleEndian.PutUint32(bytes, getVirtualDiskInfoParentLocation)
+
+		infoSize := uint32(len(bytes))
+
+		ret, _, _ := procGetVirtualDiskInformation.Call(
+			uintptr(handle),
+			uintptr(unsafe.Pointer(&infoSize)),
+			uintptr(unsafe.Pointer(&buffer[0])),
+			0, // SizeUsed is optional
+		)
+
+		switch windows.Errno(ret) {
+		case 0:
+			if infoSize < 12 || int(infoSize) > len(bytes) {
+				return nil, fmt.Errorf("GetVirtualDiskInformation parent location %s: invalid size %d", path, infoSize)
+			}
+
+			chars := unsafe.Slice((*uint16)(unsafe.Pointer(&bytes[12])), (int(infoSize)-12)/2)
+
+			return decodeMultiString(chars), nil
+		case windows.ERROR_INSUFFICIENT_BUFFER, windows.ERROR_MORE_DATA:
+			if int(infoSize) <= len(bytes) {
+				return nil, fmt.Errorf("GetVirtualDiskInformation parent location %s: %w", path, windows.Errno(ret))
+			}
+
+			buffer = make([]uint64, (int(infoSize)+7)/8)
+		default:
+			return nil, fmt.Errorf("GetVirtualDiskInformation parent location %s: %w", path, windows.Errno(ret))
+		}
+	}
+
+	return nil, fmt.Errorf("GetVirtualDiskInformation parent location %s: buffer did not stabilize", path)
+}
+
+// decodeMultiString splits a MULTI_SZ into its strings.
+func decodeMultiString(chars []uint16) []string {
+	var out []string
+
+	for len(chars) > 0 {
+		end := 0
+		for end < len(chars) && chars[end] != 0 {
+			end++
+		}
+
+		if end == 0 {
+			break
+		}
+
+		out = append(out, windows.UTF16ToString(chars[:end]))
+
+		if end == len(chars) {
+			break
+		}
+
+		chars = chars[end+1:]
+	}
+
+	return out
+}
+
+// open opens the virtual hard disk at path for reading its information only.
+// GetInfoOnly also opens a disk that is in use by a running virtual machine.
+func open(path string) (windows.Handle, error) {
+	pathPtr, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return 0, fmt.Errorf("virtual disk %s: %w", path, err)
+	}
+
+	var (
+		storageType virtualStorageType
+		handle      windows.Handle
+	)
+
+	params := openVirtualDiskParametersV2{Version: openVirtualDiskVersion2, GetInfoOnly: 1}
+
+	ret, _, _ := procOpenVirtualDisk.Call(
+		uintptr(unsafe.Pointer(&storageType)),
+		uintptr(unsafe.Pointer(pathPtr)),
+		virtualDiskAccessNone,
+		openVirtualDiskFlagNoParents,
+		uintptr(unsafe.Pointer(&params)),
+		uintptr(unsafe.Pointer(&handle)),
+	)
+	if ret != 0 {
+		return 0, fmt.Errorf("OpenVirtualDisk %s: %w", path, windows.Errno(ret))
+	}
+
+	return handle, nil
 }
 
 func getInformation(handle windows.Handle, version uint32) (getVirtualDiskInfo, error) {

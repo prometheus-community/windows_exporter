@@ -145,7 +145,7 @@ func TestReadVirtualHardDisks(t *testing.T) {
 		return virtdisk.Info{VirtualSize: uint64(len(path)), ProviderSubtype: virtdisk.ProviderSubtypeDynamic}, nil
 	}
 
-	results, err := readVirtualHardDisks(disks, 4, getInfo)
+	results, err := readVirtualHardDisks(disks, 4, virtualHardDiskReader{getInfo: getInfo, parentLocations: func(string) ([]string, error) { return nil, nil }})
 
 	// One disk fails, one panics: both are reported, the others are read.
 	require.ErrorIs(t, err, errBroken)
@@ -166,11 +166,101 @@ func TestReadVirtualHardDisks(t *testing.T) {
 func TestReadVirtualHardDisksEmpty(t *testing.T) {
 	t.Parallel()
 
-	results, err := readVirtualHardDisks(nil, 4, func(string) (virtdisk.Info, error) {
-		t.Fatal("no disk to read")
+	results, err := readVirtualHardDisks(nil, 4, virtualHardDiskReader{
+		getInfo: func(string) (virtdisk.Info, error) {
+			t.Fatal("no disk to read")
 
-		return virtdisk.Info{}, nil
+			return virtdisk.Info{}, nil
+		},
+		parentLocations: func(string) ([]string, error) { return nil, nil },
 	})
 	require.NoError(t, err)
 	require.Empty(t, results)
+}
+
+func TestVirtualStorageDeviceName(t *testing.T) {
+	t.Parallel()
+
+	for path, want := range map[string]string{
+		`C:\ClusterStorage\CSV01\VM01\disk.vhdx`:                                       `C:-ClusterStorage-CSV01-VM01-disk.vhdx`,
+		`C:\ClusterStorage\CSV04\VM02\Disk(1).vhdx`:                                    `C:-ClusterStorage-CSV04-VM02-Disk[1].vhdx`,
+		`\\?\C:\ClusterStorage\CSV01\VM01\Virtual Machines\x.vmgs`:                     `--?-C:-ClusterStorage-CSV01-VM01-Virtual Machines-x.vmgs`,
+		`C:\ClusterStorage\CSV05\VM03\VM03_8C9A696D-1374-4DD6-B15C-B74E2CA47C29.avhdx`: `C:-ClusterStorage-CSV05-VM03-VM03_8C9A696D-1374-4DD6-B15C-B74E2CA47C29.avhdx`,
+		`D:\VMs\vm.example.net\vra.vhd`:                                                `D:-VMs-vm.example.net-vra.vhd`,
+	} {
+		require.Equal(t, want, virtualStorageDeviceName(path), path)
+	}
+}
+
+func TestVirtualStorageDeviceMatcher(t *testing.T) {
+	t.Parallel()
+
+	matcher := newVirtualStorageDeviceMatcher([]string{
+		`C:-CSV01-VM01-disk.vhdx`,
+		`C:-CSV01-VM01-Disk[1].vhdx`,
+		`C:-CSV06-VM02-vm02_os.vhd`,
+		`--?-C:-CSV01-VM01-Virtual Machines-x.vmgs`,
+	})
+
+	for name, tc := range map[string]struct {
+		candidates []string
+		want       string
+	}{
+		"exact":                      {[]string{`C:\CSV01\VM01\disk.vhdx`}, `C:-CSV01-VM01-disk.vhdx`},
+		"parentheses":                {[]string{`C:\CSV01\VM01\Disk(1).vhdx`}, `C:-CSV01-VM01-Disk[1].vhdx`},
+		"case differs":               {[]string{`c:\csv01\vm01\DISK.VHDX`}, `C:-CSV01-VM01-disk.vhdx`},
+		"vhd checkpoint uses parent": {[]string{`C:\CSV06\VM02\vm02_os_8C9A696D-1374-4DD6-B15C-B74E2CA47C29.avhd`, `C:\CSV06\VM02\vm02_os.vhd`}, `C:-CSV06-VM02-vm02_os.vhd`},
+		"own name wins over parent":  {[]string{`C:\CSV01\VM01\Disk(1).vhdx`, `C:\CSV01\VM01\disk.vhdx`}, `C:-CSV01-VM01-Disk[1].vhdx`},
+		"vm not running":             {[]string{`C:\CSV09\VM09\off.vhdx`}, ""},
+		"no candidates":              {nil, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tc.want, matcher.match(tc.candidates))
+		})
+	}
+
+	require.Empty(t, newVirtualStorageDeviceMatcher(nil).match([]string{`C:\CSV01\VM01\disk.vhdx`}))
+}
+
+func TestVirtualHardDiskChain(t *testing.T) {
+	t.Parallel()
+
+	// vm_os_B.avhd -> vm_os_A.avhd -> vm_os.vhd, the second parent recorded relative.
+	parents := map[string][]string{
+		`C:\VM\vm_os_B.avhd`: {`C:\VM\vm_os_A.avhd`},
+		`C:\VM\vm_os_A.avhd`: {`vm_os.vhd`, `C:\VM\vm_os.vhd`},
+	}
+	subtypes := map[string]uint32{
+		`C:\VM\vm_os_B.avhd`: virtdisk.ProviderSubtypeDifferencing,
+		`C:\VM\vm_os_A.avhd`: virtdisk.ProviderSubtypeDifferencing,
+		`C:\VM\vm_os.vhd`:    virtdisk.ProviderSubtypeDynamic,
+	}
+
+	parentLocations := func(path string) ([]string, error) { return parents[path], nil }
+	getInfo := func(path string) (virtdisk.Info, error) {
+		subtype, ok := subtypes[path]
+		if !ok {
+			return virtdisk.Info{}, errors.New("not found")
+		}
+
+		return virtdisk.Info{ProviderSubtype: subtype}, nil
+	}
+
+	require.Equal(t,
+		[]string{`C:\VM\vm_os_B.avhd`, `C:\VM\vm_os_A.avhd`, `C:\VM\vm_os.vhd`},
+		virtualHardDiskChain(`C:\VM\vm_os_B.avhd`, virtdisk.ProviderSubtypeDifferencing, getInfo, parentLocations),
+	)
+
+	// Disks that aren't differencing have no parents to read.
+	require.Equal(t, []string{`C:\VM\vm_os.vhd`}, virtualHardDiskChain(`C:\VM\vm_os.vhd`, virtdisk.ProviderSubtypeDynamic, getInfo, func(string) ([]string, error) {
+		t.Fatal("parent locations of a dynamic disk")
+
+		return nil, nil
+	}))
+
+	// A loop in broken metadata ends.
+	loop := func(path string) ([]string, error) { return []string{path}, nil }
+	require.Equal(t, []string{`C:\VM\vm_os_B.avhd`}, virtualHardDiskChain(`C:\VM\vm_os_B.avhd`, virtdisk.ProviderSubtypeDifferencing, getInfo, loop))
 }

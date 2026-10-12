@@ -29,6 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func noVirtualStorageDevices() ([]string, error) { return nil, nil }
+
+func noParents(string) ([]string, error) { return nil, nil }
+
 func testDisks(paths ...string) []attachedVirtualHardDisk {
 	disks := make([]attachedVirtualHardDisk, 0, len(paths))
 	for _, path := range paths {
@@ -46,13 +50,14 @@ func TestVirtualHardDiskRefresherFirstRefresh(t *testing.T) {
 
 	refresher := newVirtualHardDiskRefresher(slog.New(slog.DiscardHandler), time.Hour,
 		func() ([]attachedVirtualHardDisk, error) { return testDisks(`C:\a.vhdx`, `C:\b.vhdx`), nil },
-		func(path string) (virtdisk.Info, error) {
+		noVirtualStorageDevices,
+		virtualHardDiskReader{getInfo: func(path string) (virtdisk.Info, error) {
 			if path == `C:\b.vhdx` {
 				return virtdisk.Info{}, errUnreadable
 			}
 
 			return virtdisk.Info{VirtualSize: 10, PhysicalSize: 5, ProviderSubtype: virtdisk.ProviderSubtypeDynamic}, nil
-		},
+		}, parentLocations: noParents},
 	)
 	refresher.now = func() time.Time { return refreshed }
 
@@ -96,7 +101,8 @@ func TestVirtualHardDiskRefresherListErrorKeepsResults(t *testing.T) {
 				return nil, errWMI
 			}
 		},
-		func(string) (virtdisk.Info, error) { return virtdisk.Info{VirtualSize: 10}, nil },
+		noVirtualStorageDevices,
+		virtualHardDiskReader{getInfo: func(string) (virtdisk.Info, error) { return virtdisk.Info{VirtualSize: 10}, nil }, parentLocations: noParents},
 	)
 
 	refresher.start(time.Second)
@@ -135,7 +141,8 @@ func TestVirtualHardDiskRefresherStopWaitsForList(t *testing.T) {
 
 			return nil, nil
 		},
-		func(string) (virtdisk.Info, error) { return virtdisk.Info{}, nil },
+		noVirtualStorageDevices,
+		virtualHardDiskReader{getInfo: func(string) (virtdisk.Info, error) { return virtdisk.Info{}, nil }, parentLocations: noParents},
 	)
 
 	refresher.start(time.Second)
@@ -173,7 +180,8 @@ func TestVirtualHardDiskRefresherStartIsBounded(t *testing.T) {
 
 			return nil, nil
 		},
-		func(string) (virtdisk.Info, error) { return virtdisk.Info{}, nil },
+		noVirtualStorageDevices,
+		virtualHardDiskReader{getInfo: func(string) (virtdisk.Info, error) { return virtdisk.Info{}, nil }, parentLocations: noParents},
 	)
 
 	start := time.Now()
@@ -182,4 +190,71 @@ func TestVirtualHardDiskRefresherStartIsBounded(t *testing.T) {
 
 	close(release)
 	refresher.stop()
+}
+
+func TestVirtualHardDiskRefresherDevice(t *testing.T) {
+	t.Parallel()
+
+	const (
+		vhdx       = `C:\CSV01\VM01\Disk(1).vhdx`
+		avhd       = `C:\CSV06\VM02\vm02_os_8C9A696D-1374-4DD6-B15C-B74E2CA47C29.avhd`
+		avhdParent = `C:\CSV06\VM02\vm02_os.vhd`
+		off        = `C:\CSV09\VM09\off.vhdx`
+	)
+
+	reader := virtualHardDiskReader{
+		getInfo: func(path string) (virtdisk.Info, error) {
+			if path == avhd {
+				return virtdisk.Info{ProviderSubtype: virtdisk.ProviderSubtypeDifferencing}, nil
+			}
+
+			return virtdisk.Info{ProviderSubtype: virtdisk.ProviderSubtypeDynamic}, nil
+		},
+		parentLocations: func(path string) ([]string, error) {
+			if path == avhd {
+				return []string{avhdParent}, nil
+			}
+
+			return nil, nil
+		},
+	}
+
+	for name, tc := range map[string]struct {
+		instances func() ([]string, error)
+		want      map[string]string
+	}{
+		"matched": {
+			instances: func() ([]string, error) {
+				return []string{`C:-CSV01-VM01-Disk[1].vhdx`, `C:-CSV06-VM02-vm02_os.vhd`, `--?-C:-CSV01-VM01-Virtual Machines-x.vmgs`}, nil
+			},
+			want: map[string]string{vhdx: `C:-CSV01-VM01-Disk[1].vhdx`, avhd: `C:-CSV06-VM02-vm02_os.vhd`, off: ""},
+		},
+		"counters fail": {
+			instances: func() ([]string, error) { return nil, errors.New("pdh failed") },
+			want:      map[string]string{vhdx: "", avhd: "", off: ""},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			refresher := newVirtualHardDiskRefresher(slog.New(slog.DiscardHandler), time.Hour,
+				func() ([]attachedVirtualHardDisk, error) { return testDisks(vhdx, avhd, off), nil },
+				tc.instances,
+				reader,
+			)
+
+			refresher.start(time.Second)
+			t.Cleanup(refresher.stop)
+
+			snapshot := refresher.get()
+			require.NoError(t, snapshot.err, "a failed counter read must not fail the refresh")
+
+			got := make(map[string]string)
+			for _, result := range snapshot.results {
+				got[result.disk.Path] = result.device
+			}
+
+			require.Equal(t, tc.want, got)
+		})
+	}
 }

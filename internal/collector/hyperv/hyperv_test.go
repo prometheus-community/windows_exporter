@@ -102,9 +102,18 @@ func TestCollectorLegacyNetworkAdapter(t *testing.T) {
 // TestCollectorVirtualHardDisk checks the disk of the CI fixture VM, which is
 // created with New-VM -NewVHDSizeBytes 1GB (a dynamic VHDX).
 func TestCollectorVirtualHardDisk(t *testing.T) {
-	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk"}})
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk", "virtual_storage_device"}})
 
 	labels := prometheus.Labels{"vm": "GitHubActions", "type": "dynamic"}
+
+	// The device label joins the disk with its I/O metrics: the running VM's
+	// disk has exactly one "Hyper-V Virtual Storage Device" instance.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
+		device := labelValue(metric, "device")
+		require.NotEmpty(t, device, "the running VM's disk has no device")
+		require.Contains(t, testutils.MetricValuesByLabel(metrics, "windows_hyperv_virtual_storage_device_queue_length", "device"), device,
+			"device %q is not a virtual_storage_device instance", device)
+	}
 
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
 		require.InDelta(t, 1<<30, metric.GetGauge().GetValue(), 0)
@@ -156,6 +165,10 @@ func TestCollectorVirtualHardDiskCheckpoint(t *testing.T) {
 	require.InDelta(t, 64<<20, differencing.GetGauge().GetValue(), 0)
 	require.InDelta(t, 8<<20, fixed.GetGauge().GetValue(), 0)
 
+	// The VM never runs, so its disks have no I/O counter instance.
+	require.Empty(t, labelValue(differencing, "device"))
+	require.Empty(t, labelValue(fixed, "device"))
+
 	for _, name := range []string{"windows_hyperv_virtual_hard_disk_size_bytes", "windows_hyperv_virtual_hard_disk_file_size_bytes"} {
 		var paths []string
 
@@ -176,6 +189,16 @@ func TestCollectorVirtualHardDiskCheckpoint(t *testing.T) {
 			require.True(t, strings.HasSuffix(strings.ToLower(path), ".avhdx") || strings.HasSuffix(strings.ToLower(path), "fixed.vhdx"), "%s: unexpected disk %s", name, path)
 		}
 	}
+}
+
+func labelValue(metric *dto.Metric, name string) string {
+	for _, label := range metric.GetLabel() {
+		if label.GetName() == name {
+			return label.GetValue()
+		}
+	}
+
+	return ""
 }
 
 // TestCloseReleasesQuery ensures Close releases the PDH queries of the sub-collectors.

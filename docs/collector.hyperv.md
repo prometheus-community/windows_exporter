@@ -420,18 +420,33 @@ so a scrape only publishes the last values and a slow or unreachable disk doesn'
 The values can be up to one interval old. A disk that can't be read is logged and counted in
 `windows_hyperv_virtual_hard_disk_read_errors`; only a failed disk listing fails the collector.
 
-| Name                                                              | Description                                                                      | Type  | Labels                |
-|-------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|-----------------------|
-| `windows_hyperv_virtual_hard_disk_size_bytes`                     | Maximum size of the virtual hard disk, as seen by the VM                         | gauge | vm, vm_id, path, type |
-| `windows_hyperv_virtual_hard_disk_file_size_bytes`                | Size of the virtual hard disk file on storage                                    | gauge | vm, vm_id, path, type |
-| `windows_hyperv_virtual_hard_disk_read_errors`                    | Number of attached virtual hard disks that could not be read in the last refresh | gauge | None                  |
-| `windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds` | Time of the last successful refresh                                              | gauge | None                  |
+| Name                                                              | Description                                                                      | Type  | Labels                        |
+|-------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|-------------------------------|
+| `windows_hyperv_virtual_hard_disk_size_bytes`                     | Maximum size of the virtual hard disk, as seen by the VM                         | gauge | vm, vm_id, path, type, device |
+| `windows_hyperv_virtual_hard_disk_file_size_bytes`                | Size of the virtual hard disk file on storage                                    | gauge | vm, vm_id, path, type, device |
+| `windows_hyperv_virtual_hard_disk_read_errors`                    | Number of attached virtual hard disks that could not be read in the last refresh | gauge | None                          |
+| `windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds` | Time of the last successful refresh                                              | gauge | None                          |
 
 `type` is `fixed` (thick provisioned), `dynamic` (thin provisioned), `differencing` (checkpoint or child disk)
 or `unknown`.
 
 For a VM with checkpoints, `path` is the current `.avhdx` and `file_size_bytes` only counts that file.
 The parent disks aren't reported, so summing `file_size_bytes` per VM undercounts its storage.
+
+`device` is the instance name of the disk in the `Hyper-V Virtual Storage Device` counter set, the same value as the
+`device` label of `windows_hyperv_virtual_storage_device_*`. It joins the I/O metrics with the virtual machine.
+The right-hand side is turned into `1` first, so the join only adds the `vm` label and keeps the values:
+
+```promql
+rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])
+  * on (instance, device) group_left (vm)
+  (0 * windows_hyperv_virtual_hard_disk_size_bytes{device!=""} + 1)
+```
+
+The instance names are read from the counter set on every refresh and matched to `path` (Hyper-V replaces `\` with
+`-` and `(…)` with `[…]`). `device` is empty when the disk has no instance, which is the case for virtual machines that
+aren't running. The instance of a VHD-format checkpoint (`.avhd`) is named after the base disk of its chain; `device` is
+then that name. VHDX checkpoints (`.avhdx`) have their own instance.
 
 Space promised to thin provisioned disks but not yet allocated:
 

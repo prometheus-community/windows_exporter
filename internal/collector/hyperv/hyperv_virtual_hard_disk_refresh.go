@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/virtdisk"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 )
 
@@ -46,11 +45,13 @@ type virtualHardDiskRefresher struct {
 	logger   *slog.Logger
 	interval time.Duration
 	list     func() ([]attachedVirtualHardDisk, error)
-	getInfo  func(path string) (virtdisk.Info, error)
-	now      func() time.Time
+	// instances returns the "Hyper-V Virtual Storage Device" counter instances.
+	instances func() ([]string, error)
+	reader    virtualHardDiskReader
+	now       func() time.Time
 
-	// listMu is held while list runs. stop waits for it, because list uses
-	// the MI session, which is released after Close.
+	// listMu is held while list and instances run. stop waits for it, because
+	// they use the MI session and the PDH query, which are released after Close.
 	listMu sync.Mutex
 
 	mu       sync.RWMutex
@@ -63,14 +64,16 @@ func newVirtualHardDiskRefresher(
 	logger *slog.Logger,
 	interval time.Duration,
 	list func() ([]attachedVirtualHardDisk, error),
-	getInfo func(path string) (virtdisk.Info, error),
+	instances func() ([]string, error),
+	reader virtualHardDiskReader,
 ) *virtualHardDiskRefresher {
 	return &virtualHardDiskRefresher{
-		logger:   logger,
-		interval: interval,
-		list:     list,
-		getInfo:  getInfo,
-		now:      time.Now,
+		logger:    logger,
+		interval:  interval,
+		list:      list,
+		instances: instances,
+		reader:    reader,
+		now:       time.Now,
 	}
 }
 
@@ -132,7 +135,7 @@ func (r *virtualHardDiskRefresher) get() virtualHardDiskSnapshot {
 }
 
 func (r *virtualHardDiskRefresher) refresh(ctx context.Context) {
-	disks, err := r.listDisks(ctx)
+	disks, instances, err := r.listDisks(ctx)
 	if ctx.Err() != nil {
 		return
 	}
@@ -147,9 +150,14 @@ func (r *virtualHardDiskRefresher) refresh(ctx context.Context) {
 		return
 	}
 
-	results, err := readVirtualHardDisks(disks, virtualHardDiskWorkers, r.getInfo)
+	results, err := readVirtualHardDisks(disks, virtualHardDiskWorkers, r.reader)
 	if err != nil {
 		r.logger.WarnContext(ctx, "failed to read virtual hard disks", slog.Any("err", err))
+	}
+
+	matcher := newVirtualStorageDeviceMatcher(instances)
+	for i := range results {
+		results[i].device = matcher.match(results[i].chain)
 	}
 
 	r.mu.Lock()
@@ -161,13 +169,25 @@ func (r *virtualHardDiskRefresher) refresh(ctx context.Context) {
 	r.mu.Unlock()
 }
 
-func (r *virtualHardDiskRefresher) listDisks(ctx context.Context) ([]attachedVirtualHardDisk, error) {
+// listDisks returns the attached disks and the counter instances. A failure to
+// read the instances is logged; the disks are then published without device.
+func (r *virtualHardDiskRefresher) listDisks(ctx context.Context) ([]attachedVirtualHardDisk, []string, error) {
 	r.listMu.Lock()
 	defer r.listMu.Unlock()
 
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 
-	return r.list()
+	disks, err := r.list()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	instances, err := r.instances()
+	if err != nil {
+		r.logger.WarnContext(ctx, "failed to read Hyper-V Virtual Storage Device instances", slog.Any("err", err))
+	}
+
+	return disks, instances, nil
 }

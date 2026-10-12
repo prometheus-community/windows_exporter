@@ -20,6 +20,7 @@ package virtdisk
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -67,11 +68,26 @@ const (
 func createVHDX(t *testing.T, path string, size uint64, fixed bool) {
 	t.Helper()
 
+	createVirtualDisk(t, path, createVirtualDiskParametersV2{Version: createVirtualDiskVersion2, MaximumSize: size}, fixed)
+}
+
+// createDifferencingVHDX creates a differencing VHDX with parent as its parent.
+func createDifferencingVHDX(t *testing.T, path, parent string) {
+	t.Helper()
+
+	parentPtr, err := windows.UTF16PtrFromString(parent)
+	require.NoError(t, err)
+
+	createVirtualDisk(t, path, createVirtualDiskParametersV2{Version: createVirtualDiskVersion2, ParentPath: parentPtr}, false)
+}
+
+func createVirtualDisk(t *testing.T, path string, params createVirtualDiskParametersV2, fixed bool) {
+	t.Helper()
+
 	pathPtr, err := windows.UTF16PtrFromString(path)
 	require.NoError(t, err)
 
 	storageType := virtualStorageType{DeviceID: virtualStorageTypeDeviceVHDX, VendorID: virtualStorageTypeVendorMicrosoft}
-	params := createVirtualDiskParametersV2{Version: createVirtualDiskVersion2, MaximumSize: size}
 
 	var flags uintptr
 	if fixed {
@@ -144,4 +160,57 @@ func TestGetInfoMissingFile(t *testing.T) {
 
 	_, err := GetInfo(path)
 	require.ErrorContains(t, err, path)
+}
+
+func TestParentLocations(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	parent := filepath.Join(dir, "parent.vhdx")
+	child := filepath.Join(dir, "child.avhdx")
+
+	createVHDX(t, parent, 64<<20, false)
+	createDifferencingVHDX(t, child, parent)
+
+	info, err := GetInfo(child)
+	require.NoError(t, err)
+	require.Equal(t, ProviderSubtypeDifferencing, info.ProviderSubtype)
+
+	locations, err := ParentLocations(child)
+	require.NoError(t, err)
+	require.Condition(t, func() bool {
+		for _, location := range locations {
+			if strings.EqualFold(location, parent) {
+				return true
+			}
+		}
+
+		return false
+	}, "parent %s not in %v", parent, locations)
+
+	// A disk without a parent has no parent locations.
+	locations, err = ParentLocations(parent)
+	require.NoError(t, err)
+	require.Empty(t, locations)
+}
+
+func TestDecodeMultiString(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		in   []uint16
+		want []string
+	}{
+		"two":          {append(append(windows.StringToUTF16(`..\parent.vhdx`), windows.StringToUTF16(`C:\vm\parent.vhdx`)...), 0), []string{`..\parent.vhdx`, `C:\vm\parent.vhdx`}},
+		"one":          {windows.StringToUTF16(`C:\vm\parent.vhd`), []string{`C:\vm\parent.vhd`}},
+		"empty":        {[]uint16{0, 0}, nil},
+		"unterminated": {[]uint16{'a', 'b'}, []string{"ab"}},
+		"nil":          {nil, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tc.want, decodeMultiString(tc.in))
+		})
+	}
 }

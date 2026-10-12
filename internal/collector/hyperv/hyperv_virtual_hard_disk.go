@@ -20,12 +20,14 @@ package hyperv
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/virtdisk"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
@@ -54,11 +56,23 @@ type collectorVirtualHardDisk struct {
 	virtualHardDiskSettingQuery mi.Query
 
 	virtualHardDiskRefresher *virtualHardDiskRefresher
+	// virtualHardDiskDevices reads the instance names of the "Hyper-V Virtual
+	// Storage Device" counter set, to set the device label. Nil if the counter
+	// set is not available.
+	virtualHardDiskDevices *pdh.Collector[perfDataVirtualHardDiskDevice]
 
 	virtualHardDiskSizeBytes                   *prometheus.Desc
 	virtualHardDiskFileSizeBytes               *prometheus.Desc
 	virtualHardDiskReadErrors                  *prometheus.Desc
 	virtualHardDiskLastRefreshTimestampSeconds *prometheus.Desc
+}
+
+// perfDataVirtualHardDiskDevice reads only the instance names of the
+// "Hyper-V Virtual Storage Device" counter set; one counter is required.
+type perfDataVirtualHardDiskDevice struct {
+	Name string
+
+	QueueLength float64 `perfdata:"Queue Length"`
 }
 
 // msvmVirtualMachine is the part of Msvm_ComputerSystem needed to name a VM.
@@ -104,7 +118,7 @@ func (c *Collector) buildVirtualHardDisk() error {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
 
-	labels := []string{"vm", "vm_id", "path", "type"}
+	labels := []string{"vm", "vm_id", "path", "type", "device"}
 
 	c.virtualHardDiskSizeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_hard_disk_size_bytes"),
@@ -131,17 +145,65 @@ func (c *Collector) buildVirtualHardDisk() error {
 		nil,
 	)
 
-	c.virtualHardDiskRefresher = newVirtualHardDiskRefresher(c.logger, c.config.VirtualHardDisk.RefreshInterval, c.listVirtualHardDisks, virtdisk.GetInfo)
+	c.virtualHardDiskDevices, err = pdh.NewCollector[perfDataVirtualHardDiskDevice](c.logger, pdh.CounterTypeRaw, "Hyper-V Virtual Storage Device", pdh.InstancesAll)
+	if err != nil {
+		c.logger.Warn("Hyper-V Virtual Storage Device counters are not available, virtual hard disks have no device label",
+			slog.Any("err", err),
+		)
+
+		c.virtualHardDiskDevices.Close()
+		c.virtualHardDiskDevices = nil
+	}
+
+	c.virtualHardDiskRefresher = newVirtualHardDiskRefresher(
+		c.logger,
+		c.config.VirtualHardDisk.RefreshInterval,
+		c.listVirtualHardDisks,
+		c.listVirtualHardDiskDevices,
+		virtualHardDiskReader{getInfo: virtdisk.GetInfo, parentLocations: virtdisk.ParentLocations},
+	)
 	c.virtualHardDiskRefresher.start(virtualHardDiskFirstRefreshTimeout)
 
 	return nil
 }
 
 func (c *Collector) closeVirtualHardDisk() {
+	// Stop the refresher first: it reads the counters until it stops.
 	if c.virtualHardDiskRefresher != nil {
 		c.virtualHardDiskRefresher.stop()
 		c.virtualHardDiskRefresher = nil
 	}
+
+	if c.virtualHardDiskDevices != nil {
+		c.virtualHardDiskDevices.Close()
+		c.virtualHardDiskDevices = nil
+	}
+}
+
+// listVirtualHardDiskDevices returns the "Hyper-V Virtual Storage Device"
+// instances. Only running virtual machines have instances.
+func (c *Collector) listVirtualHardDiskDevices() ([]string, error) {
+	if c.virtualHardDiskDevices == nil {
+		return nil, nil
+	}
+
+	var rows []perfDataVirtualHardDiskDevice
+
+	err := c.virtualHardDiskDevices.Collect(&rows)
+	if errors.Is(err, pdh.ErrNoData) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect Hyper-V Virtual Storage Device instances: %w", err)
+	}
+
+	instances := make([]string, 0, len(rows))
+	for _, row := range rows {
+		instances = append(instances, row.Name)
+	}
+
+	return instances, nil
 }
 
 func (c *Collector) listVirtualHardDisks() ([]attachedVirtualHardDisk, error) {
@@ -168,9 +230,9 @@ func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *
 		disk := result.disk
 		diskType := virtualHardDiskType(result.info.ProviderSubtype)
 
-		ch <- scrape.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(result.info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType)
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskSizeBytes, prometheus.GaugeValue, float64(result.info.VirtualSize), disk.VMName, disk.VMID, disk.Path, diskType, result.device)
 
-		ch <- scrape.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType)
+		ch <- scrape.MustNewConstMetric(c.virtualHardDiskFileSizeBytes, prometheus.GaugeValue, float64(result.info.PhysicalSize), disk.VMName, disk.VMID, disk.Path, diskType, result.device)
 	}
 
 	if !snapshot.refreshed.IsZero() {
@@ -189,13 +251,24 @@ func (c *Collector) collectVirtualHardDisk(ch chan<- prometheus.Metric, scrape *
 type virtualHardDiskResult struct {
 	disk attachedVirtualHardDisk
 	info virtdisk.Info
+	// chain is the disk and its parents, see virtualHardDiskChain.
+	chain []string
+	// device is the "Hyper-V Virtual Storage Device" counter instance of the
+	// disk, "" if it has none.
+	device string
 }
 
-// readVirtualHardDisks reads the disks with at most workers calls of getInfo
-// at once. A disk that fails is left out and its error, or a recovered panic,
-// is returned joined with the others; the order of the disks is kept.
-func readVirtualHardDisks(disks []attachedVirtualHardDisk, workers int, getInfo func(path string) (virtdisk.Info, error)) ([]virtualHardDiskResult, error) {
-	infos := make([]virtdisk.Info, len(disks))
+// virtualHardDiskReader reads a disk and the paths of its parents.
+type virtualHardDiskReader struct {
+	getInfo         func(path string) (virtdisk.Info, error)
+	parentLocations func(path string) ([]string, error)
+}
+
+// readVirtualHardDisks reads the disks with at most workers disks at once. A
+// disk that fails is left out and its error, or a recovered panic, is
+// returned joined with the others; the order of the disks is kept.
+func readVirtualHardDisks(disks []attachedVirtualHardDisk, workers int, reader virtualHardDiskReader) ([]virtualHardDiskResult, error) {
+	results := make([]virtualHardDiskResult, len(disks))
 	read := make([]bool, len(disks))
 	slots := make(chan struct{}, workers)
 
@@ -207,12 +280,17 @@ func readVirtualHardDisks(disks []attachedVirtualHardDisk, workers int, getInfo 
 		group.Go(func() error {
 			defer func() { <-slots }()
 
-			info, err := getInfo(disk.Path)
+			info, err := reader.getInfo(disk.Path)
 			if err != nil {
 				return err
 			}
 
-			infos[i], read[i] = info, true
+			results[i] = virtualHardDiskResult{
+				disk:  disk,
+				info:  info,
+				chain: virtualHardDiskChain(disk.Path, info.ProviderSubtype, reader.getInfo, reader.parentLocations),
+			}
+			read[i] = true
 
 			return nil
 		})
@@ -220,15 +298,15 @@ func readVirtualHardDisks(disks []attachedVirtualHardDisk, workers int, getInfo 
 
 	err := group.Wait()
 
-	results := make([]virtualHardDiskResult, 0, len(disks))
+	out := make([]virtualHardDiskResult, 0, len(disks))
 
-	for i, disk := range disks {
+	for i := range disks {
 		if read[i] {
-			results = append(results, virtualHardDiskResult{disk: disk, info: infos[i]})
+			out = append(out, results[i])
 		}
 	}
 
-	return results, err
+	return out, err
 }
 
 type attachedVirtualHardDisk struct {
