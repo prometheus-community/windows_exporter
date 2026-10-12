@@ -71,8 +71,13 @@ of them empty), about 150 ms per scrape without filters.
   per-task state reads.
 - There is no flat or recursive task enumeration: `GetTasks`/`GetFolders` and
   `SchRpcEnumTasks`/`SchRpcEnumFolders` list one folder each, with only the
-  hidden-task flag. `MSFT_ScheduledTask` (CIM) uses the same walk. The registry
-  `TaskCache` is undocumented and not readable without admin rights.
+  hidden-task flag. The registry `TaskCache` is undocumented and not readable
+  without admin rights.
+- `MSFT_ScheduledTask` (CIM, `root/Microsoft/Windows/TaskScheduler`) returns a
+  flat list with path and state, but is about 3× slower: ~440 ms through
+  `internal/mi` in-process for the same 207 tasks, whatever properties are
+  selected, plus ~120 ms for last result and missed runs. The work moves into
+  `WmiPrvSE` (up to ~30% of one core while querying).
 - Remaining options that change behavior, not taken yet: an opt-in for
   `missed_runs`, or a cache duration that serves the last task list.
 - Profiling the exporter with pprof on Windows attributes the time blocked in
