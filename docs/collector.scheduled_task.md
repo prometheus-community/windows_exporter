@@ -18,9 +18,36 @@ E.G. `--collector.scheduled_task.include="Firefox.*"`
 
 ### `--collector.scheduled_task.exclude`
 
-If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported. Default: empty
+If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported. Default: `/Microsoft/.+`
 
-E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
+The default excludes the tasks of Windows itself, below `/Microsoft/`. They are
+most of the tasks and folders of an installation and rarely worth alerting on.
+To report every task, set the flag to an empty value:
+
+E.G. `--collector.scheduled_task.exclude=""`, or `exclude: ""` below
+`collector.scheduled_task` in the configuration file. A key without a value
+keeps the default.
+
+To report Windows tasks except some folders, list the folders to exclude
+instead. Tasks in folders that are not listed are reported, including folders
+that a Windows update adds:
+
+E.G. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag|Diagnosis|WindowsUpdate)/.+"`
+
+Each task folder costs the Task Scheduler service two requests per scrape. The
+collector does not read folders whose tasks the include and exclude expressions
+reject whatever their names are, such as everything below `/Microsoft/` with
+the default. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
+alternatives) are recognized for exclude, and a literal folder prefix for include.
+Errors reading folders that are not walked are not reported.
+
+### `--collector.scheduled_task.missed-runs`
+
+If set, the collector reads and reports `windows_scheduled_task_missed_runs`.
+Reading the missed runs of a task costs the Task Scheduler service two requests
+per scrape, about a quarter of a scrape, and the service lists the start time
+of every missed run to count them. Without this flag, the dashboards show 0 missed runs
+and an empty table of tasks with missed runs. Default: `false`
 
 ## Metrics
 
@@ -28,7 +55,7 @@ Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
 `windows_scheduled_task_last_result_status` | The last result status of a scheduled task, 1 if the current status, 0 otherwise | gauge | task, status
-`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run | gauge | task
+`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run; only with `--collector.scheduled_task.missed-runs` | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
 
 For the values of the `state` and `status` labels, see below.
@@ -85,6 +112,8 @@ A task can be in the following states:
 
 
 ### Example metric
+
+This Windows task is only reported with `--collector.scheduled_task.exclude=""`.
 
 ```
 windows_scheduled_task_last_result{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1

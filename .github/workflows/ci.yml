@@ -609,6 +609,20 @@ jobs:
               throw "Expected Hyper-V VM to be running, got $($vm.State)"
           }
 
+          # A second VM, never started, for the virtual_hard_disk sub-collector:
+          # a dynamic disk with a checkpoint (the VM then runs on a differencing
+          # .avhdx) and a fixed disk attached after the checkpoint.
+          $vhdDir = Join-Path $env:RUNNER_TEMP "hyperv-ci-vhd"
+          New-Item -ItemType Directory -Force -Path $vhdDir | Out-Null
+          New-VM -Name "CIVirtualHardDisk" -Generation 2 -MemoryStartupBytes 64MB -NoVHD -Path $vhdDir | Out-Null
+          Set-VM -Name "CIVirtualHardDisk" -CheckpointType Standard
+          New-VHD -Path (Join-Path $vhdDir "dynamic.vhdx") -Dynamic -SizeBytes 64MB | Out-Null
+          Add-VMHardDiskDrive -VMName "CIVirtualHardDisk" -Path (Join-Path $vhdDir "dynamic.vhdx")
+          Checkpoint-VM -Name "CIVirtualHardDisk" -SnapshotName "ci"
+          New-VHD -Path (Join-Path $vhdDir "fixed.vhdx") -Fixed -SizeBytes 8MB | Out-Null
+          Add-VMHardDiskDrive -VMName "CIVirtualHardDisk" -Path (Join-Path $vhdDir "fixed.vhdx")
+          Get-VMHardDiskDrive -VMName "CIVirtualHardDisk" | Get-VHD | Format-Table Path, VhdType, Size, FileSize -AutoSize
+
       - name: Download container prerequisites
         id: download-container-prereqs
         background: true

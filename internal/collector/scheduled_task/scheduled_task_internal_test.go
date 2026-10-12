@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -113,7 +114,7 @@ func TestCollectMetrics(t *testing.T) {
 				MissedRunsCount: 3,
 				LastTaskResult:  TaskResult(tc.result),
 			}
-			families := gatherTaskMetrics(t, nil, ScheduledTasks{task})
+			families := gatherTaskMetrics(t, &Config{MissedRuns: true}, ScheduledTasks{task})
 
 			states := families["windows_scheduled_task_state"]
 			require.NotNil(t, states)
@@ -243,7 +244,7 @@ func TestCollectMetricsCache(t *testing.T) {
 		{Path: "/Added", State: TASK_STATE_QUEUED, LastTaskResult: SCHED_S_TASK_QUEUED},
 	}
 
-	c := New(nil)
+	c := New(&Config{MissedRuns: true})
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	var previous map[string][]prometheus.Metric
@@ -386,4 +387,38 @@ func benchmarkTasks(n int) ScheduledTasks {
 	}
 
 	return tasks
+}
+
+func TestNewWithFlagsExclude(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		args   []string
+		update bool
+		defrag bool
+	}{
+		{name: "default"},
+		{name: "empty", args: []string{"--collector.scheduled_task.exclude="}, update: true, defrag: true},
+		{name: "empty separate value", args: []string{"--collector.scheduled_task.exclude", ""}, update: true, defrag: true},
+		{
+			name:   "listed folders",
+			args:   []string{"--collector.scheduled_task.exclude=/Microsoft/Windows/(?:Defrag|Diagnosis)/.+"},
+			update: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			app := kingpin.New("test", "test")
+			c := NewWithFlags(app)
+
+			_, err := app.Parse(tc.args)
+			require.NoError(t, err)
+
+			require.True(t, c.includeTask("/Vendor/Task"))
+			require.Equal(t, tc.update, c.includeTask("/Microsoft/Windows/UpdateOrchestrator/Schedule Scan"))
+			require.Equal(t, tc.defrag, c.includeTask("/Microsoft/Windows/Defrag/ScheduledDefrag"))
+		})
+	}
 }

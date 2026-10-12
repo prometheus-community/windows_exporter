@@ -19,6 +19,7 @@ package hyperv_test
 
 import (
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -96,6 +97,108 @@ func TestCollectorLegacyNetworkAdapter(t *testing.T) {
 			require.Equal(t, dto.MetricType_COUNTER, family.GetType(), name)
 		}
 	}
+}
+
+// TestCollectorVirtualHardDisk checks the disk of the CI fixture VM, which is
+// created with New-VM -NewVHDSizeBytes 1GB (a dynamic VHDX).
+func TestCollectorVirtualHardDisk(t *testing.T) {
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk", "virtual_storage_device"}})
+
+	labels := prometheus.Labels{"vm": "GitHubActions", "type": "dynamic"}
+
+	// The device label joins the disk with its I/O metrics: the running VM's
+	// disk has exactly one "Hyper-V Virtual Storage Device" instance.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
+		device := labelValue(metric, "device")
+		require.NotEmpty(t, device, "the running VM's disk has no device")
+		require.Contains(t, testutils.MetricValuesByLabel(metrics, "windows_hyperv_virtual_storage_device_queue_length", "device"), device,
+			"device %q is not a virtual_storage_device instance", device)
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
+		require.InDelta(t, 1<<30, metric.GetGauge().GetValue(), 0)
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_file_size_bytes", labels); metric != nil {
+		require.Positive(t, metric.GetGauge().GetValue())
+		require.Less(t, metric.GetGauge().GetValue(), float64(1<<30))
+	}
+	// The first refresh runs during Build, so the first scrape has data.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds", nil); metric != nil {
+		require.InDelta(t, float64(time.Now().Unix()), metric.GetGauge().GetValue(), 300)
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_read_errors", nil); metric != nil {
+		require.InDelta(t, 0, metric.GetGauge().GetValue(), 0)
+	}
+}
+
+// TestVirtualHardDiskRefreshIntervalMustBePositive checks that an invalid
+// refresh interval stops the build instead of starting a busy loop.
+func TestVirtualHardDiskRefreshIntervalMustBePositive(t *testing.T) {
+	t.Parallel()
+
+	c := hyperv.New(&hyperv.Config{
+		CollectorsEnabled: []string{"virtual_hard_disk"},
+		VirtualHardDisk:   hyperv.VirtualHardDiskConfig{RefreshInterval: -time.Second},
+	})
+
+	require.ErrorContains(t, c.Build(slog.New(slog.DiscardHandler), nil), "refresh-interval must be positive")
+	require.NoError(t, c.Close())
+}
+
+// TestCollectorVirtualHardDiskCheckpoint checks the CI fixture VM
+// CIVirtualHardDisk: a 64 MiB dynamic disk with a checkpoint (so the VM runs
+// on a differencing .avhdx) and an 8 MiB fixed disk attached after the
+// checkpoint. Each attached disk must be reported once, the checkpoint's own
+// settings and the parent disk must not be reported.
+func TestCollectorVirtualHardDiskCheckpoint(t *testing.T) {
+	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_hard_disk"}})
+
+	differencing := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", prometheus.Labels{"vm": "CIVirtualHardDisk", "type": "differencing"})
+	fixed := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", prometheus.Labels{"vm": "CIVirtualHardDisk", "type": "fixed"})
+
+	if differencing == nil || fixed == nil {
+		return
+	}
+
+	require.InDelta(t, 64<<20, differencing.GetGauge().GetValue(), 0)
+	require.InDelta(t, 8<<20, fixed.GetGauge().GetValue(), 0)
+
+	// The VM never runs, so its disks have no I/O counter instance.
+	require.Empty(t, labelValue(differencing, "device"))
+	require.Empty(t, labelValue(fixed, "device"))
+
+	for _, name := range []string{"windows_hyperv_virtual_hard_disk_size_bytes", "windows_hyperv_virtual_hard_disk_file_size_bytes"} {
+		var paths []string
+
+		for _, metric := range metrics[name].GetMetric() {
+			labels := make(map[string]string)
+			for _, label := range metric.GetLabel() {
+				labels[label.GetName()] = label.GetValue()
+			}
+
+			if labels["vm"] == "CIVirtualHardDisk" {
+				paths = append(paths, labels["path"])
+			}
+		}
+
+		require.Len(t, paths, 2, "%s: expected the differencing and the fixed disk, got %v", name, paths)
+
+		for _, path := range paths {
+			require.True(t, strings.HasSuffix(strings.ToLower(path), ".avhdx") || strings.HasSuffix(strings.ToLower(path), "fixed.vhdx"), "%s: unexpected disk %s", name, path)
+		}
+	}
+}
+
+func labelValue(metric *dto.Metric, name string) string {
+	for _, label := range metric.GetLabel() {
+		if label.GetName() == name {
+			return label.GetValue()
+		}
+	}
+
+	return ""
 }
 
 // TestCloseReleasesQuery ensures Close releases the PDH queries of the sub-collectors.

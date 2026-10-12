@@ -9431,7 +9431,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_scheduled_task_missed_runs{job=~\"$job\", instance=\"$instance\"} > 0 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or (0 * count(windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "count(windows_scheduled_task_missed_runs{job=~\"$job\", instance=\"$instance\"} > 0 and on (task) windows_scheduled_task_state{job=~\"$job\", instance=\"$instance\", state!=\"disabled\"} == 1) or (0 * count(windows_scheduled_task_missed_runs{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -9448,7 +9448,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep. Requires the scheduled_task collector, which is not enabled by default.",
+                    "description": "Enabled tasks that missed at least one scheduled run, for example because the host was off or asleep. Requires the scheduled_task collector, which is not enabled by default. Missed runs need --collector.scheduled_task.missed-runs, which is off by default.",
                     "id": 194,
                     "links": [],
                     "title": "Missed runs",
@@ -9758,7 +9758,7 @@
                             ]
                         }
                     },
-                    "description": "Enabled tasks that missed at least one scheduled run, with the number of missed runs reported by Task Scheduler. Requires the scheduled_task collector, which is not enabled by default.",
+                    "description": "Enabled tasks that missed at least one scheduled run, with the number of missed runs reported by Task Scheduler. Missed runs need --collector.scheduled_task.missed-runs, which is off by default. Requires the scheduled_task collector, which is not enabled by default.",
                     "id": 197,
                     "links": [],
                     "title": "Tasks with missed runs",
@@ -10029,7 +10029,7 @@
                             ]
                         }
                     },
-                    "description": "All tasks with their state, last result and missed runs. Tasks that never ran report no missed runs. Requires the scheduled_task collector, which is not enabled by default.",
+                    "description": "All tasks with their state, last result and missed runs. Missed runs need --collector.scheduled_task.missed-runs, and tasks that never ran report none. Requires the scheduled_task collector, which is not enabled by default.",
                     "id": 199,
                     "links": [],
                     "title": "Tasks",
@@ -12711,7 +12711,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12796,7 +12796,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Critical\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12884,7 +12884,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", severity=\"Important\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -12972,7 +12972,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"optional_installation\"}) or (0 * windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "count(windows_update_pending_info{job=~\"$job\", instance=\"$instance\", deployment_action=\"optional_installation\"}) or (0 * count(windows_update_scrape_timestamp_seconds{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -13307,17 +13307,6 @@
                                         "inspect": false,
                                         "minWidth": 60
                                     },
-                                    "mappings": [
-                                        {
-                                            "options": {
-                                                "0": {
-                                                    "index": 0,
-                                                    "text": "unknown"
-                                                }
-                                            },
-                                            "type": "value"
-                                        }
-                                    ],
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -13326,10 +13315,35 @@
                                                 "value": null
                                             }
                                         ]
-                                    },
-                                    "unit": "dateTimeFromNow"
+                                    }
                                 },
                                 "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Published"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "dateTimeFromNow"
+                                            },
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "index": 0,
+                                                                "text": "unknown"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
                                     {
                                         "matcher": {
                                             "id": "byName",

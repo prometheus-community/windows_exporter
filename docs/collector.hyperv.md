@@ -2,17 +2,21 @@
 
 The hyperv collector exposes metrics about the Hyper-V hypervisor
 
-|                     |                      |
-|---------------------|----------------------|
-| Metric name prefix  | `hyperv`             |
-| Source              | Performance counters |
-| Enabled by default? | No                   |
+|                     |                                                                              |
+|---------------------|------------------------------------------------------------------------------|
+| Metric name prefix  | `hyperv`                                                                     |
+| Source              | Performance counters, Hyper-V WMI (`root/virtualization/v2`), `virtdisk.dll` |
+| Enabled by default? | No                                                                           |
 
 ## Flags
 
 ### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_hard_disk,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
+
+### `--collector.hyperv.virtual-hard-disk.refresh-interval`
+Interval at which the `virtual_hard_disk` sub-collector reads the disks in the background, for example `10m`.
+Scrapes publish the values of the last refresh. Default: `5m`.
 
 ## Metrics
 
@@ -400,6 +404,67 @@ Example alert:
     severity: critical
   annotations:
     summary: Hyper-V WMI is not responding on {{ $labels.instance }}
+```
+
+
+### Hyper-V Virtual Hard Disk
+
+Sub-collector `virtual_hard_disk`, enabled by default. It reports the size and provisioning type of every
+virtual hard disk (VHD, VHDX, checkpoint AVHDX) attached to a virtual machine on this host.
+The disks are listed with two WQL queries against the `root/virtualization/v2` namespace
+(`Msvm_ComputerSystem` and `Msvm_StorageAllocationSettingData`); the sizes are read with `virtdisk.dll`,
+the API behind `Get-VHD`. On a failover cluster, each node reports the virtual machines it currently owns.
+
+The disks are read in the background every `--collector.hyperv.virtual-hard-disk.refresh-interval` (default `5m`),
+so a scrape only publishes the last values and a slow or unreachable disk doesn't block the `hyperv` collector.
+The values can be up to one interval old. A disk that can't be read is logged and counted in
+`windows_hyperv_virtual_hard_disk_read_errors`; only a failed disk listing fails the collector.
+
+| Name                                                              | Description                                                                      | Type  | Labels                        |
+|-------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|-------------------------------|
+| `windows_hyperv_virtual_hard_disk_size_bytes`                     | Maximum size of the virtual hard disk, as seen by the VM                         | gauge | vm, vm_id, path, type, device |
+| `windows_hyperv_virtual_hard_disk_file_size_bytes`                | Size of the virtual hard disk file on storage                                    | gauge | vm, vm_id, path, type, device |
+| `windows_hyperv_virtual_hard_disk_read_errors`                    | Number of attached virtual hard disks that could not be read in the last refresh | gauge | None                          |
+| `windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds` | Time of the last successful refresh                                              | gauge | None                          |
+
+`type` is `fixed` (thick provisioned), `dynamic` (thin provisioned), `differencing` (checkpoint or child disk)
+or `unknown`.
+
+For a VM with checkpoints, `path` is the current `.avhdx` and `file_size_bytes` only counts that file.
+The parent disks aren't reported, so summing `file_size_bytes` per VM undercounts its storage.
+
+`device` is the instance name of the disk in the `Hyper-V Virtual Storage Device` counter set, the same value as the
+`device` label of `windows_hyperv_virtual_storage_device_*`. It joins the I/O metrics with the virtual machine.
+The right-hand side is turned into `1` first, so the join only adds the `vm` label and keeps the values:
+
+```promql
+rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])
+  * on (instance, device) group_left (vm)
+  (0 * windows_hyperv_virtual_hard_disk_size_bytes{device!=""} + 1)
+```
+
+The instance names are read from the counter set on every refresh and matched to `path` (Hyper-V replaces `\` with
+`-` and `(…)` with `[…]`). `device` is empty when the disk has no instance, which is the case for virtual machines that
+aren't running. The instance of a VHD-format checkpoint (`.avhd`) is named after the base disk of its chain; `device` is
+then that name. VHDX checkpoints (`.avhdx`) have their own instance.
+
+Space promised to thin provisioned disks but not yet allocated:
+
+```promql
+sum by (instance) (
+  windows_hyperv_virtual_hard_disk_size_bytes{type="dynamic"}
+  - windows_hyperv_virtual_hard_disk_file_size_bytes{type="dynamic"}
+)
+```
+
+Disks that could not be read, and stale data:
+
+```yaml
+- alert: HyperVVirtualHardDiskReadErrors
+  expr: windows_hyperv_virtual_hard_disk_read_errors > 0
+  for: 30m
+- alert: HyperVVirtualHardDiskStale
+  expr: time() - windows_hyperv_virtual_hard_disk_last_refresh_timestamp_seconds > 3 * 300
 ```
 
 
