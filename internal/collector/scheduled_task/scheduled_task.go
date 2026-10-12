@@ -39,18 +39,20 @@ import (
 const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude         *regexp.Regexp `yaml:"exclude"`
-	TaskInclude         *regexp.Regexp `yaml:"include"`
-	TaskIncludeOverride *regexp.Regexp `yaml:"include-override"`
-	SkipMissedRuns      bool           `yaml:"skip-missed-runs"`
+	TaskExclude    *regexp.Regexp `yaml:"exclude"`
+	TaskInclude    *regexp.Regexp `yaml:"include"`
+	SkipMissedRuns bool           `yaml:"skip-missed-runs"`
 }
+
+// defaultTaskExclude excludes the tasks of Windows itself, which are most of
+// the tasks and folders of an installation.
+const defaultTaskExclude = "/Microsoft/.+"
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	TaskExclude:         types.RegExpEmpty,
-	TaskInclude:         types.RegExpAny,
-	TaskIncludeOverride: types.RegExpEmpty,
-	SkipMissedRuns:      false,
+	TaskExclude:    regexp.MustCompile("^(?:" + defaultTaskExclude + ")$"),
+	TaskInclude:    types.RegExpAny,
+	SkipMissedRuns: false,
 }
 
 type Collector struct {
@@ -131,10 +133,6 @@ func New(config *Config) *Collector {
 		config.TaskInclude = ConfigDefaults.TaskInclude
 	}
 
-	if config.TaskIncludeOverride == nil {
-		config.TaskIncludeOverride = ConfigDefaults.TaskIncludeOverride
-	}
-
 	c := &Collector{
 		config: *config,
 	}
@@ -147,22 +145,18 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var taskExclude, taskInclude, taskIncludeOverride string
+	var taskExclude, taskInclude string
 
 	app.Flag(
 		"collector.scheduled_task.exclude",
-		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
-	).Default("").StringVar(&taskExclude)
+		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included. "+
+			"The default excludes the tasks of Windows itself.",
+	).Default(defaultTaskExclude).StringVar(&taskExclude)
 
 	app.Flag(
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
 	).Default(".+").StringVar(&taskInclude)
-
-	app.Flag(
-		"collector.scheduled_task.include-override",
-		"Regexp of tasks to include whether or not they match include and exclude.",
-	).Default("").StringVar(&taskIncludeOverride)
 
 	app.Flag(
 		"collector.scheduled_task.skip-missed-runs",
@@ -181,11 +175,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
 		if err != nil {
 			return fmt.Errorf("collector.scheduled_task.include: %w", err)
-		}
-
-		c.config.TaskIncludeOverride, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskIncludeOverride))
-		if err != nil {
-			return fmt.Errorf("collector.scheduled_task.include-override: %w", err)
 		}
 
 		return nil
@@ -236,7 +225,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude, c.config.TaskIncludeOverride)
+	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
 
 	// Cached metrics refer to the descriptors of an earlier Build.
 	c.metricCache.Reset()
@@ -273,13 +262,8 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-// includeTask reports whether a task path matches include-override, or matches
-// include and does not match exclude.
+// includeTask reports whether a task path matches include and does not match exclude.
 func (c *Collector) includeTask(path string) bool {
-	if c.config.TaskIncludeOverride.MatchString(path) {
-		return true
-	}
-
 	return c.config.TaskInclude.MatchString(path) && !c.config.TaskExclude.MatchString(path)
 }
 

@@ -36,22 +36,10 @@ type folderFilter struct {
 	// include and exclude are nil when the expression gives no folder information.
 	include *syntax.Regexp
 	exclude *syntax.Regexp
-	// override is nil when there is no include override.
-	override *syntax.Regexp
 }
 
-func newFolderFilter(include, exclude, override *regexp.Regexp) folderFilter {
-	f := folderFilter{include: parseFilter(include), exclude: parseFilter(exclude)}
-
-	if override != nil {
-		f.override = parseFilter(override)
-		if f.override == nil {
-			// Any folder may hold a task that passes an override without folder information.
-			return folderFilter{}
-		}
-	}
-
-	return f
+func newFolderFilter(include, exclude *regexp.Regexp) folderFilter {
+	return folderFilter{include: parseFilter(include), exclude: parseFilter(exclude)}
 }
 
 func parseFilter(re *regexp.Regexp) *syntax.Regexp {
@@ -72,11 +60,6 @@ func parseFilter(re *regexp.Regexp) *syntax.Regexp {
 // slash-separated path may pass both filters.
 func (f folderFilter) includeFolder(path string) bool {
 	prefix := strings.TrimSuffix(path, "/") + "/"
-
-	// Tasks that pass the override are included whatever include and exclude are.
-	if f.override != nil && mayMatchPrefixed([]*syntax.Regexp{f.override}, prefix, false) {
-		return true
-	}
 
 	if f.include != nil && !mayMatchPrefixed([]*syntax.Regexp{f.include}, prefix, false) {
 		return false
@@ -103,8 +86,6 @@ func mayMatchPrefixed(seq []*syntax.Regexp, prefix string, anchored bool) bool {
 			}
 
 			return true
-		case syntax.OpEmptyMatch:
-			continue
 		case syntax.OpCapture, syntax.OpConcat:
 			return mayMatchPrefixed(splice(re.Sub, seq[i+1:]), prefix, anchored)
 		case syntax.OpAlternate:

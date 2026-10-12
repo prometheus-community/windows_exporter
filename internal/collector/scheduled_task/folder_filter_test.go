@@ -37,7 +37,6 @@ func TestFolderFilter(t *testing.T) {
 		name     string
 		include  *regexp.Regexp
 		exclude  *regexp.Regexp
-		override *regexp.Regexp
 		included []string
 		skipped  []string
 	}{
@@ -45,7 +44,8 @@ func TestFolderFilter(t *testing.T) {
 			name:     "defaults",
 			include:  ConfigDefaults.TaskInclude,
 			exclude:  ConfigDefaults.TaskExclude,
-			included: []string{"/Microsoft", "/Microsoft/Windows", "/Other"},
+			included: []string{"/Other"},
+			skipped:  []string{"/Microsoft", "/Microsoft/Windows"},
 		},
 		{
 			name:     "flag defaults",
@@ -143,31 +143,11 @@ func TestFolderFilter(t *testing.T) {
 			included: []string{"/Microsoft", "/Microsoft/Windows", "/Microsoft/Windows/Other", "/Other"},
 			skipped:  []string{"/Microsoft/Windows/Defrag", "/Microsoft/Windows/Diagnosis", "/Microsoft/Windows/WindowsUpdate"},
 		},
-		{
-			name:     "empty override",
-			exclude:  flag("/Microsoft/.+"),
-			override: flag(""),
-			included: []string{"/Other"},
-			skipped:  []string{"/Microsoft", "/Microsoft/Windows"},
-		},
-		{
-			name:     "override below excluded folder",
-			exclude:  flag("/Microsoft/.+"),
-			override: flag("/Microsoft/Windows/Defrag/ScheduledDefrag"),
-			included: []string{"/Other", "/Microsoft", "/Microsoft/Windows", "/Microsoft/Windows/Defrag"},
-			skipped:  []string{"/Microsoft/Office", "/Microsoft/Windows/Diagnosis", "/Microsoft/Windows/Defrag/Sub"},
-		},
-		{
-			name:     "unanchored override",
-			exclude:  flag("/Microsoft/.+"),
-			override: regexp.MustCompile("Defrag"),
-			included: []string{"/Microsoft", "/Microsoft/Office"},
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			filter := newFolderFilter(tc.include, tc.exclude, tc.override)
+			filter := newFolderFilter(tc.include, tc.exclude)
 
 			for _, path := range tc.included {
 				require.True(t, filter.includeFolder(path), path)
@@ -189,7 +169,7 @@ func TestFolderFilterSkipsOnlyFilteredTasks(t *testing.T) {
 		"", ".+", ".*", "/Microsoft/.+", "/Microsoft/.*", "/Microsoft/Windows/.+", "/Microsoft/.+|/Other/.*",
 		"/Microsoft/Windows", "/Microsoft/[^/]+", "/Micro.*", "(?i)/microsoft/.+", "/Other/Task", "/Other/.+|",
 		`\A/Microsoft/.+\z`, "(?m)^/Microsoft/.*$", "(?s)/Microsoft/.+", "(/Microsoft/.+)", "^/Micro|/Other/.+",
-		"/Microsoft/Windows/(?:Defrag|Diagnosis)/.+", "/Microsoft/Windows/Defrag/Task", "(?:)",
+		"/Microsoft/Windows/(?:Defrag|Diagnosis)/.+", "/Microsoft/Windows/Defrag/Task",
 	}
 	folders := []string{
 		"/Microsoft", "/Microsoft/Windows", "/Microsoft/Windows/Defrag", "/Microsoft/Windows/Diagnosis", "/MicrosoftEdge", "/Other",
@@ -204,27 +184,21 @@ func TestFolderFilterSkipsOnlyFilteredTasks(t *testing.T) {
 
 	skipped := 0
 
-	// A nil override stands for the default.
-	overrides := append([]*regexp.Regexp{nil}, regexps...)
-
 	for _, include := range regexps {
 		for _, exclude := range regexps {
-			for _, override := range overrides {
-				c := New(&Config{TaskInclude: include, TaskExclude: exclude, TaskIncludeOverride: override})
-				filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude, c.config.TaskIncludeOverride)
+			c := New(&Config{TaskInclude: include, TaskExclude: exclude})
+			filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
 
-				for _, folder := range folders {
-					if filter.includeFolder(folder) {
-						continue
-					}
+			for _, folder := range folders {
+				if filter.includeFolder(folder) {
+					continue
+				}
 
-					skipped++
+				skipped++
 
-					for _, name := range names {
-						path := folder + "/" + name
-						require.False(t, c.includeTask(path),
-							"include %q exclude %q override %q path %q", include, exclude, c.config.TaskIncludeOverride, path)
-					}
+				for _, name := range names {
+					path := folder + "/" + name
+					require.False(t, c.includeTask(path), "include %q exclude %q path %q", include, exclude, path)
 				}
 			}
 		}

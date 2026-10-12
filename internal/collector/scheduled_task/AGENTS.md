@@ -25,8 +25,8 @@ which an unprivileged user can read.
   stay conservative: when in doubt, walk the folder. A Windows 11 desktop has
   about 150 folders for about 200 tasks, and listing the tasks and subfolders of
   each costs ~0.15 ms per call, so `exclude=/Microsoft/.+` saves most of a scrape.
-  A folder that the include override may match is always walked, and an
-  override the filter cannot parse disables folder skipping.
+  The default exclude is `/Microsoft/.+` for that reason; keep `ConfigDefaults`
+  and the flag default in sync through `defaultTaskExclude`.
 - `taskReader` carries the task and folder filters and which properties to
   read. With `skip-missed-runs`, `NumberOfMissedRuns` is neither read nor
   published, which saves its two RPCs per task.

@@ -100,14 +100,15 @@ func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 func TestFetchTasksRecursivelySkipsFilteredFolders(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
-		override        string
+		config          *Config
 		paths           []string
 		listedMicrosoft int
 	}{
-		{name: "exclude", paths: []string{"/Task", "/Vendor/Task"}},
+		{name: "default exclude", paths: []string{"/Task", "/Vendor/Task"}},
 		{
-			name: "include override", override: "/Microsoft/Task",
-			paths: []string{"/Task", "/Microsoft/Task", "/Vendor/Task"}, listedMicrosoft: 2,
+			name:   "empty exclude",
+			config: &Config{TaskExclude: regexp.MustCompile(`^(?:)$`)},
+			paths:  []string{"/Task", "/Microsoft/Task", "/Vendor/Task"}, listedMicrosoft: 2,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -133,10 +134,7 @@ func TestFetchTasksRecursivelySkipsFilteredFolders(t *testing.T) {
 			rootTasks, _ := fakeTaskCollection([]*ole.Object{fakes[2].object(&released)}, false, &collectionsReleased)
 			root := fakeTaskFolderAt(`\`, rootTasks, subfolders, nil, nil)
 
-			c := New(&Config{
-				TaskExclude:         regexp.MustCompile(`^(?:/Microsoft/.+)$`),
-				TaskIncludeOverride: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", tc.override)),
-			})
+			c := New(tc.config)
 			require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 			tasks := ScheduledTasks{}

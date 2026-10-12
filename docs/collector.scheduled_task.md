@@ -18,34 +18,26 @@ E.G. `--collector.scheduled_task.include="Firefox.*"`
 
 ### `--collector.scheduled_task.exclude`
 
-If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported. Default: empty
+If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported. Default: `/Microsoft/.+`
 
-E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
+The default excludes the tasks of Windows itself, below `/Microsoft/`. They are
+most of the tasks and folders of an installation and rarely worth alerting on.
+To report every task, set the flag to an empty value:
 
-Each task folder costs the Task Scheduler service two requests per scrape. The
-collector does not read folders whose tasks the include and exclude expressions
-reject whatever their names are, such as everything below `/Microsoft/` in the
-example above. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
-alternatives) are recognized for exclude, and a literal folder prefix for include.
-Errors reading folders that are not walked are not reported.
+E.G. `--collector.scheduled_task.exclude=""`
 
-Most folders of a Windows installation are below `/Microsoft/`, so excluding
-them saves most of a scrape. To keep some of them, either list the folders to
-exclude:
+To report some Windows tasks, list the folders to exclude instead. Tasks in
+folders that are not listed are reported, including folders that a Windows
+update adds:
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag|Diagnosis|WindowsUpdate)/.+"`
 
-or exclude all of them and add the tasks to keep with
-`--collector.scheduled_task.include-override`.
-
-### `--collector.scheduled_task.include-override`
-
-If given, tasks whose path matches the include-override regular expression are
-reported whether or not they match include and exclude. The collector reads the
-folders that may hold such tasks, so other folders are only skipped when the
-expression starts with a literal, case-sensitive folder prefix. Default: empty
-
-E.G. `--collector.scheduled_task.exclude="/Microsoft/.+" --collector.scheduled_task.include-override="/Microsoft/Windows/Defrag/ScheduledDefrag"`
+Each task folder costs the Task Scheduler service two requests per scrape. The
+collector does not read folders whose tasks the include and exclude expressions
+reject whatever their names are, such as everything below `/Microsoft/` with
+the default. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
+alternatives) are recognized for exclude, and a literal folder prefix for include.
+Errors reading folders that are not walked are not reported.
 
 ### `--collector.scheduled_task.skip-missed-runs`
 
