@@ -65,15 +65,27 @@ func scrape(t *testing.T, c *wmi.Collector) string {
 func scrapeWithTimeout(t *testing.T, c *wmi.Collector, maxScrapeDuration time.Duration) string {
 	t.Helper()
 
+	return newScraper(t, c, maxScrapeDuration)()
+}
+
+// newScraper builds c against a live MI session and returns a function that
+// scrapes it, so that a test can scrape the same collector more than once.
+func newScraper(t *testing.T, c *wmi.Collector, maxScrapeDuration time.Duration) func() string {
+	t.Helper()
+
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), newSession(t)))
 
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(collectorAdapter{c, maxScrapeDuration})
 
-	rw := httptest.NewRecorder()
-	promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
+	handler := promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 
-	return rw.Body.String()
+	return func() string {
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, &http.Request{})
+
+		return rw.Body.String()
+	}
 }
 
 // collect builds c against a live MI session and returns the number of emitted
@@ -102,10 +114,13 @@ func collect(t *testing.T, c *wmi.Collector) (int, error) {
 // constant labels, boolean conversion, a metric name shared by two queries,
 // and the query_success semantics for an unknown class, a non-numeric
 // property next to a numeric one, and a label property of unsupported type.
+//
+// The collector is scraped twice: the second scrape reuses the label pairs
+// cached by the first and must produce the same output.
 func TestCollectorMetrics(t *testing.T) {
 	t.Parallel()
 
-	got := scrape(t, wmi.New(&wmi.Config{
+	next := newScraper(t, wmi.New(&wmi.Config{
 		Queries: []wmi.Query{
 			{
 				Name:  "kernel",
@@ -172,16 +187,7 @@ func TestCollectorMetrics(t *testing.T) {
 				Properties:      []wmi.Property{{Name: "Primary"}},
 			},
 		},
-	}))
-
-	// Durations vary between runs; their presence is asserted separately.
-	var lines []string
-
-	for line := range strings.SplitSeq(got, "\n") {
-		if !strings.Contains(line, "windows_wmi_query_duration_seconds") {
-			lines = append(lines, line)
-		}
-	}
+	}), 5*time.Second)
 
 	expected := `# HELP windows_wmi_kernel_processid windows_exporter: custom WMI metric
 # TYPE windows_wmi_kernel_processid gauge
@@ -212,10 +218,23 @@ windows_wmi_test_shared{query="a"} 1
 windows_wmi_test_shared{query="b"} 1
 `
 
-	require.Equal(t, expected, strings.Join(lines, "\n"))
+	for range 2 {
+		got := next()
 
-	for _, name := range []string{"kernel", "missing_class", "os", "partial", "shared_a", "shared_b", "unsupported_label"} {
-		require.Regexp(t, `(?m)^windows_wmi_query_duration_seconds\{name="`+name+`"\} \d`, got)
+		// Durations vary between runs; their presence is asserted separately.
+		var lines []string
+
+		for line := range strings.SplitSeq(got, "\n") {
+			if !strings.Contains(line, "windows_wmi_query_duration_seconds") {
+				lines = append(lines, line)
+			}
+		}
+
+		require.Equal(t, expected, strings.Join(lines, "\n"))
+
+		for _, name := range []string{"kernel", "missing_class", "os", "partial", "shared_a", "shared_b", "unsupported_label"} {
+			require.Regexp(t, `(?m)^windows_wmi_query_duration_seconds\{name="`+name+`"\} \d`, got)
+		}
 	}
 }
 

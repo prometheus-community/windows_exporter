@@ -19,12 +19,15 @@
 // every call. For series whose value changes on every scrape, such as process
 // counters, internal/metriccache can't reuse the metric, but the labels stay
 // the same as long as the series exists. A Scrape hands out metrics that share
-// the label pairs built for the same series in the previous scrape. Series that
-// aren't reported in a scrape are dropped when it commits.
+// the label pairs built for the same series in an earlier scrape. Series that
+// a scrape doesn't report are dropped when it commits.
+//
+// Label pairs are interned: all series with the same label name and value,
+// such as the process and process_id labels of the series of one process,
+// share one pair, so the cache keeps little more than one slice per series.
 package labelcache
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,181 +35,341 @@ import (
 )
 
 // maxLabels is the largest number of label values a cached series can have.
-// Metrics with more labels are created without the cache.
-const maxLabels = 6
+// Metrics with more labels are created without the cache. Most series have
+// at most shortLabels values and use the smaller key.
+const (
+	shortLabels = 3
+	maxLabels   = 6
+)
 
-// key identifies a series. It is a fixed-size array, so building and looking up
-// a key doesn't allocate.
-type key struct {
+// shortKey and longKey identify a series. They are fixed-size arrays, so
+// building and looking up a key doesn't allocate.
+type shortKey struct {
+	desc *prometheus.Desc
+	// n keeps a call with too few label values from matching a series whose
+	// trailing values are empty; prometheus must reject it.
+	n      int
+	values [shortLabels]string
+}
+
+type longKey struct {
 	desc   *prometheus.Desc
 	n      int
 	values [maxLabels]string
 }
 
-// Cache holds the label pairs of the last committed scrape. The zero value is
-// ready to use.
+type series struct {
+	labels []*dto.LabelPair
+	// seen is the generation of the latest scrape that reported the series.
+	seen uint64
+}
+
+// seriesMap holds series by key, stored by value to save an allocation per
+// series.
+type seriesMap[K comparable] map[K]series
+
+// get returns the labels of the series and marks it as seen by generation.
+func (m seriesMap[K]) get(k K, generation uint64) ([]*dto.LabelPair, bool) {
+	entry, ok := m[k]
+	if !ok {
+		return nil, false
+	}
+
+	if entry.seen < generation {
+		entry.seen = generation
+		m[k] = entry
+	}
+
+	return entry.labels, true
+}
+
+// sweep drops the series not seen since generation and passes their labels to
+// release.
+func (m seriesMap[K]) sweep(generation uint64, release func([]*dto.LabelPair)) {
+	for k, entry := range m {
+		if entry.seen < generation {
+			delete(m, k)
+			release(entry.labels)
+		}
+	}
+}
+
+type pairKey struct {
+	name, value string
+}
+
+type pair struct {
+	pair *dto.LabelPair
+	// refs counts the cached series that use the pair.
+	refs int
+}
+
+// Cache holds the label pairs of the series of the latest scrapes. The zero
+// value is ready to use.
 type Cache struct {
-	mu      sync.Mutex
-	entries map[key][]*dto.LabelPair
+	mu sync.Mutex
+	// generation counts Begin calls. Each scrape marks the series it reports
+	// with its generation; Commit drops the series no newer scrape reported.
+	generation uint64
+	short      seriesMap[shortKey]
+	long       seriesMap[longKey]
+	pairs      map[pairKey]pair
 	// resets counts Reset calls, so that a scrape begun before a Reset doesn't
-	// commit afterwards.
+	// add series afterwards.
 	resets uint64
-	// active counts the scrapes between Begin and Commit. spare is a replaced
-	// generation that no scrape reads anymore; the next scrape reuses it
-	// instead of allocating a new map.
-	active int
-	spare  map[key][]*dto.LabelPair
 }
 
 // Scrape creates the metrics of one scrape.
 type Scrape struct {
-	cache  *Cache
-	resets uint64
-	// prev is the last committed generation. It is never modified, so it is
-	// read without holding mu.
-	prev map[key][]*dto.LabelPair
-
-	mu sync.Mutex
-	// next collects the label pairs of this scrape. Commit hands it to the
-	// cache and sets it to nil.
-	next map[key][]*dto.LabelPair
+	cache      *Cache
+	generation uint64
+	resets     uint64
+	// committed is set by Commit under the cache lock. Later calls create
+	// metrics without the cache, so they can't add series to the set the
+	// commit decided.
+	committed bool
 }
 
 // Begin starts a scrape. Call Commit when it is done.
 func (c *Cache) Begin() *Scrape {
 	c.mu.Lock()
-	prev, resets, next := c.entries, c.resets, c.spare
-	c.spare = nil
-	c.active++
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	if next == nil {
-		next = make(map[key][]*dto.LabelPair, len(prev))
-	}
+	c.generation++
 
-	return &Scrape{
-		cache:  c,
-		resets: resets,
-		prev:   prev,
-		next:   next,
-	}
+	return &Scrape{cache: c, generation: c.generation, resets: c.resets}
 }
 
 // Reset drops all cached label pairs, for example when the collector closes.
 func (c *Cache) Reset() {
 	c.mu.Lock()
-	c.entries = nil
-	c.spare = nil
+	c.short = nil
+	c.long = nil
+	c.pairs = nil
 	c.resets++
 	c.mu.Unlock()
 }
 
-// Commit makes the series of this scrape the base of the next one. Series of
-// the previous scrape that this scrape didn't report are dropped.
+// Commit drops the series that neither this scrape nor a newer one reported,
+// and the label pairs only they used.
 func (s *Scrape) Commit() {
 	if s == nil {
 		return
 	}
 
-	s.mu.Lock()
-	next := s.next
-	s.next = nil
-	s.mu.Unlock()
+	c := s.cache
 
-	if next == nil {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if s.committed {
 		return
 	}
 
-	s.cache.mu.Lock()
-	defer s.cache.mu.Unlock()
+	s.committed = true
 
-	s.cache.active--
-
-	if s.cache.resets != s.resets {
+	if c.resets != s.resets {
 		return
 	}
 
-	replaced := s.cache.entries
-	s.cache.entries = next
+	c.short.sweep(s.generation, c.release)
+	c.long.sweep(s.generation, c.release)
+}
 
-	// Other scrapes may still read the replaced generation.
-	if s.cache.active == 0 && replaced != nil {
-		clear(replaced)
-		s.cache.spare = replaced
+// release drops one reference to each pair. The caller holds mu.
+func (c *Cache) release(labels []*dto.LabelPair) {
+	for _, lp := range labels {
+		k := pairKey{name: lp.GetName(), value: lp.GetValue()}
+
+		p, ok := c.pairs[k]
+		if !ok {
+			continue
+		}
+
+		if p.refs--; p.refs <= 0 {
+			delete(c.pairs, k)
+		} else {
+			c.pairs[k] = p
+		}
 	}
 }
 
+// intern replaces the pairs of a new series with the cached pairs of the same
+// name and value. The caller holds mu and stores the series.
+func (c *Cache) intern(labels []*dto.LabelPair) []*dto.LabelPair {
+	if c.pairs == nil {
+		c.pairs = make(map[pairKey]pair)
+	}
+
+	interned := make([]*dto.LabelPair, len(labels))
+
+	for i, lp := range labels {
+		pk := pairKey{name: lp.GetName(), value: lp.GetValue()}
+
+		p, ok := c.pairs[pk]
+		if !ok {
+			p = pair{pair: lp}
+		}
+
+		p.refs++
+		c.pairs[pk] = p
+		interned[i] = p.pair
+	}
+
+	return interned
+}
+
 // MustNewConstMetric is prometheus.MustNewConstMetric, but it reuses the label
-// pairs of the series from the previous scrape. A nil Scrape creates the metric
+// pairs of the series from an earlier scrape. A nil Scrape creates the metric
 // without the cache.
 //
 //nolint:ireturn // Const metrics have no exported type.
 func (s *Scrape) MustNewConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labelValues ...string) prometheus.Metric {
-	if s == nil || len(labelValues) > maxLabels {
+	if s == nil || len(labelValues) > maxLabels || !knownValueType(valueType) {
 		return prometheus.MustNewConstMetric(desc, valueType, value, append([]string(nil), labelValues...)...)
 	}
 
-	k := key{desc: desc, n: len(labelValues)}
+	if len(labelValues) <= shortLabels {
+		k := shortKey{desc: desc, n: len(labelValues)}
+		copy(k.values[:], labelValues)
+
+		return mustNewConstMetric(s, &s.cache.short, k, desc, valueType, value, labelValues)
+	}
+
+	k := longKey{desc: desc, n: len(labelValues)}
 	copy(k.values[:], labelValues)
 
-	labels, ok := s.prev[k]
+	return mustNewConstMetric(s, &s.cache.long, k, desc, valueType, value, labelValues)
+}
 
-	s.mu.Lock()
-	if !ok {
-		labels, ok = s.next[k]
-	}
+// mustNewConstMetric looks up the series in m and adds it on a miss.
+//
+//nolint:ireturn // Const metrics have no exported type.
+func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labelValues []string) prometheus.Metric {
+	c := s.cache
 
-	if ok && s.next != nil {
-		s.next[k] = labels
-	}
-	s.mu.Unlock()
+	c.mu.Lock()
+	if c.resets == s.resets && !s.committed {
+		if labels, ok := m.get(k, s.generation); ok {
+			c.mu.Unlock()
 
-	if ok {
-		return &constMetric{desc: desc, valueType: valueType, value: value, labels: labels}
+			return newConstMetric(desc, valueType, value, labels)
+		}
 	}
+	c.mu.Unlock()
 
 	// A new series: prometheus validates the label values and builds the
 	// pairs, which the following scrapes share.
 	metric := prometheus.MustNewConstMetric(desc, valueType, value, append([]string(nil), labelValues...)...)
 
 	var out dto.Metric
-	if err := metric.Write(&out); err == nil {
-		s.mu.Lock()
-		if s.next != nil {
-			s.next[k] = out.GetLabel()
-		}
-		s.mu.Unlock()
+	if err := metric.Write(&out); err != nil {
+		return metric
 	}
 
-	return metric
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.resets != s.resets || s.committed {
+		return metric
+	}
+
+	// Another goroutine of the scrape may have added the series meanwhile.
+	if labels, ok := m.get(k, s.generation); ok {
+		return newConstMetric(desc, valueType, value, labels)
+	}
+
+	if *m == nil {
+		*m = make(seriesMap[K])
+	}
+
+	labels := c.intern(out.GetLabel())
+	(*m)[k] = series{labels: labels, seen: s.generation}
+
+	return newConstMetric(desc, valueType, value, labels)
 }
 
-// constMetric is a const metric with shared label pairs. Label pairs are
+func knownValueType(valueType prometheus.ValueType) bool {
+	switch valueType {
+	case prometheus.CounterValue, prometheus.GaugeValue, prometheus.UntypedValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// newConstMetric returns a const metric with shared label pairs. The value
+// message lives in the metric, so Write doesn't allocate. Label pairs are
 // immutable once written, like those of prometheus.NewConstMetric.
+//
+//nolint:ireturn // Const metrics have no exported type.
+func newConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labels []*dto.LabelPair) prometheus.Metric {
+	switch valueType {
+	case prometheus.CounterValue:
+		m := &counterMetric{desc: desc, labels: labels, value: value}
+		m.counter.Value = &m.value
+
+		return m
+	case prometheus.GaugeValue:
+		m := &gaugeMetric{desc: desc, labels: labels, value: value}
+		m.gauge.Value = &m.value
+
+		return m
+	default:
+		m := &untypedMetric{desc: desc, labels: labels, value: value}
+		m.untyped.Value = &m.value
+
+		return m
+	}
+}
+
 type constMetric struct {
-	desc      *prometheus.Desc
-	labels    []*dto.LabelPair
-	value     float64
-	valueType prometheus.ValueType
+	desc   *prometheus.Desc
+	labels []*dto.LabelPair
 }
 
 func (m *constMetric) Desc() *prometheus.Desc {
 	return m.desc
 }
 
-func (m *constMetric) Write(out *dto.Metric) error {
-	out.Label = m.labels
+type counterMetric struct {
+	constMetric
 
-	switch m.valueType {
-	case prometheus.CounterValue:
-		out.Counter = &dto.Counter{Value: &m.value}
-	case prometheus.GaugeValue:
-		out.Gauge = &dto.Gauge{Value: &m.value}
-	case prometheus.UntypedValue:
-		out.Untyped = &dto.Untyped{Value: &m.value}
-	default:
-		return fmt.Errorf("encountered unknown type %v", m.valueType)
-	}
+	value   float64
+	counter dto.Counter
+}
+
+func (m *counterMetric) Write(out *dto.Metric) error {
+	out.Label = m.labels
+	out.Counter = &m.counter
+
+	return nil
+}
+
+type gaugeMetric struct {
+	constMetric
+
+	value float64
+	gauge dto.Gauge
+}
+
+func (m *gaugeMetric) Write(out *dto.Metric) error {
+	out.Label = m.labels
+	out.Gauge = &m.gauge
+
+	return nil
+}
+
+type untypedMetric struct {
+	constMetric
+
+	value   float64
+	untyped dto.Untyped
+}
+
+func (m *untypedMetric) Write(out *dto.Metric) error {
+	out.Label = m.labels
+	out.Untyped = &m.untyped
 
 	return nil
 }

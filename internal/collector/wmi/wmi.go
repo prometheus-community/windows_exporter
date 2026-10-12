@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,6 +73,10 @@ type Collector struct {
 	miSession *mi.Session
 
 	queries []Query
+
+	// labels keeps the label pairs of the returned instances between scrapes,
+	// so that a query returning many instances doesn't rebuild them each time.
+	labels labelcache.Cache
 
 	querySuccessDesc  *prometheus.Desc
 	queryDurationDesc *prometheus.Desc
@@ -140,6 +145,8 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.labels.Reset()
+
 	return nil
 }
 
@@ -452,11 +459,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	var errs []error
 
 	for _, query := range c.queries {
 		startTime := time.Now()
-		err := c.collectQuery(ch, query, deadline)
+		err := c.collectQuery(ch, scrape, query, deadline)
 		duration := time.Since(startTime)
 		success := 1.0
 
@@ -478,7 +488,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("wmi query %s succeeded after %s", query.Name, duration))
+			c.logger.Debug("wmi query succeeded",
+				slog.String("query", query.Name),
+				slog.Duration("duration", duration),
+			)
 		}
 
 		ch <- prometheus.MustNewConstMetric(
@@ -499,7 +512,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, deadline time.Time) error {
+func (c *Collector) collectQuery(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, query Query, deadline time.Time) error {
 	// Zero means no timeout, which leaves the MI default in place.
 	var timeout time.Duration
 
@@ -569,7 +582,7 @@ func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, deadl
 				continue
 			}
 
-			ch <- prometheus.MustNewConstMetric(
+			ch <- scrape.MustNewConstMetric(
 				property.desc,
 				property.metricType,
 				value,
