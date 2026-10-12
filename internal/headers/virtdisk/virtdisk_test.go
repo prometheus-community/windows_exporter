@@ -19,8 +19,8 @@ package virtdisk
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"unsafe"
 
@@ -178,9 +178,14 @@ func TestParentLocations(t *testing.T) {
 
 	locations, err := ParentLocations(child)
 	require.NoError(t, err)
+
+	// Compare files, not strings: the temp dir can be a short 8.3 path
+	// (RUNNER~1) while the disk records the long one.
+	parentInfo, err := os.Stat(parent)
+	require.NoError(t, err)
 	require.Condition(t, func() bool {
 		for _, location := range locations {
-			if strings.EqualFold(location, parent) {
+			if info, err := os.Stat(location); err == nil && os.SameFile(info, parentInfo) {
 				return true
 			}
 		}
