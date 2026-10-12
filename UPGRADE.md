@@ -181,7 +181,7 @@ They are most of the tasks and folders of an installation, and skipping their fo
 | You want                          | Set                                                                                                              |
 |-----------------------------------|------------------------------------------------------------------------------------------------------------------|
 | Every task, as in 0.31            | `--collector.scheduled_task.exclude=""`, or `exclude: ""` in the configuration file                              |
-| Windows tasks except some folders | The folders to exclude, e.g. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag\|Diagnosis)/.+"` |
+| Windows tasks except some folders | The folders to exclude, e.g. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag\|Diagnosis)/.+"`  |
 
 The new `--collector.scheduled_task.skip-missed-runs` flag drops `windows_scheduled_task_missed_runs`, which costs two Task Scheduler requests per task and scrape.
 
