@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,14 +39,18 @@ import (
 const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude *regexp.Regexp `yaml:"exclude"`
-	TaskInclude *regexp.Regexp `yaml:"include"`
+	TaskExclude         *regexp.Regexp `yaml:"exclude"`
+	TaskInclude         *regexp.Regexp `yaml:"include"`
+	TaskIncludeOverride *regexp.Regexp `yaml:"include-override"`
+	SkipMissedRuns      bool           `yaml:"skip-missed-runs"`
 }
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	TaskExclude: types.RegExpEmpty,
-	TaskInclude: types.RegExpAny,
+	TaskExclude:         types.RegExpEmpty,
+	TaskInclude:         types.RegExpAny,
+	TaskIncludeOverride: types.RegExpEmpty,
+	SkipMissedRuns:      false,
 }
 
 type Collector struct {
@@ -126,6 +131,10 @@ func New(config *Config) *Collector {
 		config.TaskInclude = ConfigDefaults.TaskInclude
 	}
 
+	if config.TaskIncludeOverride == nil {
+		config.TaskIncludeOverride = ConfigDefaults.TaskIncludeOverride
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -138,7 +147,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var taskExclude, taskInclude string
+	var taskExclude, taskInclude, taskIncludeOverride string
 
 	app.Flag(
 		"collector.scheduled_task.exclude",
@@ -149,6 +158,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
 	).Default(".+").StringVar(&taskInclude)
+
+	app.Flag(
+		"collector.scheduled_task.include-override",
+		"Regexp of tasks to include whether or not they match include and exclude.",
+	).Default("").StringVar(&taskIncludeOverride)
+
+	app.Flag(
+		"collector.scheduled_task.skip-missed-runs",
+		"Do not read or publish windows_scheduled_task_missed_runs. "+
+			"Reading the missed runs of a task costs the Task Scheduler service two requests per scrape.",
+	).Default(strconv.FormatBool(ConfigDefaults.SkipMissedRuns)).BoolVar(&c.config.SkipMissedRuns)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
@@ -161,6 +181,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
 		if err != nil {
 			return fmt.Errorf("collector.scheduled_task.include: %w", err)
+		}
+
+		c.config.TaskIncludeOverride, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskIncludeOverride))
+		if err != nil {
+			return fmt.Errorf("collector.scheduled_task.include-override: %w", err)
 		}
 
 		return nil
@@ -211,7 +236,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
+	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude, c.config.TaskIncludeOverride)
 
 	// Cached metrics refer to the descriptors of an earlier Build.
 	c.metricCache.Reset()
@@ -233,7 +258,7 @@ var TASK_RESULT_STATUSES = []string{
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	scheduledTasks, err := getScheduledTasks(c.includeTask, c.folderFilter.includeFolder)
+	scheduledTasks, err := c.taskReader().getScheduledTasks()
 	if errors.Is(err, errTasksSkipped) {
 		// Tasks and folders that can't be read are skipped, the other tasks are still collected.
 		c.logger.Warn("failed to read some scheduled tasks",
@@ -248,9 +273,22 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-// includeTask reports whether a task path matches include and does not match exclude.
+// includeTask reports whether a task path matches include-override, or matches
+// include and does not match exclude.
 func (c *Collector) includeTask(path string) bool {
+	if c.config.TaskIncludeOverride.MatchString(path) {
+		return true
+	}
+
 	return c.config.TaskInclude.MatchString(path) && !c.config.TaskExclude.MatchString(path)
+}
+
+func (c *Collector) taskReader() taskReader {
+	return taskReader{
+		includeTask:   c.includeTask,
+		includeFolder: c.folderFilter.includeFolder,
+		missedRuns:    !c.config.SkipMissedRuns,
+	}
 }
 
 func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
@@ -322,28 +360,39 @@ func (c *Collector) taskMetrics(task ScheduledTask) []prometheus.Metric {
 		lastResult = 1.0
 	}
 
-	return append(metrics,
-		prometheus.MustNewConstMetric(
-			c.lastResult,
-			prometheus.GaugeValue,
-			lastResult,
-			task.Path,
-		),
-		prometheus.MustNewConstMetric(
-			c.missedRuns,
-			prometheus.GaugeValue,
-			task.MissedRunsCount,
-			task.Path,
-		),
-	)
+	metrics = append(metrics, prometheus.MustNewConstMetric(
+		c.lastResult,
+		prometheus.GaugeValue,
+		lastResult,
+		task.Path,
+	))
+
+	if c.config.SkipMissedRuns {
+		return metrics
+	}
+
+	return append(metrics, prometheus.MustNewConstMetric(
+		c.missedRuns,
+		prometheus.GaugeValue,
+		task.MissedRunsCount,
+		task.Path,
+	))
 }
 
 // errTasksSkipped accompanies readable tasks when some tasks or folders could not be read.
 var errTasksSkipped = errors.New("tasks skipped")
 
-// getScheduledTasks returns the tasks whose slash-separated paths pass include.
-// It does not walk the subfolders whose slash-separated paths fail includeFolder.
-func getScheduledTasks(include, includeFolder func(path string) bool) (ScheduledTasks, error) {
+// taskReader selects the tasks and folders to read and the task properties to read.
+type taskReader struct {
+	// includeTask and includeFolder take slash-separated paths.
+	includeTask   func(path string) bool
+	includeFolder func(path string) bool
+	missedRuns    bool
+}
+
+// getScheduledTasks returns the tasks that pass includeTask. It does not walk
+// the subfolders that fail includeFolder.
+func (r taskReader) getScheduledTasks() (ScheduledTasks, error) {
 	// COM initialization and every interface call stay on the same OS thread.
 	runtime.LockOSThread()
 
@@ -372,7 +421,7 @@ func getScheduledTasks(include, includeFolder func(path string) bool) (Scheduled
 	defer root.Release()
 
 	tasks := ScheduledTasks{}
-	if err := fetchTasksRecursively(root, `\`, include, includeFolder, &tasks); err != nil {
+	if err := r.fetchTasksRecursively(root, `\`, &tasks); err != nil {
 		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
 	}
 
@@ -380,7 +429,7 @@ func getScheduledTasks(include, includeFolder func(path string) bool) (Scheduled
 }
 
 // fetchTasksInFolder appends readable tasks and reports errors after reading the remaining tasks.
-func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) bool, scheduledTasks *ScheduledTasks) error {
+func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTasks) error {
 	tasks, err := folder.Tasks()
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
@@ -396,7 +445,7 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) b
 			continue
 		}
 
-		parsedTask, ok, err := parseTask(task, include)
+		parsedTask, ok, err := r.parseTask(task)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parse task: %w", err))
 
@@ -416,12 +465,9 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) b
 // fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
 // Subfolders that fail includeFolder are not walked, which saves two round trips
 // to the Task Scheduler service per folder.
-func fetchTasksRecursively(
-	folder *taskschd.TaskFolder, folderPath string, include, includeFolder func(path string) bool,
-	scheduledTasks *ScheduledTasks,
-) error {
+func (r taskReader) fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, scheduledTasks *ScheduledTasks) error {
 	errs := []error{}
-	if err := fetchTasksInFolder(folder, include, scheduledTasks); err != nil {
+	if err := r.fetchTasksInFolder(folder, scheduledTasks); err != nil {
 		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
 	}
 
@@ -441,11 +487,11 @@ func fetchTasksRecursively(
 		subfolderPath, err := subfolder.Path()
 		if err != nil {
 			subfolderPath = folderPath
-		} else if !includeFolder(strings.ReplaceAll(subfolderPath, "\\", "/")) {
+		} else if !r.includeFolder(strings.ReplaceAll(subfolderPath, "\\", "/")) {
 			continue
 		}
 
-		if err := fetchTasksRecursively(subfolder, subfolderPath, include, includeFolder, scheduledTasks); err != nil {
+		if err := r.fetchTasksRecursively(subfolder, subfolderPath, scheduledTasks); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -453,18 +499,18 @@ func fetchTasksRecursively(
 	return errors.Join(errs...)
 }
 
-// parseTask reads a task that passes include and reports false for filtered
+// parseTask reads a task that passes includeTask and reports false for filtered
 // tasks. Reading a task property other than Path is a round trip to the Task
 // Scheduler service, so filtered tasks are skipped before those reads, and only
 // properties that collectMetrics publishes are read.
-func parseTask(task *taskschd.RegisteredTask, include func(path string) bool) (ScheduledTask, bool, error) {
+func (r taskReader) parseTask(task *taskschd.RegisteredTask) (ScheduledTask, bool, error) {
 	path, err := task.Path()
 	if err != nil {
 		return ScheduledTask{}, false, fmt.Errorf("get task path: %w", err)
 	}
 
 	parsedTask := ScheduledTask{Path: strings.ReplaceAll(path, "\\", "/")}
-	if !include(parsedTask.Path) {
+	if !r.includeTask(parsedTask.Path) {
 		return ScheduledTask{}, false, nil
 	}
 
@@ -483,7 +529,7 @@ func parseTask(task *taskschd.RegisteredTask, include func(path string) bool) (S
 	parsedTask.LastTaskResult = TaskResult(result)
 
 	// collectMetrics omits missed runs for tasks that have not run.
-	if parsedTask.LastTaskResult != SCHED_S_TASK_HAS_NOT_RUN {
+	if r.missedRuns && parsedTask.LastTaskResult != SCHED_S_TASK_HAS_NOT_RUN {
 		missed, err := task.NumberOfMissedRuns()
 		if err != nil {
 			return ScheduledTask{}, false, fmt.Errorf("get task missed runs: %w", err)

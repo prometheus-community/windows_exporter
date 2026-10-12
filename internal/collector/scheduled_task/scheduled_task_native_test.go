@@ -19,6 +19,7 @@ package scheduled_task
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"slices"
 	"strings"
@@ -47,7 +48,7 @@ func TestFetchTasksInFolderPartialCollection(t *testing.T) {
 			folder := fakeTaskFolder(collection, nil, nil)
 			tasks := ScheduledTasks{}
 
-			err := fetchTasksInFolder(folder, includeAllTasks, &tasks)
+			err := readAllTasks.fetchTasksInFolder(folder, &tasks)
 			require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 			require.Equal(t, 1, collectionsReleased)
 
@@ -85,7 +86,7 @@ func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 	root := fakeTaskFolder(emptyTasks, folders, nil)
 	tasks := ScheduledTasks{}
 
-	err := fetchTasksRecursively(root, `\`, includeAllTasks, includeAllTasks, &tasks)
+	err := readAllTasks.fetchTasksRecursively(root, `\`, &tasks)
 	require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 	require.Equal(t, []int64{1, 2, 3}, *attempted)
 	require.Len(t, tasks, 2)
@@ -97,44 +98,68 @@ func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 }
 
 func TestFetchTasksRecursivelySkipsFilteredFolders(t *testing.T) {
-	var released, collectionsReleased, foldersReleased, listedMicrosoft, listedVendor int
+	for _, tc := range []struct {
+		name            string
+		override        string
+		paths           []string
+		listedMicrosoft int
+	}{
+		{name: "exclude", paths: []string{"/Task", "/Vendor/Task"}},
+		{
+			name: "include override", override: "/Microsoft/Task",
+			paths: []string{"/Task", "/Microsoft/Task", "/Vendor/Task"}, listedMicrosoft: 2,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var released, collectionsReleased, foldersReleased, listedMicrosoft, listedVendor int
 
-	fakes := []*fakeTask{
-		{path: `\Microsoft\Task`, state: int32(TASK_STATE_READY)},
-		{path: `\Vendor\Task`, state: int32(TASK_STATE_READY)},
-		{path: `\Task`, state: int32(TASK_STATE_READY)},
+			fakes := []*fakeTask{
+				{path: `\Microsoft\Task`, state: int32(TASK_STATE_READY)},
+				{path: `\Vendor\Task`, state: int32(TASK_STATE_READY)},
+				{path: `\Task`, state: int32(TASK_STATE_READY)},
+			}
+
+			folder := func(path string, task *fakeTask, listed *int) *ole.Object {
+				tasks, _ := fakeTaskCollection([]*ole.Object{task.object(&released)}, false, &collectionsReleased)
+				folders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+
+				return &fakeTaskFolderAt(path, tasks, folders, &foldersReleased, listed).Object
+			}
+
+			subfolders, _ := fakeTaskCollection([]*ole.Object{
+				folder(`\Microsoft`, fakes[0], &listedMicrosoft),
+				folder(`\Vendor`, fakes[1], &listedVendor),
+			}, false, &collectionsReleased)
+			rootTasks, _ := fakeTaskCollection([]*ole.Object{fakes[2].object(&released)}, false, &collectionsReleased)
+			root := fakeTaskFolderAt(`\`, rootTasks, subfolders, nil, nil)
+
+			c := New(&Config{
+				TaskExclude:         regexp.MustCompile(`^(?:/Microsoft/.+)$`),
+				TaskIncludeOverride: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", tc.override)),
+			})
+			require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+			tasks := ScheduledTasks{}
+
+			require.NoError(t, c.taskReader().fetchTasksRecursively(root, `\`, &tasks))
+
+			paths := make([]string, 0, len(tasks))
+			for _, task := range tasks {
+				require.Equal(t, TASK_STATE_READY, task.State)
+
+				paths = append(paths, task.Path)
+			}
+
+			require.ElementsMatch(t, tc.paths, paths)
+
+			// An excluded folder is released without listing its tasks or subfolders.
+			require.Equal(t, tc.listedMicrosoft, listedMicrosoft)
+			require.Equal(t, 2, listedVendor)
+			require.Equal(t, 2, foldersReleased)
+			require.Equal(t, tc.listedMicrosoft/2, fakes[0].reads[taskSlotPath])
+			require.Equal(t, 1, fakes[1].reads[taskSlotState])
+		})
 	}
-
-	folder := func(path string, task *fakeTask, listed *int) *ole.Object {
-		tasks, _ := fakeTaskCollection([]*ole.Object{task.object(&released)}, false, &collectionsReleased)
-		folders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
-
-		return &fakeTaskFolderAt(path, tasks, folders, &foldersReleased, listed).Object
-	}
-
-	subfolders, _ := fakeTaskCollection([]*ole.Object{
-		folder(`\Microsoft`, fakes[0], &listedMicrosoft),
-		folder(`\Vendor`, fakes[1], &listedVendor),
-	}, false, &collectionsReleased)
-	rootTasks, _ := fakeTaskCollection([]*ole.Object{fakes[2].object(&released)}, false, &collectionsReleased)
-	root := fakeTaskFolderAt(`\`, rootTasks, subfolders, nil, nil)
-
-	c := New(&Config{TaskExclude: regexp.MustCompile(`^(?:/Microsoft/.+)$`)})
-	filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
-	tasks := ScheduledTasks{}
-
-	require.NoError(t, fetchTasksRecursively(root, `\`, c.includeTask, filter.includeFolder, &tasks))
-	require.Equal(t, ScheduledTasks{
-		{Path: "/Task", State: TASK_STATE_READY},
-		{Path: "/Vendor/Task", State: TASK_STATE_READY},
-	}, tasks)
-
-	// The excluded folder is released without listing its tasks or subfolders.
-	require.Zero(t, listedMicrosoft)
-	require.Equal(t, 2, listedVendor)
-	require.Equal(t, 2, foldersReleased)
-	require.Zero(t, fakes[0].reads[taskSlotPath])
-	require.Equal(t, 1, fakes[1].reads[taskSlotState])
 }
 
 func TestFetchTasksFilters(t *testing.T) {
@@ -180,7 +205,7 @@ func TestFetchTasksFilters(t *testing.T) {
 			collection, _ := fakeTaskCollection(items, false, &collectionsReleased)
 			tasks := ScheduledTasks{}
 
-			err := fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), New(tc.config).includeTask, &tasks)
+			err := New(tc.config).taskReader().fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), &tasks)
 			require.NoError(t, err)
 			require.Equal(t, len(fakes), released)
 
@@ -252,7 +277,7 @@ func TestFetchTasksInFolderReadsPublishedProperties(t *testing.T) {
 	)
 	tasks := ScheduledTasks{}
 
-	require.NoError(t, fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), includeAllTasks, &tasks))
+	require.NoError(t, readAllTasks.fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), &tasks))
 	require.Equal(t, ScheduledTasks{
 		{Path: "/Folder/Ran", State: TASK_STATE_READY, LastTaskResult: 1, MissedRunsCount: 2},
 		{Path: "/NotRun", State: TASK_STATE_DISABLED, LastTaskResult: SCHED_S_TASK_HAS_NOT_RUN},
@@ -279,6 +304,24 @@ func TestFetchTasksInFolderReadsPublishedProperties(t *testing.T) {
 	require.Len(t, missedRuns.GetMetric(), 1)
 	require.Equal(t, "/Folder/Ran", missedRuns.GetMetric()[0].GetLabel()[0].GetValue())
 	require.InDelta(t, 2, missedRuns.GetMetric()[0].GetGauge().GetValue(), 0)
+}
+
+func TestFetchTasksInFolderSkipsMissedRuns(t *testing.T) {
+	var released, collectionsReleased int
+
+	task := &fakeTask{path: `\Task`, state: int32(TASK_STATE_READY), result: 1, missed: 2}
+	collection, _ := fakeTaskCollection([]*ole.Object{task.object(&released)}, false, &collectionsReleased)
+	config := &Config{SkipMissedRuns: true}
+	tasks := ScheduledTasks{}
+
+	require.NoError(t, New(config).taskReader().fetchTasksInFolder(fakeTaskFolder(collection, nil, nil), &tasks))
+	require.Equal(t, ScheduledTasks{{Path: "/Task", State: TASK_STATE_READY, LastTaskResult: 1}}, tasks)
+	require.Equal(t, 1, task.reads[taskSlotLastResult])
+	require.Zero(t, task.reads[taskSlotMissedRuns])
+
+	families := gatherTaskMetrics(t, config, tasks)
+	require.Contains(t, families, "windows_scheduled_task_last_result")
+	require.NotContains(t, families, "windows_scheduled_task_missed_runs")
 }
 
 // The fake native collections use the Task Scheduler's one-based VARIANT indices.
@@ -441,6 +484,9 @@ var sysAllocString = windows.NewLazySystemDLL("oleaut32.dll").NewProc("SysAllocS
 
 func includeAllTasks(string) bool { return true }
 
+//nolint:gochecknoglobals
+var readAllTasks = taskReader{includeTask: includeAllTasks, includeFolder: includeAllTasks, missedRuns: true}
+
 // BenchmarkGetScheduledTasks measures the Task Scheduler reads without metric creation.
 func BenchmarkGetScheduledTasks(b *testing.B) {
 	for _, bc := range []struct {
@@ -452,10 +498,10 @@ func BenchmarkGetScheduledTasks(b *testing.B) {
 	} {
 		b.Run(bc.name, func(b *testing.B) {
 			c := New(&Config{TaskExclude: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", bc.exclude))})
-			filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
+			require.NoError(b, c.Build(slog.New(slog.DiscardHandler), nil))
 
 			for b.Loop() {
-				if _, err := getScheduledTasks(c.includeTask, filter.includeFolder); err != nil {
+				if _, err := c.taskReader().getScheduledTasks(); err != nil {
 					b.Fatal(err)
 				}
 			}

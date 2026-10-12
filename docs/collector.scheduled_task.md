@@ -29,13 +29,37 @@ example above. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
 alternatives) are recognized for exclude, and a literal folder prefix for include.
 Errors reading folders that are not walked are not reported.
 
+Most folders of a Windows installation are below `/Microsoft/`, so excluding
+them saves most of a scrape. To keep some of them, either list the folders to
+exclude:
+
+E.G. `--collector.scheduled_task.exclude="/Microsoft/Windows/(?:Defrag|Diagnosis|WindowsUpdate)/.+"`
+
+or exclude all of them and add the tasks to keep with
+`--collector.scheduled_task.include-override`.
+
+### `--collector.scheduled_task.include-override`
+
+If given, tasks whose path matches the include-override regular expression are
+reported whether or not they match include and exclude. The collector reads the
+folders that may hold such tasks. Default: empty
+
+E.G. `--collector.scheduled_task.exclude="/Microsoft/.+" --collector.scheduled_task.include-override="/Microsoft/Windows/Defrag/ScheduledDefrag"`
+
+### `--collector.scheduled_task.skip-missed-runs`
+
+If set, the collector does not read or report
+`windows_scheduled_task_missed_runs`. Reading the missed runs of a task costs
+the Task Scheduler service two requests per scrape, about a quarter of a
+scrape. Default: `false`
+
 ## Metrics
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
 `windows_scheduled_task_last_result_status` | The last result status of a scheduled task, 1 if the current status, 0 otherwise | gauge | task, status
-`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run | gauge | task
+`windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run; omitted with `--collector.scheduled_task.skip-missed-runs` | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
 
 For the values of the `state` and `status` labels, see below.
