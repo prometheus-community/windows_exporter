@@ -25,9 +25,6 @@ which an unprivileged user can read.
   stay conservative: when in doubt, walk the folder. A Windows 11 desktop has
   about 150 folders for about 200 tasks, and listing the tasks and subfolders of
   each costs ~0.15 ms per call, so `exclude=/Microsoft/.+` saves most of a scrape.
-- A persistent COM connection across scrapes saves only ~1.7 ms of ~145 ms
-  (measured 2026-10). Per-task reads dominate: `NumberOfMissedRuns` ~0.3 ms
-  (more for disabled tasks), `State` and `LastTaskResult` ~0.13 ms each.
 - The fake native task in `scheduled_task_native_test.go` counts reads per
   vtable slot; extend those assertions when adding a property read.
 - To find slow calls, time each call type over a full enumeration on a live
@@ -38,3 +35,46 @@ which an unprivileged user can read.
   scrape through `internal/metriccache` while a task's path, state, last result
   and missed runs are unchanged. Add new inputs of a task's metrics to
   `taskValues`, or the cache returns stale series.
+
+## Measured costs and rejected approaches
+
+Measured in October 2026 on a Windows 11 24H2 desktop (taskschd.dll
+10.0.26100.5074), unprivileged: 207 tasks in 150 folders (134 leaf folders, 36
+of them empty), about 150 ms per scrape without filters.
+
+- Per call: `GetTasks` ~170 µs and `GetFolders` ~145 µs per folder; `State` and
+  `LastTaskResult` ~130 µs per task; `NumberOfMissedRuns` ~310 µs per task
+  (~560 µs for disabled tasks). `Path` and folder `Path` take 1–2 µs (local).
+  `NumberOfMissedRuns` alone is about 28% of a scrape.
+- `NumberOfMissedRuns` is computed with two RPCs: `SchRpcGetLastRunInfo`
+  (opnum 16), then `SchRpcScheduledRuntimes` (opnum 15) from the last run time
+  to the current local time with an unlimited `cRequested`. The service
+  computes every scheduled run in that window from the task definition and
+  returns all of them, so tasks with many missed runs (13,146 seen) send large
+  responses each scrape. Tasks without time triggers return
+  `SCHED_S_TASK_NOT_SCHEDULED`. `LastTaskResult` also calls
+  `SchRpcGetLastRunInfo`, so reading both costs one duplicate round trip.
+  `SchRpcGetNumberOfMissedRuns` (opnum 18) always returns 0 and is not what COM
+  uses.
+- Missed runs are rare but real: 6 of 207 tasks were non-zero, 2 of them
+  disabled. Skipping the read for disabled tasks would change published values.
+- A persistent COM connection (dedicated thread, service kept connected) saves
+  ~1.7 ms per scrape. `CoCreateInstance` and `Connect` are cheap; the service's
+  per-call time dominates.
+- Direct MS-TSCH RPC over `ncalrpc` (hand-marshalled NDR, `I_RpcSendReceive`)
+  is only 5–8 µs faster per call. It would only save the duplicate
+  `SchRpcGetLastRunInfo` (~18 ms per scrape, ~12%) plus ~9 ms of client CPU, at
+  the cost of a hand-written NDR client. Not worth it. Note that
+  `SchRpcGetTaskInfo` only returns the state with `SCH_FLAG_STATE`
+  (`0x10000000`).
+- One `SchRpcEnumInstances` for all running tasks took ~21 ms, slower than the
+  per-task state reads.
+- There is no flat or recursive task enumeration: `GetTasks`/`GetFolders` and
+  `SchRpcEnumTasks`/`SchRpcEnumFolders` list one folder each, with only the
+  hidden-task flag. `MSFT_ScheduledTask` (CIM) uses the same walk. The registry
+  `TaskCache` is undocumented and not readable without admin rights.
+- Remaining options that change behavior, not taken yet: an opt-in for
+  `missed_runs`, or a cache duration that serves the last task list.
+- Profiling the exporter with pprof on Windows attributes the time blocked in
+  these COM calls to `runtime.cgocall`; that is waiting, not exporter CPU. The
+  Schedule service's own CPU needs an elevated reader of its process times.
