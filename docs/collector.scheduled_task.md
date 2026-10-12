@@ -42,7 +42,8 @@ or exclude all of them and add the tasks to keep with
 
 If given, tasks whose path matches the include-override regular expression are
 reported whether or not they match include and exclude. The collector reads the
-folders that may hold such tasks. Default: empty
+folders that may hold such tasks, so other folders are only skipped when the
+expression starts with a literal, case-sensitive folder prefix. Default: empty
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/.+" --collector.scheduled_task.include-override="/Microsoft/Windows/Defrag/ScheduledDefrag"`
 
@@ -51,7 +52,8 @@ E.G. `--collector.scheduled_task.exclude="/Microsoft/.+" --collector.scheduled_t
 If set, the collector does not read or report
 `windows_scheduled_task_missed_runs`. Reading the missed runs of a task costs
 the Task Scheduler service two requests per scrape, about a quarter of a
-scrape. Default: `false`
+scrape. The missed runs panels of the dashboards show no data with this flag.
+Default: `false`
 
 ## Metrics
 

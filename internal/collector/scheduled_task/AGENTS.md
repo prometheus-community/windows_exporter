@@ -83,8 +83,8 @@ of them empty), about 150 ms per scrape without filters.
   `internal/mi` in-process for the same 207 tasks, whatever properties are
   selected, plus ~120 ms for last result and missed runs. The work moves into
   `WmiPrvSE` (up to ~30% of one core while querying).
-- Remaining options that change behavior, not taken yet: an opt-in for
-  `missed_runs`, or a cache duration that serves the last task list.
+- `missed_runs` can be dropped with `skip-missed-runs`. Not taken yet: a cache
+  duration that serves the last task list.
 - Profiling the exporter with pprof on Windows attributes the time blocked in
   these COM calls to `runtime.cgocall`; that is waiting, not exporter CPU. The
   Schedule service's own CPU needs an elevated reader of its process times.
