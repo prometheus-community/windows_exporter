@@ -2,7 +2,8 @@ local b = import 'builders.libsonnet';
 local metric(name, labels='') = 'windows_update_' + name + '{job=~"$job", instance="$instance"' + (if labels == '' then '' else ', ' + labels) + '}';
 local requirement = ' Requires the update collector, which is not enabled by default. The collector queries Windows Update in the background, every 6 hours by default.';
 // Counts fall back to 0 only while the collector reports, so a missing collector shows no data.
-local pending(labels) = 'count(' + metric('pending_info', labels) + ') or (0 * ' + metric('scrape_timestamp_seconds') + ')';
+// The fallback is aggregated too: count() has no labels, so a fallback with labels would be a second series.
+local pending(labels) = 'count(' + metric('pending_info', labels) + ') or (0 * count(' + metric('scrape_timestamp_seconds') + '))';
 local days(n) = n * 86400;
 
 function(on)
@@ -43,9 +44,15 @@ function(on)
           },
         },
       }])
-      + b.panel.withDefaults({ unit: 'dateTimeFromNow', mappings: [{ type: 'value', options: { '0': { index: 0, text: 'unknown' } } }] })
       + b.panel.withOptions({ sortBy: [{ desc: false, displayName: 'Published' }] })
+      // The date unit only fits the Published column. Set as a default, it also turns the label columns into NaN.
       + b.panel.withOverrides([{
+        matcher: { id: 'byName', options: 'Published' },
+        properties: [
+          { id: 'unit', value: 'dateTimeFromNow' },
+          { id: 'mappings', value: [{ type: 'value', options: { '0': { index: 0, text: 'unknown' } } }] },
+        ],
+      }, {
         matcher: { id: 'byName', options: 'Severity' },
         properties: [
           { id: 'color', value: { fixedColor: 'text', mode: 'fixed' } },
