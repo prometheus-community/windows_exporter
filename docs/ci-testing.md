@@ -24,6 +24,12 @@ online Generic Service that depends on an online IP Address, plus an offline IP
 Address. The `CIFailedResources` group contains a Generic Service whose binary is
 missing, so it stays failed. Native and WMI parity tests require these resources.
 
+Hyper-V runs the `GitHubActions` VM with a 1 GB dynamic VHDX and a legacy
+network adapter. A second VM, `CIVirtualHardDisk`, is never started: it has a
+dynamic disk with a checkpoint, so it runs on a differencing `.avhdx`, and a
+fixed disk attached after the checkpoint. The `virtual_hard_disk` tests require
+each of its disks to be reported exactly once.
+
 `WINDOWS_EXPORTER_TEST_COLLECTORS` lists required collectors. Their tests fail
 when setup is missing or collection fails instead of skipping. Fixture assertions
 check known instances, including the active RDP user's session and SQL database.

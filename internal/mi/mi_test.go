@@ -45,6 +45,18 @@ type win32DiskDriveWrongType struct {
 	Capabilities []string `mi:"Capabilities"`
 }
 
+// win32OperatingSystem is used to exercise STRINGA (string[]) unmarshalling.
+// Win32_OperatingSystem.MUILanguages is populated on every host.
+type win32OperatingSystem struct {
+	MUILanguages []string `mi:"MUILanguages"`
+}
+
+// win32OperatingSystemWrongType maps the string[] MUILanguages property onto
+// an incompatible Go type to exercise the STRINGA type guard.
+type win32OperatingSystemWrongType struct {
+	MUILanguages []uint16 `mi:"MUILanguages"`
+}
+
 func Test_MI_Application_Initialize(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
@@ -1163,4 +1175,32 @@ func Test_MI_GetElementByName(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, []string{"System"}, names)
+}
+
+// Test_MI_QueryUnmarshal_StringArray unmarshals a STRINGA property into a
+// []string struct field.
+func Test_MI_QueryUnmarshal_StringArray(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	query, err := mi.NewQuery("SELECT MUILanguages FROM Win32_OperatingSystem")
+	require.NoError(t, err)
+
+	var systems []win32OperatingSystem
+
+	require.NoError(t, session.Query(&systems, mi.NamespaceRootCIMv2, query, -1))
+	require.Len(t, systems, 1)
+	require.NotEmpty(t, systems[0].MUILanguages)
+	require.NotEmpty(t, systems[0].MUILanguages[0])
+
+	var wrong []win32OperatingSystemWrongType
+
+	// Unmarshalling a string[] into a []uint16 field must error, not panic.
+	require.Error(t, session.Query(&wrong, mi.NamespaceRootCIMv2, query, -1))
+
+	require.NoError(t, session.Close())
+	require.NoError(t, application.Close())
 }
