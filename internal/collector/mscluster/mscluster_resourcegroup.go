@@ -36,6 +36,10 @@ type resourceGroupSource interface {
 type collectorResourceGroup struct {
 	resourceGroupSource resourceGroupSource
 
+	// resourceGroupMetricCache reuses the field and owner node metrics of
+	// unchanged groups; see objectMetricCache.
+	resourceGroupMetricCache objectMetricCache
+
 	resourceGroupAutoFailbackType    *prometheus.Desc
 	resourceGroupCharacteristics     *prometheus.Desc
 	resourceGroupColdStartSetting    *prometheus.Desc
@@ -171,6 +175,9 @@ func (c *Collector) buildResourceGroupDescriptors() {
 		[]string{"name"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier build.
+	c.resourceGroupMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -202,26 +209,74 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 		{name: "State", desc: c.resourceGroupState},
 	}
 
+	scrape := c.resourceGroupMetricCache.Begin()
+
+	var nodeNamesKey []byte
+	for _, nodeName := range nodeNames {
+		nodeNamesKey = appendKeyString(nodeNamesKey, nodeName)
+	}
+
+	var key []byte
+
 	for _, group := range groups {
 		if group.Name == "" {
 			continue
 		}
 
-		resultErr = publishObjectFields(ch, "group", group, fields, build, resultErr)
+		var ok bool
 
-		if !group.OwnerNodeValid {
+		key, ok = appendObjectFieldsKey(key[:0], group, fields, build)
+		if !ok {
+			// A group with missing fields is not cached, so that it reports
+			// its errors on every scrape.
+			resultErr = publishObjectFields(ch, "group", group, fields, build, resultErr)
+
+			for _, metric := range c.resourceGroupOwnerNodeMetrics(nil, group, nodeNames) {
+				ch <- metric
+			}
+
 			continue
 		}
 
-		for _, nodeName := range nodeNames {
-			isCurrentState := 0.0
-			if group.OwnerNode == nodeName {
-				isCurrentState = 1.0
-			}
+		if group.OwnerNodeValid {
+			key = append(key, 1)
+			key = appendKeyString(key, group.OwnerNode)
+			key = append(key, nodeNamesKey...)
+		} else {
+			key = append(key, 0)
+		}
 
-			ch <- prometheus.MustNewConstMetric(c.resourceGroupOwnerNode, prometheus.GaugeValue, isCurrentState, nodeName, group.Name)
+		metrics := scrape.Get(group.Name, string(key), func() []prometheus.Metric {
+			metrics := objectFieldMetrics(group, fields, build, len(nodeNames))
+
+			return c.resourceGroupOwnerNodeMetrics(metrics, group, nodeNames)
+		})
+
+		for _, metric := range metrics {
+			ch <- metric
 		}
 	}
 
+	commitScrape(scrape, len(groups), resultErr)
+
 	return resultErr
+}
+
+// resourceGroupOwnerNodeMetrics appends the owner node metrics of a group, one
+// per node, to metrics. A group without a valid owner node has none.
+func (c *Collector) resourceGroupOwnerNodeMetrics(metrics []prometheus.Metric, group clusapi.Object, nodeNames []string) []prometheus.Metric {
+	if !group.OwnerNodeValid {
+		return metrics
+	}
+
+	for _, nodeName := range nodeNames {
+		isCurrentState := 0.0
+		if group.OwnerNode == nodeName {
+			isCurrentState = 1.0
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(c.resourceGroupOwnerNode, prometheus.GaugeValue, isCurrentState, nodeName, group.Name))
+	}
+
+	return metrics
 }

@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -220,133 +221,133 @@ func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 	)
 }
 
-func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorHypervisorRootPartition.Collect(&c.perfDataObjectHypervisorRootPartition)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Root Partition metrics: %w", err)
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionAddressSpaces,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionAddressSpaces,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionAttachedDevices,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionAttachedDevices,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDepositedPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDepositedPages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceDMAErrors,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceDMAErrors,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptErrors,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptErrors,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptMappings,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptMappings,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptThrottleEvents,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptThrottleEvents,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionGPAPages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionGPASpaceModifications,
 		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionGPASpaceModifications,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionIOTLBFlushCost,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionIOTLBFlushCost,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionIOTLBFlushes,
 		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionIOTLBFlushes,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionRecommendedVirtualTLBSize,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionRecommendedVirtualTLBSize,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionSkippedTimerTicks,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionSkippedTimerTicks,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition1GDevicePages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition1GDevicePages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition1GGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition1GGPAPages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition2MDevicePages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MDevicePages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition2MGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MGPAPages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition4KDevicePages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KDevicePages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartition4KGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KGPAPages,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBFlushEntries,
 		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionVirtualTLBFlushEntries,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionVirtualTLBPages,

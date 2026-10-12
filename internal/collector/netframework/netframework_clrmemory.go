@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -106,7 +107,7 @@ func (c *Collector) buildClrMemory() error {
 
 	var err error
 
-	c.perfClrMemory, err = newPerfCollector[perfDataClrMemory](c.logger, ".NET CLR Memory")
+	c.perfClrMemory, err = newPerfCollector[perfDataClrMemory](c.logger, c.perfQuery, ".NET CLR Memory")
 
 	return err
 }
@@ -135,7 +136,7 @@ type perfDataClrMemory struct {
 	ProcessID                 float64 `perfdata:"Process ID"`
 }
 
-func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrMemory
 	if err := c.perfClrMemory.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Memory: %w", err)
@@ -146,7 +147,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.allocatedBytes,
 			prometheus.CounterValue,
 			float64(process.AllocatedBytesPersec),
@@ -154,7 +155,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.finalizationSurvivors,
 			prometheus.GaugeValue,
 			float64(process.FinalizationSurvivors),
@@ -162,7 +163,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.heapSize,
 			prometheus.GaugeValue,
 			float64(process.Gen0heapsize),
@@ -171,7 +172,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen0",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.promotedBytes,
 			prometheus.GaugeValue,
 			float64(process.Gen0PromotedBytesPerSec),
@@ -180,7 +181,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen0",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.heapSize,
 			prometheus.GaugeValue,
 			float64(process.Gen1heapsize),
@@ -189,7 +190,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen1",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.promotedBytes,
 			prometheus.GaugeValue,
 			float64(process.Gen1PromotedBytesPerSec),
@@ -198,7 +199,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen1",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.heapSize,
 			prometheus.GaugeValue,
 			float64(process.Gen2heapsize),
@@ -207,7 +208,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen2",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.heapSize,
 			prometheus.GaugeValue,
 			float64(process.LargeObjectHeapsize),
@@ -216,7 +217,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"LOH",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberGCHandles,
 			prometheus.GaugeValue,
 			float64(process.NumberGCHandles),
@@ -224,7 +225,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberCollections,
 			prometheus.CounterValue,
 			float64(process.NumberGen0Collections),
@@ -233,7 +234,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen0",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberCollections,
 			prometheus.CounterValue,
 			float64(process.NumberGen1Collections),
@@ -242,7 +243,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen1",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberCollections,
 			prometheus.CounterValue,
 			float64(process.NumberGen2Collections),
@@ -251,7 +252,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			"Gen2",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberInducedGC,
 			prometheus.CounterValue,
 			float64(process.NumberInducedGC),
@@ -259,7 +260,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfPinnedObjects,
 			prometheus.GaugeValue,
 			float64(process.NumberofPinnedObjects),
@@ -267,7 +268,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberOfSinkBlocksInUse,
 			prometheus.GaugeValue,
 			float64(process.NumberofSinkBlocksinuse),
@@ -275,7 +276,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberTotalCommittedBytes,
 			prometheus.GaugeValue,
 			float64(process.NumberTotalcommittedBytes),
@@ -283,7 +284,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.numberTotalReservedBytes,
 			prometheus.GaugeValue,
 			float64(process.NumberTotalreservedBytes),
@@ -295,7 +296,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, _ time.Duratio
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeInGC,
 			prometheus.GaugeValue,
 			100*process.PercentTimeinGC/process.PercentTimeinGC_base,

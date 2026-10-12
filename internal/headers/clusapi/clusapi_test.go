@@ -29,7 +29,7 @@ import (
 func TestControlBuffer(t *testing.T) {
 	calls := 0
 
-	data, err := controlBuffer(time.Time{}, 0, func(buffer []byte) (uint32, error) {
+	data, err := controlBufferIn(time.Time{}, newControlBuffer(0), func(buffer []byte) (uint32, error) {
 		calls++
 		switch calls {
 		case 1:
@@ -62,7 +62,7 @@ func TestControlBuffer(t *testing.T) {
 func TestControlBufferPresized(t *testing.T) {
 	calls := 0
 
-	data, err := controlBuffer(time.Time{}, 8, func(buffer []byte) (uint32, error) {
+	data, err := controlBufferIn(time.Time{}, newControlBuffer(8), func(buffer []byte) (uint32, error) {
 		calls++
 
 		if len(buffer) != 8 {
@@ -79,7 +79,7 @@ func TestControlBufferPresized(t *testing.T) {
 
 	calls = 0
 
-	data, err = controlBuffer(time.Time{}, 4, func(buffer []byte) (uint32, error) {
+	data, err = controlBufferIn(time.Time{}, newControlBuffer(4), func(buffer []byte) (uint32, error) {
 		calls++
 		if calls == 1 {
 			return 6, windows.ERROR_MORE_DATA
@@ -96,7 +96,7 @@ func TestControlBufferPresized(t *testing.T) {
 	}
 
 	// A pre-sized buffer that is already large enough must not be shrunk or retried.
-	_, err = controlBuffer(time.Time{}, 8, func([]byte) (uint32, error) { return 4, windows.ERROR_MORE_DATA })
+	_, err = controlBufferIn(time.Time{}, newControlBuffer(8), func([]byte) (uint32, error) { return 4, windows.ERROR_MORE_DATA })
 	if err == nil {
 		t.Fatal("accepted ERROR_MORE_DATA without growth")
 	}
@@ -114,7 +114,7 @@ func TestControlBufferInvalidSizes(t *testing.T) {
 		{"unrelated_error", 0, windows.ERROR_ACCESS_DENIED},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := controlBuffer(time.Time{}, 0, func([]byte) (uint32, error) { return tc.size, tc.err })
+			_, err := controlBufferIn(time.Time{}, newControlBuffer(0), func([]byte) (uint32, error) { return tc.size, tc.err })
 			if err == nil {
 				t.Fatal("accepted invalid native response")
 			}
@@ -130,7 +130,7 @@ func TestControlBufferDeadline(t *testing.T) {
 	calls := 0
 	deadline := time.Now().Add(time.Millisecond)
 
-	_, err := controlBuffer(deadline, 0, func([]byte) (uint32, error) {
+	_, err := controlBufferIn(deadline, newControlBuffer(0), func([]byte) (uint32, error) {
 		calls++
 
 		time.Sleep(2 * time.Millisecond)
@@ -141,7 +141,7 @@ func TestControlBufferDeadline(t *testing.T) {
 		t.Fatalf("calls = %d, err = %v", calls, err)
 	}
 
-	_, err = controlBuffer(time.Now().Add(-time.Second), 0, func([]byte) (uint32, error) {
+	_, err = controlBufferIn(time.Now().Add(-time.Second), newControlBuffer(0), func([]byte) (uint32, error) {
 		t.Fatal("started native call after deadline")
 
 		return 0, nil
@@ -236,7 +236,7 @@ func TestStateBuffersInvalidNativeResponses(t *testing.T) {
 func TestControlBufferSuccessfulSizeProbe(t *testing.T) {
 	calls := 0
 
-	data, err := controlBuffer(time.Time{}, 0, func(buffer []byte) (uint32, error) {
+	data, err := controlBufferIn(time.Time{}, newControlBuffer(0), func(buffer []byte) (uint32, error) {
 		calls++
 		if calls == 1 {
 			return 4, nil
@@ -267,5 +267,29 @@ func TestUnopenedClusterExpiredBudget(t *testing.T) {
 
 	if !c.closed {
 		t.Fatal("unopened cluster was not closed")
+	}
+}
+
+func TestParseResourceClassInfo(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		data     []byte
+		class    uint32
+		subclass uint32
+	}{
+		{"complete", []byte{1, 0, 0, 0, 0, 0, 0, 0x80}, 1, 0x80000000},
+		// Captured from the Storage Spaces Direct Health Service resource: only
+		// the class DWORD, without the subclass. WMI reports ResourceClass 0.
+		{"health service", []byte{0, 0, 0, 0}, 0, 0},
+		{"empty", nil, 0, 0},
+		{"class only", []byte{2, 0, 0, 0}, 2, 0},
+		{"truncated class", []byte{1, 0}, 0, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			class, subclass := parseResourceClassInfo(test.data)
+			if class != test.class || subclass != test.subclass {
+				t.Fatalf("class=%#x subclass=%#x, want %#x/%#x", class, subclass, test.class, test.subclass)
+			}
+		})
 	}
 }

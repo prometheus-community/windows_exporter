@@ -18,18 +18,37 @@
 package net_test
 
 import (
+	"log/slog"
+	"sync"
 	"testing"
 
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
-	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+// BenchmarkCollector builds the collector from its config instead of
+// testutils.FuncBenchmarkCollector, which doesn't parse the flags and so
+// leaves every sub collector disabled.
 func BenchmarkCollector(b *testing.B) {
-	// PrinterInclude is not set in testing context (kingpin flags not parsed), causing the collector to skip all interfaces.
-	localNicInclude := ".+"
+	c := net.New(nil)
+	require.NoError(b, c.Build(slog.New(slog.DiscardHandler), nil))
 
-	testutils.FuncBenchmarkCollector(b, net.Name, net.NewWithFlags, func(app *kingpin.Application) {
-		app.GetFlag("collector.net.nic-include").StringVar(&localNicInclude)
+	metrics := make(chan prometheus.Metric)
+
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		for range metrics {
+		}
 	})
+	b.Cleanup(func() {
+		close(metrics)
+		wg.Wait()
+		assert.NoError(b, c.Close())
+	})
+
+	for b.Loop() {
+		require.NoError(b, c.Collect(metrics, 0))
+	}
 }

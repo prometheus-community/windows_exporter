@@ -35,6 +35,10 @@ type networkSource interface {
 type collectorNetwork struct {
 	networkSource networkSource
 
+	// networkMetricCache reuses the field metrics of unchanged networks; see
+	// objectMetricCache.
+	networkMetricCache objectMetricCache
+
 	networkCharacteristics *prometheus.Desc
 	networkFlags           *prometheus.Desc
 	networkMetric          *prometheus.Desc
@@ -98,6 +102,9 @@ func (c *Collector) buildNetworkDescriptors() {
 		[]string{"name"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier build.
+	c.networkMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -121,6 +128,10 @@ func (c *Collector) publishNetworks(ch chan<- prometheus.Metric, networks []clus
 		{name: "State", desc: c.networkState},
 	}
 
+	scrape := c.networkMetricCache.Begin()
+
+	var key []byte
+
 	for _, network := range networks {
 		if network.Name == "" {
 			continue
@@ -128,8 +139,10 @@ func (c *Collector) publishNetworks(ch chan<- prometheus.Metric, networks []clus
 
 		// All network properties exist since Windows Server 2012, so the
 		// build does not matter.
-		resultErr = publishObjectFields(ch, "network", network, fields, 0, resultErr)
+		key, resultErr = publishCachedObjectFields(ch, scrape, key, "network", network, fields, 0, resultErr)
 	}
+
+	commitScrape(scrape, len(networks), resultErr)
 
 	return resultErr
 }

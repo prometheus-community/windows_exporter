@@ -19,7 +19,6 @@ package clusapi
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -74,7 +73,7 @@ func (c *Cluster) Properties(deadline time.Time) (_ Object, resultErr error) {
 
 	object := Object{Name: name, Values: make(map[string]uint32)}
 
-	if err := readCommonProperties(clusterControl, c.handle, objectCluster, object.Values, deadline); err != nil {
+	if err := readCommonProperties(clusterControl, c.handle, objectCluster, object.Values, &c.scratch, deadline); err != nil {
 		resultErr = errors.Join(resultErr, err)
 
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -158,16 +157,14 @@ func (c *Cluster) resourceClass(name string, deadline time.Time) (_ uint32, resu
 		}
 	}()
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
+	data, err := c.scratch.resourceControl(handle, resourceGetClassInfo, 8, deadline)
 	if err != nil {
 		return 0, fmt.Errorf("class information: %w", err)
 	}
 
-	if len(data) != 8 {
-		return 0, errors.New("invalid resource class information size")
-	}
+	class, _ := parseResourceClassInfo(data)
 
-	return binary.LittleEndian.Uint32(data), nil
+	return class, nil
 }
 
 // readClusterName calls GetClusterInformation without CLUSTERVERSIONINFO.

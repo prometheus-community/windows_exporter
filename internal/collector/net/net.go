@@ -29,6 +29,8 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -59,12 +61,27 @@ var ConfigDefaults = Config{
 	},
 }
 
+// nicNameReplacer converts an adapter description into the instance name of
+// the adapter in the Network Interface performance counter object.
+//
+//nolint:gochecknoglobals
+var nicNameReplacer = strings.NewReplacer("(", "[", ")", "]", "#", "_", "/", "_", "\\", "_")
+
 // A Collector is a Prometheus Collector for Perflib Network Interface metrics.
 type Collector struct {
 	config Config
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
+
+	// labels keeps the label pairs of the Network Interface series of the last
+	// scrape. Their values change on every scrape, but their labels stay the
+	// same while the adapters do.
+	labels labelcache.Cache
+
+	// adapterAddressesBuf holds the result of GetAdaptersAddresses. It is
+	// reused between scrapes, so its size also seeds the next call.
+	adapterAddressesBuf []byte
 
 	bytesReceivedTotal       *prometheus.Desc
 	bytesSentTotal           *prometheus.Desc
@@ -83,6 +100,25 @@ type Collector struct {
 	nicIPAddressInfo *prometheus.Desc
 	nicOperStatus    *prometheus.Desc
 	nicInfo          *prometheus.Desc
+
+	// nicMetricCache reuses the nic_info, nic_operation_status and
+	// nic_address_info metrics of adapters whose information did not change
+	// since the last scrape. Each adapter publishes at least 8 of these series.
+	// The adapter addresses are still queried on every scrape, so it saves
+	// allocations, not system calls.
+	nicMetricCache metriccache.Cache[string, nicValues]
+}
+
+// nicValues holds the inputs of the nic_info metrics of an adapter besides its
+// name.
+type nicValues struct {
+	friendlyName string
+	macAddress   string
+	operStatus   uint32
+	// addresses encodes the global unicast and anycast addresses of an adapter
+	// that is up, in emission order. Each address is its length, its bytes and
+	// its address family, so the encoding is unambiguous.
+	addresses string
 }
 
 func New(config *Config) *Collector {
@@ -161,6 +197,9 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
+	c.nicMetricCache.Reset()
+	c.labels.Reset()
+	c.adapterAddressesBuf = nil
 
 	return nil
 }
@@ -271,6 +310,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.nicMetricCache.Reset()
+	c.labels.Reset()
+
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
@@ -313,97 +356,100 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Network Information metrics: %w", err)
 	}
 
+	scrape := c.labels.Begin()
+	defer scrape.Commit()
+
 	for _, data := range c.perfDataObject {
 		if c.config.NicExclude.MatchString(data.Name) || !c.config.NicInclude.MatchString(data.Name) {
 			continue
 		}
 
 		// Counters
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.bytesReceivedTotal,
 			prometheus.CounterValue,
 			data.BytesReceivedPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.bytesSentTotal,
 			prometheus.CounterValue,
 			data.BytesSentPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.bytesTotal,
 			prometheus.CounterValue,
 			data.BytesTotalPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.outputQueueLength,
 			prometheus.GaugeValue,
 			data.OutputQueueLength,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsOutboundDiscarded,
 			prometheus.CounterValue,
 			data.PacketsOutboundDiscarded,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsOutboundErrors,
 			prometheus.CounterValue,
 			data.PacketsOutboundErrors,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsTotal,
 			prometheus.CounterValue,
 			data.PacketsPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsReceivedDiscarded,
 			prometheus.CounterValue,
 			data.PacketsReceivedDiscarded,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsReceivedErrors,
 			prometheus.CounterValue,
 			data.PacketsReceivedErrors,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsReceivedTotal,
 			prometheus.CounterValue,
 			data.PacketsReceivedPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsReceivedUnknown,
 			prometheus.CounterValue,
 			data.PacketsReceivedUnknown,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.packetsSentTotal,
 			prometheus.CounterValue,
 			data.PacketsSentPerSec,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.currentBandwidth,
 			prometheus.GaugeValue,
 			data.CurrentBandwidth/8,
@@ -415,134 +461,207 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
-	nicAdapterAddresses, err := adapterAddresses()
+	var (
+		nicAdapters *windows.IpAdapterAddresses
+		err         error
+	)
+
+	nicAdapters, c.adapterAddressesBuf, err = adapterAddresses(c.adapterAddressesBuf)
 	if err != nil {
 		return err
 	}
 
-	convertNicName := strings.NewReplacer("(", "[", ")", "]", "#", "_")
+	scrape := c.nicMetricCache.Begin()
 
-	for _, nicAdapter := range nicAdapterAddresses {
+	var addresses []byte
+
+	for nicAdapter := nicAdapters; nicAdapter != nil; nicAdapter = nicAdapter.Next {
 		friendlyName := windows.UTF16PtrToString(nicAdapter.FriendlyName)
-		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapter.Description))
+		nicName := nicNameReplacer.Replace(windows.UTF16PtrToString(nicAdapter.Description))
 
 		if c.config.NicExclude.MatchString(nicName) ||
 			!c.config.NicInclude.MatchString(nicName) {
 			continue
 		}
 
-		macAddress := fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
-			nicAdapter.PhysicalAddress[0],
-			nicAdapter.PhysicalAddress[1],
-			nicAdapter.PhysicalAddress[2],
-			nicAdapter.PhysicalAddress[3],
-			nicAdapter.PhysicalAddress[4],
-			nicAdapter.PhysicalAddress[5],
-		)
+		macAddress := formatPhysicalAddress(nicAdapter)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.nicInfo,
-			prometheus.GaugeValue,
-			1,
-			nicName,
-			friendlyName,
-			macAddress,
-		)
+		addresses = addresses[:0]
 
-		for operState, labelValue := range operStatus {
-			var metricStatus float64
-			if operState == nicAdapter.OperStatus {
-				metricStatus = 1
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicOperStatus,
-				prometheus.GaugeValue,
-				metricStatus,
-				nicName,
-				labelValue,
-			)
+		if nicAdapter.OperStatus == windows.IfOperStatusUp {
+			addresses = appendNICAddresses(addresses, nicAdapter)
 		}
 
-		if nicAdapter.OperStatus != windows.IfOperStatusUp {
-			continue
+		values := nicValues{
+			friendlyName: friendlyName,
+			macAddress:   macAddress,
+			operStatus:   nicAdapter.OperStatus,
+			addresses:    string(addresses),
 		}
 
-		for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
-			ipAddr := address.Address.IP()
+		metrics := scrape.Get(nicName, values, func() []prometheus.Metric {
+			return c.nicMetrics(nicName, nicAdapter, values)
+		})
 
-			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
-				continue
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicIPAddressInfo,
-				prometheus.GaugeValue,
-				1,
-				nicName,
-				ipAddr.String(),
-				addressFamily[address.Address.Sockaddr.Addr.Family],
-			)
-		}
-
-		for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
-			ipAddr := address.Address.IP()
-
-			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
-				continue
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.nicIPAddressInfo,
-				prometheus.GaugeValue,
-				1,
-				nicName,
-				ipAddr.String(),
-				addressFamily[address.Address.Sockaddr.Addr.Family],
-			)
+		for _, metric := range metrics {
+			ch <- metric
 		}
 	}
+
+	scrape.Commit()
 
 	return nil
 }
 
-// adapterAddresses returns a list of IP adapter and address
-// structures. The structure contains an IP adapter and flattened
-// multiple IP addresses including unicast, anycast and multicast
-// addresses.
-func adapterAddresses() ([]*windows.IpAdapterAddresses, error) {
-	var b []byte
+// appendNICAddresses appends the encoding of the global unicast and anycast
+// addresses of nicAdapter to b, in the order nicMetrics emits them.
+func appendNICAddresses(b []byte, nicAdapter *windows.IpAdapterAddresses) []byte {
+	appendAddress := func(address *windows.SocketAddress) {
+		ipAddr := address.IP()
 
-	l := uint32(15000) // recommended initial size
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			return
+		}
+
+		family := address.Sockaddr.Addr.Family
+
+		b = append(b, byte(len(ipAddr)))
+		b = append(b, ipAddr...)
+		b = append(b, byte(family>>8), byte(family))
+	}
+
+	for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
+		appendAddress(&address.Address)
+	}
+
+	for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
+		appendAddress(&address.Address)
+	}
+
+	return b
+}
+
+// nicMetrics builds the nic_info, nic_operation_status and nic_address_info
+// metrics of an adapter.
+func (c *Collector) nicMetrics(nicName string, nicAdapter *windows.IpAdapterAddresses, values nicValues) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, 1+len(operStatus))
+
+	metrics = append(metrics, prometheus.MustNewConstMetric(
+		c.nicInfo,
+		prometheus.GaugeValue,
+		1,
+		nicName,
+		values.friendlyName,
+		values.macAddress,
+	))
+
+	for operState, labelValue := range operStatus {
+		var metricStatus float64
+		if operState == values.operStatus {
+			metricStatus = 1
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicOperStatus,
+			prometheus.GaugeValue,
+			metricStatus,
+			nicName,
+			labelValue,
+		))
+	}
+
+	if values.operStatus != windows.IfOperStatusUp {
+		return metrics
+	}
+
+	for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
+		ipAddr := address.Address.IP()
+
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			continue
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicIPAddressInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			ipAddr.String(),
+			addressFamily[address.Address.Sockaddr.Addr.Family],
+		))
+	}
+
+	for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
+		ipAddr := address.Address.IP()
+
+		if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
+			continue
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			c.nicIPAddressInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			ipAddr.String(),
+			addressFamily[address.Address.Sockaddr.Addr.Family],
+		))
+	}
+
+	return metrics
+}
+
+// formatPhysicalAddress returns the physical address of nicAdapter as
+// colon-separated upper case hex bytes. It is empty for adapters without one,
+// like the loopback adapter.
+func formatPhysicalAddress(nicAdapter *windows.IpAdapterAddresses) string {
+	const hexDigits = "0123456789ABCDEF"
+
+	n := min(int(nicAdapter.PhysicalAddressLength), len(nicAdapter.PhysicalAddress))
+	if n == 0 {
+		return ""
+	}
+
+	b := make([]byte, 0, 3*n-1)
+
+	for i, octet := range nicAdapter.PhysicalAddress[:n] {
+		if i > 0 {
+			b = append(b, ':')
+		}
+
+		b = append(b, hexDigits[octet>>4], hexDigits[octet&0x0F])
+	}
+
+	return string(b)
+}
+
+// adapterAddresses returns the linked list of IP adapter addresses of the
+// system, without multicast and DNS server addresses. The list lives in the
+// returned buffer, which the caller passes to the next call for reuse. The
+// list is nil if the system has no adapters.
+func adapterAddresses(b []byte) (*windows.IpAdapterAddresses, []byte, error) {
+	const flags = windows.GAA_FLAG_SKIP_MULTICAST | windows.GAA_FLAG_SKIP_DNS_SERVER
+
+	l := uint32(max(len(b), 15000)) // 15000 is the recommended initial size.
 
 	for {
-		b = make([]byte, l)
+		if len(b) < int(l) {
+			b = make([]byte, l)
+		}
 
-		const flags = windows.GAA_FLAG_SKIP_MULTICAST | windows.GAA_FLAG_SKIP_DNS_SERVER
+		l = uint32(len(b))
 
 		err := windows.GetAdaptersAddresses(windows.AF_UNSPEC, flags, 0, (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])), &l)
 		if err == nil {
-			if l == 0 {
-				return nil, nil
-			}
-
-			break
+			return (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])), b, nil
 		}
 
-		if !errors.Is(err, windows.ERROR_BUFFER_OVERFLOW) {
-			return nil, os.NewSyscallError("getadaptersaddresses", err)
+		if errors.Is(err, windows.ERROR_NO_DATA) {
+			return nil, b, nil
 		}
 
-		if l <= uint32(len(b)) {
-			return nil, os.NewSyscallError("getadaptersaddresses", err)
+		if !errors.Is(err, windows.ERROR_BUFFER_OVERFLOW) || l <= uint32(len(b)) {
+			return nil, b, os.NewSyscallError("getadaptersaddresses", err)
 		}
 	}
-
-	var addresses []*windows.IpAdapterAddresses
-
-	for address := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); address != nil; address = address.Next {
-		addresses = append(addresses, address)
-	}
-
-	return addresses, nil
 }

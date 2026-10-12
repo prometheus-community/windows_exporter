@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -73,28 +74,28 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualMachineVidPartition.Collect(&c.perfDataObjectVirtualMachineVidPartition)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V VM Vid Partition metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectVirtualMachineVidPartition {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.physicalPagesAllocated,
 			prometheus.GaugeValue,
 			data.PhysicalPagesAllocated,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.preferredNUMANodeIndex,
 			prometheus.GaugeValue,
 			data.PreferredNUMANodeIndex,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.remotePhysicalPages,
 			prometheus.GaugeValue,
 			data.RemotePhysicalPages,

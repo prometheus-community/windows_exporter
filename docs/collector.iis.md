@@ -26,6 +26,22 @@ If given, an application needs to match the include regular expression in order 
 
 If given, an application needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported.
 
+## Collection duration
+
+`windows_exporter_collector_duration_seconds{collector="iis"}` can jump to about 250 ms on some scrapes, while it normally stays in the low milliseconds. At the same moments, some other collectors that read performance counters, such as `system`, `logical_disk` or `net`, can show the same duration.
+
+The wait happens inside Windows, not in the exporter. The `Web Service` counters are served by the IIS counter DLL `w3ctrs.dll`. When its counter snapshot is older than 15 seconds, it asks the World Wide Web Publishing Service (W3SVC) to refresh it and sleeps 250 ms before it checks the snapshot again. It repeats this up to 4 times, so a single wait can take up to about 1 s; the spikes observed so far were one 250 ms step. Counter reads of other collectors that start at the same moment can wait for the same time. In the observed cases the scrape still completed; only the reported duration was longer.
+
+The DLL uses built-in defaults, which can be overridden with nonzero `REG_DWORD` values below `HKLM\SYSTEM\CurrentControlSet\Services\W3SVC\Performance` (a missing value or 0 keeps the default). Microsoft does not document these values, and changing them has not been tested as a mitigation, so try any change on a non-production system first. `w3ctrs.dll` reads them when it is loaded, so restart windows_exporter after a change. `CheckCountersEveryNMiliseconds` is spelled this way in Windows.
+
+| Value                            | Default  |
+|----------------------------------|----------|
+| `FreshTimeForCounters`           | 15000 ms |
+| `CheckCountersEveryNMiliseconds` | 250 ms   |
+| `NumberOfTimesToCheckCounters`   | 4        |
+
+See [#2698](https://github.com/prometheus-community/windows_exporter/issues/2698) for the analysis.
+
 ## Metrics
 
 | Name                                                     | Description                                                                                                                                                                                                                                                                                 | Type    | Labels                      |

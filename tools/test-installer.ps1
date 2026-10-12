@@ -16,7 +16,10 @@ Param (
     # Executable packaged in $Msi and $UpgradeMsi.
     [Parameter(Mandatory = $true)]
     [String] $Executable,
-    # Release to upgrade from, for example 0.31.8.
+    # Release to upgrade from, for example 0.32.0-beta.1. Packages up to 0.31.x
+    # stop every windows_exporter.exe with taskkill /T, which also ends
+    # unrelated processes whose stale parent process ID matches, like the
+    # runner agent of a CI job.
     [Parameter(Mandatory = $true)]
     [String] $PreviousVersion,
     [Parameter(Mandatory = $false)]
@@ -45,12 +48,56 @@ function Write-Step([String] $Message) {
     Write-Host "::group::$Message"
 }
 
-function Invoke-Msiexec([String] $Name, [String[]] $Arguments) {
+# Some runs lose the runner during the repair or uninstall, and then no log
+# is uploaded. Print what Windows Installer and Windows did around each
+# operation, so passing runs show what could end or starve the runner.
+function Get-RunnerProcess {
+    return @(Get-Process -Name 'Runner.Listener', 'Runner.Worker' -ErrorAction SilentlyContinue |
+            ForEach-Object { "$($_.Name)=$($_.Id)" }) -join ' '
+}
+
+function Write-MsiexecDiagnostic([String] $Log, [DateTime] $Since) {
+    if (Test-Path $Log) {
+        # The verbose log is UTF-16.
+        Select-String -Path $Log -Encoding unicode -Pattern 'RESTART MANAGER', 'reboot', 'in use', 'Return value 3', 'KillProcess' |
+            ForEach-Object { Write-Host "  msi: $($_.Line.Trim())" }
+    }
+
+    $events = Get-WinEvent -ErrorAction SilentlyContinue -FilterHashtable @{
+        LogName   = 'System', 'Application'
+        StartTime = $Since
+    } | Where-Object {
+        $_.Level -le 3 -or $_.ProviderName -in 'Microsoft-Windows-RestartManager', 'Service Control Manager', 'MsiInstaller'
+    }
+
+    foreach ($entry in (@($events) | Sort-Object TimeCreated)) {
+        $message = ($entry.Message -split "`r?`n")[0]
+        Write-Host "  event: $($entry.TimeCreated.ToString('HH:mm:ss.fff')) $($entry.LogName)/$($entry.ProviderName)/$($entry.Id): $message"
+    }
+}
+
+function Invoke-Msiexec([String] $Name, [String[]] $Arguments, [Switch] $PreviousPackage) {
     $log = Join-Path $WorkDir "$Name.log"
     $allArguments = $Arguments + @('/qn', '/norestart', '/L*v', "`"$log`"")
     Write-Host "msiexec $($allArguments -join ' ')"
+    Write-Host "  runner before: $(Get-RunnerProcess)"
 
+    $since = Get-Date
     $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $allArguments -Wait -PassThru
+    Write-Host "  msiexec $Name took $([Math]::Round(((Get-Date) - $since).TotalSeconds, 1)) s, exit code $($process.ExitCode)"
+    Write-Host "  runner after: $(Get-RunnerProcess)"
+    Write-MsiexecDiagnostic -Log $log -Since $since
+
+    # The package disables the Restart Manager, so no operation may shut down
+    # applications that hold its files. An upgrade removes the previous release
+    # with the previous package's settings, which still enable it.
+    if (-not $PreviousPackage -and (Test-Path $log)) {
+        $shutdown = Select-String -Path $log -Encoding unicode -Pattern 'RESTART MANAGER: Successfully shut down'
+        if ($null -ne $shutdown) {
+            throw "msiexec $Name let the Restart Manager shut down applications, see $log"
+        }
+    }
+
     # 3010 means success, but a restart is required.
     if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
         throw "msiexec $Name failed with exit code $($process.ExitCode), see $log"
@@ -168,7 +215,7 @@ try {
         throw "checksum mismatch for $previousMsi`: $actualHash, expected $expectedHash"
     }
 
-    Invoke-Msiexec -Name 'install-previous' -Arguments @('/i', "`"$previousMsi`"")
+    Invoke-Msiexec -Name 'install-previous' -Arguments @('/i', "`"$previousMsi`"") -PreviousPackage
     Assert-ServiceRunning | Out-Null
     Write-Host '::endgroup::'
 
@@ -181,7 +228,7 @@ try {
 
     Write-Step 'Upgrade to this build'
     Start-Foreign
-    Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"")
+    Invoke-Msiexec -Name 'upgrade' -Arguments @('/i', "`"$UpgradeMsi`"") -PreviousPackage
     $metrics = Assert-ServiceRunning
     Assert-InstalledExecutable
 
@@ -194,14 +241,9 @@ try {
         throw 'the upgraded service does not use the kept configuration'
     }
 
-    # The previous package removes itself with its own logic. Up to 0.31.x that
-    # stops every windows_exporter.exe, as documented in UPGRADE.md.
-    if (Test-ForeignAlive) {
-        Write-Host 'the independent windows_exporter.exe survived the upgrade'
-    } else {
-        Write-Host "::notice::the $PreviousVersion package stopped the independent windows_exporter.exe during the upgrade"
-        Start-Foreign
-    }
+    # The previous package removes itself with its own logic, so it must be
+    # 0.32.0-beta.0 or newer to leave the independent instance running.
+    Assert-ForeignAlive -Operation 'upgrade'
     Write-Host '::endgroup::'
 
     Write-Step 'Repair this build'

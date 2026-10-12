@@ -57,7 +57,6 @@ type Collector struct {
 	committedBytes                  *prometheus.Desc
 	demandZeroFaultsTotal           *prometheus.Desc
 	freeAndZeroPageListBytes        *prometheus.Desc
-	freeSystemPageTableEntries      *prometheus.Desc
 	modifiedPageListBytes           *prometheus.Desc
 	pageFaultsTotal                 *prometheus.Desc
 	swapPageReadsTotal              *prometheus.Desc
@@ -71,6 +70,7 @@ type Collector struct {
 	poolPagedBytes                  *prometheus.Desc
 	poolPagedResidentBytes          *prometheus.Desc
 	standbyCacheCoreBytes           *prometheus.Desc
+	standbyCacheLifetimeSeconds     *prometheus.Desc
 	standbyCacheNormalPriorityBytes *prometheus.Desc
 	standbyCacheReserveBytes        *prometheus.Desc
 	systemCacheResidentBytes        *prometheus.Desc
@@ -142,8 +142,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.commitLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "commit_limit"),
-		"(CommitLimit)",
+		prometheus.BuildFQName(types.Namespace, Name, "commit_limit_bytes"),
+		"Amount of virtual memory, in bytes, that can be committed without having to extend the paging file(s) (CommitLimit)",
 		nil,
 		nil,
 	)
@@ -164,12 +164,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "free_and_zero_page_list_bytes"),
 		"The amount of physical memory, in bytes, that is assigned to the free and zero page lists. This memory does not contain cached data. It is immediately"+
 			" available for allocation to a process or for system use (FreeAndZeroPageListBytes)",
-		nil,
-		nil,
-	)
-	c.freeSystemPageTableEntries = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "free_system_page_table_entries"),
-		"(FreeSystemPageTableEntries)",
 		nil,
 		nil,
 	)
@@ -253,6 +247,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "standby_cache_core_bytes"),
 		"The amount of physical memory, in bytes, that is assigned to the core standby cache page lists. This memory contains cached data and code that is "+
 			"not actively in use by processes, the system and the system cache (StandbyCacheCoreBytes)",
+		nil,
+		nil,
+	)
+	c.standbyCacheLifetimeSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "standby_cache_lifetime_seconds"),
+		"The long-term average time, in seconds, that a page stays on the standby cache page lists before it is repurposed. "+
+			"Low values indicate memory pressure (LongTermAverageStandbyCacheLifetime)",
 		nil,
 		nil,
 	)
@@ -448,12 +449,6 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.freeSystemPageTableEntries,
-		prometheus.GaugeValue,
-		c.perfDataObject[0].FreeSystemPageTableEntries,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
 		c.modifiedPageListBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].ModifiedPageListBytes,
@@ -529,6 +524,12 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		c.standbyCacheCoreBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].StandbyCacheCoreBytes,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.standbyCacheLifetimeSeconds,
+		prometheus.GaugeValue,
+		c.perfDataObject[0].LongTermAverageStandbyCacheLifetime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

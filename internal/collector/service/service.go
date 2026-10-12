@@ -32,11 +32,13 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
@@ -77,9 +79,31 @@ type Collector struct {
 	queryAllServicesMu     sync.Mutex
 	queryAllServicesBuffer []byte
 
+	// configCache caches the service configurations between scrapes.
+	configCache serviceConfigCache
+
 	// allStartModesIncluded is true if ServiceStartModeInclude contains every start mode.
 	// Only then services with an unknown start mode are collected.
 	allStartModesIncluded bool
+
+	// metricCache reuses the metrics of services whose values did not change since
+	// the last scrape. Each service publishes up to 14 series, and building them is
+	// most of the allocations of a scrape. The values are still queried on every
+	// scrape, so it saves allocations, not system calls.
+	metricCache metriccache.Cache[string, serviceValues]
+}
+
+// serviceValues holds the inputs of the metrics of a service besides its name.
+type serviceValues struct {
+	state       uint32
+	startMode   string
+	displayName string
+	runAs       string
+	pathName    string
+	processID   uint32
+	// processStartTime is the creation time of the process in nanoseconds,
+	// or 0 if it is unknown and the process metric is not published.
+	processStartTime uint64
 }
 
 // serviceEntry is a copy of an [windows.ENUM_SERVICE_STATUS_PROCESS], which
@@ -197,6 +221,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	c.metricCache.Reset()
+
 	c.apiStateValues = map[uint32]string{
 		windows.SERVICE_CONTINUE_PENDING: "continue pending",
 		windows.SERVICE_PAUSE_PENDING:    "pause pending",
@@ -241,10 +268,24 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.serviceManagerHandle = &mgr.Mgr{Handle: handle}
 
+	if err := c.configCache.init(registry.LOCAL_MACHINE, servicesKeyPath); err != nil {
+		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
+			slog.Any("err", err),
+		)
+	}
+
 	return nil
 }
 
 func (c *Collector) Close() error {
+	c.metricCache.Reset()
+
+	if err := c.configCache.close(); err != nil {
+		c.logger.Warn("Failed to close the service configuration cache",
+			slog.Any("err", err),
+		)
+	}
+
 	if c.serviceManagerHandle == nil {
 		return nil
 	}
@@ -268,6 +309,23 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
+	switch dropped, expired, err := c.configCache.refresh(); {
+	case err != nil:
+		c.logger.Warn("Failed to watch the service configurations for changes. Service configurations are queried on every scrape",
+			slog.Any("err", err),
+		)
+	case expired:
+		c.logger.Debug("Service configuration cache expired",
+			slog.Int("count", dropped),
+		)
+	case dropped > 0:
+		c.logger.Debug("Dropped changed service configurations from the cache",
+			slog.Int("count", dropped),
+		)
+	}
+
+	scrape := c.metricCache.Begin()
+
 	servicesCh := make(chan serviceEntry, len(services))
 
 	for _, service := range services {
@@ -282,22 +340,27 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	for range 4 {
 		g.Go(func() error {
 			for service := range servicesCh {
-				c.collectWorker(ch, service)
+				c.collectWorker(ch, scrape, service)
 			}
 
 			return nil
 		})
 	}
 
-	return g.Wait()
+	err = g.Wait()
+
+	// Services that were not collected in this scrape are dropped from the cache.
+	scrape.Commit()
+
+	return err
 }
 
-func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service serviceEntry) {
+func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *metriccache.Scrape[string, serviceValues], service serviceEntry) {
 	if c.config.ServiceExclude.MatchString(service.name) || !c.config.ServiceInclude.MatchString(service.name) {
 		return
 	}
 
-	if err := c.collectService(ch, service); err != nil {
+	if err := c.collectService(ch, scrape, service); err != nil {
 		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
 			slog.Any("err", err),
 			slog.String("service", service.name),
@@ -305,44 +368,12 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service serviceEn
 	}
 }
 
-func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceEntry) error {
+func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *metriccache.Scrape[string, serviceValues], service serviceEntry) error {
 	serviceName := service.name
 
-	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
+	serviceConfig, configAvailable, err := c.getCachedServiceConfig(serviceName)
 	if err != nil {
-		return fmt.Errorf("invalid service name: %w", err)
-	}
-
-	// Open connection for service handler.
-	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
-	if err != nil {
-		return fmt.Errorf("failed to open service: %w", err)
-	}
-
-	// Create handle for each service.
-	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
-	defer func(serviceManager *mgr.Service) {
-		if err := serviceManager.Close(); err != nil {
-			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
-				slog.Any("err", err),
-				slog.String("service", serviceName),
-			)
-		}
-	}(serviceManager)
-
-	// Get Service Configuration.
-	serviceConfig, err := c.getServiceConfig(serviceManager)
-	configAvailable := err == nil
-
-	if err != nil {
-		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
-			return fmt.Errorf("failed to get service configuration: %w", err)
-		}
-
-		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
-			slog.Any("err", err),
-			slog.String("service", serviceName),
-		)
+		return err
 	}
 
 	// serviceStartMode stays empty if the service configuration is not available.
@@ -379,70 +410,100 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceE
 		return nil
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	values := serviceValues{
+		state:       service.status.CurrentState,
+		startMode:   serviceStartMode,
+		displayName: serviceConfig.DisplayName,
+		runAs:       serviceConfig.ServiceStartName,
+		pathName:    serviceConfig.BinaryPathName,
+		processID:   service.status.ProcessId,
+	}
+
+	if values.processID != 0 {
+		values.processStartTime = c.processStartTime(serviceName, values.processID)
+	}
+
+	metrics := scrape.Get(serviceName, values, func() []prometheus.Metric {
+		return c.serviceMetrics(serviceName, values)
+	})
+
+	for _, metric := range metrics {
+		ch <- metric
+	}
+
+	return nil
+}
+
+// serviceMetrics builds the metrics of a service.
+func (c *Collector) serviceMetrics(serviceName string, values serviceValues) []prometheus.Metric {
+	metrics := make([]prometheus.Metric, 0, 2+len(c.apiStartModeValues)+len(c.apiStateValues))
+
+	metrics = append(metrics, prometheus.MustNewConstMetric(
 		c.info,
 		prometheus.GaugeValue,
 		1.0,
 		serviceName,
-		serviceConfig.DisplayName,
-		serviceConfig.ServiceStartName,
-		serviceConfig.BinaryPathName,
-	)
+		values.displayName,
+		values.runAs,
+		values.pathName,
+	))
 
 	var (
 		isCurrentStartMode float64
 		isCurrentState     float64
 	)
 
-	if serviceStartMode != "" {
+	if values.startMode != "" {
 		for _, startMode := range c.apiStartModeValues {
 			isCurrentStartMode = 0.0
-			if startMode == serviceStartMode {
+			if startMode == values.startMode {
 				isCurrentStartMode = 1.0
 			}
 
-			ch <- prometheus.MustNewConstMetric(
+			metrics = append(metrics, prometheus.MustNewConstMetric(
 				c.startMode,
 				prometheus.GaugeValue,
 				isCurrentStartMode,
 				serviceName,
 				startMode,
-			)
+			))
 		}
 	}
 
 	for state, stateValue := range c.apiStateValues {
 		isCurrentState = 0.0
-		if state == service.status.CurrentState {
+		if state == values.state {
 			isCurrentState = 1.0
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		metrics = append(metrics, prometheus.MustNewConstMetric(
 			c.state,
 			prometheus.GaugeValue,
 			isCurrentState,
 			serviceName,
 			stateValue,
-		)
+		))
 	}
 
-	if service.status.ProcessId == 0 {
-		return nil
+	if values.processStartTime == 0 {
+		return metrics
 	}
 
-	processID := strconv.FormatUint(uint64(service.status.ProcessId), 10)
+	return append(metrics, prometheus.MustNewConstMetric(
+		c.processID,
+		prometheus.GaugeValue,
+		float64(values.processStartTime/1_000_000_000),
+		serviceName,
+		strconv.FormatUint(uint64(values.processID), 10),
+	))
+}
 
-	processStartTime, err := c.getProcessStartTime(service.status.ProcessId)
+// processStartTime returns the creation time of the process of a service in
+// nanoseconds, or 0 if it can't be determined.
+func (c *Collector) processStartTime(serviceName string, processID uint32) uint64 {
+	processStartTime, err := c.getProcessStartTime(processID)
 	if err == nil {
-		ch <- prometheus.MustNewConstMetric(
-			c.processID,
-			prometheus.GaugeValue,
-			float64(processStartTime/1_000_000_000),
-			serviceName,
-			processID,
-		)
-
-		return nil
+		return processStartTime
 	}
 
 	logLevel := slog.LevelWarn
@@ -458,7 +519,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, service serviceE
 		slog.Any("err", err),
 	)
 
-	return nil
+	return 0
 }
 
 // queryAllServices returns all service states of the current Windows system
@@ -534,6 +595,49 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// queryServiceConfig opens the service and queries its configuration.
+// configAvailable is false if the service has no readable configuration.
+func (c *Collector) queryServiceConfig(serviceName string) (mgr.Config, bool, error) {
+	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
+	if err != nil {
+		return mgr.Config{}, false, fmt.Errorf("invalid service name: %w", err)
+	}
+
+	// Open connection for service handler.
+	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
+	if err != nil {
+		return mgr.Config{}, false, fmt.Errorf("failed to open service: %w", err)
+	}
+
+	// Create handle for each service.
+	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
+	defer func(serviceManager *mgr.Service) {
+		if err := serviceManager.Close(); err != nil {
+			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
+				slog.Any("err", err),
+				slog.String("service", serviceName),
+			)
+		}
+	}(serviceManager)
+
+	// Get Service Configuration.
+	serviceConfig, err := c.getServiceConfig(serviceManager)
+	if err != nil {
+		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
+			return mgr.Config{}, false, fmt.Errorf("failed to get service configuration: %w", err)
+		}
+
+		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
+			slog.Any("err", err),
+			slog.String("service", serviceName),
+		)
+
+		return mgr.Config{}, false, nil
+	}
+
+	return serviceConfig, true, nil
 }
 
 func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {

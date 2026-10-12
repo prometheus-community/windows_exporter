@@ -36,6 +36,10 @@ type nodeSource interface {
 type collectorNode struct {
 	nodeSource nodeSource
 
+	// nodeMetricCache reuses the field metrics of unchanged nodes; see
+	// objectMetricCache.
+	nodeMetricCache objectMetricCache
+
 	nodeBuildNumber           *prometheus.Desc
 	nodeCharacteristics       *prometheus.Desc
 	nodeDetectedCloudPlatform *prometheus.Desc
@@ -171,6 +175,9 @@ func (c *Collector) buildNodeDescriptors() {
 		[]string{"name"},
 		nil,
 	)
+
+	// Cached metrics refer to the descriptors of an earlier build.
+	c.nodeMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -207,15 +214,20 @@ func (c *Collector) publishNodes(ch chan<- prometheus.Metric, nodes []clusapi.Ob
 	}
 
 	nodeNames := make([]string, 0, len(nodes))
+	scrape := c.nodeMetricCache.Begin()
+
+	var key []byte
 
 	for _, node := range nodes {
 		if node.Name == "" {
 			continue
 		}
 
-		resultErr = publishObjectFields(ch, "node", node, fields, build, resultErr)
+		key, resultErr = publishCachedObjectFields(ch, scrape, key, "node", node, fields, build, resultErr)
 		nodeNames = append(nodeNames, node.Name)
 	}
+
+	commitScrape(scrape, len(nodes), resultErr)
 
 	return nodeNames, resultErr
 }

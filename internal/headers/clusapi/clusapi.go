@@ -38,6 +38,7 @@ const (
 	resourceGetType               = 0x0100002d
 	resourceGetClassInfo          = 0x0100000d
 	maxBufferSize                 = 64 << 20
+	maxScratchSize                = 64 << 10
 	stateUnknown                  = ^uint32(0) // ClusterResourceStateUnknown
 	propertyListBufferSize        = 4 << 10
 	typeBufferSize                = 512
@@ -74,7 +75,7 @@ type nativeAPI struct {
 	enumName      func(enum uintptr, index, enumType uint32, deadline time.Time) (objectName, error)
 	openResource  func(cluster uintptr, name objectName) (uintptr, error)
 	closeResource func(resource uintptr) error
-	readResource  func(resource uintptr, out *Resource, deadline time.Time) error
+	readResource  func(resource uintptr, out *Resource, scratch *controlScratch, deadline time.Time) error
 }
 
 //nolint:gochecknoglobals
@@ -158,6 +159,46 @@ type Cluster struct {
 	handle  uintptr
 	closed  bool
 	running bool
+
+	// scratch belongs to the running call, like handle.
+	scratch controlScratch
+}
+
+// controlScratch is the reusable control buffer of a Cluster. Its owner runs
+// one control at a time, so no pool is needed. Values parsed from a result,
+// such as Property.Data, point into the buffer and are only valid until the
+// next control; callers copy them out first.
+type controlScratch struct {
+	buffer []byte
+}
+
+// get returns n zeroed bytes, the same contents as a new buffer.
+func (s *controlScratch) get(n int) []byte {
+	if cap(s.buffer) < n {
+		s.buffer = make([]byte, max(n, propertyListBufferSize))
+	}
+
+	buffer := s.buffer[:n]
+	clear(buffer)
+
+	return buffer
+}
+
+// keep holds on to a buffer a control had to grow, up to maxScratchSize, so
+// the next object starts with the larger size.
+func (s *controlScratch) keep(data []byte) {
+	if cap(data) > cap(s.buffer) && cap(data) <= maxScratchSize {
+		s.buffer = data[:cap(data)]
+	}
+}
+
+// resourceControl calls ClusterResourceControl starting with n bytes of the
+// scratch buffer. The result is only valid until the next control.
+func (s *controlScratch) resourceControl(handle uintptr, code uint32, n int, deadline time.Time) ([]byte, error) {
+	data, err := resourceBufferIn(handle, code, s.get(n), deadline)
+	s.keep(data)
+
+	return data, err
 }
 
 type Resource struct {
@@ -391,7 +432,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 			return fmt.Errorf("OpenClusterResourceEx: %w", err)
 		}
 
-		err = api.readResource(handle, &resource, deadline)
+		err = api.readResource(handle, &resource, &c.scratch, deadline)
 		if closeErr := api.closeResource(handle); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf("CloseClusterResource: %w", closeErr))
 		}
@@ -459,13 +500,13 @@ func enumName(enum uintptr, index, enumType uint32, deadline time.Time) (objectN
 
 // readResource fills the properties of an open resource. Failed properties are
 // omitted; the identity is only valid once the state and owner are known.
-func readResource(handle uintptr, resource *Resource, deadline time.Time) error {
+func readResource(handle uintptr, resource *Resource, scratch *controlScratch, deadline time.Time) error {
 	var resultErr error
 
 	hasType := false
 
 	for _, code := range []uint32{resourceGetROCommonProperties, resourceGetCommonProperties} {
-		data, err := resourceBuffer(handle, code, propertyListBufferSize, deadline)
+		data, err := scratch.resourceControl(handle, code, propertyListBufferSize, deadline)
 		if err != nil {
 			resultErr = errors.Join(resultErr, fmt.Errorf("ClusterResourceControl %#x: %w", code, err))
 
@@ -479,23 +520,8 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 			continue
 		}
 
-		for name, values := range properties {
-			if len(values) != 1 {
-				continue
-			}
-
-			if value, err := values[0].DWORD(); err == nil {
-				resource.Values[name] = value
-			}
-		}
-
-		// The read-only common Type property is the same resource type name
-		// that CLUSCTL_RESOURCE_GET_RESOURCE_TYPE returns.
-		if values := properties["Type"]; len(values) == 1 {
-			if value, err := values[0].String(); err == nil {
-				resource.Type = value
-				hasType = true
-			}
+		if copyResourceProperties(resource, properties) {
+			hasType = true
 		}
 	}
 
@@ -503,7 +529,7 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 		name string
 		code uint32
 	}{{"Characteristics", resourceGetCharacteristics}, {"Flags", resourceGetFlags}} {
-		data, err := resourceBuffer(handle, field.code, 4, deadline)
+		data, err := scratch.resourceControl(handle, field.code, 4, deadline)
 		switch {
 		case err != nil:
 			resultErr = errors.Join(resultErr, fmt.Errorf("%s: %w", field.name, err))
@@ -514,20 +540,16 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 		}
 	}
 
-	data, err := resourceBuffer(handle, resourceGetClassInfo, 8, deadline)
-	switch {
-	case err != nil:
+	data, err := scratch.resourceControl(handle, resourceGetClassInfo, 8, deadline)
+	if err != nil {
 		resultErr = errors.Join(resultErr, fmt.Errorf("class information: %w", err))
-	case len(data) != 8:
-		resultErr = errors.Join(resultErr, errors.New("invalid resource class information size"))
-	default:
-		resource.Values["ResourceClass"] = binary.LittleEndian.Uint32(data)
-		resource.Values["Subclass"] = binary.LittleEndian.Uint32(data[4:])
+	} else {
+		resource.Values["ResourceClass"], resource.Values["Subclass"] = parseResourceClassInfo(data)
 	}
 
 	// The property lists normally carry the type; only ask separately without it.
 	if !hasType {
-		data, err = resourceBuffer(handle, resourceGetType, typeBufferSize, deadline)
+		data, err = scratch.resourceControl(handle, resourceGetType, typeBufferSize, deadline)
 		if err != nil {
 			return errors.Join(resultErr, fmt.Errorf("resource type: %w", err))
 		}
@@ -548,8 +570,56 @@ func readResource(handle uintptr, resource *Resource, deadline time.Time) error 
 	return resultErr
 }
 
-func resourceBuffer(handle uintptr, code uint32, size int, deadline time.Time) ([]byte, error) {
-	return controlBuffer(deadline, size, func(buffer []byte) (uint32, error) {
+// copyResourceProperties copies the single DWORD values and the type name out
+// of a parsed property list, so the list's buffer can be reused. It reports
+// whether the list had the type.
+func copyResourceProperties(resource *Resource, properties map[string][]Property) bool {
+	for name, values := range properties {
+		if len(values) != 1 {
+			continue
+		}
+
+		if value, ok := values[0].dword(); ok {
+			resource.Values[name] = value
+		}
+	}
+
+	// The read-only common Type property is the same resource type name that
+	// CLUSCTL_RESOURCE_GET_RESOURCE_TYPE returns.
+	if values := properties["Type"]; len(values) == 1 {
+		if value, err := values[0].String(); err == nil {
+			resource.Type = value
+
+			return true
+		}
+	}
+
+	return false
+}
+
+// parseResourceClassInfo decodes CLUS_RESOURCE_CLASS_INFO. Some resource DLLs,
+// such as the Storage Spaces Direct Health Service, succeed but return only
+// the class DWORD without the subclass; the WMI provider reports their
+// ResourceClass as CLUS_RESCLASS_UNKNOWN (0), so missing fields decode as 0
+// instead of failing.
+func parseResourceClassInfo(data []byte) (uint32, uint32) {
+	var class, subclass uint32
+
+	if len(data) >= 4 {
+		class = binary.LittleEndian.Uint32(data)
+	}
+
+	if len(data) >= 8 {
+		subclass = binary.LittleEndian.Uint32(data[4:])
+	}
+
+	return class, subclass
+}
+
+// resourceBufferIn calls ClusterResourceControl starting with buffer. The
+// result may share buffer's memory.
+func resourceBufferIn(handle uintptr, code uint32, buffer []byte, deadline time.Time) ([]byte, error) {
+	return controlBufferIn(deadline, buffer, func(buffer []byte) (uint32, error) {
 		var (
 			size    uint32
 			pointer *byte
@@ -582,7 +652,8 @@ func readResourceState(handle uintptr, deadline time.Time) (uint32, string, stri
 }
 
 func stateBuffers(deadline time.Time, call func([]uint16, []uint16) (uint32, uint32, uint32, error)) (uint32, string, string, error) {
-	node, group := make([]uint16, 256), make([]uint16, 256)
+	units := make([]uint16, 512)
+	node, group := units[:256:256], units[256:]
 
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
@@ -640,15 +711,20 @@ func checkDeadline(deadline time.Time) error {
 	return nil
 }
 
-// controlBuffer starts with a buffer of the expected size, so most controls need
-// one RPC. ERROR_MORE_DATA still grows the buffer to the reported size; size 0
-// starts with a NULL size probe.
-func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, error)) ([]byte, error) {
-	var buffer []byte
-	if size > 0 {
-		buffer = make([]byte, size)
+// newControlBuffer returns a buffer of the expected size, so most controls
+// need one RPC; size 0 starts with a NULL size probe.
+func newControlBuffer(size int) []byte {
+	if size <= 0 {
+		return nil
 	}
 
+	return make([]byte, size)
+}
+
+// controlBufferIn calls a control starting with buffer; an empty buffer is a
+// NULL size probe. ERROR_MORE_DATA grows the buffer to the reported size,
+// within buffer's capacity when it fits. The result may share buffer's memory.
+func controlBufferIn(deadline time.Time, buffer []byte, call func([]byte) (uint32, error)) ([]byte, error) {
 	for range 16 {
 		if err := checkDeadline(deadline); err != nil {
 			return nil, err
@@ -660,7 +736,7 @@ func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, erro
 				return nil, errors.New("invalid ClusterResourceControl buffer size")
 			}
 
-			buffer = make([]byte, size)
+			buffer = growBuffer(buffer, int(size))
 
 			continue
 		}
@@ -674,7 +750,7 @@ func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, erro
 				return nil, errors.New("invalid ClusterResourceControl buffer size")
 			}
 
-			buffer = make([]byte, size)
+			buffer = growBuffer(buffer, int(size))
 
 			continue
 		}
@@ -687,4 +763,16 @@ func controlBuffer(deadline time.Time, size int, call func([]byte) (uint32, erro
 	}
 
 	return nil, errors.New("ClusterResourceControl buffer did not stabilize")
+}
+
+// growBuffer returns size zeroed bytes, reusing buffer's capacity when it fits.
+func growBuffer(buffer []byte, size int) []byte {
+	if size > cap(buffer) {
+		return make([]byte, size)
+	}
+
+	buffer = buffer[:size]
+	clear(buffer)
+
+	return buffer
 }

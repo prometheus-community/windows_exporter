@@ -16,9 +16,26 @@ None
 
 ## Metrics
 
-| Name                | Description                                                                                         | Type  | Labels                                                                     |
-|---------------------|-----------------------------------------------------------------------------------------------------|-------|----------------------------------------------------------------------------|
-| `windows_dmi_info`  | A metric with a constant '1' value labeled by SMBIOS Type 1 (System Information) fields.            | gauge | `product_name`, `product_serial`, `product_uuid`, `product_version`, `system_vendor` |
+| Name               | Description                                                                 | Type  | Labels                                                                                                                                                                                                                                                                                                       |
+|--------------------|-----------------------------------------------------------------------------|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `windows_dmi_info` | A metric with a constant '1' value labeled by SMBIOS identification fields. | gauge | `bios_date`, `bios_release`, `bios_vendor`, `bios_version`, `board_asset_tag`, `board_name`, `board_serial`, `board_vendor`, `board_version`, `chassis_asset_tag`, `chassis_serial`, `chassis_vendor`, `chassis_version`, `product_family`, `product_name`, `product_serial`, `product_sku`, `product_uuid`, `product_version`, `system_vendor` |
+
+The labels come from these SMBIOS structures, using the first structure of
+each type like the Linux kernel's `/sys/class/dmi/id` attributes that
+node_exporter reads:
+
+| SMBIOS structure               | Labels                                                                                                                              |
+|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| Type 0 (BIOS Information)      | `bios_vendor`, `bios_version`, `bios_date`, `bios_release` (2.4+)                                                                   |
+| Type 1 (System Information)    | `system_vendor`, `product_name`, `product_version`, `product_serial`, `product_uuid`, `product_sku` (2.4+), `product_family` (2.4+) |
+| Type 2 (Baseboard Information) | `board_vendor`, `board_name`, `board_version`, `board_serial`, `board_asset_tag`                                                    |
+| Type 3 (System Enclosure)      | `chassis_vendor`, `chassis_version`, `chassis_serial`, `chassis_asset_tag`                                                          |
+
+Fields the firmware does not provide are exposed as empty labels, which
+Prometheus drops on ingestion. `bios_release` is the system
+BIOS major.minor release, e.g. `2.17`; some firmware, such as QEMU's SeaBIOS,
+reports `0.0`. Firmware placeholders like `Not Specified` or
+`Default string` are passed through unchanged, as on Linux.
 
 On VMs the labels reflect the hypervisor-assigned identity; on physical hosts
 they reflect the hardware SMBIOS data.  If SMBIOS data cannot be read (e.g. in
@@ -27,10 +44,12 @@ some container environments), the collector will fail to build.
 ### Example metric
 
 ```
-# HELP windows_dmi_info A metric with a constant '1' value labeled by product_name, product_serial, product_uuid, product_version, system_vendor from SMBIOS Type 1 (System Information).
+# HELP windows_dmi_info A metric with a constant '1' value labeled by bios_date, bios_release, bios_vendor, bios_version, board_asset_tag, board_name, board_serial, board_vendor, board_version, chassis_asset_tag, chassis_serial, chassis_vendor, chassis_version, product_family, product_name, product_serial, product_sku, product_uuid, product_version, system_vendor from SMBIOS.
 # TYPE windows_dmi_info gauge
-windows_dmi_info{product_name="Standard PC (Q35 + ICH9, 2009)",product_serial="Not Specified",product_uuid="12345678-1234-1234-1234-123456789abc",product_version="pc-q35-9.2",system_vendor="QEMU"} 1
+windows_dmi_info{bios_date="04/01/2014",bios_release="0.0",bios_vendor="SeaBIOS",bios_version="rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org",chassis_vendor="QEMU",chassis_version="pc-q35-9.2",product_name="Standard PC (Q35 + ICH9, 2009)",product_uuid="12345678-1234-1234-1234-123456789abc",product_version="pc-q35-9.2",system_vendor="QEMU"} 1
 ```
+
+Empty labels are left out of this example for brevity.
 
 ## Useful queries
 

@@ -27,14 +27,38 @@
   two groups (`CIResources`, `CIFailedResources`) on a private network of an
   internal Hyper-V switch; the parity tests require them. It has no clustered
   disks, so shared volume parity still compares empty sets.
+  The "Cluster Group" also holds an offline "Health Service" resource
+  without Storage Spaces Direct. It answers `CLUSCTL_RESOURCE_GET_CLASS_INFO`
+  with only 4 bytes, like the Health resource of S2D clusters (#2669). S2D
+  itself cannot be enabled on the runner: it claims every VHDX disk of the
+  other steps, and `Set-ClusterStorageSpacesDirectDisk -CanBeClaimed $false`
+  removes those disks from the host instead of leaving them alone. Disks from
+  a loopback iSCSI target (with `S2DBusTypes` limited to iSCSI) appear before
+  `New-Cluster`, but the session and the target are gone after it: once the
+  node is clustered, the iSCSI Target Server only serves clustered targets.
+  A clustered target needs a cluster disk for its files, and
+  `Get-ClusterAvailableDisk` does not list a host-mounted VHDX.
 - Property lists returned by the cluster service end with an extra
   `CLUSPROP_SYNTAX_ENDMARK` after the last value list; fixtures built only from
   the documentation miss this. The parser validates only the structure and
   accepts zero padding. `TestDumpPropertyLists` logs real lists as hex when
   `WINDOWS_EXPORTER_TEST_CLUSAPI_DUMP` is set on a cluster node.
+- Each `Cluster` owns one control buffer (`controlScratch`). Like the handle,
+  it belongs to the running call, so calls never share it and no `sync.Pool`
+  is needed. `ParseProperties` returns `Property.Data` slices into it: copy
+  values out (`copyResourceProperties`, `readCommonProperties`) before the
+  next control, and never keep a parsed list past that point. `get` zeroes
+  the bytes, so a reused buffer reads like a new one.
 - `clusapi.Open` reports an unconfigured cluster or a missing ClusAPI with
   `errors.ErrUnsupported`; the shared collector test treats that as an
   unsupported role on hosts where `mscluster` is not a required fixture.
 - Use `ClusterOpenEnum` and the `Open*Ex` functions (Windows Server 2008 R2+),
   not `ClusterOpenEnumEx` (Windows Server 2016+), to keep Windows Server
   2012 R2 support.
+- Cluster, network, node, group and resource metrics are reused between
+  scrapes through `internal/metriccache` when every input is unchanged. A
+  cache value must hold every input of the cached series: field values and
+  whether each field is published (`appendObjectFieldsKey`, which resolves the
+  build-dependent rules of `objectField`), owner node and node names. Objects
+  with missing fields are not cached, so they report the same errors on every
+  scrape. Shared volume sizes change constantly and are not cached.

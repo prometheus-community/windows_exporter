@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,20 +60,20 @@ func (c *Collector) buildVirtualMachineHealthSummary() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualMachineHealthSummary.Collect(&c.perfDataObjectVirtualMachineHealthSummary)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Machine Health Summary metrics: %w", err)
 	}
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.health,
 		prometheus.GaugeValue,
 		c.perfDataObjectVirtualMachineHealthSummary[0].HealthCritical,
 		"critical",
 	)
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.health,
 		prometheus.GaugeValue,
 		c.perfDataObjectVirtualMachineHealthSummary[0].HealthOk,

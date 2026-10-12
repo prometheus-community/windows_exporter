@@ -290,6 +290,7 @@ var (
 	pdhGetRawCounterValue        = libPdhDll.NewProc("PdhGetRawCounterValue")
 	pdhGetRawCounterArrayW       = libPdhDll.NewProc("PdhGetRawCounterArrayW")
 	pdhPdhGetCounterTimeBase     = libPdhDll.NewProc("PdhGetCounterTimeBase")
+	pdhRemoveCounter             = libPdhDll.NewProc("PdhRemoveCounter")
 )
 
 // AddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -354,6 +355,13 @@ func AddEnglishCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserDa
 		uintptr(unsafe.Pointer(ptxt)),
 		dwUserData,
 		uintptr(unsafe.Pointer(phCounter)))
+
+	return uint32(ret)
+}
+
+// RemoveCounter removes a counter from its query.
+func RemoveCounter(hCounter pdhCounterHandle) uint32 {
+	ret, _, _ := pdhRemoveCounter.Call(uintptr(hCounter))
 
 	return uint32(ret)
 }

@@ -20,6 +20,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -185,126 +186,126 @@ func (c *Collector) buildVirtualSMB() error {
 	return nil
 }
 
-func (c *Collector) collectVirtualSMB(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualSMB(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorVirtualSMB.Collect(&c.perfDataObjectVirtualSMB)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual SMB metrics: %w", err)
 	}
 
 	for _, data := range c.perfDataObjectVirtualSMB {
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBDirectMappedSections,
 			prometheus.GaugeValue,
 			data.VirtualSMBDirectMappedSections,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBDirectMappedPages,
 			prometheus.GaugeValue,
 			data.VirtualSMBDirectMappedPages,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBWriteBytesRDMA,
 			prometheus.CounterValue,
 			data.VirtualSMBWriteBytesRDMA,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBWriteBytes,
 			prometheus.CounterValue,
 			data.VirtualSMBWriteBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBReadBytesRDMA,
 			prometheus.CounterValue,
 			data.VirtualSMBReadBytesRDMA,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBReadBytes,
 			prometheus.CounterValue,
 			data.VirtualSMBReadBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBFlushRequests,
 			prometheus.CounterValue,
 			data.VirtualSMBFlushRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBWriteRequestsRDMA,
 			prometheus.CounterValue,
 			data.VirtualSMBWriteRequestsRDMA,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBWriteRequests,
 			prometheus.CounterValue,
 			data.VirtualSMBWriteRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBReadRequestsRDMA,
 			prometheus.CounterValue,
 			data.VirtualSMBReadRequestsRDMA,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBReadRequests,
 			prometheus.CounterValue,
 			data.VirtualSMBReadRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBCurrentPendingRequests,
 			prometheus.GaugeValue,
 			data.VirtualSMBCurrentPendingRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBCurrentOpenFileCount,
 			prometheus.GaugeValue,
 			data.VirtualSMBCurrentOpenFileCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBTreeConnectCount,
 			prometheus.GaugeValue,
 			data.VirtualSMBTreeConnectCount,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBRequests,
 			prometheus.CounterValue,
 			data.VirtualSMBRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBSentBytes,
 			prometheus.CounterValue,
 			data.VirtualSMBSentBytes,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.virtualSMBReceivedBytes,
 			prometheus.CounterValue,
 			data.VirtualSMBReceivedBytes,

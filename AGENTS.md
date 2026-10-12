@@ -27,13 +27,16 @@ their runtime behavior.
   and examples. [`docs/collector-template.md`](docs/collector-template.md) is the
   documentation template.
 - [`contrib/mixin`](contrib/mixin): Jsonnet recording rules, alerts and dashboard
-  sources. [`dashboard`](dashboard) contains the generated Grafana dashboard;
+  sources. [`dashboard`](dashboard) contains the generated Grafana dashboards;
   [`docs/runbooks`](docs/runbooks) documents the alerts.
 - [`installer`](installer), [`kubernetes`](kubernetes) and [`tools`](tools): MSI
   packaging, deployment examples, CI fixtures and end-to-end helpers. The CI
   package job validates installer changes with
   [`tools/test-installer.ps1`](tools/test-installer.ps1), which installs the
-  service for real. Never run it on a developer machine.
+  service for real. Never run it on a developer machine. Never upgrade from a
+  0.31.x package there: its `taskkill /T` follows stale parent process IDs and
+  can kill the runner agent, which fails the job with "The hosted runner lost
+  communication with the server" and no logs.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
@@ -178,8 +181,10 @@ running unless the user requests changes to it.
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
 [`dashboard/README.md`](dashboard/README.md) before editing monitoring artifacts.
 Edit the Jsonnet/Grafonnet source under `contrib/mixin/dashboards`, including its
-tab modules and shared builders, and regenerate
-`dashboard/windows-exporter-dashboard.json`. Do not hand-edit generated JSON.
+tab modules and shared builders, and regenerate `dashboard/windows-exporter-*.json`:
+the full dashboard `windows-exporter-dashboard.json` and one dashboard per tab.
+Do not hand-edit generated JSON. Tab dashboards keep only the variables their
+panels reference, so reference variables as `$name` or `${name}`.
 Gate every tab, row, panel and variable on the collectors it queries with
 `on('<collector>')` (names from `_config.collectors`), and run
 `jsonnet -J vendor tests/dashboard.test.jsonnet` to check the layout for several

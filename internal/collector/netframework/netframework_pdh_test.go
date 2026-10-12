@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -57,14 +58,27 @@ type expectedMetric struct {
 	area       string
 }
 
-func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, time.Duration) error, expected []expectedMetric, withPID bool) {
+func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *labelcache.Scrape, time.Duration) error, expected []expectedMetric, withPID bool) {
 	t.Helper()
+
+	// A first scrape fills the label cache, so the checked scrape publishes
+	// series with reused label pairs.
+	var cache labelcache.Cache
+
+	prime := cache.Begin()
+	primeCh := make(chan prometheus.Metric, 1024)
+	require.NoError(t, collect(primeCh, prime, time.Second))
+	prime.Commit()
 
 	registry := prometheus.NewRegistry()
 
 	var collectErr error
 
-	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) { collectErr = collect(ch, time.Second) }})
+	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) {
+		scrape := cache.Begin()
+		collectErr = collect(ch, scrape, time.Second)
+		scrape.Commit()
+	}})
 	families, err := registry.Gather()
 	require.NoError(t, err)
 	require.NoError(t, collectErr)
@@ -382,7 +396,7 @@ func TestGCZeroBaseDoesNotPublishInvalidRatio(t *testing.T) {
 	c.describeClrMemory()
 	c.perfClrMemory = &fixturePerfCollector[perfDataClrMemory]{rows: []perfDataClrMemory{{Name: "worker", ProcessID: 123, AllocatedBytesPersec: 99}}}
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) { require.NoError(t, c.collectClrMemory(ch, time.Second)) }})
+	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) { require.NoError(t, c.collectClrMemory(ch, nil, time.Second)) }})
 	families, err := registry.Gather()
 	require.NoError(t, err)
 
@@ -416,7 +430,7 @@ func TestNoDataIsReturned(t *testing.T) {
 	c.describeClrExceptions()
 	c.perfClrExceptions = unavailablePerfCollector[perfDataClrExceptions]{}
 	ch := make(chan prometheus.Metric, 16)
-	require.ErrorIs(t, c.collectClrExceptions(ch, time.Second), pdh.ErrNoData)
+	require.ErrorIs(t, c.collectClrExceptions(ch, nil, time.Second), pdh.ErrNoData)
 	require.Empty(t, ch)
 }
 
@@ -450,7 +464,7 @@ func BenchmarkClrMemoryMetricPublication(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		if err := c.collectClrMemory(ch, time.Second); err != nil {
+		if err := c.collectClrMemory(ch, nil, time.Second); err != nil {
 			b.Fatal(err)
 		}
 
@@ -467,7 +481,7 @@ func TestCollectRetainsSuccessfulChildMetrics(t *testing.T) {
 	c.perfClrExceptions = &fixturePerfCollector[perfDataClrExceptions]{rows: []perfDataClrExceptions{{Name: "worker", NumberofExcepsThrown: 37}}}
 	failure := errors.New("provider failed")
 	c.perfClrInterop = &fixturePerfCollector[perfDataClrInterop]{err: failure}
-	c.collectorFns = []func(chan<- prometheus.Metric, time.Duration) error{c.collectClrExceptions, c.collectClrInterop}
+	c.collectorFns = []func(chan<- prometheus.Metric, *labelcache.Scrape, time.Duration) error{c.collectClrExceptions, c.collectClrInterop}
 	registry := prometheus.NewRegistry()
 
 	var collectErr error

@@ -495,7 +495,7 @@ function(on)
       }),
 
       b.panel.new(107, 'Goroutines by state', 'timeseries')
-      + b.panel.withDescription('Steady growth of goroutines points to a goroutine leak. Goroutines that stay "not in Go" sit in a system call, for example a collector waiting on WMI or PDH. The states need an exporter build with the Go scheduler metrics; the total line works with every build.')
+      + b.panel.withDescription('Steady growth of goroutines points to a goroutine leak. The states need an exporter build with the Go scheduler metrics; the total line works with every build. The "not in Go" state is left out: since 0.32 a Go runtime bug (golang/go#82136) counts each WMI callback from a Windows thread once and never subtracts it, so it keeps growing without a leak.')
       + b.panel.withQueries([
         b.query.new('go_sched_goroutines_running_goroutines{job=~"$job", instance="$instance"}', 'A')
         + b.query.withLegendFormat('running'),
@@ -503,9 +503,7 @@ function(on)
         + b.query.withLegendFormat('runnable'),
         b.query.new('go_sched_goroutines_waiting_goroutines{job=~"$job", instance="$instance"}', 'C')
         + b.query.withLegendFormat('waiting'),
-        b.query.new('go_sched_goroutines_not_in_go_goroutines{job=~"$job", instance="$instance"}', 'D')
-        + b.query.withLegendFormat('not in Go'),
-        b.query.new('go_goroutines{job=~"$job", instance="$instance"}', 'E')
+        b.query.new('go_goroutines{job=~"$job", instance="$instance"}', 'D')
         + b.query.withLegendFormat('total'),
       ])
       + b.panel.withDefaults({

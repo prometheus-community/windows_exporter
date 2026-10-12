@@ -14,7 +14,7 @@ function(on)
       + b.panel.withDefaults({ decimals: 1, max: 1, min: 0 }),
       b.stat(167, 'Available', 'Physical memory available to processes: the standby, free and zero page lists.', metric('physical_free_bytes'), 'bytes')
       + b.panel.withDefaults({ decimals: 1 }),
-      b.stat(168, 'Commit used', 'Committed virtual memory as a share of the commit limit. Allocations fail at 100%.', metric('committed_bytes') + ' / ' + metric('commit_limit'), 'percentunit', steps=b.levels(0.8, 0.9))
+      b.stat(168, 'Commit used', 'Committed virtual memory as a share of the commit limit. Allocations fail at 100%.', metric('committed_bytes') + ' / ' + metric('commit_limit_bytes'), 'percentunit', steps=b.levels(0.8, 0.9))
       + b.panel.withDefaults({ decimals: 1, max: 1, min: 0 }),
       b.stat(169, 'Page reads', 'Hard page faults read from disk per second. Sustained page reads indicate memory pressure.', 'rate(' + metric('swap_page_reads_total') + '[$__rate_interval])', 'ops'),
       b.stat(170, 'Nonpaged pool', 'Kernel memory that cannot be paged out. Steady growth can indicate a driver leak.', metric('pool_nonpaged_bytes'), 'bytes')
@@ -78,7 +78,7 @@ function(on)
       + b.panel.withQueries([
         b.query.new('windows_memory_committed_bytes{job=~"$job", instance="$instance"}', 'A')
         + b.query.withLegendFormat('committed'),
-        b.query.new('windows_memory_commit_limit{job=~"$job", instance="$instance"}', 'B')
+        b.query.new('windows_memory_commit_limit_bytes{job=~"$job", instance="$instance"}', 'B')
         + b.query.withLegendFormat('limit'),
       ])
       + b.panel.withDefaults({

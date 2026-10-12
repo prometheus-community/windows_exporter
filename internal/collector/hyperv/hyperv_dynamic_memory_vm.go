@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -133,7 +134,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 	return nil
 }
 
-func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	err := c.perfDataCollectorDynamicMemoryVM.Collect(&c.perfDataObjectDynamicMemoryVM)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory VM metrics: %w", err)
@@ -142,14 +143,14 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 	for _, data := range c.perfDataObjectDynamicMemoryVM {
 		vmName := dynamicMemoryVMName(data.Name)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryAddedMemory,
 			prometheus.CounterValue,
 			utils.MBToBytes(data.VmMemoryAddedMemory),
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryCurrentPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryCurrentPressure),
@@ -157,7 +158,7 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 		)
 
 		if osversion.Build() >= osversion.LTSC2022 {
-			ch <- prometheus.MustNewConstMetric(
+			ch <- scrape.MustNewConstMetric(
 				c.vmMemoryGuestAvailableMemory,
 				prometheus.GaugeValue,
 				utils.MBToBytes(data.VmMemoryGuestAvailableMemory),
@@ -165,49 +166,49 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 			)
 		}
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryGuestVisiblePhysicalMemory,
 			prometheus.GaugeValue,
 			utils.MBToBytes(data.VmMemoryGuestVisiblePhysicalMemory),
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryMaximumPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryMaximumPressure),
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryMemoryAddOperations,
 			prometheus.CounterValue,
 			data.VmMemoryMemoryAddOperations,
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryMemoryRemoveOperations,
 			prometheus.CounterValue,
 			data.VmMemoryMemoryRemoveOperations,
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryMinimumPressure,
 			prometheus.GaugeValue,
 			utils.PercentageToRatio(data.VmMemoryMinimumPressure),
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryPhysicalMemory,
 			prometheus.GaugeValue,
 			utils.MBToBytes(data.VmMemoryPhysicalMemory),
 			vmName,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryRemovedMemory,
 			prometheus.CounterValue,
 			utils.MBToBytes(data.VmMemoryRemovedMemory),
