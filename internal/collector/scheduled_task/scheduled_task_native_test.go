@@ -18,6 +18,7 @@
 package scheduled_task
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -442,9 +443,22 @@ func includeAllTasks(string) bool { return true }
 
 // BenchmarkGetScheduledTasks measures the Task Scheduler reads without metric creation.
 func BenchmarkGetScheduledTasks(b *testing.B) {
-	for b.Loop() {
-		if _, err := getScheduledTasks(includeAllTasks, includeAllTasks); err != nil {
-			b.Fatal(err)
-		}
+	for _, bc := range []struct {
+		name    string
+		exclude string
+	}{
+		{name: "all"},
+		{name: "exclude Microsoft", exclude: "/Microsoft/.+"},
+	} {
+		b.Run(bc.name, func(b *testing.B) {
+			c := New(&Config{TaskExclude: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", bc.exclude))})
+			filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
+
+			for b.Loop() {
+				if _, err := getScheduledTasks(c.includeTask, filter.includeFolder); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }

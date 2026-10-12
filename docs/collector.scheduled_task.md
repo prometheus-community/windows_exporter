@@ -27,6 +27,7 @@ collector does not read folders whose tasks the include and exclude expressions
 reject whatever their names are, such as everything below `/Microsoft/` in the
 example above. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
 alternatives) are recognized for exclude, and a literal folder prefix for include.
+Errors reading folders that are not walked are not reported.
 
 ## Metrics
 

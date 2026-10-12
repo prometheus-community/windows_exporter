@@ -160,23 +160,31 @@ func TestFolderFilterSkipsOnlyFilteredTasks(t *testing.T) {
 
 	expressions := []string{
 		"", ".+", ".*", "/Microsoft/.+", "/Microsoft/.*", "/Microsoft/Windows/.+", "/Microsoft/.+|/Other/.*",
-		"/Microsoft/Windows", "/Microsoft/[^/]+", "/Micro.*", "(?i)/microsoft/.+", "/Other/Task",
+		"/Microsoft/Windows", "/Microsoft/[^/]+", "/Micro.*", "(?i)/microsoft/.+", "/Other/Task", "/Other/.+|",
+		`\A/Microsoft/.+\z`, "(?m)^/Microsoft/.*$", "(?s)/Microsoft/.+", "(/Microsoft/.+)", "^/Micro|/Other/.+",
 	}
 	folders := []string{"/Microsoft", "/Microsoft/Windows", "/Microsoft/Windows/Defrag", "/MicrosoftEdge", "/Other"}
 	names := []string{"Task", "Sub/Task", "x"}
 
-	for _, include := range expressions {
-		for _, exclude := range expressions {
-			c := New(&Config{
-				TaskInclude: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", include)),
-				TaskExclude: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", exclude)),
-			})
+	// The flags anchor the expressions, Config values passed to New need not be.
+	regexps := make([]*regexp.Regexp, 0, 2*len(expressions))
+	for _, expr := range expressions {
+		regexps = append(regexps, regexp.MustCompile(fmt.Sprintf("^(?:%s)$", expr)), regexp.MustCompile(expr))
+	}
+
+	skipped := 0
+
+	for _, include := range regexps {
+		for _, exclude := range regexps {
+			c := New(&Config{TaskInclude: include, TaskExclude: exclude})
 			filter := newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
 
 			for _, folder := range folders {
 				if filter.includeFolder(folder) {
 					continue
 				}
+
+				skipped++
 
 				for _, name := range names {
 					path := folder + "/" + name
@@ -185,4 +193,6 @@ func TestFolderFilterSkipsOnlyFilteredTasks(t *testing.T) {
 			}
 		}
 	}
+
+	require.NotZero(t, skipped)
 }
