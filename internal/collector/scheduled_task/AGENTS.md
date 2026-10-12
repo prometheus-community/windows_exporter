@@ -47,7 +47,7 @@ of them empty), about 150 ms per scrape without filters.
   (~560 µs for disabled tasks). `Path` and folder `Path` take 1–2 µs (local).
   `NumberOfMissedRuns` alone is about 28% of a scrape.
 - `NumberOfMissedRuns` is computed with two RPCs: `SchRpcGetLastRunInfo`
-  (opnum 16), then `SchRpcScheduledRuntimes` (opnum 15) from the last run time
+  (opnum 16), then `SchRpcScheduledRuntimes` (opnum 15) from the start of the last run
   to the current local time with an unlimited `cRequested`. The service
   computes every scheduled run in that window from the task definition and
   returns all of them, so tasks with many missed runs (13,146 seen) send large
