@@ -180,6 +180,8 @@ Matching is case-sensitive. All of these subcollectors are enabled by default.
 
 ### Shared Volumes
 
+The `shared_volumes` subcollector is available since version 0.32. Version 0.31 and older ignore the name without an error.
+
 | Name                                     | Description                                                    | Type  | Labels                      |
 |------------------------------------------|----------------------------------------------------------------|-------|-----------------------------|
 | `windows_mscluster_shared_volumes_info`  | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`,`volume_guid` |

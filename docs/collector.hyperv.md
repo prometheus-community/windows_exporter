@@ -25,6 +25,10 @@ Scrapes publish the values of the last refresh. Default: `5m`.
 
 This documentation outlines the available metrics for monitoring Hyper-V Datastore performance and resource usage using Prometheus. All metrics are prefixed with `windows_hyperv_datastore`.
 
+The `Hyper-V DataStore` performance counters describe the configuration and runtime store files that Hyper-V keeps for each virtual machine, not storage volumes. The `datastore` label is the counter instance, for example `<VM GUID> configuration file`, `<VM GUID> runtime file`, `<VM GUID> worker process configuration` and `<VM GUID> worker process runtime state`. Without a virtual machine on the host the counter set is empty and no series are published.
+
+For the free and total space of Cluster Shared Volumes (a "datastore" in VMware terms), use the `shared_volumes` sub-collector of the [mscluster collector](collector.mscluster.md#shared-volumes).
+
 | Metric Name                                                            | Description                                                                     | Type    | Labels    |
 |------------------------------------------------------------------------|---------------------------------------------------------------------------------|---------|-----------|
 | `windows_hyperv_datastore_fragmentation_ratio`                         | Represents the fragmentation ratio of the DataStore.                            | gauge   | datastore |
