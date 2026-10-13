@@ -18,6 +18,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -31,6 +32,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/httphandler"
+	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )
@@ -178,6 +182,34 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 	}
 
 	return fmt.Errorf("listener not listening: %w", err)
+}
+
+func TestScrapeStdout(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	collectors := collector.NewWithFlags(kingpin.New("test", "test"))
+	require.NoError(t, collectors.Enable([]string{"cpu"}))
+	require.NoError(t, collectors.Build(t.Context(), logger))
+
+	t.Cleanup(func() {
+		require.NoError(t, collectors.Close())
+	})
+
+	var buf bytes.Buffer
+
+	exitCode := scrapeToStdout(t.Context(), &buf, logger, collectors, &httphandler.Options{})
+	require.Equal(t, 0, exitCode)
+
+	output := buf.String()
+
+	// Must contain collector metrics.
+	require.Contains(t, output, "windows_cpu_time_total")
+	// Must contain exporter build info (proves the HTTP handler path is used).
+	require.Contains(t, output, "windows_exporter_build_info")
+	// Must contain collector success metadata.
+	require.Contains(t, output, `windows_exporter_collector_success{collector="cpu"} 1`)
 }
 
 func TestSetPriorityWindows(t *testing.T) {
