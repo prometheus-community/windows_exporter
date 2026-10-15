@@ -19,8 +19,6 @@ test_alpha_total 42
 # TYPE windows_cache_data_flush_pages_total counter
 # HELP windows_cache_data_flushes_total (DataFlushesTotal)
 # TYPE windows_cache_data_flushes_total counter
-# HELP windows_cache_data_map_hits_percent (DataMapHitsPercent)
-# TYPE windows_cache_data_map_hits_percent gauge
 # HELP windows_cache_data_map_pins_total (DataMapPinsTotal)
 # TYPE windows_cache_data_map_pins_total counter
 # HELP windows_cache_data_maps_total (DataMapsTotal)
@@ -61,8 +59,8 @@ test_alpha_total 42
 # TYPE windows_cache_sync_pin_reads_total counter
 # HELP windows_cpu_clock_interrupts_total Total number of received and serviced clock tick interrupts
 # TYPE windows_cpu_clock_interrupts_total counter
-# HELP windows_cpu_core_frequency_mhz Core frequency in megahertz
-# TYPE windows_cpu_core_frequency_mhz gauge
+# HELP windows_cpu_core_frequency_hertz Core frequency in hertz
+# TYPE windows_cpu_core_frequency_hertz gauge
 # HELP windows_cpu_cstate_seconds_total Time spent in low-power idle state
 # TYPE windows_cpu_cstate_seconds_total counter
 # HELP windows_cpu_dpcs_total Total number of received and serviced deferred procedure calls (DPCs)
@@ -75,10 +73,10 @@ test_alpha_total 42
 # TYPE windows_cpu_info_core gauge
 # HELP windows_cpu_info_enabled_core Number of enabled cores per CPU
 # TYPE windows_cpu_info_enabled_core gauge
-# HELP windows_cpu_info_l2_cache_size Size of L2 cache per CPU
-# TYPE windows_cpu_info_l2_cache_size gauge
-# HELP windows_cpu_info_l3_cache_size Size of L3 cache per CPU
-# TYPE windows_cpu_info_l3_cache_size gauge
+# HELP windows_cpu_info_l2_cache_size_bytes Size of L2 cache per CPU in bytes
+# TYPE windows_cpu_info_l2_cache_size_bytes gauge
+# HELP windows_cpu_info_l3_cache_size_bytes Size of L3 cache per CPU in bytes
+# TYPE windows_cpu_info_l3_cache_size_bytes gauge
 # HELP windows_cpu_info_logical_processor Number of logical processors per CPU
 # TYPE windows_cpu_info_logical_processor gauge
 # HELP windows_cpu_info_thread Number of threads per CPU
@@ -411,8 +409,8 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_time_clock_sync_source gauge
 # HELP windows_time_clock_frequency_adjustment This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.
 # TYPE windows_time_clock_frequency_adjustment gauge
-# HELP windows_time_clock_frequency_adjustment_ppb This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.
-# TYPE windows_time_clock_frequency_adjustment_ppb gauge
+# HELP windows_time_clock_frequency_adjustment_ratio This value reflects the adjustment made to the local system clock frequency by W32Time as a ratio. Windows reports it in Parts Per Billion (PPB): an adjustment of 1e-9 implies the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.
+# TYPE windows_time_clock_frequency_adjustment_ratio gauge
 # HELP windows_time_computed_time_offset_seconds Absolute time offset between the system clock and the chosen time source, in seconds
 # TYPE windows_time_computed_time_offset_seconds gauge
 # HELP windows_time_current_timestamp_seconds Current time as reported by the operating system, in unix time.

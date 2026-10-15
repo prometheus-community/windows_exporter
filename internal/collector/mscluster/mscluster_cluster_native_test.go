@@ -21,6 +21,7 @@ import (
 	"errors"
 	"log/slog"
 	"maps"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -114,18 +115,26 @@ func TestClusterNativeMetricContract(t *testing.T) {
 		}
 	}
 
-	for metric, property := range map[string]string{
-		"add_evict_delay":                 "AddEvictDelay",
-		"s2dio_latency_threshold":         "S2DIOLatencyThreshold",
-		"s2d_cache_page_size_k_bytes":     "S2DCachePageSizeKBytes",
-		"netft_ip_sec_enabled":            "NetftIPSecEnabled",
-		"detected_cloud_platform":         "DetectedCloudPlatform",
-		"lower_quorum_priority_node_id":   "LowerQuorumPriorityNodeId",
-		"detect_managed_events_threshold": "DetectManagedEventsThreshold",
-		"quorum_type_value":               "QuorumTypeValue",
+	// Scale converts the raw property to the base unit of the metric.
+	for metric, field := range map[string]struct {
+		property string
+		scale    float64
+	}{
+		"add_evict_delay_seconds":         {"AddEvictDelay", 1},
+		"s2dio_latency_threshold_seconds": {"S2DIOLatencyThreshold", 1e-3},
+		"s2d_cache_page_size_bytes":       {"S2DCachePageSizeKBytes", 1024},
+		"s2d_cache_flash_reserve_ratio":   {"S2DCacheFlashReservePercent", 1e-2},
+		"clus_svc_regroup_tick_seconds":   {"ClusSvcRegroupTickInMilliseconds", 1e-3},
+		"shutdown_timeout_seconds":        {"ShutdownTimeoutInMinutes", 60},
+		"cluster_log_size_bytes":          {"ClusterLogSize", 1 << 20},
+		"netft_ip_sec_enabled":            {"NetftIPSecEnabled", 1},
+		"detected_cloud_platform":         {"DetectedCloudPlatform", 1},
+		"lower_quorum_priority_node_id":   {"LowerQuorumPriorityNodeId", 1},
+		"detect_managed_events_threshold": {"DetectManagedEventsThreshold", 1},
+		"quorum_type_value":               {"QuorumTypeValue", 1},
 	} {
 		got := families["windows_mscluster_cluster_"+metric].GetMetric()[0].GetGauge().GetValue()
-		if want := float64(cluster.Values[property]); got != want {
+		if want := float64(cluster.Values[field.property]) * field.scale; math.Abs(got-want) > 1e-9*math.Max(1, math.Abs(want)) {
 			t.Errorf("%s = %v, want %v", metric, got, want)
 		}
 	}
@@ -179,7 +188,7 @@ func TestClusterWMISynthesizedValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, name := range []string{"clus_svc_regroup_opening_timeout", "grace_period_enabled", "root_memory_reserved"} {
+	for _, name := range []string{"clus_svc_regroup_opening_timeout_seconds", "grace_period_enabled", "root_memory_reserved_bytes"} {
 		if got := families["windows_mscluster_cluster_"+name].GetMetric()[0].GetGauge().GetValue(); got != 0 {
 			t.Errorf("%s = %v", name, got)
 		}

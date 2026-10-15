@@ -101,152 +101,152 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.accessAccepts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_accepts_total"),
 		"(AccessAccepts)",
 		nil,
 		nil,
 	)
 	c.accessChallenges = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_challenges"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_challenges_total"),
 		"(AccessChallenges)",
 		nil,
 		nil,
 	)
 	c.accessRejects = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_rejects"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_rejects_total"),
 		"(AccessRejects)",
 		nil,
 		nil,
 	)
 	c.accessRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_requests_total"),
 		"(AccessRequests)",
 		nil,
 		nil,
 	)
 	c.accessBadAuthenticators = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_bad_authenticators"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_bad_authenticators_total"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
 	c.accessDroppedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_dropped_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_dropped_packets_total"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
 	c.accessInvalidRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_invalid_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_invalid_requests_total"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
 	c.accessMalformedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_malformed_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_malformed_packets_total"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
 	c.accessPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_packets_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_packets_received_total"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
 	c.accessPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_packets_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_packets_sent_total"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
 	c.accessServerResetTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_server_reset_time"),
-		"(ServerResetTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "access_server_reset_time_seconds"),
+		"(ServerResetTime) Elapsed time in seconds since the NPS server counters were last reset",
 		nil,
 		nil,
 	)
 	c.accessServerUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_server_up_time"),
-		"(ServerUpTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "access_server_up_time_seconds"),
+		"(ServerUpTime) Elapsed time in seconds since the NPS service started",
 		nil,
 		nil,
 	)
 	c.accessUnknownType = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "access_unknown_type"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_unknown_type_total"),
 		"(UnknownType)",
 		nil,
 		nil,
 	)
 
 	c.accountingRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_requests_total"),
 		"(AccountingRequests)",
 		nil,
 		nil,
 	)
 	c.accountingResponses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_responses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_responses_total"),
 		"(AccountingResponses)",
 		nil,
 		nil,
 	)
 	c.accountingBadAuthenticators = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_bad_authenticators"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_bad_authenticators_total"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
 	c.accountingDroppedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_dropped_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_dropped_packets_total"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
 	c.accountingInvalidRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_invalid_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_invalid_requests_total"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
 	c.accountingMalformedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_malformed_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_malformed_packets_total"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
 	c.accountingNoRecord = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_no_record"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_no_record_total"),
 		"(NoRecord)",
 		nil,
 		nil,
 	)
 	c.accountingPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_received_total"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
 	c.accountingPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_sent_total"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
 	c.accountingServerResetTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_reset_time"),
-		"(ServerResetTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_reset_time_seconds"),
+		"(ServerResetTime) Elapsed time in seconds since the NPS server counters were last reset",
 		nil,
 		nil,
 	)
 	c.accountingServerUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_up_time"),
-		"(ServerUpTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_up_time_seconds"),
+		"(ServerUpTime) Elapsed time in seconds since the NPS service started",
 		nil,
 		nil,
 	)
 	c.accountingUnknownType = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accounting_unknown_type"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_unknown_type_total"),
 		"(UnknownType)",
 		nil,
 		nil,
@@ -355,13 +355,13 @@ func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerResetTime,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		c.accessPerfDataObject[0].AccessServerResetTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerUpTime,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		c.accessPerfDataObject[0].AccessServerUpTime,
 	)
 
@@ -436,13 +436,13 @@ func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerResetTime,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		c.accountingPerfDataObject[0].AccountingServerResetTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerUpTime,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		c.accountingPerfDataObject[0].AccountingServerUpTime,
 	)
 

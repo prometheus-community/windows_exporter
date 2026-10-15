@@ -11,6 +11,8 @@ recorded on Windows Server 2025 (build 26100) with almost no RADIUS traffic.
 - `Server Up Time` and `Server Reset Time` are elapsed times. The help text
   says "in hundredths of a second", but the raw value is seconds: 303 about
   304 s after the `IAS` service started. Both objects report the same values.
+  The collector publishes them as gauges (`..._time_seconds`); the other
+  counters are counters with a `_total` suffix.
 - Each `X / sec.` twin (`PERF_COUNTER_COUNTER`, not read) has the same raw
   value as `X` (`Packets Received / sec.` 1 = `Packets Received` 1).
 - `No Record` exists only on `NPS Accounting Server`;

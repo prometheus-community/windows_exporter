@@ -307,7 +307,7 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMaximumFileCacheMemoryUsage,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.ServiceCacheMaximumFileCacheMemoryUsage,
 		)
 

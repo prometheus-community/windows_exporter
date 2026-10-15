@@ -177,19 +177,19 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesBackupPerRestoreThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_backup_restore_operations"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_backup_restore_operations_total"),
 		"(Databases.BackupPerRestoreThroughput)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesBulkCopyRows = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_rows"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_rows_total"),
 		"(Databases.BulkCopyRows)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesBulkCopyThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_bytes_total"),
 		"(Databases.BulkCopyThroughput)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -207,19 +207,19 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesDBCCLogicalScanBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_dbcc_logical_scan_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_dbcc_logical_scan_bytes_total"),
 		"(Databases.DBCCLogicalScanBytes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesGroupCommitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_group_commit_stall_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_group_commit_stall_seconds_total"),
 		"(Databases.GroupCommitTime)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogBytesFlushed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushed_bytes_total"),
 		"(Databases.LogBytesFlushed)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -237,7 +237,7 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesLogCacheReads = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_cache_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_cache_reads_total"),
 		"(Databases.LogCacheReads)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -255,13 +255,13 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesLogFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushes_total"),
 		"(Databases.LogFlushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_waits_total"),
 		"(Databases.LogFlushWaits)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -285,79 +285,79 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesLogPoolCacheMisses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_cache_misses"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_cache_misses_total"),
 		"(Databases.LogPoolCacheMisses)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolDiskReads = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_disk_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_disk_reads_total"),
 		"(Databases.LogPoolDiskReads)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolHashDeletes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_deletes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_deletes_total"),
 		"(Databases.LogPoolHashDeletes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolHashInserts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_inserts"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_inserts_total"),
 		"(Databases.LogPoolHashInserts)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolInvalidHashEntry = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_invalid_hash_entries"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_invalid_hash_entries_total"),
 		"(Databases.LogPoolInvalidHashEntry)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolLogScanPushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_scan_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_scan_pushes_total"),
 		"(Databases.LogPoolLogScanPushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolLogWriterPushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_writer_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_writer_pushes_total"),
 		"(Databases.LogPoolLogWriterPushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushEmptyFreePool = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_empty_free_pool_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_empty_free_pool_pushes_total"),
 		"(Databases.LogPoolPushEmptyFreePool)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushLowMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_low_memory_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_low_memory_pushes_total"),
 		"(Databases.LogPoolPushLowMemory)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushNoFreeBuffer = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_no_free_buffer_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_no_free_buffer_pushes_total"),
 		"(Databases.LogPoolPushNoFreeBuffer)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolReqBehindTrunc = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_req_behind_trunc"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_req_behind_trunc_total"),
 		"(Databases.LogPoolReqBehindTrunc)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolRequestsOldVLF = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests_old_vlf"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests_old_vlf_total"),
 		"(Databases.LogPoolRequestsOldVLF)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests_total"),
 		"(Databases.LogPoolRequests)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -387,8 +387,8 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesPercentLogUsed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_used_percent"),
-		"(Databases.PercentLogUsed)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_used_ratio"),
+		"(Databases.PercentLogUsed) Ratio (0-1) of the transaction log space in use",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
@@ -399,31 +399,31 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesReplTransRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_repl_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_repl_transactions_total"),
 		"(Databases.ReplTranactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesShrinkDataMovementBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_shrink_data_movement_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_shrink_data_movement_bytes_total"),
 		"(Databases.ShrinkDataMovementBytes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesTrackedTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_tracked_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_tracked_transactions_total"),
 		"(Databases.Trackedtransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_transactions_total"),
 		"(Databases.Transactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesWriteTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_write_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_write_transactions_total"),
 		"(Databases.WriteTransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -447,7 +447,7 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesXTPControllerLogProcessed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_log_processed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_log_processed_bytes_total"),
 		"(Databases.XTPControllerLogProcessed)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -737,7 +737,7 @@ func (c *Collector) emitDatabasesMetrics(ch chan<- prometheus.Metric, sqlInstanc
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesPercentLogUsed,
 			prometheus.GaugeValue,
-			data.DatabasesPercentLogUsed,
+			data.DatabasesPercentLogUsed/100,
 			sqlInstance.name, data.Name,
 		)
 

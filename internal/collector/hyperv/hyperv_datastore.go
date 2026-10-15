@@ -229,187 +229,187 @@ func (c *Collector) buildDataStore() error {
 		nil,
 	)
 	c.dataStoreReconnectLatencyMicro = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_reconnect_latency_microseconds"),
-		"Represents the reconnect latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_reconnect_latency_seconds"),
+		"Represents the reconnect latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreDisconnectCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_disconnect_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_disconnects_total"),
 		"Represents the disconnect count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToFileByteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_byte_latency_microseconds"),
-		"Represents the write to file byte latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_byte_latency_seconds"),
+		"Represents the write to file byte latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToFileByteCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_byte_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_bytes_total"),
 		"Represents the write to file byte count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_total"),
 		"Represents the write to file count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromFileByteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_byte_latency_microseconds"),
-		"Represents the read from file byte latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_byte_latency_seconds"),
+		"Represents the read from file byte latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromFileByteCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_byte_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_bytes_total"),
 		"Represents the read from file byte count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_total"),
 		"Represents the read from file count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToStorageByteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_byte_latency_microseconds"),
-		"Represents the write to storage byte latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_byte_latency_seconds"),
+		"Represents the write to storage byte latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToStorageByteCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_byte_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_bytes_total"),
 		"Represents the write to storage byte count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreWriteToStorageCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_total"),
 		"Represents the write to storage count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromStorageByteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_byte_latency_microseconds"),
-		"Represents the read from storage byte latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_byte_latency_seconds"),
+		"Represents the read from storage byte latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromStorageByteCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_byte_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_bytes_total"),
 		"Represents the read from storage byte count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreReadFromStorageCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_total"),
 		"Represents the read from storage count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCommitByteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_byte_latency_microseconds"),
-		"Represents the commit byte latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_byte_latency_seconds"),
+		"Represents the commit byte latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCommitByteCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_byte_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_bytes_total"),
 		"Represents the commit byte count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCommitCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_commits_total"),
 		"Represents the commit count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCacheUpdateOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_cache_update_operation_latency_microseconds"),
-		"Represents the cache update operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_cache_update_operation_latency_seconds"),
+		"Represents the cache update operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCacheUpdateOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_cache_update_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_cache_update_operations_total"),
 		"Represents the cache update operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCommitOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_operation_latency_microseconds"),
-		"Represents the commit operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_operation_latency_seconds"),
+		"Represents the commit operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCommitOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_commit_operations_total"),
 		"Represents the commit operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCompactOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_compact_operation_latency_microseconds"),
-		"Represents the compact operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_compact_operation_latency_seconds"),
+		"Represents the compact operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreCompactOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_compact_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_compact_operations_total"),
 		"Represents the compact operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreLoadFileOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_load_file_operation_latency_microseconds"),
-		"Represents the load file operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_load_file_operation_latency_seconds"),
+		"Represents the load file operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreLoadFileOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_load_file_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_load_file_operations_total"),
 		"Represents the load file operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreRemoveOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_remove_operation_latency_microseconds"),
-		"Represents the remove operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_remove_operation_latency_seconds"),
+		"Represents the remove operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreRemoveOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_remove_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_remove_operations_total"),
 		"Represents the remove operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreQuerySizeOperationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_query_size_operation_latency_microseconds"),
-		"Represents the query size operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_query_size_operation_latency_seconds"),
+		"Represents the query size operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreQuerySizeOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_query_size_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_query_size_operations_total"),
 		"Represents the query size operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreSetOperationLatencyMicro = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_set_operation_latency_microseconds"),
-		"Represents the set operation latency in microseconds of the DataStore.",
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_set_operation_latency_seconds"),
+		"Represents the set operation latency in seconds of the DataStore.",
 		[]string{"datastore"},
 		nil,
 	)
 	c.dataStoreSetOperationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_set_operation_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_set_operations_total"),
 		"Represents the set operation count of the DataStore.",
 		[]string{"datastore"},
 		nil,
@@ -533,7 +533,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReconnectLatencyMicro,
 			prometheus.GaugeValue,
-			data.DataStoreReconnectLatencyMicro,
+			data.DataStoreReconnectLatencyMicro*1e-6,
 			data.Name,
 		)
 
@@ -547,7 +547,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToFileByteLatency,
 			prometheus.GaugeValue,
-			data.DataStoreWriteToFileByteLatency,
+			data.DataStoreWriteToFileByteLatency*1e-6,
 			data.Name,
 		)
 
@@ -568,7 +568,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromFileByteLatency,
 			prometheus.GaugeValue,
-			data.DataStoreReadFromFileByteLatency,
+			data.DataStoreReadFromFileByteLatency*1e-6,
 			data.Name,
 		)
 
@@ -589,7 +589,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreWriteToStorageByteLatency,
 			prometheus.GaugeValue,
-			data.DataStoreWriteToStorageByteLatency,
+			data.DataStoreWriteToStorageByteLatency*1e-6,
 			data.Name,
 		)
 
@@ -610,7 +610,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreReadFromStorageByteLatency,
 			prometheus.GaugeValue,
-			data.DataStoreReadFromStorageByteLatency,
+			data.DataStoreReadFromStorageByteLatency*1e-6,
 			data.Name,
 		)
 
@@ -631,7 +631,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitByteLatency,
 			prometheus.GaugeValue,
-			data.DataStoreCommitByteLatency,
+			data.DataStoreCommitByteLatency*1e-6,
 			data.Name,
 		)
 
@@ -652,7 +652,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCacheUpdateOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreCacheUpdateOperationLatency,
+			data.DataStoreCacheUpdateOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -666,7 +666,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCommitOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreCommitOperationLatency,
+			data.DataStoreCommitOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -680,7 +680,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreCompactOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreCompactOperationLatency,
+			data.DataStoreCompactOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -694,7 +694,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreLoadFileOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreLoadFileOperationLatency,
+			data.DataStoreLoadFileOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -708,7 +708,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreRemoveOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreRemoveOperationLatency,
+			data.DataStoreRemoveOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -722,7 +722,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreQuerySizeOperationLatency,
 			prometheus.GaugeValue,
-			data.DataStoreQuerySizeOperationLatency,
+			data.DataStoreQuerySizeOperationLatency*1e-6,
 			data.Name,
 		)
 
@@ -736,7 +736,7 @@ func (c *Collector) collectDataStore(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.dataStoreSetOperationLatencyMicro,
 			prometheus.GaugeValue,
-			data.DataStoreSetOperationLatencyMicro,
+			data.DataStoreSetOperationLatencyMicro*1e-6,
 			data.Name,
 		)
 

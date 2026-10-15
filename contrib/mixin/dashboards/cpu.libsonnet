@@ -22,7 +22,7 @@ function(on)
       b.stat(163, 'Queue per CPU', 'Threads waiting for a CPU per logical processor. A sustained value above 2 indicates CPU contention.', 'windows_system_processor_queue_length' + host + ' / ' + cores, 'short', steps=b.levels(1, 2))
       + b.panel.withDefaults({ decimals: 2, min: 0 }),
       b.stat(164, 'Ctx switches', 'Context switches per second across the host.', 'rate(windows_system_context_switches_total' + host + '[$__rate_interval])', 'ops'),
-      b.stat(165, 'Frequency', 'Average effective frequency across logical processors. Values above the nominal frequency mean turbo boost.', 'avg(1e4 * windows_cpu_core_frequency_mhz' + host + ' * rate(windows_cpu_processor_performance_total' + host + '[$__rate_interval]) / rate(windows_cpu_processor_mperf_total' + host + '[$__rate_interval]))', 'hertz'),
+      b.stat(165, 'Frequency', 'Average effective frequency across logical processors. Values above the nominal frequency mean turbo boost.', 'avg(1e-2 * windows_cpu_core_frequency_hertz' + host + ' * rate(windows_cpu_processor_performance_total' + host + '[$__rate_interval]) / rate(windows_cpu_processor_mperf_total' + host + '[$__rate_interval]))', 'hertz'),
 
       b.panel.new(24, 'CPU utilization by mode', 'timeseries')
       + b.panel.withDescription('Share of total CPU time across all logical processors.')
@@ -151,11 +151,11 @@ function(on)
       b.panel.new(30, 'CPU frequency', 'timeseries')
       + b.panel.withDescription('Effective frequency from the APERF/MPERF counters, averaged and maximum across logical processors, against the nominal frequency. Values above nominal mean turbo boost.')
       + b.panel.withQueries([
-        b.query.new('avg(1e4 * windows_cpu_core_frequency_mhz{job=~"$job", instance="$instance"} * rate(windows_cpu_processor_performance_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~"$job", instance="$instance"}[$__rate_interval]))', 'A')
+        b.query.new('avg(1e-2 * windows_cpu_core_frequency_hertz{job=~"$job", instance="$instance"} * rate(windows_cpu_processor_performance_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~"$job", instance="$instance"}[$__rate_interval]))', 'A')
         + b.query.withLegendFormat('average'),
-        b.query.new('max(1e4 * windows_cpu_core_frequency_mhz{job=~"$job", instance="$instance"} * rate(windows_cpu_processor_performance_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~"$job", instance="$instance"}[$__rate_interval]))', 'B')
+        b.query.new('max(1e-2 * windows_cpu_core_frequency_hertz{job=~"$job", instance="$instance"} * rate(windows_cpu_processor_performance_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~"$job", instance="$instance"}[$__rate_interval]))', 'B')
         + b.query.withLegendFormat('maximum'),
-        b.query.new('avg(windows_cpu_core_frequency_mhz{job=~"$job", instance="$instance"}) * 1e6', 'C')
+        b.query.new('avg(windows_cpu_core_frequency_hertz{job=~"$job", instance="$instance"})', 'C')
         + b.query.withLegendFormat('nominal'),
       ])
       + b.panel.withDefaults({

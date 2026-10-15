@@ -34,8 +34,8 @@ func (c *Collector) describeClrJIT() {
 		nil,
 	)
 	c.timeInJit = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_time_percent"),
-		"Displays the percentage of time spent in JIT compilation. This counter is updated at the end of every JIT compilation phase. A JIT compilation phase occurs when a method and its dependencies are compiled.",
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_time_ratio"),
+		"Displays the ratio (0-1) of elapsed time spent in JIT compilation since the last JIT compilation phase. This counter is updated at the end of every JIT compilation phase. A JIT compilation phase occurs when a method and its dependencies are compiled.",
 		[]string{"process"},
 		nil,
 	)
@@ -67,6 +67,7 @@ type perfDataClrJIT struct {
 	Name                       string
 	NumberofMethodsJitted      float64 `perfdata:"# of Methods JITted"`
 	PercentTimeinJit           float64 `perfdata:"% Time in Jit"`
+	PercentTimeinJitBase       float64 `perfdata:"% Time in Jit,secondvalue"`
 	StandardJitFailures        float64 `perfdata:"Standard Jit Failures"`
 	TotalNumberofILBytesJitted float64 `perfdata:"Total # of IL Bytes Jitted"`
 }
@@ -89,16 +90,18 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcach
 			process.Name,
 		)
 
-		ch <- scrape.MustNewConstMetric(
-			c.timeInJit,
-			prometheus.GaugeValue,
-			float64(process.PercentTimeinJit)/c.perfFrequency,
-			process.Name,
-		)
+		if process.PercentTimeinJitBase > 0 {
+			ch <- scrape.MustNewConstMetric(
+				c.timeInJit,
+				prometheus.GaugeValue,
+				process.PercentTimeinJit/process.PercentTimeinJitBase,
+				process.Name,
+			)
+		}
 
 		ch <- scrape.MustNewConstMetric(
 			c.standardJitFailures,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(process.StandardJitFailures),
 			process.Name,
 		)

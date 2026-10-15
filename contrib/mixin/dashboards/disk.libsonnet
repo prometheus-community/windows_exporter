@@ -444,10 +444,10 @@ function(on)
         'max by (name) (' + spaces('virtual_disk_size_bytes') + ')',
         'max by (name) (' + spaces('virtual_disk_allocated_size_bytes') + ')',
         'max by (name) (' + spaces('virtual_disk_footprint_on_pool_bytes') + ')',
-        'max by (name) (' + spaces('virtual_disk_storage_efficiency_percent') + ')',
+        'max by (name) (' + spaces('virtual_disk_storage_efficiency_ratio') + ')',
       ], [['name', 'Virtual disk'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Footprint'], ['Value #E', 'Efficiency']], [
         health,
-        { matcher: { id: 'byName', options: 'Efficiency' }, properties: [{ id: 'unit', value: 'percent' }, { id: 'decimals', value: 1 }] },
+        { matcher: { id: 'byName', options: 'Efficiency' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'decimals', value: 1 }] },
       ] + bytes(['Size', 'Allocated', 'Footprint'])),
 
       b.graph(244, 'Pool usage', 'Allocated share of each storage pool, excluding the primordial pool. A full pool cannot extend thin-provisioned virtual disks, which then fail writes.', 'percent', [['100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes'), '{{name}}']])

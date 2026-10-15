@@ -168,9 +168,9 @@ function(on)
       b.panel.new(76, 'Virtual disk throughput', 'timeseries')
       + b.panel.withDescription('Reads are drawn below the axis.')
       + b.panel.withQueries([
-        b.query.new('rate(windows_hyperv_virtual_storage_device_bytes_written{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
+        b.query.new('rate(windows_hyperv_virtual_storage_device_written_bytes_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
         + b.query.withLegendFormat('{{device}} write'),
-        b.query.new('rate(windows_hyperv_virtual_storage_device_bytes_read{job=~"$job", instance="$instance"}[$__rate_interval])', 'B')
+        b.query.new('rate(windows_hyperv_virtual_storage_device_read_bytes_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'B')
         + b.query.withLegendFormat('{{device}} read'),
       ])
       + b.panel.withDefaults({

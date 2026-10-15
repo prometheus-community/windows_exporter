@@ -136,7 +136,7 @@ func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *
 }
 
 func TestClrExceptionsMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrExceptions()
 
 	row := perfDataClrExceptions{
@@ -162,7 +162,7 @@ func TestClrExceptionsMetricCompatibility(t *testing.T) {
 }
 
 func TestClrInteropMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrInterop()
 
 	row := perfDataClrInterop{
@@ -186,12 +186,13 @@ func TestClrInteropMetricCompatibility(t *testing.T) {
 }
 
 func TestClrJITMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrJIT()
 
 	row := perfDataClrJIT{
 		NumberofMethodsJitted:      11,
 		PercentTimeinJit:           50,
+		PercentTimeinJitBase:       200,
 		StandardJitFailures:        13,
 		TotalNumberofILBytesJitted: 14,
 	}
@@ -205,14 +206,14 @@ func TestClrJITMetricCompatibility(t *testing.T) {
 	c.perfClrJIT = &fixturePerfCollector[perfDataClrJIT]{rows: rows}
 	assertFixtureMetrics(t, c.collectClrJIT, []expectedMetric{
 		{"windows_netframework_clrjit_jit_methods_total", dto.MetricType_COUNTER, 11, ""},
-		{"windows_netframework_clrjit_jit_time_percent", dto.MetricType_GAUGE, 0.05, ""},
-		{"windows_netframework_clrjit_jit_standard_failures_total", dto.MetricType_GAUGE, 13, ""},
+		{"windows_netframework_clrjit_jit_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
+		{"windows_netframework_clrjit_jit_standard_failures_total", dto.MetricType_COUNTER, 13, ""},
 		{"windows_netframework_clrjit_jit_il_bytes_total", dto.MetricType_COUNTER, 14, ""},
 	}, false)
 }
 
 func TestClrLoadingMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrLoading()
 
 	row := perfDataClrLoading{
@@ -248,7 +249,7 @@ func TestClrLoadingMetricCompatibility(t *testing.T) {
 }
 
 func TestClrLocksAndThreadsMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrLocksAndThreads()
 
 	row := perfDataClrLocksAndThreads{
@@ -280,7 +281,7 @@ func TestClrLocksAndThreadsMetricCompatibility(t *testing.T) {
 }
 
 func TestClrMemoryMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrMemory()
 
 	row := perfDataClrMemory{
@@ -331,12 +332,12 @@ func TestClrMemoryMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrmemory_number_sink_blocksinuse", dto.MetricType_GAUGE, 27, ""},
 		{"windows_netframework_clrmemory_committed_bytes", dto.MetricType_GAUGE, 24, ""},
 		{"windows_netframework_clrmemory_reserved_bytes", dto.MetricType_GAUGE, 25, ""},
-		{"windows_netframework_clrmemory_gc_time_percent", dto.MetricType_GAUGE, 25, ""},
+		{"windows_netframework_clrmemory_gc_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
 	}, true)
 }
 
 func TestClrRemotingMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrRemoting()
 
 	row := perfDataClrRemoting{
@@ -366,14 +367,15 @@ func TestClrRemotingMetricCompatibility(t *testing.T) {
 }
 
 func TestClrSecurityMetricCompatibility(t *testing.T) {
-	c := &Collector{perfFrequency: 1000}
+	c := &Collector{}
 	c.describeClrSecurity()
 
 	row := perfDataClrSecurity{
-		NumberLinkTimeChecks:  11,
-		PercentTimeinRTchecks: 50,
-		StackWalkDepth:        13,
-		TotalRuntimeChecks:    14,
+		NumberLinkTimeChecks:      11,
+		PercentTimeinRTchecks:     50,
+		PercentTimeinRTchecksBase: 200,
+		StackWalkDepth:            13,
+		TotalRuntimeChecks:        14,
 	}
 	rows := make([]perfDataClrSecurity, 0, 4)
 
@@ -385,7 +387,7 @@ func TestClrSecurityMetricCompatibility(t *testing.T) {
 	c.perfClrSecurity = &fixturePerfCollector[perfDataClrSecurity]{rows: rows}
 	assertFixtureMetrics(t, c.collectClrSecurity, []expectedMetric{
 		{"windows_netframework_clrsecurity_link_time_checks_total", dto.MetricType_COUNTER, 11, ""},
-		{"windows_netframework_clrsecurity_rt_checks_time_percent", dto.MetricType_GAUGE, 0.05, ""},
+		{"windows_netframework_clrsecurity_rt_checks_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
 		{"windows_netframework_clrsecurity_stack_walk_depth", dto.MetricType_GAUGE, 13, ""},
 		{"windows_netframework_clrsecurity_runtime_checks_total", dto.MetricType_COUNTER, 14, ""},
 	}, false)
@@ -403,7 +405,7 @@ func TestGCZeroBaseDoesNotPublishInvalidRatio(t *testing.T) {
 	foundAllocated := false
 
 	for _, family := range families {
-		require.NotEqual(t, "windows_netframework_clrmemory_gc_time_percent", family.GetName())
+		require.NotEqual(t, "windows_netframework_clrmemory_gc_time_ratio", family.GetName())
 
 		if family.GetName() == "windows_netframework_clrmemory_allocated_bytes_total" {
 			require.InDelta(t, 99.0, family.GetMetric()[0].GetCounter().GetValue(), 1e-12)
@@ -413,6 +415,31 @@ func TestGCZeroBaseDoesNotPublishInvalidRatio(t *testing.T) {
 	}
 
 	require.True(t, foundAllocated)
+}
+
+func TestJITAndSecurityZeroBaseDoNotPublishInvalidRatio(t *testing.T) {
+	c := &Collector{}
+	c.describeClrJIT()
+	c.describeClrSecurity()
+	c.perfClrJIT = &fixturePerfCollector[perfDataClrJIT]{rows: []perfDataClrJIT{{Name: "worker", PercentTimeinJit: 50, NumberofMethodsJitted: 7}}}
+	c.perfClrSecurity = &fixturePerfCollector[perfDataClrSecurity]{rows: []perfDataClrSecurity{{Name: "worker", PercentTimeinRTchecks: 50, TotalRuntimeChecks: 7}}}
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) {
+		require.NoError(t, c.collectClrJIT(ch, nil, time.Second))
+		require.NoError(t, c.collectClrSecurity(ch, nil, time.Second))
+	}})
+	families, err := registry.Gather()
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(families))
+	for _, family := range families {
+		names = append(names, family.GetName())
+	}
+
+	require.Contains(t, names, "windows_netframework_clrjit_jit_methods_total")
+	require.Contains(t, names, "windows_netframework_clrsecurity_runtime_checks_total")
+	require.NotContains(t, names, "windows_netframework_clrjit_jit_time_ratio")
+	require.NotContains(t, names, "windows_netframework_clrsecurity_rt_checks_time_ratio")
 }
 
 func TestMissingObjectErrorClassification(t *testing.T) {

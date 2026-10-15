@@ -28,7 +28,8 @@ Hyper-V guest with 12 logical processors in one processor group.
 - `Interrupts/sec`, `DPCs Queued/sec` and `Clock Interrupts/sec`
   (`PERF_COUNTER_COUNTER`) and `C1/C2/C3 Transitions/sec`,
   `Idle Break Events/sec` (`PERF_COUNTER_BULK_COUNT`) are cumulative counts.
-- `Processor Frequency` is a gauge in MHz (3700 here). `Parking Status` is a
+- `Processor Frequency` is a gauge in MHz (3700 here); the collector multiplies
+  it by 1e6 for `windows_cpu_core_frequency_hertz`. `Parking Status` is a
   gauge, 0 when the processor is not parked. `% Performance Limit` is a gauge
   percentage (100 here). `% C3 Time` and `C3 Transitions/sec` stayed 0 on this
   virtual machine.

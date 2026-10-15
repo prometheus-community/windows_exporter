@@ -128,8 +128,8 @@ func (c *Collector) buildResourceGroupDescriptors() {
 		nil,
 	)
 	c.resourceGroupFailOverPeriod = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failover_period"),
-		"The FailoverPeriod property specifies a number of hours during which a maximum number of failover attempts, specified by the FailoverThreshold property, can occur.",
+		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failover_period_seconds"),
+		"The FailoverPeriod property specifies a number of seconds during which a maximum number of failover attempts, specified by the FailoverThreshold property, can occur. Windows stores it in hours.",
 		[]string{"name"},
 		nil,
 	)
@@ -164,7 +164,7 @@ func (c *Collector) buildResourceGroupDescriptors() {
 		nil,
 	)
 	c.resourceGroupResiliencyPeriod = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "resiliency_period"),
+		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "resiliency_period_seconds"),
 		"The resiliency period for this group, in seconds.",
 		[]string{"name"},
 		nil,
@@ -200,7 +200,7 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 		{name: "DefaultOwner", desc: c.resourceGroupDefaultOwner},
 		{name: "FailbackWindowEnd", desc: c.resourceGroupFailbackWindowEnd, signed: true},
 		{name: "FailbackWindowStart", desc: c.resourceGroupFailbackWindowStart, signed: true},
-		{name: "FailoverPeriod", desc: c.resourceGroupFailOverPeriod},
+		{name: "FailoverPeriod", desc: c.resourceGroupFailOverPeriod, scale: 3600},
 		{name: "FailoverThreshold", desc: c.resourceGroupFailOverThreshold},
 		{name: "Flags", desc: c.resourceGroupFlags},
 		{name: "GroupType", desc: c.resourceGroupGroupType},

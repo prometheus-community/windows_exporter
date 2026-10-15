@@ -109,8 +109,8 @@ func (c *Collector) buildResourceDescriptors() {
 		nil,
 	)
 	c.resourceDeadlockTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "deadlock_timeout"),
-		"Indicates the length of time to wait, in milliseconds, before declaring a deadlock in any call into a resource.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "deadlock_timeout_seconds"),
+		"Indicates the length of time to wait, in seconds, before declaring a deadlock in any call into a resource.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
@@ -127,14 +127,14 @@ func (c *Collector) buildResourceDescriptors() {
 		nil,
 	)
 	c.resourceIsAlivePollInterval = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "is_alive_poll_interval"),
-		"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in milliseconds at which the Cluster Service should poll the resource to determine whether it is operational. If the property is set to 0xFFFFFFFF, the Cluster Service uses the IsAlivePollInterval property for the resource type associated with the resource.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "is_alive_poll_interval_seconds"),
+		"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it is operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the IsAlivePollInterval property for the resource type associated with the resource.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
 	c.resourceLooksAlivePollInterval = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "looks_alive_poll_interval"),
-		"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in milliseconds at which the Cluster Service should poll the resource to determine whether it appears operational. If the property is set to 0xFFFFFFFF, the Cluster Service uses the LooksAlivePollInterval property for the resource type associated with the resource.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "looks_alive_poll_interval_seconds"),
+		"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it appears operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the LooksAlivePollInterval property for the resource type associated with the resource.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
@@ -157,8 +157,8 @@ func (c *Collector) buildResourceDescriptors() {
 		nil,
 	)
 	c.resourcePendingTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "pending_timeout"),
-		"Provides access to the resource's PendingTimeout property. If a resource cannot be brought online or taken offline in the number of milliseconds specified by the PendingTimeout property, the resource is forcibly terminated.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "pending_timeout_seconds"),
+		"Provides access to the resource's PendingTimeout property. If a resource cannot be brought online or taken offline in the number of seconds specified by the PendingTimeout property, the resource is forcibly terminated.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
@@ -175,14 +175,14 @@ func (c *Collector) buildResourceDescriptors() {
 		nil,
 	)
 	c.resourceRestartDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "restart_delay"),
-		"Indicates the time delay before a failed resource is restarted.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "restart_delay_seconds"),
+		"Indicates the time delay in seconds before a failed resource is restarted.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
 	c.resourceRestartPeriod = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "restart_period"),
-		"Provides access to the resource's RestartPeriod property, which is interval of time, in milliseconds, during which a specified number of restart attempts can be made on a nonresponsive resource.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "restart_period_seconds"),
+		"Provides access to the resource's RestartPeriod property, which is interval of time, in seconds, during which a specified number of restart attempts can be made on a nonresponsive resource.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
@@ -193,8 +193,8 @@ func (c *Collector) buildResourceDescriptors() {
 		nil,
 	)
 	c.resourceRetryPeriodOnFailure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameResource, "retry_period_on_failure"),
-		"Provides access to the resource's RetryPeriodOnFailure property, which is the interval of time (in milliseconds) that a resource should remain in a failed state before the Cluster service attempts to restart it.",
+		prometheus.BuildFQName(types.Namespace, nameResource, "retry_period_on_failure_seconds"),
+		"Provides access to the resource's RetryPeriodOnFailure property, which is the interval of time (in seconds) that a resource should remain in a failed state before the Cluster service attempts to restart it.",
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
@@ -276,6 +276,24 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 		c.resourceRetryPeriodOnFailure,
 		c.resourceState,
 	}
+	// fieldScales converts the millisecond properties to seconds.
+	fieldScales := [resourceFieldCount]float64{
+		1,    // Characteristics
+		1e-3, // DeadlockTimeout
+		1,    // EmbeddedFailureAction
+		1,    // Flags
+		1e-3, // IsAlivePollInterval
+		1e-3, // LooksAlivePollInterval
+		1,    // MonitorProcessId
+		1e-3, // PendingTimeout
+		1,    // ResourceClass
+		1,    // RestartAction
+		1e-3, // RestartDelay
+		1e-3, // RestartPeriod
+		1,    // RestartThreshold
+		1e-3, // RetryPeriodOnFailure
+		1,    // State
+	}
 
 	var nodeNamesKey []byte
 	for _, nodeName := range nodeNames {
@@ -321,7 +339,7 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 					continue
 				}
 
-				ch <- prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw), resource.Type, resource.OwnerGroup, resource.Name)
+				ch <- prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw)*fieldScales[index], resource.Type, resource.OwnerGroup, resource.Name)
 			}
 
 			for _, metric := range c.resourceNodeMetrics(nil, resource, nodeNames) {
@@ -334,7 +352,7 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 		metrics := scrape.Get(resource.Name, value, func() []prometheus.Metric {
 			metrics := make([]prometheus.Metric, 0, resourceFieldCount+1+len(nodeNames))
 			for index, raw := range value.values {
-				metrics = append(metrics, prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw), resource.Type, resource.OwnerGroup, resource.Name))
+				metrics = append(metrics, prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw)*fieldScales[index], resource.Type, resource.OwnerGroup, resource.Name))
 			}
 
 			return c.resourceNodeMetrics(metrics, resource, nodeNames)

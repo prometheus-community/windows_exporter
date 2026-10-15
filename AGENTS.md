@@ -99,6 +99,12 @@ exercised a live Windows role.
   compatibility unless the change intentionally updates that contract. Update
   the corresponding collector documentation and affected queries together.
   Follow existing deprecation patterns when replacing published metrics.
+- Name metrics after the Prometheus conventions: publish base units (seconds,
+  bytes, hertz, ratios from 0 to 1) and put the unit in the name (`_seconds`,
+  `_bytes`, `_hertz`, `_ratio`), never `_mhz`, `_percent`, `_minutes`,
+  `_milliseconds`, `_microseconds`, `_kb` or an `_in_<unit>` infix. Convert
+  Windows values explicitly (MHz, percent, KiB, ms). Counters end in `_total`;
+  gauges never do. List renamed metrics in `UPGRADE.md`.
 - Determine metric types per counter, using `pdh.Collector.MetricType` where
   appropriate. Raw PDH values can be cumulative numerators, ticks or counts,
   even when the Windows counter name says average, percentage or seconds.

@@ -80,25 +80,25 @@ func (c *Collector) buildLocks() error {
 		nil,
 	)
 	c.locksLockRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_requests_total"),
 		"(Locks.LockRequests)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockTimeouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts_total"),
 		"(Locks.LockTimeouts)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockTimeoutstimeout0 = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts_excluding_NOWAIT"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts_excluding_nowait_total"),
 		"(Locks.LockTimeoutstimeout0)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_waits_total"),
 		"(Locks.LockWaits)",
 		[]string{"mssql_instance", "resource"},
 		nil,
@@ -110,7 +110,7 @@ func (c *Collector) buildLocks() error {
 		nil,
 	)
 	c.locksNumberOfDeadlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_deadlocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_deadlocks_total"),
 		"(Locks.NumberOfDeadlocks)",
 		[]string{"mssql_instance", "resource"},
 		nil,

@@ -20,8 +20,8 @@ None
 | `windows_cpu_info`                         | Labelled CPU information             | gauge | `architecture`, `device_id`, `description`, `family`, `name` |
 | `windows_cpu_info_core`              | Number of cores per CPU              | gauge | `device_id`                                                  |
 | `windows_cpu_info_enabled_core`      | Number of enabled cores per CPU      | gauge | `device_id`                                                  |
-| `windows_cpu_info_l2_cache_size`           | Size of L2 cache per CPU             | gauge | `device_id`                                                  |
-| `windows_cpu_info_l3_cache_size`           | Size of L3 cache per CPU             | gauge | `device_id`                                                  |
+| `windows_cpu_info_l2_cache_size_bytes` | Size of L2 cache per CPU in bytes    | gauge | `device_id`                                                  |
+| `windows_cpu_info_l3_cache_size_bytes` | Size of L3 cache per CPU in bytes    | gauge | `device_id`                                                  |
 | `windows_cpu_info_logical_processor` | Number of logical processors per CPU | gauge | `device_id`                                                  |
 | `windows_cpu_info_thread`            | Number of threads per CPU            | gauge | `device_id`                                                  |
 
@@ -36,12 +36,12 @@ windows_cpu_info_core{device_id="CPU0"} 12
 # HELP windows_cpu_info_enabled_core Number of enabled cores per CPU
 # TYPE windows_cpu_info_enabled_core gauge
 windows_cpu_info_enabled_core{device_id="CPU0"} 12
-# HELP windows_cpu_info_l2_cache_size Size of L2 cache per CPU
-# TYPE windows_cpu_info_l2_cache_size gauge
-windows_cpu_info_l2_cache_size{device_id="CPU0"} 6144
-# HELP windows_cpu_info_l3_cache_size Size of L3 cache per CPU
-# TYPE windows_cpu_info_l3_cache_size gauge
-windows_cpu_info_l3_cache_size{device_id="CPU0"} 65536
+# HELP windows_cpu_info_l2_cache_size_bytes Size of L2 cache per CPU in bytes
+# TYPE windows_cpu_info_l2_cache_size_bytes gauge
+windows_cpu_info_l2_cache_size_bytes{device_id="CPU0"} 6.291456e+06
+# HELP windows_cpu_info_l3_cache_size_bytes Size of L3 cache per CPU in bytes
+# TYPE windows_cpu_info_l3_cache_size_bytes gauge
+windows_cpu_info_l3_cache_size_bytes{device_id="CPU0"} 6.7108864e+07
 # HELP windows_cpu_info_logical_processor Number of logical processors per CPU
 # TYPE windows_cpu_info_logical_processor gauge
 windows_cpu_info_logical_processor{device_id="CPU0"} 24

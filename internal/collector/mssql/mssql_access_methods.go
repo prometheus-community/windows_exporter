@@ -140,43 +140,43 @@ func (c *Collector) buildAccessMethods() error {
 
 	// Win32_PerfRawData_{instance}_SQLServerAccessMethods
 	c.accessMethodsAUcleanupbatches = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanups_total"),
 		"(AccessMethods.AUcleanupbatches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsAUcleanups = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_cleanups_total"),
 		"(AccessMethods.AUcleanups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsByReferenceLobCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_creates_total"),
 		"(AccessMethods.ByreferenceLobCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsByReferenceLobUseCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_uses_total"),
 		"(AccessMethods.ByreferenceLobUseCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountLobReadahead = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_read_aheads"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_read_aheads_total"),
 		"(AccessMethods.CountLobReadahead)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountPullInRow = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pulls"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pulls_total"),
 		"(AccessMethods.CountPullInRow)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountPushOffRow = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pushes_total"),
 		"(AccessMethods.CountPushOffRow)",
 		[]string{"mssql_instance"},
 		nil,
@@ -194,211 +194,211 @@ func (c *Collector) buildAccessMethods() error {
 		nil,
 	)
 	c.accessMethodsDroppedrowsetcleanups = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_cleanups_total"),
 		"(AccessMethods.Droppedrowsetcleanups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsDroppedrowsetsskipped = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_skips"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_skips_total"),
 		"(AccessMethods.Droppedrowsetsskipped)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsExtentDeallocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_deallocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_deallocations_total"),
 		"(AccessMethods.ExtentDeallocations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsExtentsAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_allocations_total"),
 		"(AccessMethods.ExtentsAllocated)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedAUcleanupbatches = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanup_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanup_failures_total"),
 		"(AccessMethods.FailedAUcleanupbatches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedleafpagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_failures_total"),
 		"(AccessMethods.Failedleafpagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedtreepagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_failures_total"),
 		"(AccessMethods.Failedtreepagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsForwardedRecords = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_forwarded_records"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_forwarded_records_total"),
 		"(AccessMethods.ForwardedRecords)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFreeSpacePageFetches = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_page_fetches"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_page_fetches_total"),
 		"(AccessMethods.FreeSpacePageFetches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFreeSpaceScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_scans_total"),
 		"(AccessMethods.FreeSpaceScans)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFullScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_full_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_full_scans_total"),
 		"(AccessMethods.FullScans)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsIndexSearches = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_index_searches"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_index_searches_total"),
 		"(AccessMethods.IndexSearches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsInSysXactwaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_insysxact_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_insysxact_waits_total"),
 		"(AccessMethods.InSysXactwaits)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobHandleCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_creates_total"),
 		"(AccessMethods.LobHandleCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobHandleDestroyCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_destroys"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_destroys_total"),
 		"(AccessMethods.LobHandleDestroyCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_creates_total"),
 		"(AccessMethods.LobSSProviderCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderDestroyCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_destroys"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_destroys_total"),
 		"(AccessMethods.LobSSProviderDestroyCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderTruncationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_truncations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_truncations_total"),
 		"(AccessMethods.LobSSProviderTruncationCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsMixedPageAllocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_mixed_page_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_mixed_page_allocations_total"),
 		"(AccessMethods.MixedpageallocationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageCompressionAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compression_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compression_attempts_total"),
 		"(AccessMethods.PagecompressionattemptsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageDeallocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_deallocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_deallocations_total"),
 		"(AccessMethods.PageDeallocationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPagesAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_allocations_total"),
 		"(AccessMethods.PagesAllocatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPagesCompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compressions_total"),
 		"(AccessMethods.PagescompressedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageSplits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_splits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_splits_total"),
 		"(AccessMethods.PageSplitsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsProbeScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_probe_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_probe_scans_total"),
 		"(AccessMethods.ProbeScansPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsRangeScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_range_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_range_scans_total"),
 		"(AccessMethods.RangeScansPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsScanPointRevalidations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_scan_point_revalidations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_scan_point_revalidations_total"),
 		"(AccessMethods.ScanPointRevalidationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsSkippedGhostedRecords = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_ghost_record_skips"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_ghost_record_skips_total"),
 		"(AccessMethods.SkippedGhostedRecordsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsTableLockEscalations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_table_lock_escalations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_table_lock_escalations_total"),
 		"(AccessMethods.TableLockEscalationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsUsedleafpagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_uses_total"),
 		"(AccessMethods.Usedleafpagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsUsedtreepagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_uses_total"),
 		"(AccessMethods.Usedtreepagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorkfilesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_workfile_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_workfile_creates_total"),
 		"(AccessMethods.WorkfilesCreatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_creates_total"),
 		"(AccessMethods.WorktablesCreatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesFromCacheHits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_hits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_hits_total"),
 		"(AccessMethods.WorktablesFromCacheRatio)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesFromCacheLookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_lookups_total"),
 		"(AccessMethods.WorktablesFromCacheRatio_Base)",
 		[]string{"mssql_instance"},
 		nil,

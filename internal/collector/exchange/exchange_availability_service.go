@@ -45,8 +45,8 @@ func (c *Collector) buildAvailabilityService() error {
 	}
 
 	c.availabilityRequestsSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availability_service_requests_per_sec"),
-		"Number of requests serviced per second",
+		prometheus.BuildFQName(types.Namespace, Name, "availability_service_requests_total"),
+		"Total number of requests serviced",
 		nil,
 		nil,
 	)

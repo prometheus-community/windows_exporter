@@ -26,7 +26,7 @@ Name | Description | Type | Labels
 `windows_ad_searches_total` | Total number of directory searches, by search scope (Base/Subtree/Onelevel searches) | counter | `scope`
 `windows_ad_database_operations_total` | Total number of directory database operations, by operation (Database adds/deletes/modifys/recycles) | counter | `operation`
 `windows_ad_binds_total` | Total number of binds, by bind method | counter | `bind_method`
-`windows_ad_replication_highest_usn` | Highest update sequence number (USN) committed or issued by this domain controller (DRA Highest USN Committed/Issued) | counter | `state`
+`windows_ad_replication_highest_usn_total` | Highest update sequence number (USN) committed or issued by this domain controller (DRA Highest USN Committed/Issued) | counter | `state`
 `windows_ad_replication_data_intrasite_bytes_total` | Total number of uncompressed bytes replicated within the site, by direction (DRA Inbound/Outbound Bytes Not Compressed (Within Site)) | counter | `direction`
 `windows_ad_replication_data_intersite_bytes_total` | Total number of compressed bytes, after compression, replicated between sites, by direction (DRA Inbound/Outbound Bytes Compressed (Between Sites, After Compression)) | counter | `direction`
 `windows_ad_replication_inbound_sync_objects_remaining` | Number of objects remaining until a full synchronization completes (DRA Inbound Full Sync Objects Remaining) | gauge | None

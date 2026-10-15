@@ -56,8 +56,8 @@ func (c *Collector) buildRpcClientAccess() error {
 	}
 
 	c.rpcAveragedLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rpc_avg_latency_sec"),
-		"The latency (sec) averaged for the past 1024 packets",
+		prometheus.BuildFQName(types.Namespace, Name, "rpc_avg_latency_seconds"),
+		"The latency in seconds averaged for the past 1024 packets",
 		nil,
 		nil,
 	)

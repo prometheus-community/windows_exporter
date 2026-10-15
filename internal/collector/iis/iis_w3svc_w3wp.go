@@ -573,7 +573,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumFileCacheMemoryUsage,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPMaximumFileCacheMemoryUsage,
 			name,
 			pid,

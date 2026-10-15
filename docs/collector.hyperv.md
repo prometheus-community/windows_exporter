@@ -54,37 +54,37 @@ prefixed with `windows_hyperv_datastore`.
 | `windows_hyperv_datastore_table_data_size_bytes`                       | Represents the table data size in bytes of the DataStore.                       | gauge   | datastore |
 | `windows_hyperv_datastore_names_size_bytes`                            | Represents the names size in bytes of the DataStore.                            | gauge   | datastore |
 | `windows_hyperv_datastore_number_of_keys`                              | Represents the number of keys in the DataStore.                                 | gauge   | datastore |
-| `windows_hyperv_datastore_reconnect_latency_microseconds`              | Represents the reconnect latency in microseconds of the DataStore.              | gauge   | datastore |
-| `windows_hyperv_datastore_disconnect_count`                            | Represents the disconnect count of the DataStore.                               | counter | datastore |
-| `windows_hyperv_datastore_write_to_file_byte_latency_microseconds`     | Represents the write-to-file byte latency in microseconds of the DataStore.     | gauge   | datastore |
-| `windows_hyperv_datastore_write_to_file_byte_count`                    | Represents the write-to-file byte count of the DataStore.                       | counter | datastore |
-| `windows_hyperv_datastore_write_to_file_count`                         | Represents the write-to-file count of the DataStore.                            | counter | datastore |
-| `windows_hyperv_datastore_read_from_file_byte_latency_microseconds`    | Represents the read-from-file byte latency in microseconds of the DataStore.    | gauge   | datastore |
-| `windows_hyperv_datastore_read_from_file_byte_count`                   | Represents the read-from-file byte count of the DataStore.                      | counter | datastore |
-| `windows_hyperv_datastore_read_from_file_count`                        | Represents the read-from-file count of the DataStore.                           | counter | datastore |
-| `windows_hyperv_datastore_write_to_storage_byte_latency_microseconds`  | Represents the write-to-storage byte latency in microseconds of the DataStore.  | gauge   | datastore |
-| `windows_hyperv_datastore_write_to_storage_byte_count`                 | Represents the write-to-storage byte count of the DataStore.                    | counter | datastore |
-| `windows_hyperv_datastore_write_to_storage_count`                      | Represents the write-to-storage count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_read_from_storage_byte_latency_microseconds` | Represents the read-from-storage byte latency in microseconds of the DataStore. | gauge   | datastore |
-| `windows_hyperv_datastore_read_from_storage_byte_count`                | Represents the read-from-storage byte count of the DataStore.                   | counter | datastore |
-| `windows_hyperv_datastore_read_from_storage_count`                     | Represents the read-from-storage count of the DataStore.                        | counter | datastore |
-| `windows_hyperv_datastore_commit_byte_latency_microseconds`            | Represents the commit byte latency in microseconds of the DataStore.            | gauge   | datastore |
-| `windows_hyperv_datastore_commit_byte_count`                           | Represents the commit byte count of the DataStore.                              | counter | datastore |
-| `windows_hyperv_datastore_commit_count`                                | Represents the commit count of the DataStore.                                   | counter | datastore |
-| `windows_hyperv_datastore_cache_update_operation_latency_microseconds` | Represents the cache update operation latency in microseconds of the DataStore. | gauge   | datastore |
-| `windows_hyperv_datastore_cache_update_operation_count`                | Represents the cache update operation count of the DataStore.                   | counter | datastore |
-| `windows_hyperv_datastore_commit_operation_latency_microseconds`       | Represents the commit operation latency in microseconds of the DataStore.       | gauge   | datastore |
-| `windows_hyperv_datastore_commit_operation_count`                      | Represents the commit operation count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_compact_operation_latency_microseconds`      | Represents the compact operation latency in microseconds of the DataStore.      | gauge   | datastore |
-| `windows_hyperv_datastore_compact_operation_count`                     | Represents the compact operation count of the DataStore.                        | counter | datastore |
-| `windows_hyperv_datastore_load_file_operation_latency_microseconds`    | Represents the load file operation latency in microseconds of the DataStore.    | gauge   | datastore |
-| `windows_hyperv_datastore_load_file_operation_count`                   | Represents the load file operation count of the DataStore.                      | counter | datastore |
-| `windows_hyperv_datastore_remove_operation_latency_microseconds`       | Represents the remove operation latency in microseconds of the DataStore.       | gauge   | datastore |
-| `windows_hyperv_datastore_remove_operation_count`                      | Represents the remove operation count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_query_size_operation_latency_microseconds`   | Represents the query size operation latency in microseconds of the DataStore.   | gauge   | datastore |
-| `windows_hyperv_datastore_query_size_operation_count`                  | Represents the query size operation count of the DataStore.                     | counter | datastore |
-| `windows_hyperv_datastore_set_operation_latency_microseconds`          | Represents the set operation latency in microseconds of the DataStore.          | gauge   | datastore |
-| `windows_hyperv_datastore_set_operation_count`                         | Represents the set operation count of the DataStore.                            | counter | datastore |
+| `windows_hyperv_datastore_reconnect_latency_seconds`              | Represents the reconnect latency in seconds of the DataStore.              | gauge   | datastore |
+| `windows_hyperv_datastore_disconnects_total`                            | Represents the disconnect count of the DataStore.                               | counter | datastore |
+| `windows_hyperv_datastore_write_to_file_byte_latency_seconds`     | Represents the write-to-file byte latency in seconds of the DataStore.     | gauge   | datastore |
+| `windows_hyperv_datastore_write_to_file_bytes_total`                    | Represents the write-to-file byte count of the DataStore.                       | counter | datastore |
+| `windows_hyperv_datastore_write_to_file_total`                         | Represents the write-to-file count of the DataStore.                            | counter | datastore |
+| `windows_hyperv_datastore_read_from_file_byte_latency_seconds`    | Represents the read-from-file byte latency in seconds of the DataStore.    | gauge   | datastore |
+| `windows_hyperv_datastore_read_from_file_bytes_total`                   | Represents the read-from-file byte count of the DataStore.                      | counter | datastore |
+| `windows_hyperv_datastore_read_from_file_total`                        | Represents the read-from-file count of the DataStore.                           | counter | datastore |
+| `windows_hyperv_datastore_write_to_storage_byte_latency_seconds`  | Represents the write-to-storage byte latency in seconds of the DataStore.  | gauge   | datastore |
+| `windows_hyperv_datastore_write_to_storage_bytes_total`                 | Represents the write-to-storage byte count of the DataStore.                    | counter | datastore |
+| `windows_hyperv_datastore_write_to_storage_total`                      | Represents the write-to-storage count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_read_from_storage_byte_latency_seconds` | Represents the read-from-storage byte latency in seconds of the DataStore. | gauge   | datastore |
+| `windows_hyperv_datastore_read_from_storage_bytes_total`                | Represents the read-from-storage byte count of the DataStore.                   | counter | datastore |
+| `windows_hyperv_datastore_read_from_storage_total`                     | Represents the read-from-storage count of the DataStore.                        | counter | datastore |
+| `windows_hyperv_datastore_commit_byte_latency_seconds`            | Represents the commit byte latency in seconds of the DataStore.            | gauge   | datastore |
+| `windows_hyperv_datastore_commit_bytes_total`                           | Represents the commit byte count of the DataStore.                              | counter | datastore |
+| `windows_hyperv_datastore_commits_total`                                | Represents the commit count of the DataStore.                                   | counter | datastore |
+| `windows_hyperv_datastore_cache_update_operation_latency_seconds` | Represents the cache update operation latency in seconds of the DataStore. | gauge   | datastore |
+| `windows_hyperv_datastore_cache_update_operations_total`                | Represents the cache update operation count of the DataStore.                   | counter | datastore |
+| `windows_hyperv_datastore_commit_operation_latency_seconds`       | Represents the commit operation latency in seconds of the DataStore.       | gauge   | datastore |
+| `windows_hyperv_datastore_commit_operations_total`                      | Represents the commit operation count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_compact_operation_latency_seconds`      | Represents the compact operation latency in seconds of the DataStore.      | gauge   | datastore |
+| `windows_hyperv_datastore_compact_operations_total`                     | Represents the compact operation count of the DataStore.                        | counter | datastore |
+| `windows_hyperv_datastore_load_file_operation_latency_seconds`    | Represents the load file operation latency in seconds of the DataStore.    | gauge   | datastore |
+| `windows_hyperv_datastore_load_file_operations_total`                   | Represents the load file operation count of the DataStore.                      | counter | datastore |
+| `windows_hyperv_datastore_remove_operation_latency_seconds`       | Represents the remove operation latency in seconds of the DataStore.       | gauge   | datastore |
+| `windows_hyperv_datastore_remove_operations_total`                      | Represents the remove operation count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_query_size_operation_latency_seconds`   | Represents the query size operation latency in seconds of the DataStore.   | gauge   | datastore |
+| `windows_hyperv_datastore_query_size_operations_total`                  | Represents the query size operation count of the DataStore.                     | counter | datastore |
+| `windows_hyperv_datastore_set_operation_latency_seconds`          | Represents the set operation latency in seconds of the DataStore.          | gauge   | datastore |
+| `windows_hyperv_datastore_set_operations_total`                         | Represents the set operation count of the DataStore.                            | counter | datastore |
 
 ### Hyper-V Dynamic Memory Balancer
 
@@ -294,7 +294,7 @@ Example alert:
 
 | Name                                                  | Description                                  | Type    | Labels                         |
 |-------------------------------------------------------|----------------------------------------------|---------|--------------------------------|
-| `windows_hyperv_virtual_network_adapter_drop_reasons` | Hyper-V Virtual Network Adapter Drop Reasons | counter | `adapter`,`reason`,`direction` |
+| `windows_hyperv_virtual_network_adapter_drop_reasons_total` | Number of packets dropped by a Hyper-V virtual network adapter, by drop reason and direction | counter | `adapter`,`reason`,`direction` |
 
 ### Hyper-V Virtual SMB
 
@@ -302,21 +302,21 @@ Example alert:
 |-------------------------------------------------------|-----------------------------------------------------------------------------------|---------|------------|
 | `windows_hyperv_virtual_smb_direct_mapped_sections`   | Represents the number of direct-mapped sections in the virtual SMB`               | gauge   | `instance` |
 | `windows_hyperv_virtual_smb_direct_mapped_pages`      | Represents the number of direct-mapped pages in the virtual SMB`                  | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_write_bytes_rdma`         | Represents the number of bytes written per second using RDMA in the virtual SMB`  | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_bytes`              | Represents the number of bytes written per second in the virtual SMB`             | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_bytes_rdma`          | Represents the number of bytes read per second using RDMA in the virtual SMB`     | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_bytes`               | Represents the number of bytes read per second in the virtual SMB`                | counter | `instance` |
-| `windows_hyperv_virtual_smb_flush_requests`           | Represents the number of flush requests per second in the virtual SMB`            | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_requests_rdma`      | Represents the number of write requests per second using RDMA in the virtual SMB` | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_requests`           | Represents the number of write requests per second in the virtual SMB`            | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_requests_rdma`       | Represents the number of read requests per second using RDMA in the virtual SMB`  | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_requests`            | Represents the number of read requests per second in the virtual SMB`             | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_write_bytes_total`         | Represents the total number of bytes written using RDMA in the virtual SMB`  | counter | `instance` |
+| `windows_hyperv_virtual_smb_write_bytes_total`              | Represents the total number of bytes written in the virtual SMB`             | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_read_bytes_total`          | Represents the total number of bytes read using RDMA in the virtual SMB`     | counter | `instance` |
+| `windows_hyperv_virtual_smb_read_bytes_total`               | Represents the total number of bytes read in the virtual SMB`                | counter | `instance` |
+| `windows_hyperv_virtual_smb_flush_requests_total`           | Represents the total number of flush requests in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_write_requests_total`      | Represents the total number of write requests using RDMA in the virtual SMB` | counter | `instance` |
+| `windows_hyperv_virtual_smb_write_requests_total`           | Represents the total number of write requests in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_read_requests_total`       | Represents the total number of read requests using RDMA in the virtual SMB`  | counter | `instance` |
+| `windows_hyperv_virtual_smb_read_requests_total`            | Represents the total number of read requests in the virtual SMB`             | counter | `instance` |
 | `windows_hyperv_virtual_smb_current_pending_requests` | Represents the current number of pending requests in the virtual SMB`             | gauge   | `instance` |
 | `windows_hyperv_virtual_smb_current_open_file_count`  | Represents the current number of open files in the virtual SMB`                   | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_tree_connect_count`       | Represents the number of tree connects in the virtual SMB`                        | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_requests`                 | Represents the number of requests per second in the virtual SMB`                  | counter | `instance` |
-| `windows_hyperv_virtual_smb_sent_bytes`               | Represents the number of bytes sent per second in the virtual SMB`                | counter | `instance` |
-| `windows_hyperv_virtual_smb_received_bytes`           | Represents the number of bytes received per second in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_tree_connects_total`       | Represents the total number of tree connects in the virtual SMB`                        | counter | `instance` |
+| `windows_hyperv_virtual_smb_requests_total`                 | Represents the total number of requests in the virtual SMB`                  | counter | `instance` |
+| `windows_hyperv_virtual_smb_sent_bytes_total`               | Represents the total number of bytes sent in the virtual SMB`                | counter | `instance` |
+| `windows_hyperv_virtual_smb_received_bytes_total`           | Represents the total number of bytes received in the virtual SMB`            | counter | `instance` |
 
 
 ### Hyper-V Virtual Switch
@@ -351,9 +351,9 @@ Example alert:
 |------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|---------|----------|
 | `windows_hyperv_virtual_storage_device_error_count_total`              | Represents the total number of errors that have occurred on this virtual device.                                                                      | counter | `device` |
 | `windows_hyperv_virtual_storage_device_queue_length`                   | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.        | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_read`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
+| `windows_hyperv_virtual_storage_device_read_bytes_total`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_read_total`          | Represents the total number of read operations that have occurred on this virtual device.                                                             | counter | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_written`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
+| `windows_hyperv_virtual_storage_device_written_bytes_total`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_written_total`       | Represents the total number of write operations that have occurred on this virtual device.                                                            | counter | `device` |
 | `windows_hyperv_virtual_storage_device_io_latency_seconds_total`       | Represents the total IO transfer latency for this virtual device.                                                                                     | counter | `device` |
 | `windows_hyperv_virtual_storage_device_latency_seconds`                | **Deprecated:** use `windows_hyperv_virtual_storage_device_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below.       | gauge   | `device` |

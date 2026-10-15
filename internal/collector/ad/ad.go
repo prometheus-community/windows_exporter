@@ -207,7 +207,7 @@ func (c *Collector) buildDescriptors() {
 		nil,
 	)
 	c.replicationHighestUsn = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "replication_highest_usn"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_highest_usn_total"),
 		"Highest update sequence number (USN) committed or issued by this domain controller (DRA Highest USN Committed/Issued).",
 		[]string{"state"},
 		nil,

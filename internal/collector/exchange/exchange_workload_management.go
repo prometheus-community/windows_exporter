@@ -61,7 +61,7 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 		nil,
 	)
 	c.completedTasks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "workload_completed_tasks"),
+		prometheus.BuildFQName(types.Namespace, Name, "workload_completed_tasks_total"),
 		"Number of workload management tasks that have been completed",
 		[]string{"name"},
 		nil,
@@ -73,7 +73,7 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 		nil,
 	)
 	c.yieldedTasks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "workload_yielded_tasks"),
+		prometheus.BuildFQName(types.Namespace, Name, "workload_yielded_tasks_total"),
 		"The total number of tasks that have been yielded by a workload",
 		[]string{"name"},
 		nil,
@@ -113,7 +113,7 @@ func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metr
 
 		ch <- prometheus.MustNewConstMetric(
 			c.queuedTasks,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.QueuedTasks,
 			labelName,
 		)

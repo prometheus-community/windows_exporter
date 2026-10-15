@@ -34,8 +34,8 @@ func (c *Collector) describeClrSecurity() {
 		nil,
 	)
 	c.timeInRTChecks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, collectorClrSecurity+"_rt_checks_time_percent"),
-		"Displays the percentage of time spent performing runtime code access security checks in the last sample.",
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrSecurity+"_rt_checks_time_ratio"),
+		"Displays the ratio (0-1) of time spent performing runtime code access security checks in the last sample.",
 		[]string{"process"},
 		nil,
 	)
@@ -64,11 +64,12 @@ func (c *Collector) buildClrSecurity() error {
 }
 
 type perfDataClrSecurity struct {
-	Name                  string
-	NumberLinkTimeChecks  float64 `perfdata:"# Link Time Checks"`
-	PercentTimeinRTchecks float64 `perfdata:"% Time in RT checks"`
-	StackWalkDepth        float64 `perfdata:"Stack Walk Depth"`
-	TotalRuntimeChecks    float64 `perfdata:"Total Runtime Checks"`
+	Name                      string
+	NumberLinkTimeChecks      float64 `perfdata:"# Link Time Checks"`
+	PercentTimeinRTchecks     float64 `perfdata:"% Time in RT checks"`
+	PercentTimeinRTchecksBase float64 `perfdata:"% Time in RT checks,secondvalue"`
+	StackWalkDepth            float64 `perfdata:"Stack Walk Depth"`
+	TotalRuntimeChecks        float64 `perfdata:"Total Runtime Checks"`
 }
 
 func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
@@ -89,12 +90,14 @@ func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, scrape *labe
 			process.Name,
 		)
 
-		ch <- scrape.MustNewConstMetric(
-			c.timeInRTChecks,
-			prometheus.GaugeValue,
-			float64(process.PercentTimeinRTchecks)/c.perfFrequency,
-			process.Name,
-		)
+		if process.PercentTimeinRTchecksBase > 0 {
+			ch <- scrape.MustNewConstMetric(
+				c.timeInRTChecks,
+				prometheus.GaugeValue,
+				process.PercentTimeinRTchecks/process.PercentTimeinRTchecksBase,
+				process.Name,
+			)
+		}
 
 		ch <- scrape.MustNewConstMetric(
 			c.stackWalkDepth,

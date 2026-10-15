@@ -163,7 +163,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.printerJobCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "job_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "jobs_total"),
 		"Number of jobs processed by the printer since the last reset",
 		[]string{"printer"},
 		nil,

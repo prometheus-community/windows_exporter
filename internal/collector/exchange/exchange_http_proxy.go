@@ -58,14 +58,14 @@ func (c *Collector) buildHTTPProxy() error {
 	}
 
 	c.mailboxServerLocatorAverageLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_server_locator_avg_latency_sec"),
-		"Average latency (sec) of MailboxServerLocator web service calls",
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_server_locator_avg_latency_seconds"),
+		"Average latency in seconds of MailboxServerLocator web service calls",
 		[]string{"name"},
 		nil,
 	)
 	c.averageAuthenticationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_auth_latency"),
-		"Average time spent authenticating CAS requests over the last 200 samples",
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_auth_latency_seconds"),
+		"Average time in seconds spent authenticating CAS requests over the last 200 samples",
 		[]string{"name"},
 		nil,
 	)
@@ -82,14 +82,14 @@ func (c *Collector) buildHTTPProxy() error {
 		nil,
 	)
 	c.averageCASProcessingLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_cas_processing_latency_sec"),
-		"Average latency (sec) of CAS processing time over the last 200 reqs",
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_cas_processing_latency_seconds"),
+		"Average latency in seconds of CAS processing time over the last 200 reqs",
 		[]string{"name"},
 		nil,
 	)
 	c.mailboxServerProxyFailureRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_proxy_failure_rate"),
-		"% of failures between this CAS and MBX servers over the last 200 samples",
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_proxy_failure_ratio"),
+		"Ratio (0-1) of failures between this CAS and MBX servers over the last 200 samples",
 		[]string{"name"},
 		nil,
 	)
@@ -115,7 +115,7 @@ func (c *Collector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.averageAuthenticationLatency,
 			prometheus.GaugeValue,
-			data.AverageAuthenticationLatency,
+			utils.MilliSecToSec(data.AverageAuthenticationLatency),
 			labelName,
 		)
 
@@ -129,7 +129,7 @@ func (c *Collector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.mailboxServerProxyFailureRate,
 			prometheus.GaugeValue,
-			data.MailboxServerProxyFailureRate,
+			data.MailboxServerProxyFailureRate/100,
 			labelName,
 		)
 

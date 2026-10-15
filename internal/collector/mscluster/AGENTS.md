@@ -62,3 +62,13 @@
   build-dependent rules of `objectField`), owner node and node names. Objects
   with missing fields are not cached, so they report the same errors on every
   scrape. Shared volume sizes change constantly and are not cached.
+- Many cluster, group and resource properties are durations or sizes in
+  milliseconds, minutes, hours, KiB or MiB (for example
+  `ClusSvcRegroupTickInMilliseconds`, `ShutdownTimeoutInMinutes`,
+  `FailoverPeriod` in hours, `S2DCachePageSizeKBytes`, `ClusterLogSize` in
+  MiB). Publish them in base units with a unit suffix: set `objectField.scale`
+  for cluster and group fields and `fieldScales` for resources. The parity
+  tests feed WMI values through the same scale, so they cannot catch a wrong
+  factor; check units against a live cluster (`Get-Cluster | Format-List *`).
+  The WMI help texts are not reliable: `QuarantineDuration` is seconds
+  (default 7200), not milliseconds.

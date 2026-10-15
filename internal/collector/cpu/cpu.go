@@ -57,7 +57,7 @@ type Collector struct {
 	clockInterruptsTotal       *prometheus.Desc
 	idleBreakEventsTotal       *prometheus.Desc
 	parkingStatus              *prometheus.Desc
-	processorFrequencyMHz      *prometheus.Desc
+	processorFrequencyHertz    *prometheus.Desc
 	processorPerformance       *prometheus.Desc
 	processorMPerf             *prometheus.Desc
 	processorRTC               *prometheus.Desc
@@ -142,9 +142,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"core"},
 		nil,
 	)
-	c.processorFrequencyMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "core_frequency_mhz"),
-		"Core frequency in megahertz",
+	c.processorFrequencyHertz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "core_frequency_hertz"),
+		"Core frequency in hertz",
 		[]string{"core"},
 		nil,
 	)
@@ -321,9 +321,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.processorFrequencyMHz,
+			c.processorFrequencyHertz,
 			prometheus.GaugeValue,
-			coreData.ProcessorFrequencyMHz,
+			coreData.ProcessorFrequencyMHz*1e6,
 			core,
 		)
 

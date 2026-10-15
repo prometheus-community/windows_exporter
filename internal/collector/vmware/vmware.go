@@ -59,13 +59,13 @@ type Collector struct {
 	memTargetSize  *prometheus.Desc
 	memUsed        *prometheus.Desc
 
-	cpuLimitMHz            *prometheus.Desc
-	cpuReservationMHz      *prometheus.Desc
-	cpuShares              *prometheus.Desc
-	cpuStolenTotal         *prometheus.Desc
-	cpuTimeTotal           *prometheus.Desc
-	cpuEffectiveVMSpeedMHz *prometheus.Desc
-	hostProcessorSpeedMHz  *prometheus.Desc
+	cpuLimitHertz            *prometheus.Desc
+	cpuReservationHertz      *prometheus.Desc
+	cpuShares                *prometheus.Desc
+	cpuStolenTotal           *prometheus.Desc
+	cpuTimeTotal             *prometheus.Desc
+	cpuEffectiveVMSpeedHertz *prometheus.Desc
+	hostProcessorSpeedHertz  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -111,15 +111,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		errs = append(errs, fmt.Errorf("failed to create VM Memory collector: %w", err))
 	}
 
-	c.cpuLimitMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
-		"The maximum processing power in MHz allowed to the virtual machine. Assigning a CPU Limit ensures that this virtual machine never consumes more than a certain amount of the available processor power. By limiting the amount of processing power consumed, a portion of the processing power becomes available to other virtual machines.",
+	c.cpuLimitHertz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_hertz"),
+		"The maximum processing power in hertz allowed to the virtual machine. Assigning a CPU Limit ensures that this virtual machine never consumes more than a certain amount of the available processor power. By limiting the amount of processing power consumed, a portion of the processing power becomes available to other virtual machines.",
 		nil,
 		nil,
 	)
-	c.cpuReservationMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
-		"The minimum processing power in MHz available to the virtual machine. Assigning a CPU Reservation ensures that even as other virtual machines on the same host consume shared processing power, there is still a certain minimum amount for this virtual machine.",
+	c.cpuReservationHertz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_hertz"),
+		"The minimum processing power in hertz available to the virtual machine. Assigning a CPU Reservation ensures that even as other virtual machines on the same host consume shared processing power, there is still a certain minimum amount for this virtual machine.",
 		nil,
 		nil,
 	)
@@ -141,15 +141,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.cpuEffectiveVMSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_effective_vm_speed_mhz_total"),
-		"The effective speed of the VM’s virtual CPU",
+	c.cpuEffectiveVMSpeedHertz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_effective_vm_speed_hertz"),
+		"The effective speed of the VM’s virtual CPU in hertz",
 		nil,
 		nil,
 	)
-	c.hostProcessorSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
-		"Host Processor speed",
+	c.hostProcessorSpeedHertz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_hertz"),
+		"Host processor speed in hertz",
 		nil,
 		nil,
 	)
@@ -334,15 +334,15 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.cpuLimitMHz,
+		c.cpuLimitHertz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CPULimitMHz,
+		c.perfDataObjectCPU[0].CPULimitMHz*1e6,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.cpuReservationMHz,
+		c.cpuReservationHertz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CPUReservationMHz,
+		c.perfDataObjectCPU[0].CPUReservationMHz*1e6,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -364,15 +364,15 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.cpuEffectiveVMSpeedMHz,
+		c.cpuEffectiveVMSpeedHertz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CPUEffectiveVMSpeedMHz,
+		c.perfDataObjectCPU[0].CPUEffectiveVMSpeedMHz*1e6,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.hostProcessorSpeedMHz,
+		c.hostProcessorSpeedHertz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CPUHostProcessorSpeedMHz,
+		c.perfDataObjectCPU[0].CPUHostProcessorSpeedMHz*1e6,
 	)
 
 	return nil

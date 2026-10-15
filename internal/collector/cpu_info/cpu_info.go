@@ -123,16 +123,16 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 	c.cpuL2CacheSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "l2_cache_size"),
-		"Size of L2 cache per CPU",
+		prometheus.BuildFQName(types.Namespace, Name, "l2_cache_size_bytes"),
+		"Size of L2 cache per CPU in bytes",
 		[]string{
 			"device_id",
 		},
 		nil,
 	)
 	c.cpuL3CacheSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "l3_cache_size"),
-		"Size of L3 cache per CPU",
+		prometheus.BuildFQName(types.Namespace, Name, "l3_cache_size_bytes"),
+		"Size of L3 cache per CPU in bytes",
 		[]string{
 			"device_id",
 		},
@@ -225,14 +225,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuL2CacheSize,
 			prometheus.GaugeValue,
-			float64(processor.L2CacheSize),
+			float64(processor.L2CacheSize)*1024,
 			strings.TrimRight(processor.DeviceID, " "),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuL3CacheSize,
 			prometheus.GaugeValue,
-			float64(processor.L3CacheSize),
+			float64(processor.L3CacheSize)*1024,
 			strings.TrimRight(processor.DeviceID, " "),
 		)
 	}

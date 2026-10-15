@@ -218,8 +218,8 @@ func (c *Collector) buildCluster() error {
 
 func (c *Collector) buildClusterDescriptors() {
 	c.clusterAddEvictDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay"),
-		"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay_seconds"),
+		"Provides access to the cluster's AddEvictDelay property, which is the number of seconds that a new node is delayed after an eviction of another node.",
 		[]string{"name"},
 		nil,
 	)
@@ -254,38 +254,38 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterBlockCacheSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "block_cache_size"),
-		"CSV BlockCache Size in MB.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "block_cache_size_bytes"),
+		"CSV BlockCache size in bytes.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterClusSvcHangTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_hang_timeout"),
-		"Controls how long the cluster network driver waits between Failover Cluster Service heartbeats before it determines that the Failover Cluster Service has stopped responding.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_hang_timeout_seconds"),
+		"Controls how long, in seconds, the cluster network driver waits between Failover Cluster Service heartbeats before it determines that the Failover Cluster Service has stopped responding.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterClusSvcRegroupOpeningTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_opening_timeout"),
-		"Controls how long a node will wait on other nodes in the opening stage before deciding that they failed.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_opening_timeout_seconds"),
+		"Controls how long, in seconds, a node will wait on other nodes in the opening stage before deciding that they failed.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterClusSvcRegroupPruningTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_pruning_timeout"),
-		"Controls how long the membership leader will wait to reach full connectivity between cluster nodes.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_pruning_timeout_seconds"),
+		"Controls how long, in seconds, the membership leader will wait to reach full connectivity between cluster nodes.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterClusSvcRegroupStageTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_stage_timeout"),
-		"Controls how long a node will wait on other nodes in a membership stage before deciding that they failed.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_stage_timeout_seconds"),
+		"Controls how long, in seconds, a node will wait on other nodes in a membership stage before deciding that they failed.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterClusSvcRegroupTickInMilliseconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_tick_in_milliseconds"),
-		"Controls how frequently the membership algorithm is sending periodic membership messages.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_tick_seconds"),
+		"Controls how frequently, in seconds, the membership algorithm is sending periodic membership messages.",
 		[]string{"name"},
 		nil,
 	)
@@ -302,7 +302,7 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterClusterGroupWaitDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_group_wait_delay"),
+		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_group_wait_delay_seconds"),
 		"Maximum time in seconds that a group waits for its preferred node to come online during cluster startup before coming online on a different node.",
 		[]string{"name"},
 		nil,
@@ -314,8 +314,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterClusterLogSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_log_size"),
-		"Controls the maximum size of the cluster log files on each of the nodes.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_log_size_bytes"),
+		"Controls the maximum size, in bytes, of the cluster log files on each of the nodes.",
 		[]string{"name"},
 		nil,
 	)
@@ -326,8 +326,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterCrossSiteDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_site_delay"),
-		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats across sites.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_site_delay_seconds"),
+		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats across sites.",
 		[]string{"name"},
 		nil,
 	)
@@ -338,8 +338,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterCrossSubnetDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_subnet_delay"),
-		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats across subnets.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_subnet_delay_seconds"),
+		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats across subnets.",
 		[]string{"name"},
 		nil,
 	)
@@ -422,14 +422,14 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterGracePeriodTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "grace_period_timeout"),
-		"The grace period timeout in milliseconds.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "grace_period_timeout_seconds"),
+		"The grace period timeout in seconds.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterGroupDependencyTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "group_dependency_timeout"),
-		"The timeout after which a group will be brought online despite unsatisfied dependencies",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "group_dependency_timeout_seconds"),
+		"The timeout in seconds after which a group will be brought online despite unsatisfied dependencies",
 		[]string{"name"},
 		nil,
 	)
@@ -506,8 +506,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterQuarantineDuration = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "quarantine_duration"),
-		"The quarantine period timeout in milliseconds.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "quarantine_duration_seconds"),
+		"The quarantine period timeout in seconds.",
 		[]string{"name"},
 		nil,
 	)
@@ -518,14 +518,14 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterQuorumArbitrationTimeMax = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_max"),
-		"Controls the maximum time necessary to decide the Quorum owner node.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_max_seconds"),
+		"Controls the maximum time, in seconds, necessary to decide the Quorum owner node.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterQuorumArbitrationTimeMin = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_min"),
-		"Controls the minimum time necessary to decide the Quorum owner node.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_min_seconds"),
+		"Controls the minimum time, in seconds, necessary to decide the Quorum owner node.",
 		[]string{"name"},
 		nil,
 	)
@@ -542,13 +542,13 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterRequestReplyTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "request_reply_timeout"),
-		"Controls the request reply time-out period.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "request_reply_timeout_seconds"),
+		"Controls the request reply time-out period in seconds.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterResiliencyDefaultPeriod = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "resiliency_default_period"),
+		prometheus.BuildFQName(types.Namespace, nameCluster, "resiliency_default_period_seconds"),
 		"The default resiliency period, in seconds, for the cluster.",
 		[]string{"name"},
 		nil,
@@ -566,8 +566,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterRootMemoryReserved = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "root_memory_reserved"),
-		"Controls the amount of memory reserved for the parent partition on all cluster nodes.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "root_memory_reserved_bytes"),
+		"Controls the amount of memory, in bytes, reserved for the parent partition on all cluster nodes.",
 		[]string{"name"},
 		nil,
 	)
@@ -590,14 +590,14 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterS2DCacheFlashReservePercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_flash_reserve_percent"),
-		"Percentage of allocated flash space to utilize when caching.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_flash_reserve_ratio"),
+		"Ratio (0-1) of allocated flash space to utilize when caching.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterS2DCachePageSizeKBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_page_size_k_bytes"),
-		"Page size in KB used by S2D cache.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_page_size_bytes"),
+		"Page size in bytes used by S2D cache.",
 		[]string{"name"},
 		nil,
 	)
@@ -608,8 +608,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterS2DIOLatencyThreshold = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "s2dio_latency_threshold"),
-		"The I/O latency threshold for storage spaces direct.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "s2dio_latency_threshold_seconds"),
+		"The I/O latency threshold in seconds for storage spaces direct.",
 		[]string{"name"},
 		nil,
 	)
@@ -620,8 +620,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterSameSubnetDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "same_subnet_delay"),
-		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats on the same subnet.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "same_subnet_delay_seconds"),
+		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats on the same subnet.",
 		[]string{"name"},
 		nil,
 	)
@@ -644,14 +644,14 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterSharedVolumeVssWriterOperationTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "shared_volume_vss_writer_operation_timeout"),
+		prometheus.BuildFQName(types.Namespace, nameCluster, "shared_volume_vss_writer_operation_timeout_seconds"),
 		"CSV VSS Writer operation timeout in seconds.",
 		[]string{"name"},
 		nil,
 	)
 	c.clusterShutdownTimeoutInMinutes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "shutdown_timeout_in_minutes"),
-		"The maximum time in minutes allowed for cluster resources to come offline during cluster service shutdown.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "shutdown_timeout_seconds"),
+		"The maximum time in seconds allowed for cluster resources to come offline during cluster service shutdown.",
 		[]string{"name"},
 		nil,
 	)
@@ -662,7 +662,7 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterWitnessDatabaseWriteTimeout = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_database_write_timeout"),
+		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_database_write_timeout_seconds"),
 		"Controls the maximum time in seconds that a cluster database write to a witness can take before the write is abandoned.",
 		[]string{"name"},
 		nil,
@@ -674,8 +674,8 @@ func (c *Collector) buildClusterDescriptors() {
 		nil,
 	)
 	c.clusterWitnessRestartInterval = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_restart_interval"),
-		"Controls the witness restart interval.",
+		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_restart_interval_seconds"),
+		"Controls the witness restart interval in seconds.",
 		[]string{"name"},
 		nil,
 	)
@@ -723,21 +723,21 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "AutoBalancerLevel", desc: c.clusterAutoBalancerLevel, minBuild: ws2016},
 		{name: "AutoBalancerMode", desc: c.clusterAutoBalancerMode, minBuild: ws2016},
 		{name: "BackupInProgress", desc: c.clusterBackupInProgress},
-		{name: "BlockCacheSize", desc: c.clusterBlockCacheSize},
+		{name: "BlockCacheSize", desc: c.clusterBlockCacheSize, scale: 1 << 20},
 		{name: "ClusSvcHangTimeout", desc: c.clusterClusSvcHangTimeout},
 		{name: "ClusSvcRegroupOpeningTimeout", desc: c.clusterClusSvcRegroupOpeningTimeout, absent: zero},
 		{name: "ClusSvcRegroupPruningTimeout", desc: c.clusterClusSvcRegroupPruningTimeout, absent: zero},
 		{name: "ClusSvcRegroupStageTimeout", desc: c.clusterClusSvcRegroupStageTimeout},
-		{name: "ClusSvcRegroupTickInMilliseconds", desc: c.clusterClusSvcRegroupTickInMilliseconds},
+		{name: "ClusSvcRegroupTickInMilliseconds", desc: c.clusterClusSvcRegroupTickInMilliseconds, scale: 1e-3},
 		{name: "ClusterEnforcedAntiAffinity", desc: c.clusterClusterEnforcedAntiAffinity},
 		{name: "ClusterFunctionalLevel", desc: c.clusterClusterFunctionalLevel, minBuild: ws2016},
 		{name: "ClusterGroupWaitDelay", desc: c.clusterClusterGroupWaitDelay},
 		{name: "ClusterLogLevel", desc: c.clusterClusterLogLevel},
-		{name: "ClusterLogSize", desc: c.clusterClusterLogSize},
+		{name: "ClusterLogSize", desc: c.clusterClusterLogSize, scale: 1 << 20},
 		{name: "ClusterUpgradeVersion", desc: c.clusterClusterUpgradeVersion, minBuild: ws2016},
-		{name: "CrossSiteDelay", desc: c.clusterCrossSiteDelay, minBuild: ws2016},
+		{name: "CrossSiteDelay", desc: c.clusterCrossSiteDelay, scale: 1e-3, minBuild: ws2016},
 		{name: "CrossSiteThreshold", desc: c.clusterCrossSiteThreshold, minBuild: ws2016},
-		{name: "CrossSubnetDelay", desc: c.clusterCrossSubnetDelay},
+		{name: "CrossSubnetDelay", desc: c.clusterCrossSubnetDelay, scale: 1e-3},
 		{name: "CrossSubnetThreshold", desc: c.clusterCrossSubnetThreshold},
 		{name: "CsvBalancer", desc: c.clusterCsvBalancer},
 		{name: "DatabaseReadWriteMode", desc: c.clusterDatabaseReadWriteMode},
@@ -748,7 +748,7 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "EnableSharedVolumes", desc: c.clusterEnableSharedVolumes},
 		{name: "FixQuorum", desc: c.clusterFixQuorum},
 		{name: "GracePeriodEnabled", desc: c.clusterGracePeriodEnabled, minBuild: ws2016, absent: zero},
-		{name: "GracePeriodTimeout", desc: c.clusterGracePeriodTimeout, minBuild: ws2016, absent: zero},
+		{name: "GracePeriodTimeout", desc: c.clusterGracePeriodTimeout, scale: 1e-3, minBuild: ws2016, absent: zero},
 		{name: "GroupDependencyTimeout", desc: c.clusterGroupDependencyTimeout, minBuild: ws2016},
 		{name: "HangRecoveryAction", desc: c.clusterHangRecoveryAction},
 		{name: "IgnorePersistentStateOnStartup", desc: c.clusterIgnorePersistentStateOnStartup},
@@ -771,20 +771,20 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "ResiliencyDefaultPeriod", desc: c.clusterResiliencyDefaultPeriod, minBuild: ws2016},
 		{name: "ResiliencyLevel", desc: c.clusterResiliencyLevel, minBuild: ws2016},
 		{name: "ResourceDllDeadlockPeriod", desc: c.clusterResourceDllDeadlockPeriod, absent: zero},
-		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved, absent: zero},
+		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved, scale: 1 << 20, absent: zero},
 		{name: "RouteHistoryLength", desc: c.clusterRouteHistoryLength},
 		{name: "S2DBusTypes", desc: c.clusterS2DBusTypes, minBuild: ws2016},
 		{name: "S2DCacheDesiredState", desc: c.clusterS2DCacheDesiredState, minBuild: ws2016},
-		{name: "S2DCacheFlashReservePercent", desc: c.clusterS2DCacheFlashReservePercent, minBuild: ws2016},
-		{name: "S2DCachePageSizeKBytes", desc: c.clusterS2DCachePageSizeKBytes, minBuild: ws2016},
+		{name: "S2DCacheFlashReservePercent", desc: c.clusterS2DCacheFlashReservePercent, scale: 1e-2, minBuild: ws2016},
+		{name: "S2DCachePageSizeKBytes", desc: c.clusterS2DCachePageSizeKBytes, scale: 1 << 10, minBuild: ws2016},
 		{name: "S2DEnabled", desc: c.clusterS2DEnabled, minBuild: ws2016},
-		{name: "S2DIOLatencyThreshold", desc: c.clusterS2DIOLatencyThreshold, minBuild: ws2016},
+		{name: "S2DIOLatencyThreshold", desc: c.clusterS2DIOLatencyThreshold, scale: 1e-3, minBuild: ws2016},
 		{name: "S2DOptimizations", desc: c.clusterS2DOptimizations, minBuild: ws2016},
-		{name: "SameSubnetDelay", desc: c.clusterSameSubnetDelay},
+		{name: "SameSubnetDelay", desc: c.clusterSameSubnetDelay, scale: 1e-3},
 		{name: "SameSubnetThreshold", desc: c.clusterSameSubnetThreshold},
 		{name: "SecurityLevel", desc: c.clusterSecurityLevel},
 		{name: "SharedVolumeVssWriterOperationTimeout", desc: c.clusterSharedVolumeVssWriterOperationTimeout},
-		{name: "ShutdownTimeoutInMinutes", desc: c.clusterShutdownTimeoutInMinutes},
+		{name: "ShutdownTimeoutInMinutes", desc: c.clusterShutdownTimeoutInMinutes, scale: 60},
 		{name: "UseClientAccessNetworksForSharedVolumes", desc: c.clusterUseClientAccessNetworksForSharedVolumes},
 		{name: "WitnessDatabaseWriteTimeout", desc: c.clusterWitnessDatabaseWriteTimeout},
 		{name: "WitnessDynamicWeight", desc: c.clusterWitnessDynamicWeight},

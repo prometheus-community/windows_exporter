@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"testing"
 	"time"
 
@@ -133,7 +134,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 	}
 
 	expected := map[string]float64{
-		"characteristics": 1, "deadlock_timeout": 2, "embedded_failure_action": 3, "flags": 4, "is_alive_poll_interval": 4294967295, "looks_alive_poll_interval": 6, "monitor_process_id": 7, "pending_timeout": 8, "resource_class": 1, "restart_action": 10, "restart_delay": 11, "restart_period": 12, "restart_threshold": 13, "retry_period_on_failure": 14, "state": 4294967295, "subclass": 0,
+		"characteristics": 1, "deadlock_timeout_seconds": 0.002, "embedded_failure_action": 3, "flags": 4, "is_alive_poll_interval_seconds": 4294967.295, "looks_alive_poll_interval_seconds": 0.006, "monitor_process_id": 7, "pending_timeout_seconds": 0.008, "resource_class": 1, "restart_action": 10, "restart_delay_seconds": 0.011, "restart_period_seconds": 0.012, "restart_threshold": 13, "retry_period_on_failure_seconds": 0.014, "state": 4294967295, "subclass": 0,
 	}
 
 	if len(families) != 17 {
@@ -147,7 +148,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 		}
 
 		metric := family.GetMetric()[0]
-		if metric.GetGauge().GetValue() != value {
+		if math.Abs(metric.GetGauge().GetValue()-value) > 1e-9*math.Max(1, math.Abs(value)) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
@@ -189,7 +190,7 @@ func TestResourcePartialResultsAndJoinedErrors(t *testing.T) {
 		t.Fatalf("lost joined cause: %v", err)
 	}
 
-	if _, exists := families["windows_mscluster_resource_deadlock_timeout"]; exists {
+	if _, exists := families["windows_mscluster_resource_deadlock_timeout_seconds"]; exists {
 		t.Fatal("published missing field as zero")
 	}
 

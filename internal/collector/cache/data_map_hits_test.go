@@ -62,12 +62,11 @@ func TestDataMapHitCounterWireFormats(t *testing.T) {
 			require.Contains(t, openMetrics.String(), "# TYPE windows_cache_data_map_hits counter")
 			require.Contains(t, openMetrics.String(), "windows_cache_data_map_hits_total 1000")
 		case "windows_cache_data_map_hits_percent":
-			found[family.GetName()] = true
-			require.InDelta(t, 1000, family.GetMetric()[0].GetGauge().GetValue(), 1e-9)
+			t.Fatalf("removed metric %s is still exported", family.GetName())
 		}
 	}
 
-	require.Len(t, found, 2)
+	require.Len(t, found, 1)
 }
 
 type dataMapFixture struct{}

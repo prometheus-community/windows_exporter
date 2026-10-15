@@ -104,7 +104,7 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsConnectionReset = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_connection_resets"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_connection_resets_total"),
 		"(GeneralStatistics.ConnectionReset)",
 		[]string{"mssql_instance"},
 		nil,
@@ -128,13 +128,13 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsLogins = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_logins"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_logins_total"),
 		"(GeneralStatistics.Logins)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsLogouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_logouts"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_logouts_total"),
 		"(GeneralStatistics.Logouts)",
 		[]string{"mssql_instance"},
 		nil,
@@ -146,7 +146,7 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsNonAtomicYieldRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_non_atomic_yields"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_non_atomic_yields_total"),
 		"(GeneralStatistics.Nonatomicyields)",
 		[]string{"mssql_instance"},
 		nil,
@@ -212,7 +212,7 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsTempTablesCreationRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_temp_tables_creations"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_temp_tables_creations_total"),
 		"(GeneralStatistics.TempTablesCreations)",
 		[]string{"mssql_instance"},
 		nil,

@@ -134,7 +134,7 @@ func TestResourceGroupNativeMetricContract(t *testing.T) {
 	}
 
 	expected := map[string]float64{
-		"auto_failback_type": 1, "characteristics": 2, "cold_start_setting": 3, "default_owner": 4294967295, "failback_window_end": -1, "failback_window_start": 5, "failover_period": 6, "failover_threshold": 4294967294, "flags": 1, "group_type": 9999, "priority": 3000, "resiliency_period": 240, "state": 4294967295,
+		"auto_failback_type": 1, "characteristics": 2, "cold_start_setting": 3, "default_owner": 4294967295, "failback_window_end": -1, "failback_window_start": 5, "failover_period_seconds": 21600, "failover_threshold": 4294967294, "flags": 1, "group_type": 9999, "priority": 3000, "resiliency_period_seconds": 240, "state": 4294967295,
 	}
 
 	if len(families) != len(expected)+1 {

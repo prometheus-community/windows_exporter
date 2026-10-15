@@ -185,7 +185,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.gpuEngineRunningTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "engine_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "engine_time_seconds_total"),
 		"Total running time of the GPU engine in seconds.",
 		[]string{"process_id", "luid", "device_id", "phys", "eng", "engtype"},
 		nil,

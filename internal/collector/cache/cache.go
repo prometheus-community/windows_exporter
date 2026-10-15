@@ -53,7 +53,6 @@ type Collector struct {
 	copyReadsTotal              *prometheus.Desc
 	dataFlushesTotal            *prometheus.Desc
 	dataFlushPagesTotal         *prometheus.Desc
-	dataMapHitsPercent          *prometheus.Desc
 	dataMapHitsTotal            *prometheus.Desc
 	dataMapPinsTotal            *prometheus.Desc
 	dataMapsTotal               *prometheus.Desc
@@ -163,12 +162,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "data_map_hits_total"),
 		"Number of data-map requests that hit the cache.",
 		nil, nil,
-	)
-	c.dataMapHitsPercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "data_map_hits_percent"),
-		"Deprecated: raw data-map hit count, not a percentage. Use windows_cache_data_map_hits_total.",
-		nil,
-		nil,
 	)
 	c.dataMapPinsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "data_map_pins_total"),
@@ -361,12 +354,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapHitsTotal,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DataMapHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapHitsPercent,
-		prometheus.GaugeValue,
 		c.perfDataObject[0].DataMapHitsTotal,
 	)
 

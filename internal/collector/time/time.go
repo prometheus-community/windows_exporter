@@ -167,8 +167,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.clockFrequencyAdjustmentPPB = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb"),
-		"This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.",
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ratio"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time as a ratio. Windows reports it in Parts Per Billion (PPB): an adjustment of 1e-9 implies the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.",
 		nil,
 		nil,
 	)
@@ -316,7 +316,7 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.clockFrequencyAdjustmentPPB,
 			prometheus.GaugeValue,
-			c.perfDataObject[0].ClockFrequencyAdjustmentPPB,
+			c.perfDataObject[0].ClockFrequencyAdjustmentPPB*1e-9,
 		)
 	}
 

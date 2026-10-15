@@ -95,8 +95,8 @@ func (c *Collector) describeClrMemory() {
 		nil,
 	)
 	c.timeInGC = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_gc_time_percent"),
-		"Displays the percentage of time that was spent performing a garbage collection in the last sample.",
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_gc_time_ratio"),
+		"Displays the ratio (0-1) of elapsed time spent performing a garbage collection since the end of the last garbage collection cycle.",
 		[]string{"process", "process_id"},
 		nil,
 	)
@@ -299,7 +299,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, scrape *labelc
 		ch <- scrape.MustNewConstMetric(
 			c.timeInGC,
 			prometheus.GaugeValue,
-			100*process.PercentTimeinGC/process.PercentTimeinGC_base,
+			process.PercentTimeinGC/process.PercentTimeinGC_base,
 			process.Name,
 			strconv.FormatUint(uint64(process.ProcessID), 10),
 		)

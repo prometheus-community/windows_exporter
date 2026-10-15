@@ -59,12 +59,12 @@ func TestClrCounterPaths(t *testing.T) {
 	}{
 		{reflect.TypeFor[perfDataClrExceptions](), []string{"# of Exceps Thrown", "# of Filters / sec", "# of Finallys / sec", "Throw To Catch Depth / sec"}},
 		{reflect.TypeFor[perfDataClrInterop](), []string{"# of CCWs", "# of Stubs", "# of marshalling"}},
-		{reflect.TypeFor[perfDataClrJIT](), []string{"# of Methods Jitted", "% Time in Jit", "Standard Jit Failures", "Total # of IL Bytes Jitted"}},
+		{reflect.TypeFor[perfDataClrJIT](), []string{"# of Methods Jitted", "% Time in Jit", "% Time in Jit,secondvalue", "Standard Jit Failures", "Total # of IL Bytes Jitted"}},
 		{reflect.TypeFor[perfDataClrLoading](), []string{"Bytes in Loader Heap", "Current appdomains", "Current Assemblies", "Current Classes Loaded", "Total Appdomains", "Total appdomains unloaded", "Total Assemblies", "Total Classes Loaded", "Total # of Load Failures"}},
 		{reflect.TypeFor[perfDataClrLocksAndThreads](), []string{"Current Queue Length", "# of current logical Threads", "# of current physical Threads", "# of current recognized threads", "# of total recognized threads", "Queue Length Peak", "Total # of Contentions"}},
 		{reflect.TypeFor[perfDataClrMemory](), []string{"Allocated Bytes/sec", "Finalization Survivors", "Gen 0 heap size", "Gen 0 Promoted Bytes/Sec", "Gen 1 heap size", "Gen 1 Promoted Bytes/Sec", "Gen 2 heap size", "Large Object Heap size", "# GC Handles", "# Gen 0 Collections", "# Gen 1 Collections", "# Gen 2 Collections", "# Induced GC", "# of Pinned Objects", "# of Sink Blocks in use", "# Total committed Bytes", "# Total reserved Bytes", "% Time in GC", "% Time in GC,secondvalue", "Process ID"}},
 		{reflect.TypeFor[perfDataClrRemoting](), []string{"Channels", "Context-Bound Classes Loaded", "Context-Bound Objects Alloc / sec", "Context Proxies", "Contexts", "Total Remote Calls"}},
-		{reflect.TypeFor[perfDataClrSecurity](), []string{"# Link Time Checks", "% Time in RT checks", "Stack Walk Depth", "Total Runtime Checks"}},
+		{reflect.TypeFor[perfDataClrSecurity](), []string{"# Link Time Checks", "% Time in RT checks", "% Time in RT checks,secondvalue", "Stack Walk Depth", "Total Runtime Checks"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.rowType.Name(), func(t *testing.T) {

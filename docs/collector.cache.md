@@ -27,7 +27,6 @@ Name | Description | Type | Labels
 `windows_cache_data_flushes_total`              | Number of times the file system cache has flushed its contents to disk as the result of a request to flush or to satisfy a write-through file write request. | counter | None
 `windows_cache_data_flush_pages_total`          | Number of pages the file system cache has flushed to disk as a result of a request to flush or to satisfy a write-through file write request.  | counter | None
 `windows_cache_data_map_hits_total`             | Number of data maps in the file system cache that could be resolved without having to retrieve a page from the disk, because the page was already in physical memory. | counter | None
-`windows_cache_data_map_hits_percent`           | Deprecated: raw data-map hit count, not a percentage. Use `windows_cache_data_map_hits_total`. | gauge | None
 `windows_cache_data_map_pins_total`             | Number of data maps in the file system cache that resulted in pinning a page in main memory, an action usually preparatory to writing to the file on disk. | counter | None
 `windows_cache_data_maps_total`                 | Number of times that a file system such as NTFS, maps a page of a file into the file system cache to read the page. | counter | None
 `windows_cache_dirty_pages`                     | Number of dirty pages on the system cache. | gauge | None
@@ -47,8 +46,6 @@ Name | Description | Type | Labels
 `windows_cache_sync_fast_reads_total`           | Number of reads from the file system cache that bypass the installed file system and retrieve the data directly from the cache. If the data is not in the cache, the request (application program call) will wait until the data has been retrieved from disk. | counter | None
 `windows_cache_sync_mdl_reads_total`            | Number of reads from the file system cache that use a Memory Descriptor List (MDL) to access the pages. If the accessed page(s) are not in main memory, the caller will wait for the pages to fault in from the disk. | counter | None
 `windows_cache_sync_pin_reads_total`            | Number of reads into the file system cache preparatory to writing the data back to disk. The file system will not regain control until the page is pinned in the file system cache, in particular if the disk must be accessed to retrieve the page. | counter | None
-
-`windows_cache_data_map_hits_percent` is retained as a deprecated gauge exposing the same raw hit count as `windows_cache_data_map_hits_total`. It is not a percentage and can exceed 100. Use the hit-total counter for new queries.
 
 ### Example metric
 Percentage of copy reads that hit the cache

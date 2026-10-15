@@ -32,8 +32,8 @@ If the endpoint is not available, for example on hosts without Kubernetes, the H
 |------------------------------------------------------------|-----------------------------------------------------|---------|------------------------------------------------------------|
 | `windows_container_available`                              | Available                                           | gauge   | `container_id`,`namespace`,`pod`,`container`,`hostprocess` |
 | `windows_container_count`                                  | Number of running HCS containers                    | gauge   | None                                                       |
-| `windows_container_cpu_usage_seconds_kernelmode`           | Runtime in Kernel mode in Seconds                   | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_cpu_usage_seconds_usermode`             | Runtime in User mode in Seconds                     | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_kernelmode_seconds_total`           | Runtime in Kernel mode in Seconds                   | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_usermode_seconds_total`             | Runtime in User mode in Seconds                     | counter | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_cpu_usage_seconds_total`                | Total Runtime in Seconds                            | counter | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_memory_page_faults_total`               | Total number of page faults (HostProcess only)      | counter | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_memory_usage_commit_bytes`              | Memory Usage Commit Bytes                           | gauge   | `container_id`,`namespace`,`pod`,`container`               |

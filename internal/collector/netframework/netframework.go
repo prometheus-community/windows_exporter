@@ -25,7 +25,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
@@ -33,7 +32,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sys/windows"
 )
 
 type perfCollector[T any] interface {
@@ -77,11 +75,10 @@ type Collector struct {
 	// labels keeps the label pairs of the series of the last scrape. The
 	// counters change on every scrape, but their process labels stay the
 	// same while the process runs.
-	labels        labelcache.Cache
-	config        Config
-	logger        *slog.Logger
-	perfFrequency float64
-	closeFns      []func()
+	labels   labelcache.Cache
+	config   Config
+	logger   *slog.Logger
+	closeFns []func()
 	// perfQuery samples the counters of all enabled sub-collectors at once.
 	// The .NET CLR counter provider serves one query at a time and walks
 	// every .NET process for each, so separate queries wait for each other.
@@ -226,16 +223,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	c.logger = logger
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrJIT) || slices.Contains(c.config.CollectorsEnabled, collectorClrSecurity) {
-		var frequency int64
-
-		ret, _, err := windows.NewLazySystemDLL("kernel32.dll").NewProc("QueryPerformanceFrequency").Call(uintptr(unsafe.Pointer(&frequency)))
-		if ret == 0 || frequency <= 0 {
-			return fmt.Errorf("QueryPerformanceFrequency: %w", err)
-		}
-
-		c.perfFrequency = float64(frequency)
-	}
 
 	var err error
 

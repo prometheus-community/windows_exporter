@@ -92,7 +92,7 @@ func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 		nil,
 	)
 	c.virtualStorageDeviceReadBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_bytes_read"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_read_bytes_total"),
 		"Represents the total number of bytes that have been read on this virtual device.",
 		[]string{"device"},
 		nil,
@@ -104,7 +104,7 @@ func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 		nil,
 	)
 	c.virtualStorageDeviceWriteBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_bytes_written"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_written_bytes_total"),
 		"Represents the total number of bytes that have been written on this virtual device.",
 		[]string{"device"},
 		nil,

@@ -50,7 +50,7 @@ Join on `unique_id` to restrict other pool metrics to concrete pools, as shown i
 | `windows_storage_spaces_virtual_disk_size_bytes`                 | Total size of the virtual disk in bytes                                                                                | gauge | `name`, `unique_id` |
 | `windows_storage_spaces_virtual_disk_allocated_size_bytes`       | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
 | `windows_storage_spaces_virtual_disk_footprint_on_pool_bytes`    | Physical storage consumed by the virtual disk on the storage pool in bytes                                             | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_storage_efficiency_percent` | Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100), omitted while FootprintOnPool is 0              | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_storage_efficiency_ratio`   | Storage efficiency ratio (AllocatedSize / FootprintOnPool), omitted while FootprintOnPool is 0                          | gauge | `name`, `unique_id` |
 
 ### Example metric
 
@@ -72,7 +72,7 @@ Storage pool usage in percent, excluding the primordial pool
 
 Find virtual disks with low storage efficiency (over-provisioned)
 ```
-windows_storage_spaces_virtual_disk_storage_efficiency_percent < 50
+windows_storage_spaces_virtual_disk_storage_efficiency_ratio < 0.5
 ```
 
 Calculate total virtual disk capacity vs physical usage

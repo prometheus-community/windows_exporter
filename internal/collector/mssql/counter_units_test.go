@@ -156,7 +156,7 @@ func TestCounterUnitConversions(t *testing.T) {
 	gauge := dto.MetricType_GAUGE
 
 	want := map[string]wantMetric{
-		"windows_mssql_bufman_read_ahead_issuing_seconds": {counter, 882e-6},
+		"windows_mssql_bufman_read_ahead_issuing_seconds_total": {counter, 882e-6},
 
 		"windows_mssql_databases_log_flush_wait_seconds_total":                   {counter, 0.004},
 		"windows_mssql_databases_log_flush_write_seconds_total":                  {counter, 0.003},
@@ -275,7 +275,7 @@ func TestMetricTypesMatchCounterTypes(t *testing.T) {
 	waitStats := c.waitStatsPerfDataCollectors[instance].MetricType
 
 	checks := []check{
-		{"windows_mssql_bufman_read_ahead_issuing_seconds", "Readahead time/sec", false, bufMan},
+		{"windows_mssql_bufman_read_ahead_issuing_seconds_total", "Readahead time/sec", false, bufMan},
 		{"windows_mssql_databases_log_flush_wait_seconds_total", "Log Flush Wait Time", false, databases},
 		{"windows_mssql_databases_log_flush_write_seconds_total", "Log Flush Write Time (ms)", false, databases},
 		{"windows_mssql_databases_log_growths_total", "Log Growths", true, databases},

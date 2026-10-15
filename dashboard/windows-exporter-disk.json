@@ -2349,7 +2349,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (name) (windows_storage_spaces_virtual_disk_storage_efficiency_percent{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (name) (windows_storage_spaces_virtual_disk_storage_efficiency_ratio{job=~\"$job\", instance=\"$instance\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -2495,7 +2495,7 @@
                                         "properties": [
                                             {
                                                 "id": "unit",
-                                                "value": "percent"
+                                                "value": "percentunit"
                                             },
                                             {
                                                 "id": "decimals",

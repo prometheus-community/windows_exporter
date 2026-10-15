@@ -526,7 +526,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "avg(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -1391,7 +1391,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "avg(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "average",
                                                 "range": true
@@ -1413,7 +1413,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "max(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "maximum",
                                                 "range": true
@@ -1435,7 +1435,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"}) * 1e6",
+                                                "expr": "avg(windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "nominal",
                                                 "range": true

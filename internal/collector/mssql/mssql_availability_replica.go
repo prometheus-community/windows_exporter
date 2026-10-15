@@ -71,55 +71,55 @@ func (c *Collector) buildAvailabilityReplica() error {
 
 	// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
 	c.availReplicaBytesReceivedFromReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_received_from_replica_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_received_from_replica_bytes_total"),
 		"(AvailabilityReplica.BytesReceivedfromReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaBytesSentToReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_replica_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_replica_bytes_total"),
 		"(AvailabilityReplica.BytesSenttoReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaBytesSentToTransport = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_transport_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_transport_bytes_total"),
 		"(AvailabilityReplica.BytesSenttoTransport)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaFlowControl = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_initiated_flow_controls"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_initiated_flow_controls_total"),
 		"(AvailabilityReplica.FlowControl)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaFlowControlTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_flow_control_wait_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_flow_control_wait_seconds_total"),
 		"(AvailabilityReplica.FlowControlTimems)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaReceivesFromReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_receives_from_replica"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_receives_from_replica_total"),
 		"(AvailabilityReplica.ReceivesfromReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaResentMessages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_resent_messages"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_resent_messages_total"),
 		"(AvailabilityReplica.ResentMessages)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaSendsToReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_replica"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_replica_total"),
 		"(AvailabilityReplica.SendstoReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaSendsToTransport = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_transport"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_transport_total"),
 		"(AvailabilityReplica.SendstoTransport)",
 		[]string{"mssql_instance", "replica"},
 		nil,
