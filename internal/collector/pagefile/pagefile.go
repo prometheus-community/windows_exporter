@@ -20,7 +20,6 @@ package pagefile
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -42,6 +41,7 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
@@ -77,9 +77,11 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	c.pagingLimitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "limit_bytes"),
-		"Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files",
+		"Current size of the paging file in bytes",
 		[]string{"file"},
 		nil,
 	)
@@ -93,7 +95,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Paging File", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Paging File", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Paging File collector: %w", err)
 	}
@@ -114,31 +116,42 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return err
 	}
 
-	for _, data := range c.perfDataObject {
-		fileString := strings.ReplaceAll(data.Name, `\??\`, "")
-		file, err := os.Stat(fileString)
+	c.collectPagingFiles(ch, c.perfDataObject, float64(gpi.PageSize))
 
-		var fileSize float64
+	return nil
+}
 
-		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
-		if err == nil {
-			fileSize = float64(file.Size())
+// collectPagingFiles publishes the size and free space of each paging file.
+// Both come from "% Usage": its raw value is the number of pages in use and its
+// base is the size of the paging file in pages.
+func (c *Collector) collectPagingFiles(ch chan<- prometheus.Metric, data []perfDataCounterValues, pageSize float64) {
+	for _, file := range data {
+		// A paging file without a size has no valid sample. Publishing it would
+		// report a size of 0 and a negative free space.
+		if file.UsageBase <= 0 || file.Usage < 0 || file.Usage > file.UsageBase {
+			c.logger.Debug("skipping paging file without a valid size",
+				slog.String("file", file.Name),
+				slog.Float64("used_pages", file.Usage),
+				slog.Float64("size_pages", file.UsageBase),
+			)
+
+			continue
 		}
+
+		fileName := strings.ReplaceAll(file.Name, `\??\`, "")
 
 		ch <- prometheus.MustNewConstMetric(
 			c.pagingFreeBytes,
 			prometheus.GaugeValue,
-			fileSize-(data.Usage*float64(gpi.PageSize)),
-			fileString,
+			(file.UsageBase-file.Usage)*pageSize,
+			fileName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.pagingLimitBytes,
 			prometheus.GaugeValue,
-			fileSize,
-			fileString,
+			file.UsageBase*pageSize,
+			fileName,
 		)
 	}
-
-	return nil
 }

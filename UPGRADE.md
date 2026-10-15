@@ -279,6 +279,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
 - `windows_netframework_clrmemory_gc_time_percent` no longer overflows, and it is left out when Windows reports no base value. The `netframework` collector now reads the CLR counters through PDH instead of WMI; names, labels and types are unchanged.
 - The IIS URI cache flush and kernel cache item metrics read the right Windows counters, and the metadata cache hit metrics are no longer always `0`.
+- `windows_pagefile_limit_bytes` and `windows_pagefile_free_bytes` read the paging file size from the `Paging File` counter instead of the file system. In 0.31 a paging file that could not be read reported a size of `0` and a negative free space; it is now left out.
 - `windows_logical_disk_readonly`, the FSRM quota template information, the SMTP general failure totals and the Hyper-V root partition interrupt mappings were documented but never exported. They are exported now.
 
 ### performancecounter and PDH-based collectors
