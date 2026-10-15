@@ -338,7 +338,7 @@ func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
 	}
 
 	c.logger.Debug("detected MSSQL instances",
-		slog.String("instances", fmt.Sprintf("%#v", sqlInstances)),
+		slog.Any("instances", sqlInstances),
 	)
 
 	return sqlInstances, nil
