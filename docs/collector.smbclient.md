@@ -35,6 +35,11 @@ Name | Description | Type | Labels
 `windows_smbclient_write_requests_total` | The write requests on this share | counter | `server`, `share`|
 `windows_smbclient_read_seconds_total` | Seconds waiting for read requests on this share | counter | `server`, `share`|
 `windows_smbclient_write_seconds_total` | Seconds waiting for write requests on this share | counter | `server`, `share`|
+
+Windows keeps several raw counters at 32 bits: the time sums behind `read_seconds_total`, `write_seconds_total` and `request_seconds_total`, and the counts behind `requests_total`, `read_requests_total`, `write_requests_total`, `metadata_requests_total`, `stalls_total`, `turbo_io_reads_total`, `turbo_io_writes_total`, `read_requests_via_smbdirect_total` and `write_requests_via_smbdirect_total`. The collector extends them past 2^32 per share, so they don't drop back to a low value when the raw counter wraps. The extended value starts at the raw value and follows the raw counter when the share reconnects.
+
+The time sums wrap after 2^32 ticks, about 430 seconds of summed request time, and that sum grows by one second per second for each outstanding request. The collector can only detect one wrap between two scrapes, so with about 7 or more requests outstanding on average over a 60 second scrape interval, the `*_seconds_total` values undercount. Scrape more often on busy shares.
+
 ## Useful queries
 ```
 # Average request queue length (includes read and write).

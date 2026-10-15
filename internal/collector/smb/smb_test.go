@@ -23,6 +23,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -31,5 +33,15 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, smb.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, smb.Name, "windows_smb_server_shares_received_bytes_total", prometheus.Labels{"share": `\\*\CIShare`})
+	if testutils.RequireFixtureMetric(t, metrics, smb.Name, "windows_smb_server_shares_received_bytes_total", prometheus.Labels{"share": `\\*\CIShare`}) == nil {
+		return
+	}
+
+	for _, name := range []string{
+		"windows_smb_server_shares_current_open_file_count",
+		"windows_smb_server_shares_tree_connect_count",
+	} {
+		require.Contains(t, metrics, name)
+		require.Equal(t, dto.MetricType_GAUGE, metrics[name].GetType(), name)
+	}
 }

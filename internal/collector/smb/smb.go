@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,6 +43,10 @@ type Collector struct {
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
+	// counters32 extends the 32-bit request counters of each share.
+	counters32 map[string]*shareCounters32
+	generation uint64
+
 	treeConnectCount     *prometheus.Desc
 	currentOpenFileCount *prometheus.Desc
 	receivedBytes        *prometheus.Desc
@@ -50,6 +55,24 @@ type Collector struct {
 	metadataRequests     *prometheus.Desc
 	sentBytes            *prometheus.Desc
 	filesOpened          *prometheus.Desc
+}
+
+const (
+	// restartBelow treats a drop of a request count from below 2^31 as a
+	// share restart: a wrap from there needs 2^31 requests between two scrapes.
+	restartBelow = 1 << 31
+
+	staleGenerations = 3
+)
+
+// shareCounters32 holds the 32-bit counters of one share, extended beyond
+// 2^32, and the 64-bit byte counters that show a restart of the share.
+type shareCounters32 struct {
+	generation    uint64
+	receivedBytes float64
+	sentBytes     float64
+	readRequests  utils.Counter32
+	writeRequests utils.Counter32
 }
 
 func New(config *Config) *Collector {
@@ -98,19 +121,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.writeRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_total"),
 		"Writes requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.readRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_total"),
 		"Read requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.metadataRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_total"),
 		"Metadata requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
@@ -122,11 +145,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.filesOpened = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_files_opened_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_files_opened_total"),
 		"Files opened on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
+
+	c.counters32 = make(map[string]*shareCounters32)
 
 	var err error
 
@@ -145,17 +170,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect SMB Server Shares metrics: %w", err)
 	}
 
+	c.generation++
+
 	for _, data := range c.perfDataObject {
+		c.extendCounters32(&data)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.currentOpenFileCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.CurrentOpenFileCount,
 			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.treeConnectCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.TreeConnectCount,
 			data.Name,
 		)
@@ -203,5 +232,42 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	c.pruneCounters32()
+
 	return nil
+}
+
+// pruneCounters32 drops the state of shares missing from the last
+// staleGenerations scrapes. A share missing from a single sample keeps its
+// state, so its extended counters don't fall back to the raw value.
+func (c *Collector) pruneCounters32() {
+	for name, counters := range c.counters32 {
+		if c.generation-counters.generation >= staleGenerations {
+			delete(c.counters32, name)
+		}
+	}
+}
+
+// extendCounters32 replaces the raw 32-bit request counters with values that
+// keep counting past 2^32. Read Requests/sec and Write Requests/sec are
+// PERF_COUNTER_COUNTER (32-bit), the byte counters are 64-bit. A drop of a
+// byte counter shows that the share restarted.
+func (c *Collector) extendCounters32(data *perfDataCounterValues) {
+	counters, ok := c.counters32[data.Name]
+	if !ok {
+		counters = &shareCounters32{
+			readRequests:  utils.NewCounter32(data.ReadRequests, restartBelow),
+			writeRequests: utils.NewCounter32(data.WriteRequests, restartBelow),
+		}
+		c.counters32[data.Name] = counters
+	}
+
+	reset := data.ReceivedBytes < counters.receivedBytes || data.SentBytes < counters.sentBytes
+
+	counters.generation = c.generation
+	counters.receivedBytes = data.ReceivedBytes
+	counters.sentBytes = data.SentBytes
+
+	data.ReadRequests = counters.readRequests.Update(data.ReadRequests, reset)
+	data.WriteRequests = counters.writeRequests.Update(data.WriteRequests, reset)
 }

@@ -747,7 +747,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_smb_server_shares_read_requests_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_smb_server_shares_read_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{share}} read",
                                                 "range": true
@@ -769,7 +769,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_smb_server_shares_write_requests_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_smb_server_shares_write_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{share}} write",
                                                 "range": true
@@ -791,7 +791,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_smb_server_shares_metadata_requests_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_smb_server_shares_metadata_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{share}} metadata",
                                                 "range": true
@@ -1136,7 +1136,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_smb_server_shares_files_opened_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_smb_server_shares_files_opened_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{share}}",
                                                 "range": true

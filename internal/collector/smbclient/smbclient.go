@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -41,9 +42,17 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
+
+	// unexpectedInstances holds instance names already logged as unparsable.
+	unexpectedInstances map[string]struct{}
+
+	// counters32 extends the 32-bit counters of each share.
+	counters32 map[string]*shareCounters32
+	generation uint64
 
 	readBytesTotal                            *prometheus.Desc
 	readBytesTransmittedViaSMBDirectTotal     *prometheus.Desc
@@ -67,6 +76,58 @@ type Collector struct {
 	metadataRequestsTotal *prometheus.Desc
 	requestQueueSecsTotal *prometheus.Desc
 	requestSecs           *prometheus.Desc
+}
+
+// shareCounters32 holds the 32-bit counters of one share, extended beyond
+// 2^32, and the 64-bit byte counter that shows a reconnect of the share.
+type shareCounters32 struct {
+	generation uint64
+	restart    [numRestartSignals]float64
+	counters   [numTimers32 + numCounts32]utils.Counter32
+}
+
+const (
+	numTimers32       = 3
+	numCounts32       = 9
+	numRestartSignals = 4
+
+	// restartBelow treats a drop of a request count from below 2^31 as a
+	// share restart: a wrap from there needs 2^31 requests between two
+	// scrapes. Timer sums grow by 10^7 per second for each outstanding
+	// request, so they can wrap from anywhere and don't use it.
+	restartBelow = 1 << 31
+
+	staleGenerations = 3
+)
+
+// restartSignals returns 64-bit counters that only drop when the share
+// restarts, for example after an idle disconnect and a reconnect.
+func restartSignals(data *perfDataCounterValues) [numRestartSignals]float64 {
+	return [numRestartSignals]float64{
+		data.DataBytesPerSec,
+		data.ReadBytesPerSec,
+		data.WriteBytesPerSec,
+		data.AvgDataQueueLength,
+	}
+}
+
+// fields32 returns the 32-bit counters: first the PERF_AVERAGE_TIMER
+// numerators, then the request counters (PERF_COUNTER_COUNTER).
+func fields32(data *perfDataCounterValues) [numTimers32 + numCounts32]*float64 {
+	return [numTimers32 + numCounts32]*float64{
+		&data.AvgSecPerRead,
+		&data.AvgSecPerWrite,
+		&data.AvgSecPerDataRequest,
+		&data.CreditStallsPerSec,
+		&data.DataRequestsPerSec,
+		&data.MetadataRequestsPerSec,
+		&data.ReadRequestsTransmittedViaSMBDirectPerSec,
+		&data.ReadRequestsPerSec,
+		&data.TurboIOReadsPerSec,
+		&data.TurboIOWritesPerSec,
+		&data.WriteRequestsTransmittedViaSMBDirectPerSec,
+		&data.WriteRequestsPerSec,
+	}
 }
 
 func New(config *Config) *Collector {
@@ -96,6 +157,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+	c.unexpectedInstances = make(map[string]struct{})
+	c.counters32 = make(map[string]*shareCounters32)
+
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -193,7 +258,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
 	}
@@ -208,14 +273,23 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect SMB Client Shares metrics: %w", err)
 	}
 
+	c.generation++
+
 	for _, data := range c.perfDataObject {
-		parsed := strings.FieldsFunc(data.Name, func(r rune) bool { return r == '\\' })
-		if len(parsed) != 2 {
-			return fmt.Errorf("unexpected number of fields in SMB Client Shares instance name: %q", data.Name)
+		serverValue, shareValue, ok := parseInstanceName(data.Name)
+		if !ok {
+			if _, logged := c.unexpectedInstances[data.Name]; !logged {
+				c.unexpectedInstances[data.Name] = struct{}{}
+
+				c.logger.Warn("skipping SMB Client Shares instance with unexpected name",
+					slog.String("instance", data.Name),
+				)
+			}
+
+			continue
 		}
 
-		serverValue := parsed[0]
-		shareValue := parsed[1]
+		c.extendCounters32(&data)
 
 		// Request time spent on queue. Convert from ticks to seconds.
 		ch <- prometheus.MustNewConstMetric(
@@ -368,5 +442,66 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	c.pruneCounters32()
+
 	return nil
+}
+
+// pruneCounters32 drops the state of shares missing from the last
+// staleGenerations scrapes. A share missing from a single sample keeps its
+// state, so its extended counters don't fall back to the raw value.
+func (c *Collector) pruneCounters32() {
+	for name, counters := range c.counters32 {
+		if c.generation-counters.generation >= staleGenerations {
+			delete(c.counters32, name)
+		}
+	}
+}
+
+// extendCounters32 replaces the raw 32-bit counters with values that keep
+// counting past 2^32.
+func (c *Collector) extendCounters32(data *perfDataCounterValues) {
+	fields := fields32(data)
+
+	signals := restartSignals(data)
+
+	counters, ok := c.counters32[data.Name]
+	if !ok {
+		counters = &shareCounters32{restart: signals}
+
+		for i, field := range fields {
+			var below uint32
+			if i >= numTimers32 {
+				below = restartBelow
+			}
+
+			counters.counters[i] = utils.NewCounter32(*field, below)
+		}
+
+		c.counters32[data.Name] = counters
+	}
+
+	var reset bool
+
+	for i, signal := range signals {
+		reset = reset || signal < counters.restart[i]
+	}
+
+	counters.generation = c.generation
+	counters.restart = signals
+
+	for i, field := range fields {
+		*field = counters.counters[i].Update(*field, reset)
+	}
+}
+
+// parseInstanceName splits an SMB Client Shares instance name such as
+// \\server\share into its server and share parts.
+func parseInstanceName(name string) (string, string, bool) {
+	parsed := strings.FieldsFunc(name, func(r rune) bool { return r == '\\' })
+	if len(parsed) != 2 {
+		return "", "", false
+	}
+
+	return parsed[0], parsed[1], true
 }
