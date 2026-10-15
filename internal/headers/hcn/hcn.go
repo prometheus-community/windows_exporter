@@ -23,14 +23,27 @@ import (
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
+
+// Load checks that vmcompute.dll, and the hcs functions this package uses,
+// export every function of this package. Call it in Build: a missing export
+// panics on the first call otherwise.
+func Load() error {
+	if err := load(); err != nil {
+		return err
+	}
+
+	return hcs.Load()
+}
 
 //nolint:gochecknoglobals
 var (
 	modvmcompute = windows.NewLazySystemDLL("vmcompute.dll")
 	procHNSCall  = modvmcompute.NewProc("HNSCall")
+	load         = lazyproc.Once(modvmcompute, procHNSCall)
 
 	hcnBodyEmpty         = utils.Must(windows.UTF16PtrFromString(""))
 	hcnMethodGet         = utils.Must(windows.UTF16PtrFromString("GET"))

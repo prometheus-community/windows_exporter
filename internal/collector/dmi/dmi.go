@@ -69,6 +69,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	if err := sysinfoapi.Load(); err != nil {
+		return err
+	}
+
 	info, err := sysinfoapi.GetSMBIOSInfo()
 	if err != nil {
 		return fmt.Errorf("SMBIOS info unavailable: %w", err)

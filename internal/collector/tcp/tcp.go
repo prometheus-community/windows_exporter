@@ -143,6 +143,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
+		if err := iphlpapi.Load(); err != nil {
+			return err
+		}
+	}
+
 	labels := []string{"af"}
 
 	c.connectionFailures = prometheus.NewDesc(

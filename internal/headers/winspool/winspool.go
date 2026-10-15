@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -38,7 +39,13 @@ var (
 	procOpenPrinterW  = modWinspool.NewProc("OpenPrinterW")
 	procClosePrinter  = modWinspool.NewProc("ClosePrinter")
 	procEnumJobsW     = modWinspool.NewProc("EnumJobsW")
+
+	load = lazyproc.Once(modWinspool, procEnumPrintersW, procOpenPrinterW, procClosePrinter, procEnumJobsW)
 )
+
+// Load checks that winspool.drv exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 // EnumPrinters returns the printers selected by flags, a combination of PRINTER_ENUM_* values.
 func EnumPrinters(flags uint32) ([]Printer, error) {

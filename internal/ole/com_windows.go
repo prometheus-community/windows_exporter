@@ -27,6 +27,7 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -40,12 +41,21 @@ var (
 	sysAllocStringLen = oleaut32.NewProc("SysAllocStringLen")
 	sysFreeString     = oleaut32.NewProc("SysFreeString")
 	sysStringLen      = oleaut32.NewProc("SysStringLen")
+
+	loadOle32    = lazyproc.Once(ole32, coInitializeEx, coUninitialize, coCreateInstance)
+	loadOleaut32 = lazyproc.Once(oleaut32, sysAllocStringLen, sysFreeString, sysStringLen)
 )
 
 // Initialize initializes the MTA and disables legacy OLE 1.0 DDE. The caller
 // must lock its OS thread before calling and release all objects before
 // Uninitialize on that same thread. S_FALSE is successful initialization.
+// A missing ole32 or oleaut32 export fails Initialize instead of panicking
+// in a later call.
 func Initialize() error {
+	if err := errors.Join(loadOle32(), loadOleaut32()); err != nil {
+		return fmt.Errorf("initialize COM: %w", err)
+	}
+
 	hr, _, _ := coInitializeEx.Call(0, windows.COINIT_MULTITHREADED|windows.COINIT_DISABLE_OLE1DDE)
 	if err := ResultError(hr); err != nil {
 		return fmt.Errorf("initialize COM: %w", err)

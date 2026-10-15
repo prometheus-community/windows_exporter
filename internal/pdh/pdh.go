@@ -54,6 +54,7 @@ import (
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -291,7 +292,38 @@ var (
 	pdhGetRawCounterArrayW       = libPdhDll.NewProc("PdhGetRawCounterArrayW")
 	pdhPdhGetCounterTimeBase     = libPdhDll.NewProc("PdhGetCounterTimeBase")
 	pdhRemoveCounter             = libPdhDll.NewProc("PdhRemoveCounter")
+
+	// The localized-name procs are optional and checked where they are used.
+	loadPdh = lazyproc.Once(libPdhDll,
+		pdhAddCounterW,
+		pdhAddEnglishCounterW,
+		pdhCloseQuery,
+		pdhCollectQueryData,
+		pdhCollectQueryDataWithTime,
+		pdhGetFormattedCounterValue,
+		pdhGetFormattedCounterArrayW,
+		pdhOpenQuery,
+		pdhValidatePathW,
+		pdhExpandWildCardPathW,
+		pdhGetCounterInfoW,
+		pdhGetRawCounterValue,
+		pdhGetRawCounterArrayW,
+		pdhPdhGetCounterTimeBase,
+		pdhRemoveCounter,
+	)
 )
+
+// Load checks that pdh.dll, and the kernel32 functions this package uses,
+// export every function this package calls without a check of its own.
+// [NewQuery] and the collector constructors call it, so a missing export
+// fails Build instead of panicking on the first scrape.
+func Load() error {
+	if err := loadPdh(); err != nil {
+		return err
+	}
+
+	return kernel32.Load()
+}
 
 // AddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
 // function AddEnglishCounter instead. hQuery is the query handle, which has been fetched by OpenQuery.

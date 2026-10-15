@@ -154,6 +154,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	if err := errors.Join(gdi32.Load(), cfgmgr32.Load()); err != nil {
+		return fmt.Errorf("GPU APIs not available: %w", err)
+	}
+
 	var err error
 
 	c.logger = logger.With(slog.String("collector", Name))

@@ -221,6 +221,10 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 		return nil, fmt.Errorf("invalid result type: %v", resultType)
 	}
 
+	if err := Load(); err != nil {
+		return nil, err
+	}
+
 	var handle pdhQueryHandle
 
 	if query != nil {

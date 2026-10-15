@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"github.com/prometheus-community/windows_exporter/internal/headers/win32"
 	"golang.org/x/sys/windows"
 )
@@ -31,7 +32,13 @@ var (
 	procCMGetDeviceIDListSize = cfgmgr32.NewProc("CM_Get_Device_ID_List_SizeW")
 	procCMGetDevNodePropertyW = cfgmgr32.NewProc("CM_Get_DevNode_PropertyW")
 	procCMLocateDevNodeW      = cfgmgr32.NewProc("CM_Locate_DevNodeW")
+
+	load = lazyproc.Once(cfgmgr32, procCMGetDeviceIDListW, procCMGetDeviceIDListSize, procCMGetDevNodePropertyW, procCMLocateDevNodeW)
 )
+
+// Load checks that cfgmgr32.dll exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 func CMGetDeviceIDListSize(filter *win32.LPWSTR, size *uint32) error {
 	ret, _, _ := procCMGetDeviceIDListSize.Call(

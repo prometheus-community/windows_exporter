@@ -79,6 +79,10 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	if err := psapi.Load(); err != nil {
+		return err
+	}
+
 	c.pagingLimitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "limit_bytes"),
 		"Current size of the paging file in bytes",

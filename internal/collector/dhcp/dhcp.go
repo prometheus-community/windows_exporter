@@ -167,6 +167,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
+		if err := dhcpsapi.Load(); err != nil {
+			return fmt.Errorf("DHCP server API not available: %w", err)
+		}
+
 		c.scopeInfo = prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, Name, "scope_info"),
 			"DHCP Scope information",

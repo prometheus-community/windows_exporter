@@ -52,6 +52,10 @@ func (c *Collector) buildWMIHealth() error {
 		return mi.ErrNotInitialized
 	}
 
+	if err := sysinfoapi.Load(); err != nil {
+		return err
+	}
+
 	// The host's Msvm_ComputerSystem is named after the physical NetBIOS name.
 	// Caption is localized, so it can't be used to select the host.
 	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNamePhysicalNetBIOS)

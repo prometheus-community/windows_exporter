@@ -228,9 +228,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			close:   func() { c.perfDataCollectorDynamicMemoryVM.Close() },
 		},
 		subCollectorHost: {
-			build:   c.buildHost,
-			collect: c.collectHost,
-			close:   func() { c.perfDataCollectorLogicalProcessor.Close() },
+			// The Host Compute Service API (computecore.dll) exists since 1809.
+			minBuildNumber: osversion.LTSC2019,
+			build:          c.buildHost,
+			collect:        c.collectHost,
+			close:          func() { c.perfDataCollectorLogicalProcessor.Close() },
 		},
 		subCollectorHypervisorLogicalProcessor: {
 			build:   c.buildHypervisorLogicalProcessor,

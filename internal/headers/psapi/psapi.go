@@ -20,6 +20,7 @@ package psapi
 import (
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -46,7 +47,13 @@ type PerformanceInformation struct {
 var (
 	psapi                  = windows.NewLazySystemDLL("psapi.dll")
 	procGetPerformanceInfo = psapi.NewProc("GetPerformanceInfo")
+
+	load = lazyproc.Once(psapi, procGetPerformanceInfo)
 )
+
+// Load checks that psapi.dll exports every function of this package. Call it
+// in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 // GetPerformanceInfo returns the dereferenced version of GetLPPerformanceInfo.
 func GetPerformanceInfo() (PerformanceInformation, error) {

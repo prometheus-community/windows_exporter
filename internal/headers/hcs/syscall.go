@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -36,7 +37,21 @@ var (
 	procHcsOpenComputeSystem          = modComputeCore.NewProc("HcsOpenComputeSystem")
 	procHcsGetComputeSystemProperties = modComputeCore.NewProc("HcsGetComputeSystemProperties")
 	procHcsCloseComputeSystem         = modComputeCore.NewProc("HcsCloseComputeSystem")
+
+	load = lazyproc.Once(modComputeCore,
+		procHcsCreateOperation,
+		procHcsWaitForOperationResult,
+		procHcsCloseOperation,
+		procHcsEnumerateComputeSystems,
+		procHcsOpenComputeSystem,
+		procHcsGetComputeSystemProperties,
+		procHcsCloseComputeSystem,
+	)
 )
+
+// Load checks that computecore.dll exports every function of this package.
+// Call it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 // CreateOperation creates a new operation.
 //

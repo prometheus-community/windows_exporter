@@ -54,7 +54,12 @@ in [`Makefile`](Makefile). Do not change versions to work around a local tooling
 problem. Follow [`.golangci.yaml`](.golangci.yaml), [`.editorconfig`](.editorconfig)
 and [`.gitattributes`](.gitattributes); keep LF line endings and the existing
 license headers. Use structured `slog` attributes and the existing Windows API
-wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`).
+wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`). `LazyProc.Call`
+panics for a missing export: add every proc a binding calls without its own
+`Find` check to the package's `lazyproc.Once` list, and call the package's
+`Load` in the `Build` of each collector that uses it. Mirrors of native structs
+that MI or COM read by offset need `unsafe.Sizeof`/`Offsetof` checks, see
+[`internal/mi/layout.go`](internal/mi/layout.go).
 
 Before committing, run the repository checks from its root:
 

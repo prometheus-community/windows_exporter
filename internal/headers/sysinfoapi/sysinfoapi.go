@@ -21,6 +21,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -121,7 +122,18 @@ var (
 	procGetSystemInfo        = kernel32.NewProc("GetSystemInfo")
 	procGlobalMemoryStatusEx = kernel32.NewProc("GlobalMemoryStatusEx")
 	procGetComputerNameExW   = kernel32.NewProc("GetComputerNameExW")
+
+	load = lazyproc.Once(kernel32,
+		procGetSystemInfo,
+		procGlobalMemoryStatusEx,
+		procGetComputerNameExW,
+		procGetSystemFirmwareTable,
+	)
 )
+
+// Load checks that kernel32.dll exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 // GlobalMemoryStatusEx retrieves information about the system's current usage of both physical and virtual memory.
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex

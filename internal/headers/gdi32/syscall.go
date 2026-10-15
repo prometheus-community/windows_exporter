@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"github.com/prometheus-community/windows_exporter/internal/headers/ntdll"
 	"golang.org/x/sys/windows"
 )
@@ -30,7 +31,25 @@ var (
 	procD3DKMTQueryAdapterInfo    = modGdi32.NewProc("D3DKMTQueryAdapterInfo")
 	procD3DKMTCloseAdapter        = modGdi32.NewProc("D3DKMTCloseAdapter")
 	procD3DKMTEnumAdapters2       = modGdi32.NewProc("D3DKMTEnumAdapters2")
+
+	load = lazyproc.Once(modGdi32,
+		procD3DKMTOpenAdapterFromLuid,
+		procD3DKMTQueryAdapterInfo,
+		procD3DKMTCloseAdapter,
+		procD3DKMTEnumAdapters2,
+	)
 )
+
+// Load checks that gdi32.dll, and the ntdll functions this package uses,
+// export every function of this package. Call it in Build: a missing export
+// panics on the first call otherwise.
+func Load() error {
+	if err := load(); err != nil {
+		return err
+	}
+
+	return ntdll.Load()
+}
 
 func D3DKMTOpenAdapterFromLuid(ptr *D3DKMT_OPENADAPTERFROMLUID) error {
 	ret, _, _ := procD3DKMTOpenAdapterFromLuid.Call(

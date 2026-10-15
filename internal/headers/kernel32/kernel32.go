@@ -20,6 +20,7 @@ package kernel32
 import (
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -31,7 +32,20 @@ var (
 	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
 	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
 	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
+
+	// GetDiskSpaceInformationW is optional and checked by GetDiskSpaceInformation.
+	load = lazyproc.Once(modkernel32,
+		procGetDynamicTimeZoneInformationSys,
+		procKernelLocalFileTimeToFileTime,
+		procOpenJobObject,
+		procIsProcessInJob,
+	)
 )
+
+// Load checks that kernel32.dll exports every function this package calls
+// without a check of its own. Call it in Build: a missing export panics on
+// the first call otherwise.
+func Load() error { return load() }
 
 // SYSTEMTIME contains a date and time.
 // 📑 https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-systemtime
