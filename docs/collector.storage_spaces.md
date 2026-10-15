@@ -5,7 +5,8 @@ It works on standalone hosts as well as on failover clusters using Storage Space
 
 Storage pools and virtual disks only exist for Storage Spaces, for example the pool that Storage Spaces Direct builds
 from the local drives of the cluster nodes. A failover cluster whose Cluster Shared Volumes are SAN LUNs (Fibre
-Channel, iSCSI, SAS) has no storage pool, so this collector reports nothing there. The size and free space of Cluster
+Channel, iSCSI, SAS) has no storage pool, so this collector reports nothing there (see
+[failover cluster storage architectures](https://learn.microsoft.com/en-us/windows-server/failover-clustering/storage-architectures)). The size and free space of Cluster
 Shared Volumes are reported for both setups by the `shared_volumes` sub-collector of the
 [`mscluster`](collector.mscluster.md) collector.
 

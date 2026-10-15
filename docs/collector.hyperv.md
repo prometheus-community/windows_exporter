@@ -25,7 +25,7 @@ Scrapes publish the values of the last refresh. Default: `5m`.
 Sub-collector `datastore`. It reads the `Hyper-V DataStore` performance counter set. Each virtual machine has its own
 instances, named after the VM GUID, for example `<VM GUID> configuration file` and `<VM GUID> runtime file`. They
 describe the files in which Hyper-V keeps the configuration and runtime state of the virtual machine (`.vmcx`,
-`.vmrs`), for example their fragmentation, free space in their tables and the reads and writes to them. All metrics are
+`.vmrs`, see [virtual machine file types](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/deploy/upgrade-virtual-machine-version-in-hyper-v-on-windows-or-windows-server)), for example their fragmentation, free space in their tables and the reads and writes to them. All metrics are
 prefixed with `windows_hyperv_datastore`.
 
 > [!NOTE]

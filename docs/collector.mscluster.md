@@ -183,10 +183,12 @@ Matching is case-sensitive. All of these subcollectors are enabled by default.
 Sub-collector `shared_volumes`, available since v0.32.0. It reports the size and free space of the partitions of the
 cluster's disk resources. This includes the Cluster Shared Volumes (CSV): a clustered file system that all nodes can
 read and write at the same time, mounted under `C:\ClusterStorage` on every node. One node at a time coordinates a
-CSV, and coordination moves between nodes, for example on failover or rebalancing.
+CSV, and coordination moves between nodes, for example on failover or rebalancing. See
+[Cluster Shared Volumes overview](https://learn.microsoft.com/en-us/windows-server/failover-clustering/failover-cluster-csvs).
 
 A CSV can be backed by Storage Spaces Direct (the local drives of the nodes, usually ReFS) or by SAN storage such as
-Fibre Channel, iSCSI or SAS LUNs (usually NTFS). The sub-collector reports both. Pool and virtual disk metrics, which
+Fibre Channel, iSCSI or SAS LUNs (usually NTFS), see
+[failover cluster storage architectures](https://learn.microsoft.com/en-us/windows-server/failover-clustering/storage-architectures). The sub-collector reports both. Pool and virtual disk metrics, which
 only exist for Storage Spaces Direct, are in the [`storage_spaces`](collector.storage_spaces.md) collector.
 
 > [!NOTE]
