@@ -269,20 +269,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-// Collect reads the tasks on the COM worker. If the worker does not answer
-// within maxScrapeDuration, Collect returns an error and the read finishes in
-// the background. The next scrape waits for it within its own budget.
-func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	ctx := context.Background()
-
-	if maxScrapeDuration > 0 {
-		var cancel context.CancelFunc
-
-		ctx, cancel = context.WithTimeout(ctx, maxScrapeDuration)
-		defer cancel()
-	}
-
-	return c.collect(ctx, ch)
+// Collect reads the tasks on the COM worker and waits for the result without
+// a deadline of its own. A Task Scheduler call cannot be interrupted, so a
+// read that outlives the scrape budget keeps Collect running: the collection
+// reports the scrape as timed out, keeps the collector's slot until Collect
+// returns and skips the collector in later scrapes meanwhile. Waiting for the
+// worker with the scrape budget instead would let every later scrape queue
+// behind a hung call for its whole budget.
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	return c.collect(context.Background(), ch)
 }
 
 //nolint:gochecknoglobals
@@ -299,8 +294,6 @@ func (c *Collector) collect(ctx context.Context, ch chan<- prometheus.Metric) er
 		return ole.ErrWorkerStopped
 	}
 
-	// The reader is a copy that only refers to the immutable filters, so a
-	// read that outlives its scrape shares no state with the next Collect.
 	scheduledTasks, err := ole.Do(ctx, c.worker, c.taskReader().getScheduledTasks)
 	if errors.Is(err, errTasksSkipped) {
 		// Tasks and folders that can't be read are skipped, the other tasks are still collected.

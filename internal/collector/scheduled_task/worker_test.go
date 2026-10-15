@@ -19,51 +19,36 @@ package scheduled_task
 
 import (
 	"context"
-	"log/slog"
 	"testing"
-	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/ole"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stretchr/testify/require"
 )
 
-// TestCollectHonorsBudget checks that Collect returns within its budget while
-// the COM worker is busy, and that the worker answers again afterwards.
-func TestCollectHonorsBudget(t *testing.T) {
-	c := New(nil)
-	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+// HangWorker blocks the COM worker of c, like a Task Scheduler call that does
+// not return, until the returned function is called. It returns once the
+// worker is blocked.
+func HangWorker(t *testing.T, c *Collector) func() {
+	t.Helper()
 
-	release := make(chan struct{})
 	running := make(chan struct{})
-	busyDone := make(chan error, 1)
+	unblock := make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
-		_, err := ole.Do(context.Background(), c.worker, func() (struct{}, error) {
+		defer close(done)
+
+		_, _ = ole.Do(context.Background(), c.worker, func() (struct{}, error) {
 			close(running)
-			<-release
+			<-unblock
 
 			return struct{}{}, nil
 		})
-		busyDone <- err
 	}()
 
 	<-running
 
-	ch := make(chan prometheus.Metric, 1024)
-	start := time.Now()
-
-	err := c.Collect(ch, 100*time.Millisecond)
-	require.ErrorIs(t, err, ole.ErrWorkerTimeout)
-	require.Less(t, time.Since(start), time.Second)
-	require.Empty(t, ch)
-
-	close(release)
-	require.NoError(t, <-busyDone)
-
-	// The worker answers again once the earlier read returned.
-	require.NoError(t, c.Collect(ch, time.Minute))
-	require.NoError(t, c.Close())
-	require.NoError(t, c.Close(), "Close is idempotent")
-	require.ErrorIs(t, c.Collect(ch, time.Minute), ole.ErrWorkerStopped)
+	return func() {
+		close(unblock)
+		<-done
+	}
 }
