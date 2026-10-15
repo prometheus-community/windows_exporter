@@ -291,7 +291,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_install_time_timestamp_seconds gauge
 # HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
 # TYPE windows_pagefile_free_bytes gauge
-# HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
+# HELP windows_pagefile_limit_bytes Current size of the paging file in bytes
 # TYPE windows_pagefile_limit_bytes gauge
 # HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
 # TYPE windows_performancecounter_collector_duration_seconds gauge
