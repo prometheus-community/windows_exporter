@@ -270,6 +270,45 @@ func TestUnknownCollectors(t *testing.T) {
 	require.Equal(t, []string{"nope", "CPU"}, unknownCollectors([]string{"cpu", "nope", "", "nope", "CPU"}))
 }
 
+func TestSplitCollectorList(t *testing.T) {
+	t.Parallel()
+
+	for list, want := range map[string][]string{
+		"cpu,net":          {"cpu", "net"},
+		"cpu, net":         {"cpu", "net"},
+		" cpu ,\tnet , os": {"cpu", "net", "os"},
+		"cpu,cpu, cpu":     {"cpu"},
+		// An empty name is kept, so that an empty --collectors.enabled still fails.
+		"": {""},
+	} {
+		require.Equal(t, want, splitCollectorList(list), list)
+	}
+
+	require.Equal(t, []string{"cpu", "net"}, expandEnabledCollectors("cpu, net"))
+	require.Contains(t, expandEnabledCollectors("[defaults], net"), "net")
+	require.NotContains(t, expandEnabledCollectors("[defaults], net"), " net")
+}
+
+// TestCollectorListsWithSpaces checks that names with spaces around them enable
+// and disable the collectors they name.
+func TestCollectorListsWithSpaces(t *testing.T) {
+	t.Parallel()
+
+	collectors := collector.NewWithFlags(kingpin.New("test", "test"))
+	require.NoError(t, collectors.Enable(expandEnabledCollectors("cpu, net, os")))
+
+	disabled := splitCollectorList("cpu, net")
+	collectors.Disable(disabled)
+	require.Empty(t, unknownCollectors(disabled), "no warning for trimmed names")
+
+	limited, err := collectors.WithCollectors([]string{"os"})
+	require.NoError(t, err)
+	require.NotNil(t, limited)
+
+	_, err = collectors.WithCollectors([]string{"net"})
+	require.Error(t, err, "net must be disabled")
+}
+
 func TestScrapeStdout(t *testing.T) {
 	t.Parallel()
 

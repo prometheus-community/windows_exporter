@@ -243,7 +243,7 @@ func run(ctx context.Context, args []string) int {
 
 	var disabledCollectorList []string
 	if *disabledCollectors != "" {
-		disabledCollectorList = slices.Compact(strings.Split(*disabledCollectors, ","))
+		disabledCollectorList = splitCollectorList(*disabledCollectors)
 		collectors.Disable(disabledCollectorList)
 
 		// An unknown name in --collectors.enabled fails the startup. Only warn about one in
@@ -526,9 +526,18 @@ func handle(mux *http.ServeMux, pattern string, handler http.Handler) error {
 }
 
 func expandEnabledCollectors(enabled string) []string {
-	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
+	return splitCollectorList(strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors))
+}
 
-	return slices.Compact(strings.Split(expanded, ","))
+// splitCollectorList splits a comma-separated list of collector names and trims
+// the whitespace around each name, so that "cpu, net" names net.
+func splitCollectorList(list string) []string {
+	names := strings.Split(list, ",")
+	for i, name := range names {
+		names[i] = strings.TrimSpace(name)
+	}
+
+	return slices.Compact(names)
 }
 
 // scrapeToStdout performs a single scrape through the HTTP handler and writes

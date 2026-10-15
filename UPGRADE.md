@@ -108,7 +108,7 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
 - **Memory limit.** `--process.memory-limit=0` now disables the limit, as documented. In 0.31 it set a soft limit of zero bytes, which made the Go runtime collect garbage continuously. Negative values stop the exporter.
 - **Scrape timeout margin.** A negative `--scrape.timeout-margin` stops the exporter. 0.31 treated it as `0`.
 - **Telemetry path.** `--telemetry.path` must start with `/`, must not be `/health` and, with `--debug.enabled`, must not be one of the `/debug/pprof/` routes. 0.31 accepted such a path and then crashed while starting the HTTP server.
-- **Disabled collectors.** Unknown names in `--collectors.disabled` are logged as a warning and otherwise ignored, so a configuration that still disables a removed collector keeps working. Names are not trimmed: with `cpu, net`, the exporter warns about ` net` and doesn't disable `net`.
+- **Disabled collectors.** Unknown names in `--collectors.disabled` are logged as a warning and otherwise ignored, so a configuration that still disables a removed collector keeps working. Spaces around the names in `--collectors.enabled` and `--collectors.disabled` are ignored: `cpu, net` now names `net`. In 0.31, `--collectors.disabled=cpu, net` left `net` enabled and `--collectors.enabled=cpu, net` stopped the exporter with `unknown collector  net`.
 - **update collector.** In a configuration file, the key for `--collector.update.scrape-interval` is `scrape-interval`:
 
   ```yaml
