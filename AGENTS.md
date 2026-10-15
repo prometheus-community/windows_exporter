@@ -103,6 +103,11 @@ exercised a live Windows role.
   instance occurrences within a sample; their suffixes are not stable identities.
   Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
+- PDH collectors add counters by English path. On a Windows installation
+  without en-US resources, the 009 name table holds localized names for v2
+  (manifest-based) counter sets such as `SMB Server Shares` or `HTTP Service`;
+  `internal/pdh/localized.go` then maps the English names through the v2
+  registration API. Classic (v1) sets such as `Processor` are not affected.
 - Keep `Build`, `Collect` and `Close` serialized for each collector instance.
   Filtered `WithCollectors` views share execution state and do not own shutdown;
   the original `Collection` owns collectors and MI resources. A timed-out call

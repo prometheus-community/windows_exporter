@@ -291,7 +291,7 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 			var counterHandle pdhCounterHandle
 
 			//nolint:nestif
-			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
+			if ret := addEnglishCounter(handle, object, instance, counterName, &counterHandle); ret != ErrorSuccess {
 				if ret == CstatusNoCounter {
 					if f.minOSBuild != "" {
 						if minOSBuild, err := strconv.Atoi(f.minOSBuild); err == nil {
