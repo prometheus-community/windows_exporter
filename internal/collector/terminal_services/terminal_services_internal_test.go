@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,19 +38,11 @@ func TestCollectorWithoutSessionObject(t *testing.T) {
 
 	t.Cleanup(func() { terminalServicesSessionObject = original })
 
-	miApp, err := mi.ApplicationInitialize()
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, miApp.Close()) })
-
-	miSession, err := miApp.NewSession(nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, miSession.Close()) })
-
 	c := New(nil)
 
 	t.Cleanup(func() { assert.NoError(t, c.Close()) })
 
-	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), miSession))
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 	require.Nil(t, c.perfDataCollectorTerminalServicesSession)
 
 	for range 2 {

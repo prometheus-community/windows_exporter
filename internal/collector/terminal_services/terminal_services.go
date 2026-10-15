@@ -296,11 +296,10 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	c.perfDataCollectorTerminalServicesSession, err = pdh.NewQueryCollector[perfDataCounterValuesTerminalServicesSession](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, terminalServicesSessionObject, pdh.InstancesAll)
 	if err != nil {
-		// Some hosts, e.g. Server Core installations or hosts without the
-		// Remote Desktop Session Host role, don't register the Terminal Services
-		// Session object. session_info comes from the WTS API, so keep it and
-		// skip only the per-session process metrics, instead of failing the
-		// whole collector.
+		// Some hosts, e.g. some Windows Server Core installations, don't
+		// register the Terminal Services Session object. session_info comes
+		// from the WTS API, so keep it and skip only the per-session process
+		// metrics, instead of failing the whole collector.
 		c.logger.Warn("failed to create Terminal Services Session collector, skipping per-session performance metrics",
 			slog.Any("err", err),
 		)
