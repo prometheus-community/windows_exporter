@@ -143,7 +143,11 @@ exercised a live Windows role.
 - Keep CLI and YAML validation consistent. Reject unknown fields, unsupported
   sub-collector names and invalid values; preserve CLI precedence and repeated
   flag/list behavior. Changes to config shapes also need schema, flag parsing
-  and documentation updates.
+  and documentation updates. A collector is registered once, in the
+  `registrations` table of `pkg/collector/map.go`, with a `Config` field whose
+  YAML key is the collector name and a `docs/collector.<name>.md`;
+  `TestRegistrations` checks that they agree. The configuration file schema in
+  `internal/config` only checks keys: the flags parse and validate the values.
 - For textfiles, keep HELP/type metadata consistent across files and preserve
   unrelated valid series when reporting duplicates or parse failures. Publish
   producer output by replacing a temporary file in the same directory. File

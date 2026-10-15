@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -30,7 +31,9 @@ import (
 )
 
 // configFile represents the structure of the windows_exporter configuration file,
-// including configuration from the collector and web packages.
+// including configuration from the collector and web packages. Each leaf is a
+// flag; the field types document the value of the flag, which parses and
+// validates it. [validateKeys] checks the keys of the file against this schema.
 type configFile struct {
 	Debug struct {
 		Enabled bool `yaml:"enabled"`
@@ -45,17 +48,17 @@ type configFile struct {
 		Format   string `yaml:"format"`
 		File     string `yaml:"file"`
 		Rotation struct {
-			MaxSize    string `yaml:"max-size"`
-			MaxBackups string `yaml:"max-backups"`
-			Compress   bool   `yaml:"compress"`
+			MaxSize    int  `yaml:"max-size"`
+			MaxBackups int  `yaml:"max-backups"`
+			Compress   bool `yaml:"compress"`
 		} `yaml:"rotation"`
 	} `yaml:"log"`
 	Process struct {
 		Priority    string `yaml:"priority"`
-		MemoryLimit string `yaml:"memory-limit"`
+		MemoryLimit int64  `yaml:"memory-limit"`
 	} `yaml:"process"`
 	Scrape struct {
-		TimeoutMargin string `yaml:"timeout-margin"`
+		TimeoutMargin float64 `yaml:"timeout-margin"`
 	} `yaml:"scrape"`
 	Telemetry struct {
 		Path string `yaml:"path"`
@@ -135,12 +138,9 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		_ = file.Close()
 	}()
 
-	var configFileStructure configFile
+	var document yaml.Node
 
-	decoder := yaml.NewDecoder(file)
-	decoder.KnownFields(true)
-
-	if err = decoder.Decode(&configFileStructure); err != nil {
+	if err = yaml.NewDecoder(file).Decode(&document); err != nil {
 		// Handle EOF error gracefully, indicating no configuration was found.
 		if errors.Is(err, io.EOF) {
 			return &Resolver{flags: flags}, nil
@@ -149,15 +149,13 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		return nil, fmt.Errorf("configuration file validation error: %w", err)
 	}
 
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, fmt.Errorf("failed to rewind file: %w", err)
+	if err = validateKeys(&document, "the configuration", reflect.TypeFor[configFile]()); err != nil {
+		return nil, fmt.Errorf("configuration file validation error: %w", err)
 	}
 
 	var rawValues map[string]any
 
-	decoder = yaml.NewDecoder(file)
-	if err = decoder.Decode(&rawValues); err != nil {
+	if err = document.Decode(&rawValues); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
 	}
 
