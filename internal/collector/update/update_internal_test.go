@@ -19,9 +19,11 @@ package update
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 	"unicode/utf16"
 	"unsafe"
 
@@ -32,6 +34,52 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )
+
+func TestCloseWaitsForWorker(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		stopsIn  time.Duration
+		timedOut bool
+	}{
+		{name: "worker stops in time", stopsIn: 200 * time.Millisecond},
+		{name: "search outlives the close bound", stopsIn: closeTimeout + time.Second, timedOut: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			done := make(chan struct{})
+
+			// The fake worker models a search that returns stopsIn after the cancellation.
+			go func() {
+				defer close(done)
+
+				<-ctx.Done()
+				time.Sleep(tc.stopsIn)
+			}()
+
+			var logs bytes.Buffer
+
+			c := &Collector{
+				logger:      slog.New(slog.NewTextHandler(&logs, nil)),
+				ctxCancelFn: cancel,
+				workerDone:  done,
+			}
+			start := time.Now()
+
+			require.NoError(t, c.Close())
+
+			if tc.timedOut {
+				require.Less(t, time.Since(start), closeTimeout+time.Second/2, "Close is bounded")
+				require.Contains(t, logs.String(), "Windows Update search still running at close")
+				<-done
+			} else {
+				require.GreaterOrEqual(t, time.Since(start), tc.stopsIn, "Close waits for the worker")
+				require.Empty(t, logs.String())
+			}
+
+			require.NoError(t, c.Close(), "Close is idempotent")
+		})
+	}
+}
 
 func TestFetchUpdatesPartialCollection(t *testing.T) {
 	for _, tc := range []struct {

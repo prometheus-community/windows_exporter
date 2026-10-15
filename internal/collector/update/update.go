@@ -67,6 +67,8 @@ type Collector struct {
 
 	mu          sync.RWMutex
 	ctxCancelFn context.CancelFunc
+	// workerDone is closed when the Windows Update worker returned and released its COM objects.
+	workerDone chan struct{}
 
 	logger *slog.Logger
 
@@ -108,10 +110,36 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
+// closeTimeout bounds how long Close waits for the Windows Update worker. It
+// stays below the 5 seconds that the collection waits for its collectors to close.
+const closeTimeout = 3 * time.Second
+
+// Close stops the Windows Update worker and waits up to closeTimeout for it.
+//
+// The worker observes the cancellation between searches only: a running
+// search is a synchronous WUA call that cannot be interrupted, and an online
+// search can take minutes. If the worker does not return in time, Close logs
+// a warning and returns. The worker owns all of its resources and shares none
+// with the caller: it keeps running until the search returns, then releases
+// its COM objects, uninitializes COM and exits on its own without starting
+// another search. If the process exits first, the search is abandoned.
 func (c *Collector) Close() error {
-	if c.ctxCancelFn != nil {
-		c.ctxCancelFn()
-		c.ctxCancelFn = nil
+	if c.ctxCancelFn == nil {
+		return nil
+	}
+
+	c.ctxCancelFn()
+	c.ctxCancelFn = nil
+
+	timer := time.NewTimer(closeTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-c.workerDone:
+	case <-timer.C:
+		c.logger.Warn("Windows Update search still running at close, it finishes in the background",
+			slog.Duration("waited", closeTimeout),
+		)
 	}
 
 	return nil
@@ -154,8 +182,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	// scheduleUpdateStatus sends exactly one value to initErrCh, nil after a successful initialization.
 	initErrCh := make(chan error, 1)
+	workerDone := make(chan struct{})
 
 	go func() {
+		defer close(workerDone)
+
 		err := recovery.Run(func() error {
 			c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
 
@@ -175,6 +206,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}()
 
 	c.ctxCancelFn = cancel
+	c.workerDone = workerDone
 
 	if err := <-initErrCh; err != nil {
 		return fmt.Errorf("failed to initialize Windows Update collector: %w", err)
