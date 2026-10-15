@@ -18,6 +18,7 @@
 package pdh
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -50,6 +51,7 @@ type Collector[T any] struct {
 	object                string
 	resultType            CounterType
 	counters              []Counter
+	counterIndex          map[string]int // index in counters by counter name
 	handle                pdhQueryHandle
 	totalCounterRequested bool
 	mu                    sync.RWMutex
@@ -73,10 +75,12 @@ type Row struct {
 	Values []float64
 }
 
-// rowAccessor creates rows of type T and sets their names and counter values.
+// rowAccessor initializes rows of type T and sets their names and counter values.
 // field is the index the counterField of the counter was created with.
 type rowAccessor[T any] struct {
-	newRow   func(instance string) T
+	// resetRow initializes row for instance. row can hold the values of a
+	// previous sample; resetRow can reuse its memory.
+	resetRow func(row *T, instance string)
 	setName  func(row *T, instance string)
 	setValue func(row *T, field int, value float64)
 }
@@ -84,7 +88,9 @@ type rowAccessor[T any] struct {
 // counterField maps a counter to the field index passed to rowAccessor.setValue.
 type counterField struct {
 	// tag is the counter name, optionally suffixed with ",secondvalue".
-	tag        string
+	tag string
+	// index is the byte offset of the field in a struct row, or the index
+	// in Row.Values.
 	index      int
 	minOSBuild string
 }
@@ -132,15 +138,30 @@ func NewQueryCollector[T any](logger *slog.Logger, query *Query, resultType Coun
 }
 
 func newStructCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string) (*Collector[T], error) {
-	valueType := reflect.TypeFor[T]()
-	if valueType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("expected a struct, got %s", valueType)
+	fields, rows, errs, err := structFields[T]()
+	if err != nil {
+		return nil, err
 	}
 
-	nameIndex := -1
+	return newCollector(logger, query, resultType, object, instances, fields, rows, false, errs)
+}
+
+// structFields returns the counter fields declared by the perfdata tags of
+// the struct T and an accessor that writes them. The index of a counterField
+// is the byte offset of its float64 field in T, so the accessor writes values
+// without reflection.
+func structFields[T any]() ([]counterField, rowAccessor[T], []error, error) {
+	valueType := reflect.TypeFor[T]()
+	if valueType.Kind() != reflect.Struct {
+		return nil, rowAccessor[T]{}, nil, fmt.Errorf("expected a struct, got %s", valueType)
+	}
+
+	nameOffset := -1
 
 	if f, ok := valueType.FieldByName("Name"); ok && f.Type.Kind() == reflect.String {
-		nameIndex = f.Index[0]
+		if offset, ok := fieldOffset(valueType, f.Index); ok {
+			nameOffset = offset
+		}
 	}
 
 	var errs []error
@@ -159,34 +180,66 @@ func newStructCollector[T any](logger *slog.Logger, query *Query, resultType Cou
 			continue
 		}
 
+		offset, ok := fieldOffset(valueType, f.Index)
+		if !ok {
+			errs = append(errs, fmt.Errorf("field %s must not be promoted through an embedded pointer", f.Name))
+
+			continue
+		}
+
 		fields = append(fields, counterField{
 			tag:        counterName,
-			index:      f.Index[0],
+			index:      offset,
 			minOSBuild: f.Tag.Get("perfdata_min_build"),
 		})
 	}
 
-	rows := rowAccessor[T]{
-		newRow: func(instance string) T {
-			var row T
+	return fields, structRowAccessor[T](nameOffset), errs, nil
+}
 
-			if nameIndex != -1 {
-				reflect.ValueOf(&row).Elem().Field(nameIndex).SetString(instance)
-			}
+// fieldOffset returns the byte offset of the field with the index sequence
+// index in the struct t. ok is false if the field is reached through an
+// embedded pointer and is therefore not stored in t itself.
+func fieldOffset(t reflect.Type, index []int) (int, bool) {
+	var offset uintptr
 
-			return row
-		},
-		setName: func(row *T, instance string) {
-			if nameIndex != -1 {
-				reflect.ValueOf(row).Elem().Field(nameIndex).SetString(instance)
-			}
-		},
-		setValue: func(row *T, field int, value float64) {
-			reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
-		},
+	for _, i := range index {
+		if t.Kind() != reflect.Struct {
+			return 0, false
+		}
+
+		f := t.Field(i)
+		offset += f.Offset
+		t = f.Type
 	}
 
-	return newCollector(logger, query, resultType, object, instances, fields, rows, false, errs)
+	return int(offset), true
+}
+
+// structRowAccessor returns the accessor of the struct T. nameOffset is the
+// byte offset of its string field Name, or -1. The offsets passed to setValue
+// come from [structFields] and address float64 fields of T, so values are
+// written without reflection.
+func structRowAccessor[T any](nameOffset int) rowAccessor[T] {
+	setName := func(row *T, instance string) {
+		if nameOffset >= 0 {
+			*(*string)(unsafe.Add(unsafe.Pointer(row), nameOffset)) = instance
+		}
+	}
+
+	return rowAccessor[T]{
+		resetRow: func(row *T, instance string) {
+			var zero T
+
+			*row = zero
+
+			setName(row, instance)
+		},
+		setName: setName,
+		setValue: func(row *T, offset int, value float64) {
+			*(*float64)(unsafe.Add(unsafe.Pointer(row), offset)) = value
+		},
+	}
 }
 
 // NewDynamicCollector creates a collector for counters that are only known at runtime.
@@ -199,9 +252,24 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 		fields[i] = counterField{tag: counter, index: i}
 	}
 
-	rows := rowAccessor[Row]{
-		newRow: func(instance string) Row {
-			return Row{Name: instance, Values: make([]float64, len(counters))}
+	return newCollector(logger, nil, resultType, object, instances, fields, dynamicRowAccessor(len(counters)), true, nil)
+}
+
+// dynamicRowAccessor returns the accessor of rows with n values. A reused row
+// keeps its Values array if it is large enough.
+func dynamicRowAccessor(n int) rowAccessor[Row] {
+	return rowAccessor[Row]{
+		resetRow: func(row *Row, instance string) {
+			row.Name = instance
+
+			if cap(row.Values) < n {
+				row.Values = make([]float64, n)
+
+				return
+			}
+
+			row.Values = row.Values[:n]
+			clear(row.Values)
 		},
 		setName: func(row *Row, instance string) {
 			row.Name = instance
@@ -210,8 +278,6 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 			row.Values[field] = value
 		},
 	}
-
-	return newCollector(logger, nil, resultType, object, instances, fields, rows, true, nil)
 }
 
 func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string,
@@ -246,6 +312,7 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 		object:                object,
 		resultType:            resultType,
 		counters:              make([]Counter, 0, len(fields)),
+		counterIndex:          make(map[string]int, len(fields)),
 		handle:                handle,
 		totalCounterRequested: slices.ContainsFunc(instances, func(instance string) bool { return IsTotalInstance(object, instance) }),
 		mu:                    sync.RWMutex{},
@@ -254,15 +321,13 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 		partialRows:           partialRows,
 	}
 
-	counterIndex := make(map[string]int, len(fields))
-
 	for _, f := range fields {
 		counterName, secondValue := strings.CutSuffix(f.tag, ",secondvalue")
 
-		i, ok := counterIndex[counterName]
+		i, ok := collector.counterIndex[counterName]
 		if !ok {
 			i = len(collector.counters)
-			counterIndex[counterName] = i
+			collector.counterIndex[counterName] = i
 			collector.counters = append(collector.counters, Counter{
 				Name:                  counterName,
 				Instances:             make(map[string]pdhCounterHandle, len(instances)),
@@ -438,13 +503,14 @@ func (c *Collector[T]) MetricType(counterName string) (prometheus.ValueType, boo
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for _, counter := range c.counters {
-		if counter.Name == counterName {
-			return counter.MetricType, counter.MetricType != 0
-		}
+	i, ok := c.counterIndex[counterName]
+	if !ok {
+		return 0, false
 	}
 
-	return 0, false
+	metricType := c.counters[i].MetricType
+
+	return metricType, metricType != 0
 }
 
 // Frequency returns the time base in ticks per second of the raw timer counter
@@ -461,16 +527,22 @@ func (c *Collector[T]) Frequency(counterName string) (int64, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for _, counter := range c.counters {
-		if counter.Name == counterName {
-			return counter.Frequency, counter.Frequency > 0
-		}
+	i, ok := c.counterIndex[counterName]
+	if !ok {
+		return 0, false
 	}
 
-	return 0, false
+	frequency := c.counters[i].Frequency
+
+	return frequency, frequency > 0
 }
 
 // Collect replaces the content of dst with one row per collected instance.
+//
+// Collect reuses the backing array of dst and, for [Row], the Values slices of
+// its rows, so a sample does not allocate them again. Rows, sub-slices of dst
+// and Row.Values are only valid until the next Collect into the same slice;
+// copy what must be kept longer.
 func (c *Collector[T]) Collect(dst *[]T) error {
 	if c == nil {
 		return ErrPerformanceCounterNotInitialized
@@ -530,7 +602,16 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 		}
 	}
 
-	*dst = (*dst)[:0:0]
+	// Keep the backing array; rowSet initializes every row it reuses.
+	previousLen := len(*dst)
+	*dst = (*dst)[:0]
+
+	defer func() {
+		// Release the instance names of rows that this sample no longer uses.
+		if n := len(*dst); n < previousLen {
+			clear((*dst)[n:previousLen])
+		}
+	}()
 
 	rows := newRowSet(c, dst, state)
 
@@ -624,12 +705,15 @@ func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (
 			return itemCount, true, nil
 		}
 
-		if err := NewPdhError(ret); ret != MoreData {
-			if isKnownCounterDataError(err) {
+		// Check the status before creating an error: NewPdhError formats the
+		// message text, which a growing buffer or a counter without data in
+		// this sample does not need.
+		if ret != MoreData {
+			if isKnownCounterDataStatus(ret) {
 				return 0, false, nil
 			}
 
-			return 0, false, fmt.Errorf("%s: %w", name, err)
+			return 0, false, fmt.Errorf("%s: %w", name, NewPdhError(ret))
 		}
 
 		if bytesNeeded <= uint32(len(*buf)) {
@@ -734,11 +818,15 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	r.occurrences[instanceName] = max(r.occurrences[instanceName], occurrence+1)
 
 	if status != CstatusValidData && status != CstatusNewData {
-		r.c.logger.Debug("skipping counter item with invalid data status",
-			slog.String("counter", counter.Name),
-			slog.String("instance", instanceName),
-			slog.Uint64("status", uint64(status)),
-		)
+		// Check the level first, so the attributes are not built for every
+		// invalid item while debug logging is off.
+		if r.c.logger.Enabled(context.Background(), slog.LevelDebug) {
+			r.c.logger.LogAttrs(context.Background(), slog.LevelDebug, "skipping counter item with invalid data status",
+				slog.String("counter", counter.Name),
+				slog.String("instance", instanceName),
+				slog.Uint64("status", uint64(status)),
+			)
+		}
 
 		return 0, false
 	}
@@ -752,10 +840,21 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 		return index, true
 	}
 
-	index := len(*r.dst)
+	rows := *r.dst
+	index := len(rows)
 	r.index[key] = index
 
-	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName))
+	// Reuse a row of a previous sample within the capacity of dst.
+	if index < cap(rows) {
+		rows = rows[:index+1]
+	} else {
+		var zero T
+
+		rows = append(rows, zero)
+	}
+
+	r.c.rows.resetRow(&rows[index], instanceName)
+	*r.dst = rows
 
 	n := len(r.c.counters)
 	r.valid = slices.Grow(r.valid, n)[:len(r.valid)+n]
@@ -871,7 +970,7 @@ func (r *rowSet[T]) finish() {
 	}
 
 	if dropped := len(rows) - kept; dropped > 0 {
-		r.c.logger.Debug("omitting instances without a valid value for every counter",
+		r.c.logger.LogAttrs(context.Background(), slog.LevelDebug, "omitting instances without a valid value for every counter",
 			slog.String("object", r.c.object),
 			slog.Int("instances", dropped),
 		)
@@ -998,13 +1097,13 @@ func (cache *instanceNameCache) removeUnseen() {
 	}
 }
 
-func isKnownCounterDataError(err error) bool {
-	var pdhErr *Error
-
-	return errors.As(err, &pdhErr) && (pdhErr.ErrorCode == InvalidData ||
-		pdhErr.ErrorCode == CalcNegativeDenominator ||
-		pdhErr.ErrorCode == CalcNegativeValue ||
-		pdhErr.ErrorCode == CstatusInvalidData ||
-		pdhErr.ErrorCode == CstatusNoInstance ||
-		pdhErr.ErrorCode == NoData)
+// isKnownCounterDataStatus reports whether status means that a counter has no
+// valid data in a sample, which is not a collection error.
+func isKnownCounterDataStatus(status uint32) bool {
+	switch status {
+	case InvalidData, CalcNegativeDenominator, CalcNegativeValue, CstatusInvalidData, CstatusNoInstance, NoData:
+		return true
+	default:
+		return false
+	}
 }

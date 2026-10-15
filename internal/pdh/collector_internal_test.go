@@ -43,25 +43,18 @@ type rowSetValues struct {
 // newRowSetTestCollector returns a collector with the counters A and B, which
 // have instances, and Optional, which was skipped at Build and has none.
 func newRowSetTestCollector(partialRows bool) *Collector[rowSetValues] {
+	var row rowSetValues
+
 	return &Collector[rowSetValues]{
 		partialRows: partialRows,
 		logger:      slog.New(slog.DiscardHandler),
-		rows: rowAccessor[rowSetValues]{
-			newRow: func(instance string) rowSetValues {
-				return rowSetValues{Name: instance}
-			},
-			setName: func(row *rowSetValues, instance string) {
-				row.Name = instance
-			},
-			setValue: func(row *rowSetValues, field int, value float64) {
-				reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
-			},
-		},
+		rows:        structRowAccessor[rowSetValues](int(unsafe.Offsetof(row.Name))),
 		counters: []Counter{
-			{Name: "A", Instances: map[string]pdhCounterHandle{"*": 1}, FieldIndexValue: 1, FieldIndexSecondValue: -1},
-			{Name: "B", Instances: map[string]pdhCounterHandle{"*": 2}, FieldIndexValue: 2, FieldIndexSecondValue: 3},
-			{Name: "Optional", Instances: map[string]pdhCounterHandle{}, FieldIndexValue: 4, FieldIndexSecondValue: -1},
+			{Name: "A", Instances: map[string]pdhCounterHandle{"*": 1}, FieldIndexValue: int(unsafe.Offsetof(row.A)), FieldIndexSecondValue: -1},
+			{Name: "B", Instances: map[string]pdhCounterHandle{"*": 2}, FieldIndexValue: int(unsafe.Offsetof(row.B)), FieldIndexSecondValue: int(unsafe.Offsetof(row.BSecond))},
+			{Name: "Optional", Instances: map[string]pdhCounterHandle{}, FieldIndexValue: int(unsafe.Offsetof(row.Optional)), FieldIndexSecondValue: -1},
 		},
+		counterIndex: map[string]int{"A": 0, "B": 1, "Optional": 2},
 	}
 }
 
@@ -348,7 +341,7 @@ func TestSetRawValueElapsedTime(t *testing.T) {
 
 	var values rowSetValues
 
-	counter := &Counter{Type: PERF_ELAPSED_TIME, Frequency: 10_000_000, FieldIndexValue: 1, FieldIndexSecondValue: -1}
+	counter := &Counter{Type: PERF_ELAPSED_TIME, Frequency: 10_000_000, FieldIndexValue: int(unsafe.Offsetof(values.A)), FieldIndexSecondValue: -1}
 
 	// 2.5 s at 10 MHz. Integer division truncated this to 2.
 	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 100_000_000, SecondValue: 125_000_000}))
@@ -359,7 +352,7 @@ func TestSetRawValueElapsedTime(t *testing.T) {
 	require.False(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 2}))
 
 	// A counter with only a second value field must not set field -1.
-	counter = &Counter{Type: PERF_ELAPSED_TIME, Frequency: 1, FieldIndexValue: -1, FieldIndexSecondValue: 3}
+	counter = &Counter{Type: PERF_ELAPSED_TIME, Frequency: 1, FieldIndexValue: -1, FieldIndexSecondValue: int(unsafe.Offsetof(values.BSecond))}
 	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 2}))
 }
 
@@ -474,17 +467,14 @@ func TestCollectRecoversPanic(t *testing.T) {
 
 	require.NoError(t, c.Collect(&dst))
 
-	// Point the counter at a field that does not exist, so that reflect panics.
-	c.mu.Lock()
-	c.counters[0].FieldIndexValue = 42
-	c.mu.Unlock()
+	setValue := setPanicOnSetValue(c)
 
 	err = c.Collect(&dst)
 	require.ErrorContains(t, err, "panic while collecting performance counters of Process")
 
 	// Collection still works after the panic.
 	c.mu.Lock()
-	c.counters[0].FieldIndexValue = 1
+	c.rows.setValue = setValue
 	c.mu.Unlock()
 
 	require.NoError(t, c.Collect(&dst))
@@ -515,19 +505,23 @@ func TestCollectKeepsInstanceNames(t *testing.T) {
 	require.Same(t, unsafe.StringData(systemName(first)), unsafe.StringData(systemName(second)), "name decoded again")
 
 	// Assertions run without holding the lock, because a failed assertion would leave it locked for Close.
-	cachedNames := func(fieldIndex int) int {
+	setValue := setPanicOnSetValue(c)
+
+	cachedNames := func() int {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-
-		c.counters[0].FieldIndexValue = fieldIndex
 
 		return len(c.state.names.names)
 	}
 
-	// Point the counter at a field that does not exist, so that the first item panics.
-	require.Greater(t, cachedNames(42), 1)
+	// Let the first item panic.
+	require.Greater(t, cachedNames(), 1)
 	require.Error(t, c.Collect(&first))
-	require.Equal(t, 1, cachedNames(1), "names not reached by the failed sample kept")
+	require.Equal(t, 1, cachedNames(), "names not reached by the failed sample kept")
+
+	c.mu.Lock()
+	c.rows.setValue = setValue
+	c.mu.Unlock()
 
 	require.NoError(t, c.Collect(&first))
 	require.Equal(t, systemName(second), systemName(first))
@@ -596,4 +590,16 @@ func TestRowSetReusesState(t *testing.T) {
 			{Name: "c", A: 5, B: 7},
 		}, dst)
 	}
+}
+
+// setPanicOnSetValue lets every value that c sets panic and returns the
+// previous setter.
+func setPanicOnSetValue[T any](c *Collector[T]) func(row *T, field int, value float64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	setValue := c.rows.setValue
+	c.rows.setValue = func(*T, int, float64) { panic("test panic") }
+
+	return setValue
 }
