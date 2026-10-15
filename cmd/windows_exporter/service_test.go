@@ -35,8 +35,8 @@ func TestAppendToFile(t *testing.T) {
 	path := filepath.Join(dir, serviceErrorLogName)
 	now := time.Date(2026, 10, 15, 14, 3, 5, 0, time.UTC)
 
-	appendToFile(path, "first failure", now)
-	appendToFile(path, "second failure\n", now.Add(time.Second))
+	require.NoError(t, appendToFile(path, "first failure", now, serviceErrorLogMaxSize))
+	require.NoError(t, appendToFile(path, "second failure\n", now.Add(time.Second), serviceErrorLogMaxSize))
 
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -45,6 +45,43 @@ func TestAppendToFile(t *testing.T) {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, "2026-10-15T14:03:05Z first failure\n2026-10-15T14:03:06Z second failure\n", string(data))
+}
+
+func TestAppendToFileStartsOverAboveMaxSize(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), serviceErrorLogName)
+	now := time.Date(2026, 10, 15, 14, 3, 5, 0, time.UTC)
+
+	require.NoError(t, appendToFile(path, "first failure", now, 10))
+	require.NoError(t, appendToFile(path, "second failure", now, 10))
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, "2026-10-15T14:03:05Z second failure\n", string(data))
+}
+
+func TestAppendToFileRefusesLinks(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target.txt")
+	require.NoError(t, os.WriteFile(target, []byte("keep"), 0o600))
+
+	hardLink := filepath.Join(dir, "hardlink.log")
+	require.NoError(t, os.Link(target, hardLink))
+	require.ErrorContains(t, appendToFile(hardLink, "failure", time.Now(), serviceErrorLogMaxSize), "refusing to write")
+
+	symlink := filepath.Join(dir, "symlink.log")
+	if err := os.Symlink(target, symlink); err == nil {
+		require.ErrorContains(t, appendToFile(symlink, "failure", time.Now(), serviceErrorLogMaxSize), "refusing to write")
+	} else {
+		t.Logf("skipping the symbolic link case: %v", err)
+	}
+
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	require.Equal(t, "keep", string(data))
 }
 
 func TestServiceExecuteStop(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -225,24 +226,74 @@ func logStartupError(ctx context.Context, msg string, err error) {
 	)
 }
 
-// serviceErrorLogName is the file in the temporary directory that logToFile appends to.
-const serviceErrorLogName = "windows_exporter.service.error.log"
+const (
+	// serviceErrorLogName is the file in the temporary directory that logToFile appends to.
+	serviceErrorLogName = "windows_exporter.service.error.log"
+	// serviceErrorLogMaxSize is the size above which logToFile starts the file over.
+	serviceErrorLogMaxSize = 1 << 20
+)
 
 // logToFile is the last resort when the event log cannot be written. It appends
 // msg to one file in the temporary directory, so that repeated failures don't
-// leave a new file behind each time.
+// leave a new file behind each time. For a service running as LocalSystem, Go
+// returns C:\Windows\SystemTemp, which only administrators can write to.
 func logToFile(msg string) {
-	appendToFile(filepath.Join(os.TempDir(), serviceErrorLogName), msg, time.Now())
+	_ = appendToFile(filepath.Join(os.TempDir(), serviceErrorLogName), msg, time.Now(), serviceErrorLogMaxSize)
 }
 
-func appendToFile(path, msg string, now time.Time) {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+// appendToFile appends a timestamped line to path. It starts the file over once
+// it is larger than maxSize. It refuses to write through a symbolic link,
+// junction or other reparse point, or to a file with more than one hard link,
+// so that a file planted at path cannot redirect the write to another file.
+func appendToFile(path, msg string, now time.Time, maxSize int64) error {
+	pathPtr, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return
+		return err
 	}
 
-	_, _ = file.WriteString(now.Format(time.RFC3339) + " " + strings.TrimSpace(msg) + "\n")
-	_ = file.Close()
+	handle, err := windows.CreateFile(
+		pathPtr,
+		windows.GENERIC_READ|windows.GENERIC_WRITE,
+		windows.FILE_SHARE_READ,
+		nil,
+		windows.OPEN_ALWAYS,
+		windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT,
+		0,
+	)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", path, err)
+	}
+
+	file := os.NewFile(uintptr(handle), path)
+
+	defer func() {
+		_ = file.Close()
+	}()
+
+	var info windows.ByHandleFileInformation
+	if err = windows.GetFileInformationByHandle(handle, &info); err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+
+	if info.FileAttributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 || info.NumberOfLinks > 1 {
+		return fmt.Errorf("refusing to write to %s: it is a reparse point or has more than one link", path)
+	}
+
+	if size := int64(info.FileSizeHigh)<<32 | int64(info.FileSizeLow); size > maxSize {
+		if err = file.Truncate(0); err != nil {
+			return fmt.Errorf("truncate %s: %w", path, err)
+		}
+	}
+
+	if _, err = file.Seek(0, io.SeekEnd); err != nil {
+		return fmt.Errorf("seek %s: %w", path, err)
+	}
+
+	if _, err = file.WriteString(now.Format(time.RFC3339) + " " + strings.TrimSpace(msg) + "\n"); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // isWindowsService is a clone of "golang.org/x/sys/windows/svc:IsWindowsService", but with a fix
