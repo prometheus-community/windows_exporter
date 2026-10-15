@@ -195,7 +195,8 @@ $cat.GetCounters('NTDS') | ForEach-Object {
 ```
 
 Roles that are rarely available on development machines (AD DS, AD CS,
-AD FS) have such dumps recorded in the `AGENTS.md` of their collector.
+AD FS, DFSR, RemoteFX sessions) have such dumps recorded in the `AGENTS.md`
+of their collector.
 
 ## Dashboards, rules and runbooks
 
