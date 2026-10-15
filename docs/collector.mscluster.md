@@ -1,12 +1,21 @@
 # mscluster_cluster collector
 
-The collector exposes Windows failover cluster metrics. All subcollectors read through the read-only Windows Cluster API (ClusAPI) instead of the `root\MSCluster` WMI provider. `shared_volumes` reads the partitions of every storage class resource with `CLUSCTL_RESOURCE_STORAGE_GET_DISK_INFO_EX`, the source of the former `MSCluster_DiskPartition` class, and keeps its whole-megabyte resolution. Metric names, types, labels and units are unchanged.
+The mscluster collector exposes metrics about a Windows failover cluster: the cluster itself, its networks, nodes,
+resources, resource groups and Cluster Shared Volumes.
 
-Each subcollector opens its cluster handle on its first scrape so a transient cluster-service failure is reported during collection; a handle whose RPC binding broke (for example after a cluster service restart) is reopened on the next scrape. ClusAPI calls cannot be cancelled while they are running. The subcollectors check the remaining scrape budget before starting each native call and stop waiting when the budget is spent. A call that is still running then makes the next scrapes of the same subcollector fail fast until it returns, while the other subcollectors keep publishing.
+Since v0.32.0 the collector reads the cluster through the Windows Cluster API instead of the `root\MSCluster` WMI
+namespace. Metric names, labels and units are unchanged.
 
-If a property of the cluster or of a network, node, resource or group cannot be read, its sample is omitted and the scrape reports an error; valid properties and other objects are retained. Invalid resource identities are not published. Missing native values are not substituted with zero. Objects deleted during a scrape are skipped. Names decode like the WMI strings did: up to the first NUL, with invalid UTF-16 replaced by U+FFFD. Values that the WMI provider synthesized are reproduced, so the series stay unchanged: for example `mscluster_resource_subclass` is always 0, because `MSCluster_Resource.Subclass` is NULL for every resource.
+If a value can't be read, only that sample is left out and the collector reports an error; all other values are still
+published. `windows_mscluster_resource_subclass` is always `0`, as in earlier releases.
 
-The ClusAPI functions in use are available since Windows Server 2008 R2. The `cold_start_setting` and `resiliency_period` group properties and the `status_information` node property exist since Windows Server 2016; on older versions these samples are omitted without an error. Cluster properties that Microsoft documents as added in Windows Server 2016 (for example `s2d_enabled` or `cluster_functional_level`) are omitted the same way. As before, `mscluster_node_detected_cloud_platform` is 0 before Windows Server 2022 unless the node reports the property, and the cluster metrics `detect_managed_events`, `detect_managed_events_threshold`, `security_level_for_storage`, `max_number_of_nodes` and `detected_cloud_platform` are published only on Windows Server 2022 and newer.
+Some metrics only exist on newer Windows Server versions and are left out on older ones, without an error:
+
+- Windows Server 2016 and later: the resource group metrics `cold_start_setting` and `resiliency_period`, the node
+  metric `status_information`, and cluster metrics such as `s2d_enabled` and `cluster_functional_level`.
+- Windows Server 2022 and later: the cluster metrics `detect_managed_events`, `detect_managed_events_threshold`,
+  `security_level_for_storage`, `max_number_of_nodes` and `detected_cloud_platform`.
+  `windows_mscluster_node_detected_cloud_platform` is `0` on older versions unless the node reports it.
 
 |||
 -|-
