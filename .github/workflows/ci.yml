@@ -86,7 +86,13 @@ jobs:
       # Builds between tags keep the number of the tag they follow.
       - name: Compute file version
         run: |
-          tag="$(git describe --tags --abbrev=0)"
+          # Several tags can point at one commit, such as an rc on the last
+          # beta, and git describe would pick the first by name.
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="$(git describe --tags --abbrev=0)"
+          fi
           if [[ ! "$tag" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)(-(alpha|beta|rc)\.([0-9]+))?$ ]]; then
             echo "::error::Cannot derive a file version from tag $tag"
             exit 1
