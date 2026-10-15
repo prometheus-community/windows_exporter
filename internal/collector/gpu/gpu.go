@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -141,13 +142,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels}
+}
+
 func (c *Collector) Close() error {
 	c.gpuEnginePerfDataCollector.Close()
 	c.gpuAdapterMemoryPerfDataCollector.Close()
 	c.gpuLocalAdapterMemoryPerfDataCollector.Close()
 	c.gpuNonLocalAdapterMemoryPerfDataCollector.Close()
 	c.gpuProcessMemoryPerfDataCollector.Close()
-	c.labels.Reset()
 	c.instances.reset()
 
 	return nil
@@ -409,8 +414,7 @@ func (c *Collector) getGPUDevice(luid string) (gpuDevice, bool) {
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
 
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	instances := c.instances.begin()
 	defer instances.commit()

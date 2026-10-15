@@ -32,7 +32,9 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"github.com/prometheus-community/windows_exporter/internal/ole/taskschd"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -50,7 +52,7 @@ const defaultTaskExclude = "/Microsoft/.+"
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	TaskExclude: regexp.MustCompile("^(?:" + defaultTaskExclude + ")$"),
+	TaskExclude: utils.MustCompileAnchored(defaultTaskExclude),
 	TaskInclude: types.RegExpAny,
 	MissedRuns:  false,
 }
@@ -153,40 +155,24 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var taskExclude, taskInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.scheduled_task.exclude",
 		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included. "+
 			"The default excludes the tasks of Windows itself.",
-	).Default(defaultTaskExclude).StringVar(&taskExclude)
+		defaultTaskExclude, &c.config.TaskExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&taskInclude)
+		".+", &c.config.TaskInclude,
+	)
 
 	app.Flag(
 		"collector.scheduled_task.missed-runs",
 		"Read and publish windows_scheduled_task_missed_runs. "+
 			"Reading the missed runs of a task costs the Task Scheduler service two requests per scrape.",
 	).Default(strconv.FormatBool(ConfigDefaults.MissedRuns)).BoolVar(&c.config.MissedRuns)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.TaskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskExclude))
-		if err != nil {
-			return fmt.Errorf("collector.scheduled_task.exclude: %w", err)
-		}
-
-		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
-		if err != nil {
-			return fmt.Errorf("collector.scheduled_task.include: %w", err)
-		}
-
-		return nil
-	})
 
 	return c
 }
@@ -195,13 +181,16 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.metricCache}
+}
+
 // Close stops the COM worker. It waits up to closeTimeout for a task read that
 // outlived its scrape. If the read is still running after that, Close returns
 // an error and the worker stops and uninitializes COM on its own once the read
 // returns.
 func (c *Collector) Close() error {
-	c.metricCache.Reset()
-
 	if c.worker == nil {
 		return nil
 	}
@@ -249,9 +238,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
-
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
 
 	if c.worker != nil {
 		if err := c.Close(); err != nil {
@@ -323,7 +309,7 @@ func (c *Collector) taskReader() taskReader {
 }
 
 func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
-	scrape := c.metricCache.Begin()
+	scrape := c.metricCache.Scrape()
 
 	for _, task := range scheduledTasks {
 		values := taskValues{
@@ -340,8 +326,6 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 			ch <- metric
 		}
 	}
-
-	scrape.Commit()
 }
 
 // taskMetrics builds the metrics of a task.

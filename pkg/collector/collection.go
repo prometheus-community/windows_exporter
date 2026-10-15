@@ -28,56 +28,6 @@ import (
 	gotime "time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
-	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
-	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
-	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
-	"github.com/prometheus-community/windows_exporter/internal/collector/container"
-	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
-	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
-	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
-	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
-	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
-	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
-	"github.com/prometheus-community/windows_exporter/internal/collector/file"
-	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
-	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
-	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
-	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
-	"github.com/prometheus-community/windows_exporter/internal/collector/license"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
-	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
-	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
-	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
-	"github.com/prometheus-community/windows_exporter/internal/collector/net"
-	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
-	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
-	"github.com/prometheus-community/windows_exporter/internal/collector/os"
-	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
-	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
-	"github.com/prometheus-community/windows_exporter/internal/collector/process"
-	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
-	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
-	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
-	"github.com/prometheus-community/windows_exporter/internal/collector/service"
-	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
-	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
-	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
-	"github.com/prometheus-community/windows_exporter/internal/collector/system"
-	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
-	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/time"
-	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/update"
-	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -100,57 +50,10 @@ func NewWithFlags(app *kingpin.Application) *Collection {
 //
 //goland:noinspection GoUnusedExportedFunction
 func NewWithConfig(config Config) *Collection {
-	collectors := Map{}
-	collectors[ad.Name] = ad.New(&config.AD)
-	collectors[adcs.Name] = adcs.New(&config.ADCS)
-	collectors[adfs.Name] = adfs.New(&config.ADFS)
-	collectors[cache.Name] = cache.New(&config.Cache)
-	collectors[container.Name] = container.New(&config.Container)
-	collectors[cpu.Name] = cpu.New(&config.CPU)
-	collectors[cpu_info.Name] = cpu_info.New(&config.CPUInfo)
-	collectors[dfsr.Name] = dfsr.New(&config.DFSR)
-	collectors[dhcp.Name] = dhcp.New(&config.Dhcp)
-	collectors[diskdrive.Name] = diskdrive.New(&config.DiskDrive)
-	collectors[dmi.Name] = dmi.New(&config.DMI)
-	collectors[dns.Name] = dns.New(&config.DNS)
-	collectors[exchange.Name] = exchange.New(&config.Exchange)
-	collectors[file.Name] = file.New(&config.File)
-	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
-	collectors[gpu.Name] = gpu.New(&config.GPU)
-	collectors[hyperv.Name] = hyperv.New(&config.HyperV)
-	collectors[iis.Name] = iis.New(&config.IIS)
-	collectors[license.Name] = license.New(&config.License)
-	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
-	collectors[memory.Name] = memory.New(&config.Memory)
-	collectors[mscluster.Name] = mscluster.New(&config.MSCluster)
-	collectors[msmq.Name] = msmq.New(&config.Msmq)
-	collectors[mssql.Name] = mssql.New(&config.Mssql)
-	collectors[net.Name] = net.New(&config.Net)
-	collectors[netframework.Name] = netframework.New(&config.NetFramework)
-	collectors[nps.Name] = nps.New(&config.Nps)
-	collectors[os.Name] = os.New(&config.OS)
-	collectors[pagefile.Name] = pagefile.New(&config.Paging)
-	collectors[performancecounter.Name] = performancecounter.New(&config.PerformanceCounter)
-	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
-	collectors[printer.Name] = printer.New(&config.Printer)
-	collectors[process.Name] = process.New(&config.Process)
-	collectors[registry.Name] = registry.New(&config.Registry)
-	collectors[remote_fx.Name] = remote_fx.New(&config.RemoteFx)
-	collectors[scheduled_task.Name] = scheduled_task.New(&config.ScheduledTask)
-	collectors[service.Name] = service.New(&config.Service)
-	collectors[smb.Name] = smb.New(&config.SMB)
-	collectors[smbclient.Name] = smbclient.New(&config.SMBClient)
-	collectors[smtp.Name] = smtp.New(&config.SMTP)
-	collectors[storage_spaces.Name] = storage_spaces.New(&config.StorageSpaces)
-	collectors[system.Name] = system.New(&config.System)
-	collectors[tcp.Name] = tcp.New(&config.TCP)
-	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)
-	collectors[textfile.Name] = textfile.New(&config.Textfile)
-	collectors[time.Name] = time.New(&config.Time)
-	collectors[udp.Name] = udp.New(&config.UDP)
-	collectors[update.Name] = update.New(&config.Update)
-	collectors[vmware.Name] = vmware.New(&config.Vmware)
-	collectors[wmi.Name] = wmi.New(&config.WMI)
+	collectors := make(Map, len(registrations))
+	for _, r := range registrations {
+		collectors[r.name] = r.newWithConfig(&config)
+	}
 
 	return New(collectors)
 }
@@ -163,6 +66,12 @@ func New(collectors Map) *Collection {
 		scrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_duration_seconds"),
 			"windows_exporter: Total scrape duration.",
+			nil,
+			nil,
+		),
+		scrapeQueueTimeoutDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_queue_timeout"),
+			"windows_exporter: Whether the scrape timed out while it waited for an earlier scrape, so that it didn't start the collectors.",
 			nil,
 			nil,
 		),
@@ -401,6 +310,7 @@ func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
 		state:                       c.state,
 		isView:                      true,
 		scrapeDurationDesc:          c.scrapeDurationDesc,
+		scrapeQueueTimeoutDesc:      c.scrapeQueueTimeoutDesc,
 		collectorScrapeDurationDesc: c.collectorScrapeDurationDesc,
 		collectorScrapeSuccessDesc:  c.collectorScrapeSuccessDesc,
 		collectorScrapeTimeoutDesc:  c.collectorScrapeTimeoutDesc,

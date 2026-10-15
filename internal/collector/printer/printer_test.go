@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,12 +30,7 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all printers.
-	printersInclude := ".+"
-
-	testutils.FuncBenchmarkCollector(b, "printer", printer.NewWithFlags, func(app *kingpin.Application) {
-		app.GetFlag("collector.printer.include").StringVar(&printersInclude)
-	})
+	testutils.FuncBenchmarkCollector(b, "printer", printer.NewWithFlags)
 }
 
 func TestCollector(t *testing.T) {
@@ -57,5 +51,5 @@ func TestCollectorWithoutMISession(t *testing.T) {
 
 	ch := make(chan prometheus.Metric, 1000)
 
-	require.NoError(t, c.Collect(ch, time.Second))
+	require.NoError(t, testutils.Collect(c, ch, time.Second))
 }

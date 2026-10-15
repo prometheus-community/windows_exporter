@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -90,33 +91,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var diskExclude, diskInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.physical_disk.disk-exclude",
 		"Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
-	).Default("").StringVar(&diskExclude)
+		"", &c.config.DiskExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.physical_disk.disk-include",
 		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&diskInclude)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.DiskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", diskExclude))
-		if err != nil {
-			return fmt.Errorf("collector.physical_disk.disk-exclude: %w", err)
-		}
-
-		c.config.DiskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", diskInclude))
-		if err != nil {
-			return fmt.Errorf("collector.physical_disk.disk-include: %w", err)
-		}
-
-		return nil
-	})
+		".+", &c.config.DiskInclude,
+	)
 
 	return c
 }
