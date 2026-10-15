@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -69,8 +70,20 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	})
 
 	for b.Loop() {
-		require.NoError(b, c.Collect(metrics, 0))
+		require.NoError(b, Collect(c, metrics, 0))
 	}
+}
+
+// Collect calls c.Collect within a scrape of the caches of c, as the
+// collection does. Calling c.Collect directly collects without the caches.
+func Collect(c collector.Collector, ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) (err error) {
+	cacheScrape := scrapecache.Begin(c)
+
+	defer func() {
+		cacheScrape.End(err)
+	}()
+
+	return c.Collect(ch, maxScrapeDuration)
 }
 
 // TestCollector validates real Windows collector output. CI lists provisioned
@@ -89,7 +102,14 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	miSession, err := miApp.NewSession(nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, miSession.Close()) })
-	t.Cleanup(func() { assert.NoError(t, c.Close()) })
+	t.Cleanup(func() {
+		assert.NoError(t, c.Close())
+		scrapecache.Reset(c)
+	})
+
+	// Like the collection, start without cached metrics and collect through
+	// the caches, so the second scrape publishes cached metrics.
+	scrapecache.Reset(c)
 
 	if err := c.Build(logger, miSession); err != nil {
 		if !required && unsupportedBuild(err) {
@@ -159,13 +179,13 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 			wg.Wait()
 		}()
 
-		err := c.Collect(ch, 30*time.Second)
+		err := Collect(c, ch, 30*time.Second)
 		if errors.Is(err, update.ErrNoUpdates) && required {
 			deadline := time.Now().Add(time.Minute)
 			for errors.Is(err, update.ErrNoUpdates) && time.Now().Before(deadline) {
 				time.Sleep(100 * time.Millisecond)
 
-				err = c.Collect(ch, 30*time.Second)
+				err = Collect(c, ch, 30*time.Second)
 			}
 		}
 

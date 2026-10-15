@@ -50,6 +50,7 @@ package pdh
 
 import (
 	"fmt"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -472,8 +473,10 @@ func GetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32,
 //			time.Sleep(2000 * time.Millisecond)
 //		}
 //	}
+//
+// Like [GetRawCounterArray], it uses syscall.SyscallN to keep the sizes on the stack.
 func GetFormattedCounterArrayDouble(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
-	ret, _, _ := pdhGetFormattedCounterArrayW.Call(
+	ret, _, _ := syscall.SyscallN(pdhGetFormattedCounterArrayW.Addr(),
 		uintptr(hCounter),
 		uintptr(FmtDouble),
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
@@ -631,8 +634,11 @@ func GetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *Raw
 // ItemBuffer
 // Caller-allocated buffer that receives the array of RawCounterItem structures; the structures contain the raw instance counter values.
 // Set to NULL if lpdwBufferSize is zero.
+//
+// It is called for every counter in every sample. syscall.SyscallN, unlike
+// LazyProc.Call, does not move the pointed-to sizes to the heap.
 func GetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
-	ret, _, _ := pdhGetRawCounterArrayW.Call(
+	ret, _, _ := syscall.SyscallN(pdhGetRawCounterArrayW.Addr(),
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
 		uintptr(unsafe.Pointer(lpdwBufferCount)),

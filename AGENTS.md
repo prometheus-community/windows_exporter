@@ -127,6 +127,9 @@ exercised a live Windows role.
   instance occurrences within a sample; their suffixes are not stable identities.
   Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
+  `pdh.Collector.Collect` reuses the backing array of its destination slice
+  and `Row.Values`; do not keep rows, sub-slices or pointers into it across
+  scrapes.
 - PDH collectors add counters by English path. On a Windows installation
   without en-US resources, the 009 name table holds localized names for v2
   (manifest-based) counter sets such as `SMB Server Shares` or `HTTP Service`;
@@ -139,6 +142,14 @@ exercised a live Windows role.
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
   `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
   never `0` (no MI timeout), so one stalled provider cannot block startup.
+- Collectors that reuse metrics or label pairs between scrapes keep an
+  `internal/metriccache` or `internal/labelcache` field and list it in
+  `ScrapeCaches()` (`internal/scrapecache`). The collection resets these caches
+  before `Build` and after `Close`, and begins a scrape before and ends it after
+  each `Collect`; `Collect` gets it with `Scrape()`. Do not call `Begin`,
+  `Commit` or `Reset` in collectors. A direct `Collect` call, as in most tests,
+  runs without the caches; use `testutils.Collect` or `scrapecache.Begin` to
+  test the cached path.
 - Release resources after partial initialization and on error paths. A non-nil
   PDH collector returned with an error still belongs to the caller and must be
   closed. Sub-collector cleanup closures must read the initialized field when
@@ -163,6 +174,10 @@ exercised a live Windows role.
   YAML key is the collector name and a `docs/collector.<name>.md`;
   `TestRegistrations` checks that they agree. The configuration file schema in
   `internal/config` only checks keys: the flags parse and validate the values.
+  Register include/exclude expression flags with `utils.RegexpFlag`, which
+  anchors the expression, stores the compiled `*regexp.Regexp` in the config
+  and names the flag in parse errors; use `utils.IsMatchAll`/`IsMatchNone` to
+  detect unfiltered defaults.
 - For textfiles, keep HELP/type metadata consistent across files and preserve
   unrelated valid series when reporting duplicates or parse failures. Publish
   producer output by replacing a temporary file in the same directory. File
