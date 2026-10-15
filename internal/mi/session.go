@@ -18,10 +18,12 @@
 package mi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -30,10 +32,26 @@ import (
 )
 
 // BuildQueryTimeout bounds the probe queries collectors run in Build. Build
-// has no scrape budget, and a zero timeout sets no MI timeout, so a stalled
-// provider would otherwise block startup. A timed-out query fails with
-// MI_RESULT_INVALID_OPERATION_TIMEOUT. MI ignores timeouts below 1ms.
+// has no scrape budget, and the session default, [DefaultQueryTimeout], is
+// too short for slow providers. A timed-out query fails with
+// MI_RESULT_INVALID_OPERATION_TIMEOUT.
 const BuildQueryTimeout = 30 * time.Second
+
+// DefaultQueryTimeout is the MI timeout of a query that is started with a
+// non-positive timeout or with nil operation options. Every query started
+// through [Session.Query] or [Session.QueryFunc] has an MI timeout: MI treats
+// a zero timeout as unset, which would let a stalled provider block the query
+// forever.
+const DefaultQueryTimeout = 5 * time.Second
+
+// minQueryTimeout is the shortest MI timeout. MI ignores timeouts below 1ms,
+// so shorter positive timeouts are raised to it instead of disabling the
+// timeout.
+const minQueryTimeout = time.Millisecond
+
+// maxCachedOperationOptions bounds the number of fixed query timeouts whose
+// operation options a session keeps.
+const maxCachedOperationOptions = 16
 
 // Session represents a session.
 //
@@ -47,8 +65,18 @@ type Session struct {
 	//
 	// application created the session and outlives it, so per-query
 	// operation options are created without MI_Session_GetApplication.
-	application             *Application
+	application *Application
+	// defaultOperationOptions carry DefaultQueryTimeout. They are used for
+	// nil operation options and non-positive query timeouts.
 	defaultOperationOptions *OperationOptions
+
+	// optionsMu guards cachedOperationOptions and closed. The cached options
+	// carry fixed timeouts, see operationOptions. Like the default options,
+	// they are shared by concurrent operations and deleted by Close after
+	// MI_Session_Close has closed every operation.
+	optionsMu              sync.Mutex
+	cachedOperationOptions map[time.Duration]*OperationOptions
+	closed                 bool
 }
 
 // SessionFT represents the function table for Session.
@@ -80,14 +108,28 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
+	// Queries started from now on fail instead of caching new options.
+	s.optionsMu.Lock()
+	s.closed = true
+	s.optionsMu.Unlock()
+
 	// MI_Session_Close cancels running operations and blocks until their
-	// handles are closed. The default options are deleted afterwards, so an
-	// operation that is still open never uses freed options.
+	// handles are closed. The default and cached options are deleted
+	// afterwards, so an operation that is still open never uses freed options.
 	r0, _, _ := syscall.SyscallN(s.ft.Close,
 		uintptr(unsafe.Pointer(s)),
 		0,
 		0,
 	)
+
+	s.optionsMu.Lock()
+
+	for _, operationOptions := range s.cachedOperationOptions {
+		_ = operationOptions.Delete()
+	}
+
+	s.cachedOperationOptions = nil
+	s.optionsMu.Unlock()
 
 	if s.defaultOperationOptions != nil {
 		_ = s.defaultOperationOptions.Delete()
@@ -405,25 +447,66 @@ func (s *Session) QueryUnmarshal[T any](dst *[]T,
 	})
 }
 
-// Query queries for a set of instances based on a query expression.
+// Query queries for a set of instances based on a query expression and
+// unmarshals them into dst. It is [Session.QueryContext] without
+// cancellation.
 func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
-	operationOptions, err := s.newOperationOptions(queryTimeout)
+	return s.QueryContext(context.Background(), dst, namespaceName, queryExpression, queryTimeout)
+}
+
+// QueryContext queries for a set of instances based on a query expression and
+// unmarshals them into dst.
+//
+// queryTimeout is the MI timeout of the query. A non-positive timeout selects
+// [DefaultQueryTimeout], so MI never runs the query without a timeout. A
+// positive timeout below 1ms is raised to 1ms, the shortest one MI honors.
+//
+// If ctx is done before the query starts, the query is not started. If ctx is
+// done while the query runs, the operation is cancelled. Either way the
+// context's cause is returned, unless the query failed before. QueryContext
+// returns only after MI has delivered the final result of a started query.
+func (s *Session) QueryContext[T any](ctx context.Context, dst *[]T, namespaceName Namespace, queryExpression Query,
+	queryTimeout time.Duration,
+) error {
+	if s == nil || s.ft == nil {
+		return ErrNotInitialized
+	}
+
+	fields, err := prepareUnmarshal(dst)
 	if err != nil {
 		return err
 	}
 
-	if operationOptions != nil {
-		defer func() {
-			_ = operationOptions.Delete()
-		}()
+	if ctx.Err() != nil {
+		return context.Cause(ctx)
 	}
 
-	return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+	operationOptions, release, err := s.operationOptions(queryTimeout)
+	if err != nil {
+		return err
+	}
+
+	// Deferred first so the options outlive the operation that uses them.
+	defer release()
+
+	return s.queryContext(ctx, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression,
+		func(instance *Instance) error {
+			return appendInstance(dst, instance, fields, true)
+		})
 }
 
-// QueryFunc runs a WQL query and calls fn for every returned instance, in
-// order. It is meant for queries whose result shape is only known at runtime,
-// where [Session.Query] cannot unmarshal into a struct.
+// QueryFunc runs a WQL query and calls fn for every returned instance. It is
+// [Session.QueryFuncContext] without cancellation.
+func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
+	return s.QueryFuncContext(context.Background(), namespaceName, queryExpression, queryTimeout, fn)
+}
+
+// QueryFuncContext runs a WQL query and calls fn for every returned instance,
+// in order. It is meant for queries whose result shape is only known at
+// runtime, where [Session.QueryContext] cannot unmarshal into a struct.
+//
+// queryTimeout and ctx behave as for [Session.QueryContext]. Once ctx is
+// done, fn is not called any more.
 //
 // The instance passed to fn, and every element read from it, is only valid
 // until fn returns. If fn returns an error, the query is cancelled and that
@@ -437,22 +520,24 @@ func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpressio
 // MI does not wait for fn. With a slow fn, copies of the remaining result set
 // queue up in native memory, and the query timeout does not stop fn; check a
 // deadline in fn where that matters.
-func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
+func (s *Session) QueryFuncContext(ctx context.Context, namespaceName Namespace, queryExpression Query,
+	queryTimeout time.Duration, fn func(*Instance) error,
+) error {
 	if s == nil || s.ft == nil {
 		return ErrNotInitialized
 	}
 
-	operationOptions, err := s.newOperationOptions(queryTimeout)
+	if ctx.Err() != nil {
+		return context.Cause(ctx)
+	}
+
+	operationOptions, release, err := s.operationOptions(queryTimeout)
 	if err != nil {
 		return err
 	}
 
-	if operationOptions != nil {
-		// Deferred first so the options outlive the operation that uses them.
-		defer func() {
-			_ = operationOptions.Delete()
-		}()
-	}
+	// Deferred first so the options outlive the operation that uses them.
+	defer release()
 
 	query := newCopyQuery(fn)
 
@@ -461,33 +546,88 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 	// close cancels the operation if fn aborted it early or panicked.
 	defer query.close()
 
-	return query.wait()
+	return query.wait(ctx)
 }
 
-// newOperationOptions creates operation options carrying queryTimeout. A zero
-// timeout leaves the MI default in place; a negative timeout returns nil
-// options, so the session defaults are used. The caller must delete non-nil
-// options once the operation is closed.
+// operationOptions returns the operation options for queryTimeout and a
+// function that releases them once the operation that uses them is closed.
+//
+//   - A non-positive timeout returns the session defaults, which carry
+//     DefaultQueryTimeout.
+//   - A timeout of whole seconds is taken as a fixed, configured timeout, e.g.
+//     BuildQueryTimeout. Its options are created once and kept until Close,
+//     for up to maxCachedOperationOptions distinct timeouts. Every query with
+//     such a timeout saves three native calls.
+//   - Any other timeout, typically the remaining scrape budget, gets options
+//     of its own, which release deletes.
+func (s *Session) operationOptions(queryTimeout time.Duration) (*OperationOptions, func(), error) {
+	if queryTimeout <= 0 {
+		if s.defaultOperationOptions == nil {
+			return nil, nil, ErrNotInitialized
+		}
+
+		return s.defaultOperationOptions, func() {}, nil
+	}
+
+	queryTimeout = max(queryTimeout, minQueryTimeout)
+
+	if queryTimeout%time.Second != 0 {
+		return s.ownOperationOptions(queryTimeout)
+	}
+
+	s.optionsMu.Lock()
+	defer s.optionsMu.Unlock()
+
+	if s.closed {
+		return nil, nil, ErrNotInitialized
+	}
+
+	if operationOptions, ok := s.cachedOperationOptions[queryTimeout]; ok {
+		return operationOptions, func() {}, nil
+	}
+
+	if len(s.cachedOperationOptions) >= maxCachedOperationOptions {
+		return s.ownOperationOptions(queryTimeout)
+	}
+
+	operationOptions, err := s.newOperationOptions(queryTimeout)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if s.cachedOperationOptions == nil {
+		s.cachedOperationOptions = make(map[time.Duration]*OperationOptions, 1)
+	}
+
+	s.cachedOperationOptions[queryTimeout] = operationOptions
+
+	return operationOptions, func() {}, nil
+}
+
+// ownOperationOptions returns new operation options for queryTimeout and a
+// function that deletes them.
+func (s *Session) ownOperationOptions(queryTimeout time.Duration) (*OperationOptions, func(), error) {
+	operationOptions, err := s.newOperationOptions(queryTimeout)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return operationOptions, func() { _ = operationOptions.Delete() }, nil
+}
+
+// newOperationOptions creates operation options carrying queryTimeout, which
+// must be at least minQueryTimeout. The caller must delete them once the
+// operation that uses them is closed.
 func (s *Session) newOperationOptions(queryTimeout time.Duration) (*OperationOptions, error) {
-	if s == nil || s.ft == nil {
-		return nil, ErrNotInitialized
-	}
-
-	if queryTimeout < 0 {
-		return nil, nil //nolint:nilnil
-	}
-
 	operationOptions, err := s.application.NewOperationOptions()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation options: %w", err)
 	}
 
-	if queryTimeout > 0 {
-		if err = operationOptions.SetTimeout(queryTimeout); err != nil {
-			_ = operationOptions.Delete()
+	if err = operationOptions.SetTimeout(queryTimeout); err != nil {
+		_ = operationOptions.Delete()
 
-			return nil, fmt.Errorf("failed to set timeout: %w", err)
-		}
+		return nil, fmt.Errorf("failed to set timeout: %w", err)
 	}
 
 	return operationOptions, nil

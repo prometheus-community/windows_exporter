@@ -18,6 +18,7 @@
 package mi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -166,6 +167,9 @@ type asyncQuery struct {
 	// instances that arrived before any failed result.
 	handlerErr error
 
+	// ctx is the context passed to wait. Only the waiting goroutine uses it.
+	ctx context.Context //nolint:containedctx // lives for the duration of one wait.
+
 	// cancelRequested asks the waiting goroutine to cancel the operation.
 	cancelRequested chan struct{}
 	// done is closed by the final callback. MI does not use the query any
@@ -308,14 +312,31 @@ func (q *asyncQuery) queueCopy(instance *Instance) error {
 }
 
 // wait blocks until the final callback and returns the query result. It
-// cancels the operation when a callback asks for it, and runs the handler of
-// a copy query.
-func (q *asyncQuery) wait() error {
+// cancels the operation when a callback asks for it or ctx is done, and runs
+// the handler of a copy query.
+//
+// A done ctx fails the query with the context's cause, unless it has failed
+// before, and stops calling the handler. wait still returns only after the
+// final callback, so close never releases memory MI may use.
+func (q *asyncQuery) wait(ctx context.Context) error {
 	guard := newGuardTimer()
 	defer releaseGuardTimer(guard)
 
+	q.ctx = ctx
+	ctxDone := ctx.Done()
+
 	for {
 		select {
+		case <-ctxDone:
+			// Fires once. The cancellation goes through cancelRequested,
+			// like one a callback asks for.
+			ctxDone = nil
+
+			if !q.finished.Load() {
+				q.mu.Lock()
+				q.fail(context.Cause(ctx))
+				q.mu.Unlock()
+			}
 		case <-q.done:
 			// Copies queued by the last callbacks.
 			q.handleQueued()
@@ -359,7 +380,8 @@ func (q *asyncQuery) handleQueued() {
 		q.batch = batch
 
 		for i, instance := range batch {
-			if q.handlerErr == nil {
+			// After ctx is done, the copies are only deleted.
+			if q.handlerErr == nil && q.ctx.Err() == nil {
 				if err := q.handler(instance); err != nil {
 					q.handlerErr = err
 
@@ -429,10 +451,17 @@ func (q *asyncQuery) close() {
 func (s *Session) query(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
 	queryDialect QueryDialect, queryExpression Query, onInstance func(*Instance) error,
 ) error {
+	return s.queryContext(context.Background(), flags, operationOptions, namespaceName, queryDialect, queryExpression, onInstance)
+}
+
+// queryContext is query with cancellation, see [asyncQuery.wait].
+func (s *Session) queryContext(ctx context.Context, flags OperationFlags, operationOptions *OperationOptions,
+	namespaceName Namespace, queryDialect QueryDialect, queryExpression Query, onInstance func(*Instance) error,
+) error {
 	query := newAsyncQuery(onInstance)
 
 	query.start(s, flags, operationOptions, namespaceName, queryDialect, queryExpression)
 	defer query.close()
 
-	return query.wait()
+	return query.wait(ctx)
 }

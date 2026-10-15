@@ -18,6 +18,7 @@
 package mi_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -273,4 +274,98 @@ func Test_MI_Query_DeadlockDetector(t *testing.T) {
 
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "%s", output)
+}
+
+// Test_MI_QueryContext_CancelBeforeStart checks that a query with a done
+// context is not started.
+func Test_MI_QueryContext_CancelBeforeStart(t *testing.T) {
+	t.Parallel()
+
+	session := newTestSession(t)
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	processes := []win32Process{{Name: "stale"}}
+
+	require.ErrorIs(t, session.QueryContext(ctx, &processes, mi.NamespaceRootCIMv2, query, 5*time.Second), context.Canceled)
+	require.Empty(t, processes)
+
+	err = session.QueryFuncContext(ctx, mi.NamespaceRootCIMv2, query, 5*time.Second, func(*mi.Instance) error {
+		return errors.New("unexpected instance")
+	})
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+// Test_MI_QueryContext_CancelDuringQuery checks that a context that is done
+// while the query runs cancels the operation and is reported, and that the
+// session stays usable.
+func Test_MI_QueryContext_CancelDuringQuery(t *testing.T) {
+	session := newTestSession(t)
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	t.Run("QueryFuncContext", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		var handled int
+
+		err := session.QueryFuncContext(ctx, mi.NamespaceRootCIMv2, query, 5*time.Second, func(*mi.Instance) error {
+			handled++
+
+			cancel()
+
+			return nil
+		})
+		require.ErrorIs(t, err, context.Canceled)
+		require.Equal(t, 1, handled)
+	})
+
+	t.Run("QueryContext", func(t *testing.T) {
+		// CIM_DataFile enumerates every file of the drive, which takes far
+		// longer than the context.
+		slowQuery, err := mi.NewQuery("SELECT Name FROM CIM_DataFile WHERE Drive = 'C:'")
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+		defer cancel()
+
+		type cimDataFile struct {
+			Name string `mi:"Name"`
+		}
+
+		var files []cimDataFile
+
+		start := time.Now()
+
+		err = session.QueryContext(ctx, &files, mi.NamespaceRootCIMv2, slowQuery, time.Minute)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.Less(t, time.Since(start), 30*time.Second)
+	})
+
+	var processes []win32Process
+
+	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 5*time.Second))
+	require.NotEmpty(t, processes)
+}
+
+// Test_MI_Query_ZeroTimeout checks that a zero timeout runs the query with
+// mi.DefaultQueryTimeout instead of failing.
+func Test_MI_Query_ZeroTimeout(t *testing.T) {
+	t.Parallel()
+
+	session := newTestSession(t)
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	var processes []win32Process
+
+	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 0))
+	require.NotEmpty(t, processes)
 }

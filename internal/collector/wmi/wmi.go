@@ -513,7 +513,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 }
 
 func (c *Collector) collectQuery(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, query Query, deadline time.Time) error {
-	// Zero means no timeout, which leaves the MI default in place.
+	// Zero selects mi.DefaultQueryTimeout.
 	var timeout time.Duration
 
 	if !deadline.IsZero() {
