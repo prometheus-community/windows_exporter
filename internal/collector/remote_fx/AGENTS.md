@@ -35,3 +35,52 @@ with one active RDP session over TCP.
   151159, `Total Sent Bytes` 29262741, `Total Received Bytes` 3920173.
 - `RemoteFX Root GPU Management` exists but has no instances without GPU
   partitioning; the collector does not read it.
+
+## Counter reference
+
+Recorded on Windows Server 2025 (build 26100). `Raw` and `Base` are the first and second
+values that `pdh.CounterTypeRaw` returns for the sample instance.
+
+### `RemoteFX Graphics`
+
+Multi-instance. Instances: `RDP-Tcp 0`. Sample instance: `RDP-Tcp 0`.
+
+Counters the collector reads:
+
+| Counter | Type | Raw | Base |
+|---|---|---|---|
+| `Average Encoding Time` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Frame Quality` | `PERF_COUNTER_RAWCOUNT` | 100 |  |
+| `Frames Skipped/Second - Insufficient Client Resources` | `PERF_COUNTER_COUNTER` | 0 |  |
+| `Frames Skipped/Second - Insufficient Network Resources` | `PERF_COUNTER_COUNTER` | 0 |  |
+| `Frames Skipped/Second - Insufficient Server Resources` | `PERF_COUNTER_COUNTER` | 0 |  |
+| `Graphics Compression ratio` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Input Frames/Second` | `PERF_COUNTER_COUNTER` | 27104 |  |
+| `Output Frames/Second` | `PERF_COUNTER_COUNTER` | 26157 |  |
+| `Source Frames/Second` | `PERF_COUNTER_COUNTER` | 0 |  |
+
+### `RemoteFX Network`
+
+Multi-instance. Instances: `RDP-tcp 0`. Sample instance: `RDP-tcp 0`.
+
+Counters the collector reads:
+
+| Counter | Type | Raw | Base |
+|---|---|---|---|
+| `Base TCP RTT` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Base UDP RTT` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Current TCP Bandwidth` | `PERF_COUNTER_RAWCOUNT` | 151159 |  |
+| `Current TCP RTT` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Current UDP Bandwidth` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `Current UDP RTT` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
+| `FEC Rate` | `PERF_SAMPLE_FRACTION` | 0 | 0 |
+| `Loss Rate` | `PERF_SAMPLE_FRACTION` | 0 | 0 |
+| `Retransmission Rate` | `PERF_SAMPLE_FRACTION` | 0 | 0 |
+| `Total Received Bytes` | `PERF_COUNTER_RAWCOUNT` | 3922173 |  |
+| `Total Sent Bytes` | `PERF_COUNTER_RAWCOUNT` | 29288171 |  |
+| `UDP Packets Received/sec` | `PERF_COUNTER_COUNTER` | 0 |  |
+| `UDP Packets Sent/sec` | `PERF_COUNTER_COUNTER` | 0 |  |
+
+Not read by the collector:
+
+- `PERF_COUNTER_COUNTER`: `Sent Rate P0`, `Sent Rate P1`, `Sent Rate P2`, `Sent Rate P3`, `TCP Received Rate`, `TCP Sent Rate`, `Total Received Rate`, `Total Sent Rate`, `UDP Received Rate`, `UDP Sent Rate`
