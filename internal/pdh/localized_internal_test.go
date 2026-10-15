@@ -50,7 +50,7 @@ func TestLocalizedCounterPaths(t *testing.T) {
 	paths := localizedCounterPaths("SMB Client Shares", "*", "Avg. sec/Read")
 
 	for _, langID := range uiLanguages() {
-		if langID == langIDEnglish {
+		if isEnglish(langID) {
 			continue
 		}
 

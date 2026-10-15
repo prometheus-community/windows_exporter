@@ -126,7 +126,7 @@ func localizedCounterSets(object string) []localizedCounterSet {
 		english := counterNames(&guid, langIDEnglish)
 
 		for _, langID := range uiLanguages() {
-			if langID == langIDEnglish {
+			if isEnglish(langID) {
 				continue
 			}
 
@@ -151,6 +151,12 @@ func localizedCounterSets(object string) []localizedCounterSet {
 	localizedNames[key] = sets
 
 	return sets
+}
+
+// isEnglish reports whether langID is an English language, e.g. en-US or en-GB,
+// whose names match the English ones.
+func isEnglish(langID uint32) bool {
+	return langID&0x3FF == langIDEnglish&0x3FF
 }
 
 // uiLanguages returns the UI languages whose names PDH may expect: the one of
@@ -203,7 +209,7 @@ func loadEnglishCounterSets() map[string]windows.GUID {
 			return sets
 		}
 
-		guids = guids[:actual]
+		guids = guids[:min(actual, size)]
 
 		break
 	}
