@@ -16,6 +16,7 @@
 package labelcache_test
 
 import (
+	"errors"
 	"runtime"
 	"strconv"
 	"sync"
@@ -357,4 +358,72 @@ func TestCommittedScrape(t *testing.T) {
 	require.Same(t, first[0], write(t, next.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "1")).GetLabel()[0])
 	require.NotSame(t, late[1], write(t, next.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "2")).GetLabel()[1], "late series was not cached")
 	next.Commit()
+}
+
+// scrapeWith runs one scrape of the pids the way the collection does around
+// a Collect call that returns err, and returns the label pairs of each series.
+func scrapeWith(t *testing.T, cache *labelcache.Cache, err error, pids ...string) [][]*dto.LabelPair {
+	t.Helper()
+
+	cache.BeginScrape()
+	defer cache.EndScrape(err)
+
+	scrape := cache.Scrape()
+	labels := make([][]*dto.LabelPair, 0, len(pids))
+
+	for _, pid := range pids {
+		labels = append(labels, write(t, scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", pid)).GetLabel())
+	}
+
+	return labels
+}
+
+func TestBeginEndScrape(t *testing.T) {
+	t.Parallel()
+
+	var cache labelcache.Cache
+
+	require.Nil(t, cache.Scrape(), "no scrape outside of BeginScrape")
+
+	first := scrapeWith(t, &cache, nil, "1", "2")
+	require.Nil(t, cache.Scrape(), "EndScrape ends the scrape")
+
+	second := scrapeWith(t, &cache, nil, "1", "2")
+	require.Same(t, first[0][1], second[0][1], "label pairs reused")
+	require.Same(t, first[1][1], second[1][1])
+
+	// A Collect call that never asked for the scrape leaves the cache unchanged.
+	cache.BeginScrape()
+	cache.EndScrape(nil)
+
+	// A failed Collect that created no metric keeps the series.
+	scrapeWith(t, &cache, errors.New("read failed"))
+
+	third := scrapeWith(t, &cache, nil, "1", "2")
+	require.Same(t, first[1][1], third[1][1], "failed empty scrape kept the series")
+
+	// A failed Collect that created metrics commits its series.
+	scrapeWith(t, &cache, errors.New("partial"), "1")
+
+	fourth := scrapeWith(t, &cache, nil, "1", "2")
+	require.Same(t, first[0][1], fourth[0][1])
+	require.NotSame(t, first[1][1], fourth[1][1], "partial scrape dropped series 2")
+
+	// A successful empty scrape drops every series.
+	scrapeWith(t, &cache, nil)
+
+	fifth := scrapeWith(t, &cache, nil, "1")
+	require.NotSame(t, fourth[0][1], fifth[0][1])
+
+	// Reset drops the series, also those of a running scrape.
+	cache.BeginScrape()
+	write(t, cache.Scrape().MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, 1, "p", "1"))
+	cache.Reset()
+	cache.EndScrape(nil)
+
+	sixth := scrapeWith(t, &cache, nil, "1")
+	require.NotSame(t, fifth[0][1], sixth[0][1])
+
+	// EndScrape without a scrape does nothing.
+	cache.EndScrape(nil)
 }

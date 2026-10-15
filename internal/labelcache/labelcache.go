@@ -25,10 +25,15 @@
 // Label pairs are interned: all series with the same label name and value,
 // such as the process and process_id labels of the series of one process,
 // share one pair, so the cache keeps little more than one slice per series.
+//
+// A collector lists its caches in ScrapeCaches (see internal/scrapecache).
+// The collection resets them around Build and Close and begins and ends a
+// scrape around each Collect call, which gets it from [Cache.Scrape].
 package labelcache
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -117,6 +122,11 @@ type Cache struct {
 	// resets counts Reset calls, so that a scrape begun before a Reset doesn't
 	// add series afterwards.
 	resets uint64
+
+	// active is set between BeginScrape and EndScrape.
+	active atomic.Bool
+	// current is the scrape that Scrape created after BeginScrape, or nil.
+	current atomic.Pointer[Scrape]
 }
 
 // Scrape creates the metrics of one scrape.
@@ -128,9 +138,14 @@ type Scrape struct {
 	// metrics without the cache, so they can't add series to the set the
 	// commit decided.
 	committed bool
+	// used is set by the first MustNewConstMetric call.
+	used atomic.Bool
 }
 
 // Begin starts a scrape. Call Commit when it is done.
+//
+// Collectors don't call Begin: the collection begins and ends their scrapes
+// through BeginScrape and EndScrape, and Collect gets its scrape from [Cache.Scrape].
 func (c *Cache) Begin() *Scrape {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -138,6 +153,64 @@ func (c *Cache) Begin() *Scrape {
 	c.generation++
 
 	return &Scrape{cache: c, generation: c.generation, resets: c.resets}
+}
+
+// BeginScrape begins a scrape. The collection calls it before Collect.
+func (c *Cache) BeginScrape() {
+	c.current.Store(nil)
+	c.active.Store(true)
+}
+
+// EndScrape ends the scrape begun by BeginScrape. The collection calls it
+// once Collect returned err.
+//
+// A scrape that Collect never asked for leaves the cache unchanged. Otherwise
+// the scrape is committed, unless Collect failed before it created a metric:
+// then the series of the previous scrapes stay.
+func (c *Cache) EndScrape(err error) {
+	c.active.Store(false)
+
+	s := c.current.Swap(nil)
+	if s == nil {
+		return
+	}
+
+	if err != nil && !s.used.Load() {
+		s.discard()
+
+		return
+	}
+
+	s.Commit()
+}
+
+// Scrape returns the scrape of the running Collect call, which it creates on
+// the first call. It is nil outside of a scrape begun by the collection, for
+// example when Collect is called directly; a nil Scrape creates metrics
+// without the cache.
+func (c *Cache) Scrape() *Scrape {
+	if s := c.current.Load(); s != nil {
+		return s
+	}
+
+	if !c.active.Load() {
+		return nil
+	}
+
+	s := c.Begin()
+	if c.current.CompareAndSwap(nil, s) {
+		return s
+	}
+
+	// Another worker of the scrape created it first.
+	return c.current.Load()
+}
+
+// discard ends the scrape without dropping any series.
+func (s *Scrape) discard() {
+	s.cache.mu.Lock()
+	s.committed = true
+	s.cache.mu.Unlock()
 }
 
 // Reset drops all cached label pairs, for example when the collector closes.
@@ -225,6 +298,10 @@ func (c *Cache) intern(labels []*dto.LabelPair) []*dto.LabelPair {
 //
 //nolint:ireturn // Const metrics have no exported type.
 func (s *Scrape) MustNewConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labelValues ...string) prometheus.Metric {
+	if s != nil && !s.used.Load() {
+		s.used.Store(true)
+	}
+
 	if s == nil || len(labelValues) > maxLabels || !knownValueType(valueType) {
 		return prometheus.MustNewConstMetric(desc, valueType, value, append([]string(nil), labelValues...)...)
 	}

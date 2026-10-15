@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -251,7 +252,15 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 }
 
 // collect calls Collector.Collect and turns a panic into an error.
+// It begins a scrape of the collector's caches before and ends it after the call.
 func collect(name string, collector Collector, ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) (err error) {
+	cacheScrape := scrapecache.Begin(collector)
+
+	// Deferred first, so it runs after the recovery and gets the error of a panic.
+	defer func() {
+		cacheScrape.End(err)
+	}()
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic in collector %s: %v. stack: %s", name, r,
