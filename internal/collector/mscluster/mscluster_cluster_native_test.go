@@ -175,7 +175,7 @@ func TestClusterWMISynthesizedValues(t *testing.T) {
 	cluster := clusterFixture()
 	synthesized := map[string]float64{
 		"ClusSvcRegroupOpeningTimeout": 0, "ClusSvcRegroupPruningTimeout": 0, "DisableGroupPreferredOwnerRandomization": 0,
-		"GracePeriodEnabled": 0, "GracePeriodTimeout": 0, "QuorumArbitrationTimeMin": 0, "ResourceDllDeadlockPeriod": 0,
+		"GracePeriodEnabled": 0, "GracePeriodTimeout": 0, "QuorumArbitrationTimeMin": 0,
 		"RootMemoryReserved": 0, "MaxNumberOfNodes": 64,
 	}
 

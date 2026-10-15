@@ -215,7 +215,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 	c.cpuTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
 		[]string{"process", "process_id", "mode"},
 		nil,

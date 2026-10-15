@@ -78,7 +78,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "1 - avg(clamp_max(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1))",
+                                                "expr": "1 - avg(clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -173,7 +173,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"user\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"user\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -260,7 +260,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"privileged\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"privileged\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -611,7 +611,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (mode) (rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode!=\"idle\"}[$__rate_interval])) / scalar(count(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}))",
+                                                "expr": "sum by (mode) (rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode!=\"idle\"}[$__rate_interval])) / scalar(count(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{mode}}",
                                                 "range": true
@@ -727,7 +727,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "label_replace(clamp(1 - rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 0, 1), \"core\", \"$1,0$2\", \"core\", \"(\\\\d+),(\\\\d)\")",
+                                                "expr": "label_replace(clamp(1 - rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 0, 1), \"core\", \"$1,0$2\", \"core\", \"(\\\\d+),(\\\\d)\")",
                                                 "instant": false,
                                                 "legendFormat": "{{core}}",
                                                 "range": true

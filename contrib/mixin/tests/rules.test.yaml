@@ -7,15 +7,15 @@ tests:
   - name: CPU is averaged across cores and preserves target labels
     interval: 1m
     input_series:
-      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
         values: '0+12x10'
-      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="1", mode="idle"}'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="1", mode="idle"}'
         values: '0+36x10'
-      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="user"}'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="user"}'
         values: '0+48x10'
-      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="b", core="0", mode="idle"}'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="b", core="0", mode="idle"}'
         values: '0+30x10'
-      - series: 'windows_cpu_time_total{job="other", instance="host:9182", core="0", mode="idle"}'
+      - series: 'windows_cpu_time_seconds_total{job="other", instance="host:9182", core="0", mode="idle"}'
         values: '0+6x10'
     promql_expr_test:
       - expr: windows:cpu_cores:count

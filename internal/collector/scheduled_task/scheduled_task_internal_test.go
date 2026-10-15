@@ -166,23 +166,13 @@ func TestCollectMetrics(t *testing.T) {
 
 			if tc.result == 0x41303 {
 				require.Len(t, families, 2)
-				require.NotContains(t, families, "windows_scheduled_task_last_result")
 				require.NotContains(t, families, "windows_scheduled_task_missed_runs")
 
 				return
 			}
 
-			require.Len(t, families, 4)
-			lastResult := families["windows_scheduled_task_last_result"]
-			require.NotNil(t, lastResult)
-			require.Len(t, lastResult.GetMetric(), 1)
-
-			wantSuccess := 0.0
-			if tc.result == 0 {
-				wantSuccess = 1
-			}
-
-			require.InDelta(t, wantSuccess, lastResult.GetMetric()[0].GetGauge().GetValue(), 0)
+			require.Len(t, families, 3)
+			require.NotContains(t, families, "windows_scheduled_task_last_result")
 
 			missedRuns := families["windows_scheduled_task_missed_runs"]
 			require.NotNil(t, missedRuns)
@@ -251,7 +241,7 @@ func TestCollectMetricsCache(t *testing.T) {
 
 	for i, scrape := range []ScheduledTasks{tasks, tasks, changed, changed} {
 		// Collect once outside the registry, which calls Collect for Describe too.
-		collected := make(chan prometheus.Metric, len(scrape)*19)
+		collected := make(chan prometheus.Metric, len(scrape)*18)
 		c.collectMetrics(collected, scrape)
 		close(collected)
 
@@ -280,7 +270,7 @@ func TestCollectMetricsCache(t *testing.T) {
 		current := make(map[string][]prometheus.Metric, len(scrape))
 
 		for _, task := range scrape {
-			n := 19
+			n := 18
 			if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
 				n = 17
 			}
@@ -354,7 +344,7 @@ func BenchmarkCollectMetrics(b *testing.B) {
 			require.NoError(b, c.Build(slog.New(slog.DiscardHandler), nil))
 
 			tasks := benchmarkTasks(265)
-			ch := make(chan prometheus.Metric, len(tasks)*19)
+			ch := make(chan prometheus.Metric, len(tasks)*18)
 
 			b.ReportAllocs()
 

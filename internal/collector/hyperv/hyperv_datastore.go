@@ -253,7 +253,7 @@ func (c *Collector) buildDataStore() error {
 		nil,
 	)
 	c.dataStoreWriteToFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_file_operations_total"),
 		"Represents the write to file count of the DataStore.",
 		[]string{"datastore"},
 		nil,
@@ -271,7 +271,7 @@ func (c *Collector) buildDataStore() error {
 		nil,
 	)
 	c.dataStoreReadFromFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_file_operations_total"),
 		"Represents the read from file count of the DataStore.",
 		[]string{"datastore"},
 		nil,
@@ -289,7 +289,7 @@ func (c *Collector) buildDataStore() error {
 		nil,
 	)
 	c.dataStoreWriteToStorageCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_write_to_storage_operations_total"),
 		"Represents the write to storage count of the DataStore.",
 		[]string{"datastore"},
 		nil,
@@ -307,7 +307,7 @@ func (c *Collector) buildDataStore() error {
 		nil,
 	)
 	c.dataStoreReadFromStorageCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "datastore_read_from_storage_operations_total"),
 		"Represents the read from storage count of the DataStore.",
 		[]string{"datastore"},
 		nil,

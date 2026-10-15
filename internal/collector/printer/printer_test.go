@@ -41,7 +41,7 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, printer.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, printer.Name, "windows_printer_jobs_total", prometheus.Labels{"printer": "CIPrinter"})
+	testutils.RequireFixtureMetric(t, metrics, printer.Name, "windows_printer_jobs", prometheus.Labels{"printer": "CIPrinter"})
 }
 
 // TestCollectorWithoutMISession checks that the collector does not depend on WMI.

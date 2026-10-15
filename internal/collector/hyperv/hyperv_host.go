@@ -83,21 +83,21 @@ func (c *Collector) buildHost() error {
 	}
 
 	c.vmProcessorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_processor_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_processors"),
 		"Number of virtual processors assigned to the VM",
 		[]string{"vm_id", "vm"},
 		nil,
 	)
 
 	c.hostLogicalProcessorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "host_logical_processor_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_logical_processors"),
 		"Number of logical processors on the host",
 		nil,
 		nil,
 	)
 
 	c.totalVMProcessorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_vm_processor_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "assigned_vm_processors"),
 		"Total number of virtual processors assigned to all VMs",
 		nil,
 		nil,

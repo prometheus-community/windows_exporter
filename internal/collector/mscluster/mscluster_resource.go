@@ -20,6 +20,7 @@ package mscluster
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
@@ -294,6 +295,11 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 		1e-3, // RetryPeriodOnFailure
 		1,    // State
 	}
+	// The poll intervals are 0xFFFFFFFF when the resource uses the interval of its
+	// resource type. That is not a duration, so the series is left out.
+	useTypeDefault := func(index int, raw uint32) bool {
+		return raw == math.MaxUint32 && (fieldNames[index] == "IsAlivePollInterval" || fieldNames[index] == "LooksAlivePollInterval")
+	}
 
 	var nodeNamesKey []byte
 	for _, nodeName := range nodeNames {
@@ -339,6 +345,10 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 					continue
 				}
 
+				if useTypeDefault(index, raw) {
+					continue
+				}
+
 				ch <- prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw)*fieldScales[index], resource.Type, resource.OwnerGroup, resource.Name)
 			}
 
@@ -351,7 +361,12 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 
 		metrics := scrape.Get(resource.Name, value, func() []prometheus.Metric {
 			metrics := make([]prometheus.Metric, 0, resourceFieldCount+1+len(nodeNames))
+
 			for index, raw := range value.values {
+				if useTypeDefault(index, raw) {
+					continue
+				}
+
 				metrics = append(metrics, prometheus.MustNewConstMetric(fieldDescs[index], prometheus.GaugeValue, float64(raw)*fieldScales[index], resource.Type, resource.OwnerGroup, resource.Name))
 			}
 

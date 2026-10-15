@@ -97,8 +97,8 @@ test_alpha_total 42
 # TYPE windows_cpu_processor_rtc_total counter
 # HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
 # TYPE windows_cpu_processor_utility_total counter
-# HELP windows_cpu_time_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
-# TYPE windows_cpu_time_total counter
+# HELP windows_cpu_time_seconds_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
+# TYPE windows_cpu_time_seconds_total counter
 # HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
 # TYPE windows_exporter_build_info gauge
 # HELP windows_exporter_collector_duration_seconds windows_exporter: Duration of a collection.
@@ -145,6 +145,8 @@ windows_exporter_collector_timeout{collector="time"} 0
 windows_exporter_collector_timeout{collector="udp"} 0
 # HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
 # TYPE windows_exporter_scrape_duration_seconds gauge
+# HELP windows_exporter_scrape_queue_timeout windows_exporter: Whether the scrape timed out while it waited for an earlier scrape, so that it didn't start the collectors.
+# TYPE windows_exporter_scrape_queue_timeout gauge
 # HELP windows_logical_disk_free_bytes Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)
 # TYPE windows_logical_disk_free_bytes gauge
 # HELP windows_logical_disk_idle_seconds_total Seconds that the disk was idle (LogicalDisk.PercentIdleTime)
@@ -319,9 +321,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_scheduled_task_last_result DEPRECATED: use windows_scheduled_task_last_result_status. 1 if the last result code of the registered task is zero, 0 otherwise
-# TYPE windows_scheduled_task_last_result gauge
-windows_scheduled_task_last_result{task="/Microsoft/Windows/PLA/GAEvents"} 0
 # HELP windows_scheduled_task_last_result_status The last result status of a scheduled task, 1 if the current status, 0 otherwise
 # TYPE windows_scheduled_task_last_result_status gauge
 windows_scheduled_task_last_result_status{status="disabled",task="/Microsoft/Windows/PLA/GAEvents"} 0
@@ -393,8 +392,8 @@ windows_service_state{service="Themes",state="stopped"} 0
 # TYPE windows_tcp_connections_passive_total counter
 # HELP windows_tcp_connections_reset_total (TCP.ConnectionsReset)
 # TYPE windows_tcp_connections_reset_total counter
-# HELP windows_tcp_connections_state_count Number of TCP connections by state and address family
-# TYPE windows_tcp_connections_state_count gauge
+# HELP windows_tcp_connections Number of TCP connections by state and address family
+# TYPE windows_tcp_connections gauge
 # HELP windows_tcp_segments_received_total (TCP.SegmentsReceivedTotal)
 # TYPE windows_tcp_segments_received_total counter
 # HELP windows_tcp_segments_retransmitted_total (TCP.SegmentsRetransmittedTotal)

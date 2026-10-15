@@ -78,7 +78,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_smb_server_shares_current_open_file_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum(windows_smb_server_shares_open_files{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -163,7 +163,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_smb_server_shares_tree_connect_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum(windows_smb_server_shares_tree_connects{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -906,7 +906,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_smb_server_shares_current_open_file_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_smb_server_shares_open_files{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "{{share}}",
                                                 "range": true
@@ -1021,7 +1021,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_smb_server_shares_tree_connect_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_smb_server_shares_tree_connects{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "{{share}}",
                                                 "range": true

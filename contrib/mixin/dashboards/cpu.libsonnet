@@ -1,7 +1,7 @@
 local b = import 'builders.libsonnet';
 local host = '{job=~"$job", instance="$instance"}';
 local cores = 'scalar(max(windows_cpu_logical_processor' + host + '))';
-local mode(m) = 'sum(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="' + m + '"}[$__rate_interval])) / ' + cores;
+local mode(m) = 'sum(rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="' + m + '"}[$__rate_interval])) / ' + cores;
 
 function(on)
   b.tab(
@@ -13,7 +13,7 @@ function(on)
       if on('cpu') then b.row('System calls and frequency', b.flow([if on('system') then [29, 12, 8], [30, 12, 8]])),
     ]),
     [
-      b.stat(160, 'CPU busy', 'Non-idle CPU time averaged across logical processors.', '1 - avg(clamp_max(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1))', 'percentunit', steps=b.levels(0.8, 0.9))
+      b.stat(160, 'CPU busy', 'Non-idle CPU time averaged across logical processors.', '1 - avg(clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1))', 'percentunit', steps=b.levels(0.8, 0.9))
       + b.panel.withDefaults({ decimals: 1, max: 1, min: 0 }),
       b.stat(161, 'User', 'CPU time spent in user mode, as a share of all logical processors.', mode('user'), 'percentunit')
       + b.panel.withDefaults({ decimals: 1, min: 0 }),
@@ -27,7 +27,7 @@ function(on)
       b.panel.new(24, 'CPU utilization by mode', 'timeseries')
       + b.panel.withDescription('Share of total CPU time across all logical processors.')
       + b.panel.withQueries([
-        b.query.new('sum by (mode) (rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode!="idle"}[$__rate_interval])) / scalar(count(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}))', 'A')
+        b.query.new('sum by (mode) (rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode!="idle"}[$__rate_interval])) / scalar(count(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="idle"}))', 'A')
         + b.query.withLegendFormat('{{mode}}'),
       ])
       + b.panel.withDefaults({
@@ -44,7 +44,7 @@ function(on)
       b.panel.new(25, 'CPU utilization per core', 'state-timeline')
       + b.panel.withDescription('Busy time of each logical processor, labelled processor group,core. Green is idle, red is fully busy.')
       + b.panel.withQueries([
-        b.query.new('label_replace(clamp(1 - rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 0, 1), "core", "$1,0$2", "core", "(\\\\d+),(\\\\d)")', 'A')
+        b.query.new('label_replace(clamp(1 - rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 0, 1), "core", "$1,0$2", "core", "(\\\\d+),(\\\\d)")', 'A')
         + b.query.withLegendFormat('{{core}}'),
       ])
       + b.panel.withDefaults({

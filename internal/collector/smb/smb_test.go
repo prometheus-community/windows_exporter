@@ -38,8 +38,8 @@ func TestCollector(t *testing.T) {
 	}
 
 	for _, name := range []string{
-		"windows_smb_server_shares_current_open_file_count",
-		"windows_smb_server_shares_tree_connect_count",
+		"windows_smb_server_shares_open_files",
+		"windows_smb_server_shares_tree_connects",
 	} {
 		require.Contains(t, metrics, name)
 		require.Equal(t, dto.MetricType_GAUGE, metrics[name].GetType(), name)

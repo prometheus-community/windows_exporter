@@ -2,7 +2,7 @@ local b = import 'builders.libsonnet';
 local hosts = 'windows_os_hostname{job=~"$job", hostname=~"$hostname"}';
 // Counts hosts matching expr, a vector by instance. Falls back to 0 while hosts are selected.
 local countHosts(expr) = 'count((' + expr + ') and on (instance) ' + hosts + ') or (0 * count(' + hosts + '))';
-local cpuBusy = '100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))';
+local cpuBusy = '100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))';
 local memoryUsed = '100 * (1 - windows_memory_physical_free_bytes{job=~"$job"} / windows_memory_physical_total_bytes{job=~"$job"})';
 local volumeFree = '100 * windows_logical_disk_free_bytes{job=~"$job", volume!~"HarddiskVolume.*"} / windows_logical_disk_size_bytes{job=~"$job", volume!~"HarddiskVolume.*"}';
 local attention = [{ color: 'green', value: null }, { color: 'orange', value: 1 }];
@@ -49,7 +49,7 @@ function(on, config, overview=null)
         b.query.new('(max by (instance) (windows_cpu_logical_processor{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'D')
         + b.query.withInstant()
         + b.query.withFormat('table'),
-        b.query.new('(100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'E')
+        b.query.new('(100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'E')
         + b.query.withInstant()
         + b.query.withFormat('table'),
         b.query.new('(max by (instance) (windows_memory_physical_total_bytes{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'F')
@@ -643,7 +643,7 @@ function(on, config, overview=null)
       b.panel.new(3, 'CPU utilization', 'timeseries')
       + b.panel.withDescription('Shows the 25 highest hosts at each point in time.')
       + b.panel.withQueries([
-        b.query.new('topk(25, (100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~"$job", hostname=~"$hostname"}))', 'A')
+        b.query.new('topk(25, (100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", mode="idle"}[$__rate_interval]), 1)))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~"$job", hostname=~"$hostname"}))', 'A')
         + b.query.withLegendFormat('{{hostname}}'),
       ])
       + b.panel.withDefaults({

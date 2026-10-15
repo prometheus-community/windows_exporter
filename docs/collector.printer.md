@@ -24,5 +24,5 @@ If given, a printer needs to *not* match the exclude regular expression in order
 Name | Description | Type    | Labels
 -----|-------------|---------|-------
 `windows_printer_status` | Printer status. 1 for the current status, 0 otherwise | gauge   | `printer`, `status`
-`windows_printer_jobs_total` | Number of jobs processed by the printer since the last reset | counter | `printer`
+`windows_printer_jobs` | Number of jobs in the queue of the printer | gauge | `printer`
 `windows_printer_job_status` | A counter of printer jobs by status | gauge   | `printer`, `status`

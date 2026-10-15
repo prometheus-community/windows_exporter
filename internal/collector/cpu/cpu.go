@@ -107,7 +107,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.timeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "time_seconds_total"),
 		"Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)",
 		[]string{"core", "mode"},
 		nil,

@@ -152,7 +152,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.service.include",
-		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
+		"Regexp of service to include. Service name (not the display name!) must both match include and not match exclude to be included.",
 	).Default(".+").StringVar(&serviceInclude)
 
 	app.Flag(
@@ -165,12 +165,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 		c.config.ServiceExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceExclude))
 		if err != nil {
-			return fmt.Errorf("collector.process.exclude: %w", err)
+			return fmt.Errorf("collector.service.exclude: %w", err)
 		}
 
 		c.config.ServiceInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceInclude))
 		if err != nil {
-			return fmt.Errorf("collector.process.include: %w", err)
+			return fmt.Errorf("collector.service.include: %w", err)
 		}
 
 		c.config.ServiceStartModeInclude = strings.Split(serviceStartModeInclude, ",")

@@ -70,7 +70,7 @@ function(on)
       b.panel.new(14, 'CPU busy', 'stat')
       + b.panel.withDescription('Percentage of non-idle CPU time averaged across logical processors over the rate interval. Sustained high values together with a growing processor queue can indicate CPU contention.')
       + b.panel.withQueries([
-        b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A'),
+        b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A'),
       ])
       + b.panel.withDefaults({
         decimals: 1,
@@ -184,7 +184,7 @@ function(on)
       b.panel.new(18, 'CPU utilization', 'timeseries')
       + b.panel.withDescription('Percentage of non-idle CPU time averaged across logical processors. This measures CPU time rather than the frequency-adjusted processor utility shown by Windows Task Manager.')
       + b.panel.withQueries([
-        b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A')
+        b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A')
         + b.query.withLegendFormat('CPU busy'),
       ])
       + b.panel.withDefaults({

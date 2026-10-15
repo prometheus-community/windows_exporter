@@ -21,7 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -30,7 +33,9 @@ import (
 )
 
 // configFile represents the structure of the windows_exporter configuration file,
-// including configuration from the collector and web packages.
+// including configuration from the collector and web packages. Each leaf is a
+// flag; the field types document the value of the flag, which parses and
+// validates it. [validateKeys] checks the keys of the file against this schema.
 type configFile struct {
 	Debug struct {
 		Enabled bool `yaml:"enabled"`
@@ -45,17 +50,17 @@ type configFile struct {
 		Format   string `yaml:"format"`
 		File     string `yaml:"file"`
 		Rotation struct {
-			MaxSize    string `yaml:"max-size"`
-			MaxBackups string `yaml:"max-backups"`
-			Compress   bool   `yaml:"compress"`
+			MaxSize    int  `yaml:"max-size"`
+			MaxBackups int  `yaml:"max-backups"`
+			Compress   bool `yaml:"compress"`
 		} `yaml:"rotation"`
 	} `yaml:"log"`
 	Process struct {
 		Priority    string `yaml:"priority"`
-		MemoryLimit string `yaml:"memory-limit"`
+		MemoryLimit int64  `yaml:"memory-limit"`
 	} `yaml:"process"`
 	Scrape struct {
-		TimeoutMargin string `yaml:"timeout-margin"`
+		TimeoutMargin float64 `yaml:"timeout-margin"`
 	} `yaml:"scrape"`
 	Telemetry struct {
 		Path string `yaml:"path"`
@@ -76,6 +81,8 @@ type getFlagger interface {
 // Resolver represents a configuration file resolver for kingpin.
 type Resolver struct {
 	flags map[string][]string
+	// lines maps the keys of the configuration file to their lines.
+	lines map[string]int
 }
 
 // Parse parses the command line arguments and configuration files.
@@ -135,12 +142,9 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		_ = file.Close()
 	}()
 
-	var configFileStructure configFile
+	var document yaml.Node
 
-	decoder := yaml.NewDecoder(file)
-	decoder.KnownFields(true)
-
-	if err = decoder.Decode(&configFileStructure); err != nil {
+	if err = yaml.NewDecoder(file).Decode(&document); err != nil {
 		// Handle EOF error gracefully, indicating no configuration was found.
 		if errors.Is(err, io.EOF) {
 			return &Resolver{flags: flags}, nil
@@ -149,16 +153,16 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		return nil, fmt.Errorf("configuration file validation error: %w", err)
 	}
 
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, fmt.Errorf("failed to rewind file: %w", err)
-	}
-
+	// Decoding first rejects duplicate keys and expands aliases within the
+	// limits of the decoder before the schema walks the document.
 	var rawValues map[string]any
 
-	decoder = yaml.NewDecoder(file)
-	if err = decoder.Decode(&rawValues); err != nil {
+	if err = document.Decode(&rawValues); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
+	}
+
+	if err = validateKeys(&document, "", reflect.TypeFor[configFile]()); err != nil {
+		return nil, fmt.Errorf("configuration file validation error: %w", err)
 	}
 
 	// Flatten nested YAML values
@@ -169,14 +173,23 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		}
 	}
 
-	return &Resolver{flags: flags}, nil
+	lines := map[string]int{}
+	keyLines(&document, "", lines)
+
+	return &Resolver{flags: flags, lines: lines}, nil
 }
 
-func (c *Resolver) setDefault(v getFlagger) {
-	for name, values := range c.flags {
+func (c *Resolver) setDefault(v getFlagger) error {
+	for _, name := range slices.Sorted(maps.Keys(c.flags)) {
+		values := c.flags[name]
+
 		f := v.GetFlag(name)
 		if f == nil {
 			continue
+		}
+
+		if err := checkFlagValue(f, values); err != nil {
+			return fmt.Errorf("line %d: %s: %w", c.lines[name], name, err)
 		}
 
 		// A list sets a repeatable flag, like web.listen-address, once per element.
@@ -187,6 +200,8 @@ func (c *Resolver) setDefault(v getFlagger) {
 			f.Default(strings.Join(values, ","))
 		}
 	}
+
+	return nil
 }
 
 // Bind sets active flags with their default values from the configuration file(s).
@@ -197,10 +212,12 @@ func (c *Resolver) Bind(app *kingpin.Application, args []string) error {
 		return err
 	}
 
-	c.setDefault(app)
+	if err = c.setDefault(app); err != nil {
+		return err
+	}
 
 	if pc.SelectedCommand != nil {
-		c.setDefault(pc.SelectedCommand)
+		return c.setDefault(pc.SelectedCommand)
 	}
 
 	return nil

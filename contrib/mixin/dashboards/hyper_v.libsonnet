@@ -11,9 +11,9 @@ function(on)
       if on('hyperv') then b.row('Network', b.flow([[80, 8, 8], [81, 8, 8], [82, 8, 8]])),
     ]),
     [
-      b.stat(63, 'Virtual machines', 'Needs the hyperv collector, which is not enabled by default.', 'sum(windows_hyperv_virtual_machine_health_total_count{job=~"$job", instance="$instance"})', 'short'),
+      b.stat(63, 'Virtual machines', 'Needs the hyperv collector, which is not enabled by default.', 'sum(windows_hyperv_virtual_machines{job=~"$job", instance="$instance"})', 'short'),
 
-      b.stat(64, 'VMs in critical health', 'Number of Hyper-V virtual machines reporting critical health. Inspect the affected VM and Hyper-V event logs; this requires the optional hyperv collector.', 'sum(windows_hyperv_virtual_machine_health_total_count{job=~"$job", instance="$instance", state="critical"})', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
+      b.stat(64, 'VMs in critical health', 'Number of Hyper-V virtual machines reporting critical health. Inspect the affected VM and Hyper-V event logs; this requires the optional hyperv collector.', 'sum(windows_hyperv_virtual_machines{job=~"$job", instance="$instance", state="critical"})', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
 
       b.panel.new(65, 'Hyper-V WMI', 'stat')
       + b.panel.withDescription('Whether the Hyper-V WMI namespace answers. When it stops answering, Hyper-V Manager and Failover Cluster Manager usually cannot manage the host.')
@@ -52,17 +52,17 @@ function(on)
         unit: '',
       }),
 
-      b.stat(66, 'Logical processors', 'Number of host logical processors reported by Hyper-V. Use this as capacity context for host and virtual processor load; this requires the optional hyperv collector.', 'windows_hyperv_host_logical_processor_count{job=~"$job", instance="$instance"}', 'short'),
+      b.stat(66, 'Logical processors', 'Number of host logical processors reported by Hyper-V. Use this as capacity context for host and virtual processor load; this requires the optional hyperv collector.', 'windows_hyperv_host_logical_processors{job=~"$job", instance="$instance"}', 'short'),
 
-      b.stat(67, 'Virtual processors', 'Virtual processors assigned to all VMs.', 'windows_hyperv_total_vm_processor_count{job=~"$job", instance="$instance"}', 'short'),
+      b.stat(67, 'Virtual processors', 'Virtual processors assigned to all VMs.', 'windows_hyperv_assigned_vm_processors{job=~"$job", instance="$instance"}', 'short'),
 
-      b.stat(68, 'vCPU per logical CPU', 'Virtual processors assigned to VMs per logical processor of the host.', 'windows_hyperv_total_vm_processor_count{job=~"$job", instance="$instance"} / windows_hyperv_host_logical_processor_count{job=~"$job", instance="$instance"}', 'short')
+      b.stat(68, 'vCPU per logical CPU', 'Virtual processors assigned to VMs per logical processor of the host.', 'windows_hyperv_assigned_vm_processors{job=~"$job", instance="$instance"} / windows_hyperv_host_logical_processors{job=~"$job", instance="$instance"}', 'short')
       + b.panel.withDefaults({ decimals: 2 }),
 
       b.panel.new(69, 'Host CPU time by state', 'timeseries')
       + b.panel.withDescription('Share of all logical processors spent running guest code (VMs and the root partition) and in the hypervisor. With Hyper-V enabled, the CPU tab only sees the root partition.')
       + b.panel.withQueries([
-        b.query.new('sum by (state) (rate(windows_hyperv_hypervisor_logical_processor_time_total{job=~"$job", instance="$instance", state!="idle"}[$__rate_interval])) / scalar(count(windows_hyperv_hypervisor_logical_processor_time_total{job=~"$job", instance="$instance", state="idle"}))', 'A')
+        b.query.new('sum by (state) (rate(windows_hyperv_hypervisor_logical_processor_time_seconds_total{job=~"$job", instance="$instance", state!="idle"}[$__rate_interval])) / scalar(count(windows_hyperv_hypervisor_logical_processor_time_seconds_total{job=~"$job", instance="$instance", state="idle"}))', 'A')
         + b.query.withLegendFormat('{{state}}'),
       ])
       + b.panel.withDefaults({
@@ -79,7 +79,7 @@ function(on)
       b.panel.new(70, 'CPU usage per VM', 'timeseries')
       + b.panel.withDescription('Virtual processor run time of each VM as a share of all logical processors of the host.')
       + b.panel.withQueries([
-        b.query.new('sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{job=~"$job", instance="$instance"}[$__rate_interval])) / scalar(max(windows_hyperv_host_logical_processor_count{job=~"$job", instance="$instance"}))', 'A')
+        b.query.new('sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval])) / scalar(max(windows_hyperv_host_logical_processors{job=~"$job", instance="$instance"}))', 'A')
         + b.query.withLegendFormat('{{vm}}'),
       ])
       + b.panel.withDefaults({
@@ -222,7 +222,7 @@ function(on)
       + b.panel.withQueries([
         b.query.new('rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_hyperv_virtual_storage_device_throughput_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
         + b.query.withLegendFormat('{{device}} latency'),
-        b.query.new('rate(windows_hyperv_virtual_storage_device_error_count_total{job=~"$job", instance="$instance"}[$__rate_interval]) > 0', 'B')
+        b.query.new('rate(windows_hyperv_virtual_storage_device_errors_total{job=~"$job", instance="$instance"}[$__rate_interval]) > 0', 'B')
         + b.query.withLegendFormat('{{device}} errors'),
       ])
       + b.panel.withDefaults({

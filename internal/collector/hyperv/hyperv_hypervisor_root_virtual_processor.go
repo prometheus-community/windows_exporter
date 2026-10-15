@@ -71,14 +71,14 @@ func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 
 func (c *Collector) buildHypervisorRootVirtualProcessorDescriptors() {
 	c.hypervisorRootVirtualProcessorTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_root_virtual_processor_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_root_virtual_processor_time_seconds_total"),
 		"Time in seconds that processor spent in different modes (guest_run, hypervisor, remote)",
 		[]string{"core", "state"},
 		nil,
 	)
 
 	c.hypervisorRootVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_root_virtual_processor_total_run_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_root_virtual_processor_total_run_time_seconds_total"),
 		"Time in seconds that processor spent running",
 		[]string{"core"},
 		nil,

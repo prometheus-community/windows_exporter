@@ -134,11 +134,16 @@ func TestResourceNativeMetricContract(t *testing.T) {
 	}
 
 	expected := map[string]float64{
-		"characteristics": 1, "deadlock_timeout_seconds": 0.002, "embedded_failure_action": 3, "flags": 4, "is_alive_poll_interval_seconds": 4294967.295, "looks_alive_poll_interval_seconds": 0.006, "monitor_process_id": 7, "pending_timeout_seconds": 0.008, "resource_class": 1, "restart_action": 10, "restart_delay_seconds": 0.011, "restart_period_seconds": 0.012, "restart_threshold": 13, "retry_period_on_failure_seconds": 0.014, "state": 4294967295, "subclass": 0,
+		"characteristics": 1, "deadlock_timeout_seconds": 0.002, "embedded_failure_action": 3, "flags": 4, "looks_alive_poll_interval_seconds": 0.006, "monitor_process_id": 7, "pending_timeout_seconds": 0.008, "resource_class": 1, "restart_action": 10, "restart_delay_seconds": 0.011, "restart_period_seconds": 0.012, "restart_threshold": 13, "retry_period_on_failure_seconds": 0.014, "state": 4294967295, "subclass": 0,
 	}
 
-	if len(families) != 17 {
+	if len(families) != 16 {
 		t.Fatalf("families = %d", len(families))
+	}
+
+	// IsAlivePollInterval is 0xFFFFFFFF: the resource uses the interval of its type.
+	if _, exists := families["windows_mscluster_resource_is_alive_poll_interval_seconds"]; exists {
+		t.Fatal("published the resource type default sentinel as a duration")
 	}
 
 	for suffix, value := range expected {
@@ -194,7 +199,7 @@ func TestResourcePartialResultsAndJoinedErrors(t *testing.T) {
 		t.Fatal("published missing field as zero")
 	}
 
-	if len(families) != 16 {
+	if len(families) != 15 {
 		t.Fatalf("lost successful properties: %d", len(families))
 	}
 
@@ -294,7 +299,7 @@ func BenchmarkResourcePublication(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		for range 18 {
+		for range 17 {
 			<-ch
 		}
 	}
@@ -330,7 +335,7 @@ func TestResourceMetricCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(first) != 18 || len(second) != len(first) || first[0] != second[0] {
+	if len(first) != 17 || len(second) != len(first) || first[0] != second[0] {
 		t.Fatal("did not reuse the metrics of an unchanged resource")
 	}
 
@@ -370,7 +375,7 @@ func TestResourceMetricCache(t *testing.T) {
 
 	for range 2 {
 		metrics, err := publish(resource, "nodeA")
-		if err == nil || len(metrics) != 16 {
+		if err == nil || len(metrics) != 15 {
 			t.Fatalf("missing field: %d metrics, %v", len(metrics), err)
 		}
 	}
@@ -388,8 +393,8 @@ func TestResourceLargeClusterGather(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(families) != 17 {
-		t.Fatalf("families = %d, want 17", len(families))
+	if len(families) != 16 {
+		t.Fatalf("families = %d, want 16", len(families))
 	}
 
 	for name, family := range families {

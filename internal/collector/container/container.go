@@ -272,7 +272,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.containersCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "count"),
+		prometheus.BuildFQName(types.Namespace, "", "containers"),
 		"Number of containers",
 		nil,
 		nil,

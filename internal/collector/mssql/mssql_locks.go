@@ -32,7 +32,6 @@ type collectorLocks struct {
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
 	locksWaitTime             *prometheus.Desc
-	locksCount                *prometheus.Desc
 	locksLockRequests         *prometheus.Desc
 	locksLockTimeouts         *prometheus.Desc
 	locksLockTimeoutstimeout0 *prometheus.Desc
@@ -45,7 +44,6 @@ type perfDataCounterValuesLocks struct {
 	Name string
 
 	LocksAverageWaitTimeMS          float64 `perfdata:"Average Wait Time (ms)"`
-	LocksAverageWaitTimeMSBase      float64 `perfdata:"Average Wait Time (ms),secondvalue"`
 	LocksLockRequestsPerSec         float64 `perfdata:"Lock Requests/sec"`
 	LocksLockTimeoutsPerSec         float64 `perfdata:"Lock Timeouts/sec"`
 	LocksLockTimeoutsTimeout0PerSec float64 `perfdata:"Lock Timeouts (timeout > 0)/sec"`
@@ -69,13 +67,7 @@ func (c *Collector) buildLocks() error {
 
 	c.locksWaitTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "locks_wait_time_seconds_total"),
-		"(Locks.AverageWaitTimems) Total time lock requests waited, in seconds. Numerator of Average Wait Time (ms)",
-		[]string{"mssql_instance", "resource"},
-		nil,
-	)
-	c.locksCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_count_total"),
-		"(Locks.AverageWaitTimems_Base) Total number of lock requests that waited. Base of Average Wait Time (ms)",
+		"(Locks.AverageWaitTimems) Total time lock requests waited, in seconds. Divide its rate by the rate of windows_mssql_locks_lock_waits_total for the average wait",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
@@ -140,13 +132,6 @@ func (c *Collector) emitLocksMetrics(ch chan<- prometheus.Metric, sqlInstance ms
 			c.locksWaitTime,
 			prometheus.CounterValue,
 			data.LocksAverageWaitTimeMS/1000.0,
-			sqlInstance.name, data.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.locksCount,
-			prometheus.CounterValue,
-			data.LocksAverageWaitTimeMSBase,
 			sqlInstance.name, data.Name,
 		)
 

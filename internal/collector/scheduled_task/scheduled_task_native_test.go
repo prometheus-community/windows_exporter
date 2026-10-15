@@ -229,7 +229,7 @@ func TestFetchTasksFilters(t *testing.T) {
 				return
 			}
 
-			require.Len(t, families, 4)
+			require.Len(t, families, 3)
 
 			for _, family := range families {
 				paths := make([]string, 0, len(family.GetMetric()))
@@ -321,7 +321,7 @@ func TestFetchTasksInFolderSkipsMissedRuns(t *testing.T) {
 	require.Zero(t, task.reads[taskSlotMissedRuns])
 
 	families := gatherTaskMetrics(t, config, tasks)
-	require.Contains(t, families, "windows_scheduled_task_last_result")
+	require.Contains(t, families, "windows_scheduled_task_last_result_status")
 	require.NotContains(t, families, "windows_scheduled_task_missed_runs")
 }
 

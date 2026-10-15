@@ -121,10 +121,9 @@ func TestCounterUnitConversions(t *testing.T) {
 		GenStatsTempdbRowsetID:               11,
 	}}
 	c.locksPerfDataObject = []perfDataCounterValuesLocks{{
-		Name:                       "locks",
-		LocksAverageWaitTimeMS:     499,
-		LocksAverageWaitTimeMSBase: 3,
-		LocksLockWaitTimeMS:        499,
+		Name:                   "locks",
+		LocksAverageWaitTimeMS: 499,
+		LocksLockWaitTimeMS:    499,
 	}}
 	c.transactionsPerfDataObject = []perfDataCounterValuesTransactions{{
 		TransactionsNonSnapshotVersionTransactions: 1,
@@ -189,7 +188,6 @@ func TestCounterUnitConversions(t *testing.T) {
 		"windows_mssql_genstats_tempdb_rowset_ids_generated_total":        {counter, 11},
 
 		"windows_mssql_locks_wait_time_seconds_total": {counter, 0.499},
-		"windows_mssql_locks_count_total":             {counter, 3},
 		"windows_mssql_locks_lock_wait_seconds_total": {counter, 0.499},
 
 		"windows_mssql_transactions_nonsnapshot_version_active":         {gauge, 1},

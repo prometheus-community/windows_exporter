@@ -47,6 +47,9 @@ const (
 	failed
 	// unavailable means the collector was skipped because its Build failed or the collection is closed.
 	unavailable
+	// notStarted means the scrape ended before it started any collector, because an earlier scrape
+	// held the scrape slot until the scrape timed out or was canceled. The collector itself didn't time out.
+	notStarted
 )
 
 // collectAll runs all collectors once. It returns when ctx is done, even if collectors are still running.
@@ -54,7 +57,7 @@ const (
 func (c *Collection) collectAll(ctx context.Context, ch chan<- prometheus.Metric, logger *slog.Logger) {
 	collectorStartTime := time.Now()
 
-	if err := acquireScrapeSlot(ctx); err != nil {
+	if err := c.state.acquireScrapeSlot(ctx); err != nil {
 		level := slog.LevelWarn
 		if errors.Is(err, context.Canceled) {
 			level = slog.LevelDebug
@@ -65,15 +68,17 @@ func (c *Collection) collectAll(ctx context.Context, ch chan<- prometheus.Metric
 		)
 
 		for name := range c.collectors {
-			c.sendCollectorStatus(ch, collectorStatus{name: name, statusCode: pending})
+			c.sendCollectorStatus(ch, collectorStatus{name: name, statusCode: notStarted})
 		}
 
+		// A canceled scrape, for example at shutdown or after the client went away, did not time out.
+		c.sendScrapeQueueTimeout(ch, errors.Is(err, context.DeadlineExceeded))
 		c.sendScrapeDuration(ch, collectorStartTime)
 
 		return
 	}
 
-	defer releaseScrapeSlot()
+	defer c.state.releaseScrapeSlot()
 
 	// WaitGroup to wait for all collectors to finish
 	wg := sync.WaitGroup{}
@@ -105,7 +110,22 @@ func (c *Collection) collectAll(ctx context.Context, ch chan<- prometheus.Metric
 		c.sendCollectorStatus(ch, status)
 	}
 
+	c.sendScrapeQueueTimeout(ch, false)
 	c.sendScrapeDuration(ch, collectorStartTime)
+}
+
+// sendScrapeQueueTimeout reports whether the scrape ended while it waited for an earlier scrape.
+func (c *Collection) sendScrapeQueueTimeout(ch chan<- prometheus.Metric, timedOut bool) {
+	var value float64
+	if timedOut {
+		value = 1.0
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.scrapeQueueTimeoutDesc,
+		prometheus.GaugeValue,
+		value,
+	)
 }
 
 func (c *Collection) sendCollectorStatus(ch chan<- prometheus.Metric, status collectorStatus) {

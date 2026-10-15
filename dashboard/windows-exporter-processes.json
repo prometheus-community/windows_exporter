@@ -78,7 +78,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
+                                                "expr": "sum by (process, process_id) (rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
                                                 "instant": false,
                                                 "legendFormat": "{{process}} ({{process_id}})",
                                                 "range": true
@@ -1272,7 +1272,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true

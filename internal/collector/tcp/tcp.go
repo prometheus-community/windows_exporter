@@ -200,7 +200,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.connectionsStateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "connections_state_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections"),
 		"Number of TCP connections by state and address family",
 		[]string{"af", "state"},
 		nil,

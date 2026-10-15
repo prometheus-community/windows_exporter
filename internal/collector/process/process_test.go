@@ -74,7 +74,7 @@ func TestCollectorCurrentProcess(t *testing.T) {
 		require.Positive(t, testutils.MetricValuesByLabel(families, name, "process_id")[pid], name)
 	}
 
-	cpu := families["windows_process_cpu_time_total"].GetMetric()
+	cpu := families["windows_process_cpu_time_seconds_total"].GetMetric()
 	require.Len(t, cpu, 2)
 	require.NotNil(t, cpu[0].GetCounter())
 }

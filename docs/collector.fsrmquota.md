@@ -18,7 +18,7 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_fsrmquota_count` | Number of Quotas | gauge |None
+`windows_fsrmquota_quotas` | Number of Quotas | gauge |None
 `windows_fsrmquota_description` | A string up to 1KB in size. Optional. The default value is an empty string. (Description) | gauge |`path`, `template`,`description`
 `windows_fsrmquota_disabled` | If 1, the quota is disabled. The default value is 0. (Disabled) | gauge |`path`, `template`
 `windows_fsrmquota_matchestemplate` | If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate) | gauge |`path`, `template`
