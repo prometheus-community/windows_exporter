@@ -23,8 +23,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"time"
 
-	"github.com/DeRuina/timberjack"
 	"github.com/prometheus-community/windows_exporter/internal/log/eventlog"
 	"github.com/prometheus/common/promslog"
 	wineventlog "golang.org/x/sys/windows/svc/eventlog"
@@ -132,19 +132,16 @@ func New(config *Config) (*slog.Logger, io.Closer, error) {
 			return nil, nil, fmt.Errorf("log rotation requires log.file to be a file path, not %s", config.File.s)
 		}
 	case config.Rotation.MaxSize > 0:
-		rotator := newRotator(config.File.s, config.Rotation)
-
-		// timberjack opens the file on the first write. Open it now, so an
-		// unwritable path fails at startup like it does without rotation.
-		if _, err := rotator.Write(nil); err != nil {
+		file, err := newRotatingFile(config.File.s, int64(config.Rotation.MaxSize)<<20, config.Rotation.MaxBackups, config.Rotation.Compress, time.Now)
+		if err != nil {
 			return nil, nil, fmt.Errorf("failed to open log file: %w", err)
 		}
 
-		writer, closer = rotator, rotator
+		writer, closer = file, file
 	case config.Rotation.configured():
 		return nil, nil, errors.New("log rotation requires log.rotation.max-size")
 	default:
-		file, err := os.OpenFile(config.File.s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o200)
+		file, err := openLogFile(config.File.s)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to open log file: %w", err)
 		}
@@ -156,19 +153,4 @@ func New(config *Config) (*slog.Logger, io.Closer, error) {
 	config.Style = promslog.SlogStyle
 
 	return promslog.New(config.Config), closer, nil
-}
-
-func newRotator(path string, rotation Rotation) *timberjack.Logger {
-	compression := "none"
-	if rotation.Compress {
-		compression = "gzip"
-	}
-
-	return &timberjack.Logger{
-		Filename:    path,
-		MaxSize:     rotation.MaxSize,
-		MaxBackups:  rotation.MaxBackups,
-		Compression: compression,
-		LocalTime:   true,
-	}
 }
