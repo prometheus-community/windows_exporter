@@ -27,7 +27,7 @@ import (
 )
 
 // Interface guard.
-var _ io.Writer = (*Writer)(nil)
+var _ io.WriteCloser = (*Writer)(nil)
 
 var reStripTimeAndLevel = regexp.MustCompile(`^time=\S+ level=\S+ `)
 
@@ -56,4 +56,9 @@ func (w *Writer) Write(p []byte) (int, error) {
 	}
 
 	return len(p), err
+}
+
+// Close releases the event log handle.
+func (w *Writer) Close() error {
+	return w.handle.Close()
 }
