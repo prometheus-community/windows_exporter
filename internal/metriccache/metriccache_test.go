@@ -16,6 +16,7 @@
 package metriccache_test
 
 import (
+	"errors"
 	"strconv"
 	"sync"
 	"testing"
@@ -218,6 +219,125 @@ func TestScrapeConcurrentWorkers(t *testing.T) {
 
 		wg.Wait()
 		scrape.Commit()
+	}
+}
+
+func TestNilScrape(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, string]
+
+	scrape := cache.Scrape()
+	require.Nil(t, scrape, "no scrape outside of BeginScrape")
+
+	built := 0
+	buildCounted := func() []prometheus.Metric {
+		built++
+
+		return build("a", "up")
+	}
+
+	metrics := scrape.Get("a", "up", buildCounted)
+	require.Len(t, metrics, 1)
+
+	_, ok := scrape.Load("a", "up")
+	require.False(t, ok)
+	scrape.Store("a", "up", metrics)
+	scrape.Commit()
+
+	scrape.Get("a", "up", buildCounted)
+	require.Equal(t, 2, built, "a nil scrape caches nothing")
+}
+
+// scrapeWith runs one scrape of keys the way the collection does around a
+// Collect call that returns err.
+func scrapeWith(cache *metriccache.Cache[string, string], err error, keys ...string) []prometheus.Metric {
+	cache.BeginScrape()
+	defer cache.EndScrape(err)
+
+	scrape := cache.Scrape()
+	metrics := make([]prometheus.Metric, 0, len(keys))
+
+	for _, key := range keys {
+		metrics = append(metrics, scrape.Get(key, "up", func() []prometheus.Metric {
+			return build(key, "up")
+		})...)
+	}
+
+	return metrics
+}
+
+func TestBeginEndScrape(t *testing.T) {
+	t.Parallel()
+
+	var cache metriccache.Cache[string, string]
+
+	first := scrapeWith(&cache, nil, "a", "b")
+	require.Nil(t, cache.Scrape(), "EndScrape ends the scrape")
+
+	second := scrapeWith(&cache, nil, "a", "b")
+	require.Same(t, first[0], second[0], "metrics reused")
+	require.Same(t, first[1], second[1])
+
+	// A Collect call that never asked for the scrape leaves the cache unchanged.
+	cache.BeginScrape()
+	cache.EndScrape(nil)
+
+	// A failed Collect that used no entry keeps the previous ones.
+	scrapeWith(&cache, errors.New("read failed"))
+
+	third := scrapeWith(&cache, nil, "a", "b")
+	require.Same(t, first[0], third[0], "failed empty scrape kept the entries")
+
+	// A failed Collect that used entries commits them.
+	scrapeWith(&cache, errors.New("partial"), "a")
+
+	fourth := scrapeWith(&cache, nil, "a", "b")
+	require.Same(t, first[0], fourth[0])
+	require.NotSame(t, first[1], fourth[1], "partial scrape dropped b")
+
+	// A successful empty scrape drops every entry.
+	scrapeWith(&cache, nil)
+
+	fifth := scrapeWith(&cache, nil, "a")
+	require.NotSame(t, fourth[0], fifth[0])
+
+	// Reset drops the entries, also those of a running scrape.
+	cache.BeginScrape()
+	cache.Scrape().Get("a", "up", func() []prometheus.Metric { return build("a", "up") })
+	cache.Reset()
+	cache.EndScrape(nil)
+
+	sixth := scrapeWith(&cache, nil, "a")
+	require.NotSame(t, fifth[0], sixth[0])
+
+	// EndScrape without a scrape does nothing.
+	cache.EndScrape(nil)
+}
+
+func TestScrapeCreatedOnce(t *testing.T) {
+	t.Parallel()
+
+	var (
+		cache   metriccache.Cache[string, string]
+		wg      sync.WaitGroup
+		scrapes [8]*metriccache.Scrape[string, string]
+	)
+
+	cache.BeginScrape()
+
+	for i := range scrapes {
+		wg.Go(func() {
+			scrapes[i] = cache.Scrape()
+		})
+	}
+
+	wg.Wait()
+	cache.EndScrape(nil)
+
+	for _, scrape := range scrapes {
+		require.NotNil(t, scrape)
+		require.Same(t, scrapes[0], scrape, "the workers of a scrape share one scrape")
 	}
 }
 

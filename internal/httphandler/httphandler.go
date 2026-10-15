@@ -19,6 +19,7 @@ package httphandler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -32,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 )
 
 // Interface guard.
@@ -42,9 +44,10 @@ const (
 	defaultScrapeTimeout = 10 * time.Second
 	// minScrapeTimeout is the smallest time given to the collectors.
 	minScrapeTimeout = 10 * time.Millisecond
-	// maxScrapeTimeout is the largest time given to the collectors.
-	// The exporter's HTTP server ends responses after 5 minutes anyway.
-	maxScrapeTimeout = 5 * time.Minute
+	// MaxScrapeTimeout is the largest time given to the collectors, including the time a scrape
+	// waits for an earlier one. The HTTP server's write timeout must exceed it, so that a scrape
+	// that uses its full budget can still write its response.
+	MaxScrapeTimeout = 5 * time.Minute
 )
 
 type MetricsHTTPHandler struct {
@@ -120,7 +123,7 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // getScrapeTimeout returns the time the collectors get for this request.
 // It is the client's X-Prometheus-Scrape-Timeout-Seconds minus the timeout margin,
 // but the margin takes at most half of the client's timeout.
-// The result is between minScrapeTimeout and maxScrapeTimeout.
+// The result is between minScrapeTimeout and MaxScrapeTimeout.
 func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Request) time.Duration {
 	timeout := defaultScrapeTimeout
 
@@ -130,7 +133,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 		switch {
 		case math.IsInf(seconds, 1):
 			// Includes values too large for a float64, which ParseFloat reports as an error.
-			timeout = maxScrapeTimeout
+			timeout = MaxScrapeTimeout
 		case err != nil, math.IsNaN(seconds), seconds <= 0:
 			logger.WarnContext(r.Context(), fmt.Sprintf("Invalid X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %s", v, defaultScrapeTimeout))
 		default:
@@ -140,18 +143,18 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 	timeout = max(timeout-c.timeoutMargin, timeout/2)
 
-	return min(max(timeout, minScrapeTimeout), maxScrapeTimeout)
+	return min(max(timeout, minScrapeTimeout), MaxScrapeTimeout)
 }
 
-// toDuration converts seconds to a duration between 0 and maxScrapeTimeout.
+// toDuration converts seconds to a duration between 0 and MaxScrapeTimeout.
 // NaN and negative values become 0.
 func toDuration(seconds float64) time.Duration {
 	if math.IsNaN(seconds) || seconds <= 0 {
 		return 0
 	}
 
-	if seconds >= maxScrapeTimeout.Seconds() {
-		return maxScrapeTimeout
+	if seconds >= MaxScrapeTimeout.Seconds() {
+		return MaxScrapeTimeout
 	}
 
 	return time.Duration(seconds * float64(time.Second))
@@ -171,35 +174,50 @@ func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Lo
 	}
 
 	// Scrapes are serialized by the collection, so the handler doesn't limit requests in flight.
-	var regHandler http.Handler
-	if c.exporterMetricsRegistry != nil {
-		regHandler = promhttp.HandlerFor(
-			mergedGatherer{first: c.exporterMetricsRegistry, second: reg},
-			promhttp.HandlerOpts{
-				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:     promhttp.ContinueOnError,
-				Registry:          c.exporterMetricsRegistry,
-				EnableOpenMetrics: true,
-				ProcessStartTime:  c.metricCollectors.GetStartTime(),
-			},
-		)
-
-		// Note that we have to use h.exporterMetricsRegistry here to
-		// use the same promhttp metrics for all expositions.
-		regHandler = promhttp.InstrumentMetricHandler(
-			c.exporterMetricsRegistry, regHandler,
-		)
-	} else {
-		regHandler = promhttp.HandlerFor(
-			reg,
-			promhttp.HandlerOpts{
-				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:     promhttp.ContinueOnError,
-				EnableOpenMetrics: true,
-				ProcessStartTime:  c.metricCollectors.GetStartTime(),
-			},
-		)
+	opts := promhttp.HandlerOpts{
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		ErrorHandling:     promhttp.ContinueOnError,
+		EnableOpenMetrics: true,
+		ProcessStartTime:  c.metricCollectors.GetStartTime(),
 	}
 
-	return regHandler, nil
+	if c.exporterMetricsRegistry == nil {
+		return canceledScrapeHandler(logger, reg, opts), nil
+	}
+
+	// Note that we have to use h.exporterMetricsRegistry here to
+	// use the same promhttp metrics for all expositions.
+	opts.Registry = c.exporterMetricsRegistry
+
+	return promhttp.InstrumentMetricHandler(
+		c.exporterMetricsRegistry,
+		canceledScrapeHandler(logger, mergedGatherer{first: c.exporterMetricsRegistry, second: reg}, opts),
+	), nil
+}
+
+// canceledScrapeHandler serves the metrics of gatherer like [promhttp.HandlerFor], but fails the
+// response with 503 Service Unavailable if the request was canceled while it gathered, for example
+// because the exporter shuts down. The collectors return early then, so the response would report
+// collectors as timed out or failed and miss their series. A failed scrape records up=0 instead.
+// A scrape that ends at its deadline is still served, with the timed-out collectors marked.
+func canceledScrapeHandler(logger *slog.Logger, gatherer prometheus.Gatherer, opts promhttp.HandlerOpts) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mfs, err := gatherer.Gather()
+
+		if ctx := r.Context(); errors.Is(ctx.Err(), context.Canceled) {
+			logger.DebugContext(ctx, "scrape canceled, metrics not served",
+				slog.Any("cause", context.Cause(ctx)),
+			)
+
+			http.Error(w, "Scrape canceled: "+context.Cause(ctx).Error(), http.StatusServiceUnavailable)
+
+			return
+		}
+
+		gathered := prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) {
+			return mfs, err
+		})
+
+		promhttp.HandlerFor(gathered, opts).ServeHTTP(w, r)
+	})
 }

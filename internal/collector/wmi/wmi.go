@@ -31,6 +31,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
@@ -144,9 +145,12 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) Close() error {
-	c.labels.Reset()
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels}
+}
 
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -459,8 +463,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		deadline = time.Now().Add(maxScrapeDuration)
 	}
 
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	var errs []error
 

@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -119,33 +120,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var serverExclude, serverInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.smtp.server-exclude",
 		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&serverExclude)
+		"", &c.config.ServerExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.smtp.server-include",
 		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&serverInclude)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.ServerExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serverExclude))
-		if err != nil {
-			return fmt.Errorf("collector.smtp.server-exclude: %w", err)
-		}
-
-		c.config.ServerInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serverInclude))
-		if err != nil {
-			return fmt.Errorf("collector.smtp.server-include: %w", err)
-		}
-
-		return nil
-	})
+		".+", &c.config.ServerInclude,
+	)
 
 	return c
 }
