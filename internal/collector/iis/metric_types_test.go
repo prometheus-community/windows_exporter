@@ -135,7 +135,7 @@ func TestHttpServiceRequestQueuesMetrics(t *testing.T) {
 		wantMaxAge bool
 	}{
 		// An empty queue reports math.MaxInt64 as start time, which internal/pdh
-		// turns into about -9.2e11 seconds.
+		// turns into a large negative number of seconds.
 		{name: "empty queue", maxAge: -922337203685.4775, wantMaxAge: false},
 		{name: "waiting request", maxAge: 1.5, wantMaxAge: true},
 		{name: "request just queued", maxAge: 0, wantMaxAge: true},

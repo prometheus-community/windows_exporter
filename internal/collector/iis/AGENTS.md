@@ -279,19 +279,12 @@ Not read by the collector:
 
 ## Published metrics
 
-- `APP_POOL_WAS` uptimes and `Time Since Last Worker Process Failure` are
-  `PERF_ELAPSED_TIME`: the raw value is a start time (FILETIME) and
-  `internal/pdh` returns the elapsed seconds. Publish them as uptime gauges
-  in seconds, not as timestamps.
-- `HTTP Service Request Queues`: `ArrivalRate` is `PERF_COUNTER_BULK_COUNT`
-  and `RejectedRequests` a cumulative count, so both are counters.
-  `MaxQueueItemAge` is `PERF_ELAPSED_TIME`; on an empty queue its raw value is
-  `math.MaxInt64`, which gives about -9.2e11 seconds. Leave the series out
-  then; never publish it as `0`. Named instances are the HTTP.sys queues of
-  the application pools (label `app`, app filters); the `---<n>` queues are
-  skipped.
-- In `W3SVC_W3WP`, `Active Requests`, `WebSocket Active Requests` and
-  `Maximum Threads Count` (the thread pool limit, 256 by default) are current
-  values, so gauges.
+- Publish the APP_POOL_WAS elapsed-time counters as uptime gauges in
+  seconds (*_uptime_seconds), not as timestamps.
+- MaxQueueItemAge of an empty queue becomes a large negative number
+  (now minus math.MaxInt64 ticks). Leave the series out then; never publish
+  it as  .
+- HTTP Service Request Queues instances are application pools: they use the
+  label pp and the app include/exclude filters.
 - Check published names, types and labels through registry gathering with the
-  `cacheFixture` collector fake, as in `metric_types_test.go`.
+  cacheFixture collector fake, as in metric_types_test.go.
