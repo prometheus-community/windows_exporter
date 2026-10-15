@@ -60,14 +60,14 @@ func TestLocalizedCounterPaths(t *testing.T) {
 	for _, path := range paths {
 		var query pdhQueryHandle
 
-		require.Equal(t, ErrorSuccess, OpenQuery(0, 0, &query))
+		require.Equal(t, uint32(ErrorSuccess), OpenQuery(0, 0, &query))
 
 		var counter pdhCounterHandle
 
 		ret := AddCounter(query, path, 0, &counter)
 		CloseQuery(query)
 
-		require.Equal(t, ErrorSuccess, ret, "add localized counter %s", path)
+		require.Equal(t, uint32(ErrorSuccess), ret, "add localized counter %s", path)
 	}
 }
 
