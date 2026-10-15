@@ -233,6 +233,7 @@ Renamed:
 | `windows_smb_server_shares_write_requests_count_total` | `windows_smb_server_shares_write_requests_total` | Same value |
 | `windows_smb_server_shares_metadata_requests_count_total` | `windows_smb_server_shares_metadata_requests_total` | Same value |
 | `windows_smb_server_shares_files_opened_count_total` | `windows_smb_server_shares_files_opened_total` | Same value |
+| `windows_iis_ipapi_extension_requests_total` | `windows_iis_isapi_extension_requests_total` | Same value; the old name was misspelled |
 | `windows_remote_fx_net_current_tcp_bandwidth`        | `windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
 | `windows_remote_fx_net_current_udp_bandwidth`        | `windows_remote_fx_net_current_udp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
 | `windows_remote_fx_gfx_frame_quality`                | `windows_remote_fx_gfx_frame_quality_ratio`                    | Ratio from 0 to 1 instead of percent |

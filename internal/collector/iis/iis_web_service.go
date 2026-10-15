@@ -204,7 +204,7 @@ func (c *Collector) buildWebService() error {
 		nil,
 	)
 	c.webServiceTotalISAPIExtensionRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "ipapi_extension_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "isapi_extension_requests_total"),
 		"ISAPI Extension Requests received (WebService.TotalISAPIExtensionRequests)",
 		[]string{"site"},
 		nil,
