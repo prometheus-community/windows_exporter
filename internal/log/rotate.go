@@ -34,9 +34,20 @@ const (
 	// appended to before the rotation is tried again.
 	rotationRetryInterval = time.Minute
 
+	// cleanupCloseTimeout bounds how long Close waits for the background
+	// compression and pruning of rotated files. A service has limited time
+	// to stop, and a backup that is left uncompressed is still a valid log.
+	cleanupCloseTimeout = 2 * time.Second
+	// cleanupAbortTimeout is how long Close waits for an aborted compression
+	// to remove its temporary file.
+	cleanupAbortTimeout = time.Second
+
 	backupTimeFormat = "2006-01-02T15-04-05.000"
 	gzipSuffix       = ".gz"
 )
+
+// errCompressionAborted is returned by compressFile when the log file is closed.
+var errCompressionAborted = errors.New("compression aborted, the log file is closed")
 
 // rotatingFile appends to a log file and rotates it before a write would make
 // it larger than maxSize. A rotation that fails, for example because another
@@ -61,9 +72,13 @@ type rotatingFile struct {
 	checkAfter time.Time
 
 	// cleanup compresses and prunes rotated files in the background; Close
-	// waits for it. cleanupMu runs one cleanup at a time.
-	cleanup   sync.WaitGroup
-	cleanupMu sync.Mutex
+	// waits for it up to closeTimeout. cleanupMu runs one cleanup at a time.
+	// After closeTimeout, Close closes stop, which aborts a running compression.
+	cleanup      sync.WaitGroup
+	cleanupMu    sync.Mutex
+	stop         chan struct{}
+	stopOnce     sync.Once
+	closeTimeout time.Duration
 }
 
 func newRotatingFile(path string, maxSize int64, maxBackups int, compress bool, now func() time.Time) (*rotatingFile, error) {
@@ -86,6 +101,8 @@ func newRotatingFileWithRename(
 		now:           now,
 		rename:        rename,
 		retryInterval: rotationRetryInterval,
+		stop:          make(chan struct{}),
+		closeTimeout:  cleanupCloseTimeout,
 	}
 
 	file, size, err := openLogFileWithSize(path)
@@ -154,11 +171,16 @@ func (r *rotatingFile) Write(p []byte) (int, error) {
 }
 
 // Close closes the log file and waits for compression and pruning of rotated files.
+// Close closes the log file and waits up to closeTimeout for the background
+// cleanup of rotated files. If the cleanup is still running then, Close aborts
+// the compression, which keeps the rotated file uncompressed.
 func (r *rotatingFile) Close() error {
 	r.mu.Lock()
 
 	var err error
 
+	// Write returns before rotating once file is nil, so no cleanup starts
+	// after this.
 	if r.file != nil {
 		err = r.file.Close()
 		r.file = nil
@@ -166,9 +188,32 @@ func (r *rotatingFile) Close() error {
 
 	r.mu.Unlock()
 
-	r.cleanup.Wait()
+	done := make(chan struct{})
 
-	return err
+	go func() {
+		r.cleanup.Wait()
+		close(done)
+	}()
+
+	timer := time.NewTimer(r.closeTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-done:
+		return err
+	case <-timer.C:
+	}
+
+	r.stopOnce.Do(func() { close(r.stop) })
+
+	timer.Reset(cleanupAbortTimeout)
+
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+
+	return errors.Join(err, fmt.Errorf("aborted the cleanup of rotated log files after %s", r.closeTimeout))
 }
 
 // rotate renames the log file to a backup and opens a new one. r.mu must be held.
@@ -266,7 +311,7 @@ func exists(path string) bool {
 // beyond maxBackups. Errors only leave files behind, so they are ignored.
 func (r *rotatingFile) cleanupBackups(backup string) {
 	if r.compress {
-		_ = compressFile(backup)
+		_ = compressFile(backup, r.stop)
 	}
 
 	if r.maxBackups <= 0 {
@@ -346,8 +391,24 @@ func (r *rotatingFile) backups() []backupFile {
 	return backups
 }
 
-// compressFile replaces path with path.gz.
-func compressFile(path string) (err error) {
+// stopReader reads from r until stop is closed.
+type stopReader struct {
+	r    io.Reader
+	stop <-chan struct{}
+}
+
+func (s stopReader) Read(p []byte) (int, error) {
+	select {
+	case <-s.stop:
+		return 0, errCompressionAborted
+	default:
+		return s.r.Read(p)
+	}
+}
+
+// compressFile replaces path with path.gz. When stop is closed, it stops and
+// keeps path uncompressed.
+func compressFile(path string, stop <-chan struct{}) (err error) {
 	src, err := os.Open(path)
 	if err != nil {
 		return err
@@ -371,7 +432,7 @@ func compressFile(path string) (err error) {
 
 	writer := gzip.NewWriter(dst)
 
-	if _, err = io.Copy(writer, src); err != nil {
+	if _, err = io.Copy(writer, stopReader{r: src, stop: stop}); err != nil {
 		return err
 	}
 

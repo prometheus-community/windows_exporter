@@ -222,6 +222,54 @@ func TestRotatingFileCompress(t *testing.T) {
 	require.Equal(t, "abcd", string(data))
 }
 
+func TestRotatingFileCloseBoundsCleanup(t *testing.T) {
+	t.Parallel()
+
+	file, _, _ := testRotatingFile(t, 10, 0, false)
+	file.closeTimeout = 50 * time.Millisecond
+
+	// A cleanup that only returns once Close aborts it, like a compression
+	// that is still reading.
+	file.cleanup.Go(func() {
+		<-file.stop
+	})
+
+	start := time.Now()
+	err := file.Close()
+	elapsed := time.Since(start)
+
+	require.ErrorContains(t, err, "aborted the cleanup of rotated log files")
+	require.GreaterOrEqual(t, elapsed, file.closeTimeout)
+	require.Less(t, elapsed, file.closeTimeout+cleanupAbortTimeout, "Close did not return when the aborted cleanup did")
+
+	// A cleanup that ignores the abort delays Close by at most cleanupAbortTimeout.
+	block := make(chan struct{})
+	defer close(block)
+
+	file.cleanup.Go(func() {
+		<-block
+	})
+
+	start = time.Now()
+
+	require.Error(t, file.Close())
+	require.Less(t, time.Since(start), file.closeTimeout+cleanupAbortTimeout+time.Second)
+}
+
+func TestCompressFileAborts(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "windows_exporter-2026-10-15T14-03-05.000.log")
+	require.NoError(t, os.WriteFile(path, []byte("abcd"), 0o600))
+
+	stop := make(chan struct{})
+	close(stop)
+
+	require.ErrorIs(t, compressFile(path, stop), errCompressionAborted)
+	require.Equal(t, []string{filepath.Base(path)}, dirEntries(t, filepath.Dir(path)), "the rotated file must stay uncompressed, without a temporary file")
+	require.Equal(t, "abcd", readFile(t, path))
+}
+
 func TestRotatingFileBackupNamesAreUnique(t *testing.T) {
 	t.Parallel()
 
