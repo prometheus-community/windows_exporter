@@ -52,7 +52,11 @@ Cancellation: `QueryContext` and `QueryFuncContext` do not start a query
 for a done context. When it is done during the query, `wait` fails the query
 through `fail`/`cancelRequested`, so `Cancel` runs on the waiting goroutine,
 and still waits for the final callback before `close` frees anything. The
-handler is not called after the context is done.
+handler is not called after the context is done; a copy it skips fails the
+query with the context's cause, even after the final result, so partial
+results never look complete. A context that is done after the final result
+(`complete`, set under `mu`) does not fail a query that has nothing left to
+hand over.
 
 Run `CGO_ENABLED=1 go test -race` (gcc from w64devkit) and a
 `-gcflags=all=-d=checkptr` run for changes in this package.

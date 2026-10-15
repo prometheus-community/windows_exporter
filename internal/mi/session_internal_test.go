@@ -44,8 +44,8 @@ func newInternalTestSession(tb testing.TB) *Session {
 func TestSession_OperationOptions(t *testing.T) {
 	session := newInternalTestSession(t)
 
-	t.Run("non-positive timeouts use the session defaults", func(t *testing.T) {
-		for _, timeout := range []time.Duration{0, -1, -time.Hour} {
+	t.Run("non-positive and default timeouts use the session defaults", func(t *testing.T) {
+		for _, timeout := range []time.Duration{0, -1, -time.Hour, DefaultQueryTimeout} {
 			operationOptions, release, err := session.operationOptions(timeout)
 			require.NoError(t, err)
 			require.Same(t, session.defaultOperationOptions, operationOptions)
@@ -92,9 +92,69 @@ func TestSession_OperationOptions(t *testing.T) {
 
 	require.NoError(t, session.Close())
 	require.Nil(t, session.cachedOperationOptions)
+	require.Nil(t, session.defaultOperationOptions)
 
-	_, _, err := session.operationOptions(BuildQueryTimeout)
-	require.ErrorIs(t, err, ErrNotInitialized)
+	for _, timeout := range []time.Duration{0, BuildQueryTimeout, 1500 * time.Millisecond} {
+		_, _, err := session.operationOptions(timeout)
+		require.ErrorIs(t, err, ErrNotInitialized, timeout)
+	}
+}
+
+// Test_asyncQuery_ContextDoneAfterFinalResult checks a context that is done
+// after MI's final callback. Instances the handler did not see fail the
+// query, while a result that was complete stays successful.
+func Test_asyncQuery_ContextDoneAfterFinalResult(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	t.Run("unhandled copies", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		var handled int
+
+		query := newCopyQuery(func(*Instance) error {
+			handled++
+
+			cancel()
+
+			return nil
+		})
+
+		query.start(session, OperationFlagsStandardRTTI, nil, NamespaceRootCIMv2, QueryDialectWQL, queryExpression)
+		defer query.close()
+
+		// Every copy is queued and the final callback has run before wait.
+		<-query.done
+
+		require.ErrorIs(t, query.wait(ctx), context.Canceled)
+		require.Equal(t, 1, handled)
+	})
+
+	t.Run("complete result", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+
+		var instances int
+
+		query := newAsyncQuery(func(*Instance) error {
+			instances++
+
+			return nil
+		})
+
+		query.start(session, OperationFlagsStandardRTTI, nil, NamespaceRootCIMv2, QueryDialectWQL, queryExpression)
+		defer query.close()
+
+		<-query.done
+		cancel()
+
+		require.NoError(t, query.wait(ctx))
+		require.Positive(t, instances)
+	})
 }
 
 // Test_asyncQuery_ContextCancel checks that a cancelled query returns only

@@ -108,7 +108,8 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
-	// Queries started from now on fail instead of caching new options.
+	// Query and QueryFunc calls from now on fail instead of using options
+	// that are about to be deleted.
 	s.optionsMu.Lock()
 	s.closed = true
 	s.optionsMu.Unlock()
@@ -129,12 +130,13 @@ func (s *Session) Close() error {
 	}
 
 	s.cachedOperationOptions = nil
-	s.optionsMu.Unlock()
 
 	if s.defaultOperationOptions != nil {
 		_ = s.defaultOperationOptions.Delete()
 		s.defaultOperationOptions = nil
 	}
+
+	s.optionsMu.Unlock()
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return result
@@ -552,20 +554,25 @@ func (s *Session) QueryFuncContext(ctx context.Context, namespaceName Namespace,
 // operationOptions returns the operation options for queryTimeout and a
 // function that releases them once the operation that uses them is closed.
 //
-//   - A non-positive timeout returns the session defaults, which carry
-//     DefaultQueryTimeout.
+//   - A non-positive timeout, or DefaultQueryTimeout itself, returns the
+//     session defaults.
 //   - A timeout of whole seconds is taken as a fixed, configured timeout, e.g.
 //     BuildQueryTimeout. Its options are created once and kept until Close,
 //     for up to maxCachedOperationOptions distinct timeouts. Every query with
 //     such a timeout saves three native calls.
 //   - Any other timeout, typically the remaining scrape budget, gets options
 //     of its own, which release deletes.
+//
+// Every path fails with ErrNotInitialized once Close has started.
 func (s *Session) operationOptions(queryTimeout time.Duration) (*OperationOptions, func(), error) {
-	if queryTimeout <= 0 {
-		if s.defaultOperationOptions == nil {
-			return nil, nil, ErrNotInitialized
-		}
+	s.optionsMu.Lock()
+	defer s.optionsMu.Unlock()
 
+	if s.closed || s.defaultOperationOptions == nil {
+		return nil, nil, ErrNotInitialized
+	}
+
+	if queryTimeout <= 0 || queryTimeout == DefaultQueryTimeout {
 		return s.defaultOperationOptions, func() {}, nil
 	}
 
@@ -573,13 +580,6 @@ func (s *Session) operationOptions(queryTimeout time.Duration) (*OperationOption
 
 	if queryTimeout%time.Second != 0 {
 		return s.ownOperationOptions(queryTimeout)
-	}
-
-	s.optionsMu.Lock()
-	defer s.optionsMu.Unlock()
-
-	if s.closed {
-		return nil, nil, ErrNotInitialized
 	}
 
 	if operationOptions, ok := s.cachedOperationOptions[queryTimeout]; ok {

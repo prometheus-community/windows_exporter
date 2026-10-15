@@ -185,6 +185,8 @@ type asyncQuery struct {
 	// mu also guards pending against the waiting goroutine.
 	mu  sync.Mutex
 	err error
+	// complete is set under mu by the final callback, before done is closed.
+	complete bool
 }
 
 // newAsyncQuery returns a query that calls onInstance inside the callback.
@@ -250,6 +252,10 @@ func (q *asyncQuery) instanceResult(instance *Instance, moreResults bool, result
 		// A panic must not unwind into MI. It fails the query instead.
 		if r := recover(); r != nil {
 			q.fail(&callbackPanicError{value: r})
+		}
+
+		if !moreResults {
+			q.complete = true
 		}
 
 		q.mu.Unlock()
@@ -332,11 +338,15 @@ func (q *asyncQuery) wait(ctx context.Context) error {
 			// like one a callback asks for.
 			ctxDone = nil
 
-			if !q.finished.Load() {
-				q.mu.Lock()
+			// A query whose final result has arrived is complete; a late
+			// cancellation must not turn it into an error.
+			q.mu.Lock()
+
+			if !q.complete {
 				q.fail(context.Cause(ctx))
-				q.mu.Unlock()
 			}
+
+			q.mu.Unlock()
 		case <-q.done:
 			// Copies queued by the last callbacks.
 			q.handleQueued()
@@ -380,9 +390,17 @@ func (q *asyncQuery) handleQueued() {
 		q.batch = batch
 
 		for i, instance := range batch {
-			// After ctx is done, the copies are only deleted.
-			if q.handlerErr == nil && q.ctx.Err() == nil {
-				if err := q.handler(instance); err != nil {
+			if q.handlerErr == nil {
+				err := context.Cause(q.ctx)
+				if err == nil {
+					err = q.handler(instance)
+				}
+
+				// After ctx is done, the copies are only deleted. That fails
+				// the query, also when MI has already delivered the final
+				// result: skipped instances must not look like a complete
+				// result.
+				if err != nil {
 					q.handlerErr = err
 
 					// Stops the callbacks from copying further instances.
