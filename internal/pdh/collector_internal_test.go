@@ -425,7 +425,10 @@ func TestFrequencyOfAverageTimer(t *testing.T) {
 	}
 
 	// As if GetCounterTimeBase failed at startup.
-	collector.counters[0].Frequency = 0
+	idx := slices.IndexFunc(collector.counters, func(counter Counter) bool { return counter.Name == "Avg. Disk sec/Read" })
+	require.NotEqual(t, -1, idx)
+
+	collector.counters[idx].Frequency = 0
 
 	_, ok = collector.Frequency("Avg. Disk sec/Read")
 	require.False(t, ok)

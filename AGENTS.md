@@ -104,7 +104,9 @@ exercised a live Windows role.
   even when the Windows counter name says average, percentage or seconds.
   Convert units explicitly; expose the base/operation count needed for ratios.
   The raw value of a `PERF_AVERAGE_TIMER` counter is in ticks of its time
-  base: divide it by `pdh.Collector.Frequency` instead of a fixed factor.
+  base: in new code, divide it by `pdh.Collector.Frequency` instead of a fixed
+  factor. The disk and `smbclient` collectors still use the fixed 1e-7
+  (10 MHz) factor.
   Never publish an invalid sample as zero: that can look like a counter reset.
 - Keep the typed PDH collectors and `perfdata` tags. Preserve duplicate
   instance occurrences within a sample; their suffixes are not stable identities.
