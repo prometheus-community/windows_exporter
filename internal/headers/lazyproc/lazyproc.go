@@ -27,32 +27,63 @@ package lazyproc
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"golang.org/x/sys/windows"
 )
 
-// Find loads dll and every proc, which must belong to dll. It returns nil if
-// all of them exist, and otherwise an error that wraps [errors.ErrUnsupported]
-// and names the missing DLL or each missing export.
-func Find(dll *windows.LazyDLL, procs ...*windows.LazyProc) error {
-	if err := dll.Load(); err != nil {
-		return fmt.Errorf("%w: load %s: %w", errors.ErrUnsupported, dll.Name, err)
+// Error reports a missing DLL or missing exports. It matches
+// [errors.ErrUnsupported] and has no other cause, so a collector that fails
+// Build with it is skipped as an unavailable subsystem: the loader errors,
+// e.g. ERROR_MOD_NOT_FOUND, are only kept as text and in Missing.
+type Error struct {
+	// DLL is the name of the DLL.
+	DLL string
+	// Missing holds the error of the DLL, if it could not be loaded, or of
+	// each missing export.
+	Missing []error
+}
+
+func (e *Error) Error() string {
+	var message strings.Builder
+
+	fmt.Fprintf(&message, "%s: %s", errors.ErrUnsupported, e.DLL)
+
+	for _, err := range e.Missing {
+		message.WriteString(": ")
+		message.WriteString(err.Error())
 	}
 
-	var errs []error
+	return message.String()
+}
+
+// Is reports whether target is [errors.ErrUnsupported].
+func (e *Error) Is(target error) bool {
+	return target == errors.ErrUnsupported
+}
+
+// Find loads dll and every proc, which must belong to dll. It returns nil if
+// all of them exist, and otherwise an [*Error] that names the missing DLL or
+// each missing export.
+func Find(dll *windows.LazyDLL, procs ...*windows.LazyProc) error {
+	if err := dll.Load(); err != nil {
+		return &Error{DLL: dll.Name, Missing: []error{err}}
+	}
+
+	var missing []error
 
 	for _, proc := range procs {
 		if err := proc.Find(); err != nil {
-			errs = append(errs, err)
+			missing = append(missing, err)
 		}
 	}
 
-	if len(errs) == 0 {
+	if len(missing) == 0 {
 		return nil
 	}
 
-	return fmt.Errorf("%w: %w", errors.ErrUnsupported, errors.Join(errs...))
+	return &Error{DLL: dll.Name, Missing: missing}
 }
 
 // Once returns a function that runs [Find] once and then returns its result.

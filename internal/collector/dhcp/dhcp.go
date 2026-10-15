@@ -46,6 +46,11 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"enabled"`
 }
 
+// loadDHCPServerAPI checks the DHCP server API. Tests replace it.
+//
+//nolint:gochecknoglobals
+var loadDHCPServerAPI = dhcpsapi.Load
+
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
@@ -164,13 +169,27 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	// Without the DHCP server API only the scope metrics are unavailable; the
+	// server metrics come from performance counters.
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
+		if err := loadDHCPServerAPI(); err != nil {
+			if !slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
+				return fmt.Errorf("DHCP server API not available: %w", err)
+			}
+
+			c.logger.Warn("DHCP server API not available, skipping the scope_metrics sub-collector",
+				slog.Any("err", err),
+			)
+
+			c.config.CollectorsEnabled = slices.DeleteFunc(slices.Clone(c.config.CollectorsEnabled), func(name string) bool {
+				return name == subCollectorScopeMetrics
+			})
+		}
+	}
+
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
-		if err := dhcpsapi.Load(); err != nil {
-			return fmt.Errorf("DHCP server API not available: %w", err)
-		}
-
 		c.scopeInfo = prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, Name, "scope_info"),
 			"DHCP Scope information",

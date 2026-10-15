@@ -54,6 +54,15 @@ func TestFind(t *testing.T) {
 		err := lazyproc.Find(missingDLL, missingDLL.NewProc("A"), missingDLL.NewProc("B"))
 		require.ErrorIs(t, err, errors.ErrUnsupported)
 		require.Equal(t, 1, strings.Count(err.Error(), "windows_exporter_missing.dll"), err.Error())
+
+		// The loader error stays text only, so the error has a single cause.
+		require.NotErrorIs(t, err, windows.ERROR_MOD_NOT_FOUND)
+
+		var lazyErr *lazyproc.Error
+
+		require.ErrorAs(t, err, &lazyErr)
+		require.Equal(t, "windows_exporter_missing.dll", lazyErr.DLL)
+		require.Len(t, lazyErr.Missing, 1)
 	})
 
 	t.Run("Once", func(t *testing.T) {
