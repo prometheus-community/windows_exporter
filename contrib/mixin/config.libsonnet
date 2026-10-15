@@ -68,6 +68,8 @@
     memoryHighUsageThreshold: 90,
     memoryCommitHighUsageThreshold: 90,
     diskLatencyThresholdSeconds: 0.05,
+    // Average latency per I/O above which a Hyper-V virtual disk counts as slow.
+    hypervDiskLatencyThresholdSeconds: 0.01,
     networkErrorRateThreshold: 1,
     networkDiscardRateThreshold: 1,
     clockOffsetThresholdSeconds: 0.05,
