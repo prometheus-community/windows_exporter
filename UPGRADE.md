@@ -222,12 +222,12 @@ Renamed:
 | `windows_remote_fx_net_current_tcp_bandwidth`        | `windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
 | `windows_remote_fx_net_current_udp_bandwidth`        | `windows_remote_fx_net_current_udp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
 | `windows_remote_fx_gfx_frame_quality`                | `windows_remote_fx_gfx_frame_quality_ratio`                    | Ratio from 0 to 1 instead of percent |
-| `windows_remote_fx_net_loss_rate`                    | `windows_remote_fx_net_loss_total` and `windows_remote_fx_net_loss_base_total` | Counters, see below |
-| `windows_remote_fx_net_fec_rate`                     | `windows_remote_fx_net_fec_total` and `windows_remote_fx_net_fec_base_total` | Counters, see below |
-| `windows_remote_fx_net_retransmission_rate`          | `windows_remote_fx_net_retransmission_total` and `windows_remote_fx_net_retransmission_base_total` | Counters, see below |
+| `windows_remote_fx_net_loss_rate`                    | `windows_remote_fx_net_lost_packets_total` and `windows_remote_fx_net_loss_sampled_packets_total` | Counters, see below |
+| `windows_remote_fx_net_fec_rate`                     | `windows_remote_fx_net_fec_packets_total` and `windows_remote_fx_net_fec_sampled_packets_total` | Counters, see below |
+| `windows_remote_fx_net_retransmission_rate`          | `windows_remote_fx_net_retransmitted_packets_total` and `windows_remote_fx_net_retransmission_sampled_packets_total` | Counters, see below |
 
 The RemoteFX loss, FEC and retransmission gauges were not percentages. They exported the raw numerator of a Windows sample fraction, a running count that only grows.
-The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_loss_total[5m]) / rate(windows_remote_fx_net_loss_base_total[5m])`, and likewise for `fec` and `retransmission`.
+The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])`, and likewise with `windows_remote_fx_net_fec_packets_total` / `windows_remote_fx_net_fec_sampled_packets_total` and `windows_remote_fx_net_retransmitted_packets_total` / `windows_remote_fx_net_retransmission_sampled_packets_total`.
 
 Removed:
 

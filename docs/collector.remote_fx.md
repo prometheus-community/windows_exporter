@@ -28,12 +28,12 @@ Name | Description | Type | Labels
 `windows_remote_fx_net_sent_bytes_total` | Total number of bytes sent since the connection started. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_received_total` | Total number of packets received over UDP. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_sent_total` | Total number of packets sent over UDP. | counter | `session_name`
-`windows_remote_fx_net_loss_total` | Numerator of the loss rate. | counter | `session_name`
-`windows_remote_fx_net_loss_base_total` | Base (denominator) of the loss rate. | counter | `session_name`
-`windows_remote_fx_net_fec_total` | Numerator of the Forward Error Correction (FEC) rate. | counter | `session_name`
-`windows_remote_fx_net_fec_base_total` | Base (denominator) of the Forward Error Correction (FEC) rate. | counter | `session_name`
-`windows_remote_fx_net_retransmission_total` | Numerator of the packet retransmission rate. | counter | `session_name`
-`windows_remote_fx_net_retransmission_base_total` | Base (denominator) of the packet retransmission rate. | counter | `session_name`
+`windows_remote_fx_net_lost_packets_total` | Number of lost packets. Numerator of the loss rate counter. | counter | `session_name`
+`windows_remote_fx_net_loss_sampled_packets_total` | Number of packets sampled for the loss rate. Denominator (base) of the loss rate counter. | counter | `session_name`
+`windows_remote_fx_net_fec_packets_total` | Number of Forward Error Correction (FEC) packets. Numerator of the FEC rate counter. | counter | `session_name`
+`windows_remote_fx_net_fec_sampled_packets_total` | Number of packets sampled for the FEC rate. Denominator (base) of the FEC rate counter. | counter | `session_name`
+`windows_remote_fx_net_retransmitted_packets_total` | Number of retransmitted packets. Numerator of the retransmission rate counter. | counter | `session_name`
+`windows_remote_fx_net_retransmission_sampled_packets_total` | Number of packets sampled for the retransmission rate. Denominator (base) of the retransmission rate counter. | counter | `session_name`
 
 Windows reports the loss, FEC and retransmission rates as sample fractions: two cumulative values whose
 deltas give the ratio. Divide the rate of the numerator by the rate of its base, see [Useful queries](#useful-queries).
@@ -62,7 +62,7 @@ _This collector does not yet have explained examples, we would appreciate your h
 Packet loss ratio of each RDP session over the last 5 minutes:
 
 ```
-rate(windows_remote_fx_net_loss_total[5m]) / rate(windows_remote_fx_net_loss_base_total[5m])
+rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])
 ```
 
 Frames skipped per second, by cause:

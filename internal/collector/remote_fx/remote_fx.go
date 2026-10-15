@@ -190,38 +190,38 @@ func (c *Collector) buildDescriptors() {
 		nil,
 	)
 	c.fec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_fec_total"),
-		"Numerator of the Forward Error Correction (FEC) rate. Divide its rate by the rate of windows_remote_fx_net_fec_base_total to get the FEC ratio.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_fec_packets_total"),
+		"Number of Forward Error Correction (FEC) packets. Numerator of the FEC rate counter; divide its rate by the rate of windows_remote_fx_net_fec_sampled_packets_total to get the FEC ratio.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.fecBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_fec_base_total"),
-		"Base (denominator) of the Forward Error Correction (FEC) rate.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_fec_sampled_packets_total"),
+		"Number of packets sampled for the FEC rate. Denominator (base) of the FEC rate counter.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.loss = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_loss_total"),
-		"Numerator of the loss rate. Divide its rate by the rate of windows_remote_fx_net_loss_base_total to get the loss ratio.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_lost_packets_total"),
+		"Number of lost packets. Numerator of the loss rate counter; divide its rate by the rate of windows_remote_fx_net_loss_sampled_packets_total to get the loss ratio.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.lossBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_loss_base_total"),
-		"Base (denominator) of the loss rate.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_loss_sampled_packets_total"),
+		"Number of packets sampled for the loss rate. Denominator (base) of the loss rate counter.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.retransmission = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_retransmission_total"),
-		"Numerator of the packet retransmission rate. Divide its rate by the rate of windows_remote_fx_net_retransmission_base_total to get the retransmission ratio.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_retransmitted_packets_total"),
+		"Number of retransmitted packets. Numerator of the retransmission rate counter; divide its rate by the rate of windows_remote_fx_net_retransmission_sampled_packets_total to get the retransmission ratio.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.retransmissionBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "net_retransmission_base_total"),
-		"Base (denominator) of the packet retransmission rate.",
+		prometheus.BuildFQName(types.Namespace, Name, "net_retransmission_sampled_packets_total"),
+		"Number of packets sampled for the retransmission rate. Denominator (base) of the retransmission rate counter.",
 		[]string{"session_name"},
 		nil,
 	)

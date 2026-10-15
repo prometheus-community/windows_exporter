@@ -69,12 +69,12 @@ func TestCollectNetworkMetrics(t *testing.T) {
 		"windows_remote_fx_net_sent_bytes_total":                       {dto.MetricType_COUNTER, 29262741},
 		"windows_remote_fx_net_udp_packets_received_total":             {dto.MetricType_COUNTER, 5},
 		"windows_remote_fx_net_udp_packets_sent_total":                 {dto.MetricType_COUNTER, 6},
-		"windows_remote_fx_net_fec_total":                              {dto.MetricType_COUNTER, 7},
-		"windows_remote_fx_net_fec_base_total":                         {dto.MetricType_COUNTER, 70},
-		"windows_remote_fx_net_loss_total":                             {dto.MetricType_COUNTER, 2},
-		"windows_remote_fx_net_loss_base_total":                        {dto.MetricType_COUNTER, 200},
-		"windows_remote_fx_net_retransmission_total":                   {dto.MetricType_COUNTER, 3},
-		"windows_remote_fx_net_retransmission_base_total":              {dto.MetricType_COUNTER, 300},
+		"windows_remote_fx_net_fec_packets_total":                      {dto.MetricType_COUNTER, 7},
+		"windows_remote_fx_net_fec_sampled_packets_total":              {dto.MetricType_COUNTER, 70},
+		"windows_remote_fx_net_lost_packets_total":                     {dto.MetricType_COUNTER, 2},
+		"windows_remote_fx_net_loss_sampled_packets_total":             {dto.MetricType_COUNTER, 200},
+		"windows_remote_fx_net_retransmitted_packets_total":            {dto.MetricType_COUNTER, 3},
+		"windows_remote_fx_net_retransmission_sampled_packets_total":   {dto.MetricType_COUNTER, 300},
 	}
 
 	c := New(nil)
