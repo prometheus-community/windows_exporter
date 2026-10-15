@@ -22,18 +22,19 @@ import (
 	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorHttpServiceRequestQueues struct {
-	perfDataCollectorHttpServiceRequestQueues *pdh.Collector[perfDataCounterValuesHttpServiceRequestQueues]
+	perfDataCollectorHttpServiceRequestQueues pdhtypes.Collector[perfDataCounterValuesHttpServiceRequestQueues]
 	perfDataObjectHttpServiceRequestQueues    []perfDataCounterValuesHttpServiceRequestQueues
 
-	httpRequestQueuesCurrentQueueSize     *prometheus.Desc
-	httpRequestQueuesTotalRejectedRequest *prometheus.Desc
-	httpRequestQueuesMaxQueueItemAge      *prometheus.Desc
-	httpRequestQueuesArrivalRate          *prometheus.Desc
+	httpRequestQueuesCurrentQueueSize *prometheus.Desc
+	httpRequestQueuesRejectedRequests *prometheus.Desc
+	httpRequestQueuesMaxQueueItemAge  *prometheus.Desc
+	httpRequestQueuesArrivedRequests  *prometheus.Desc
 }
 
 type perfDataCounterValuesHttpServiceRequestQueues struct {
@@ -59,32 +60,38 @@ func (c *Collector) buildHttpServiceRequestQueues() error {
 		return fmt.Errorf("failed to create Http Service collector: %w", err)
 	}
 
+	c.buildHttpServiceRequestQueuesDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildHttpServiceRequestQueuesDescriptors() {
+	// The named instances of HTTP Service Request Queues are the HTTP.sys
+	// request queues of the IIS application pools, so the label is "app".
 	c.httpRequestQueuesCurrentQueueSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_requests_current_queue_size"),
-		"Http Request Current Queue Size",
-		[]string{"site"},
+		"Number of requests in the HTTP.sys request queue of the application pool (CurrentQueueSize)",
+		[]string{"app"},
 		nil,
 	)
-	c.httpRequestQueuesTotalRejectedRequest = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_request_total_rejected_request"),
-		"Http Request Total Rejected Request",
-		[]string{"site"},
+	c.httpRequestQueuesRejectedRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_requests_rejected_total"),
+		"Total number of requests rejected by the HTTP.sys request queue of the application pool (RejectedRequests)",
+		[]string{"app"},
 		nil,
 	)
 	c.httpRequestQueuesMaxQueueItemAge = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_requests_max_queue_item_age"),
-		"Http Request Max Queue Item Age. The values might be bogus if the queue is empty.",
-		[]string{"site"},
+		prometheus.BuildFQName(types.Namespace, Name, "http_requests_max_queue_item_age_seconds"),
+		"Age, in seconds, of the oldest request in the HTTP.sys request queue of the application pool. Not reported while the queue is empty (MaxQueueItemAge)",
+		[]string{"app"},
 		nil,
 	)
-	c.httpRequestQueuesArrivalRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_requests_arrival_rate"),
-		"Http Request Arrival Rate",
-		[]string{"site"},
+	c.httpRequestQueuesArrivedRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_requests_arrived_total"),
+		"Total number of requests that arrived in the HTTP.sys request queue of the application pool (ArrivalRate)",
+		[]string{"app"},
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric) error {
@@ -103,7 +110,7 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 			continue
 		}
 
-		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
+		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
 			continue
 		}
 
@@ -115,22 +122,27 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesTotalRejectedRequest,
-			prometheus.GaugeValue,
+			c.httpRequestQueuesRejectedRequests,
+			prometheus.CounterValue,
 			data.HttpRequestQueuesTotalRejectedRequests,
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesMaxQueueItemAge,
-			prometheus.GaugeValue,
-			data.HttpRequestQueuesMaxQueueItemAge,
-			data.Name,
-		)
+		// MaxQueueItemAge is PERF_ELAPSED_TIME. On an empty queue its raw
+		// value is math.MaxInt64 instead of a start time, which gives a large
+		// negative elapsed time. That is no sample, so leave the series out.
+		if data.HttpRequestQueuesMaxQueueItemAge >= 0 {
+			ch <- prometheus.MustNewConstMetric(
+				c.httpRequestQueuesMaxQueueItemAge,
+				prometheus.GaugeValue,
+				data.HttpRequestQueuesMaxQueueItemAge,
+				data.Name,
+			)
+		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesArrivalRate,
-			prometheus.GaugeValue,
+			c.httpRequestQueuesArrivedRequests,
+			prometheus.CounterValue,
 			data.HttpRequestQueuesArrivalRate,
 			data.Name,
 		)

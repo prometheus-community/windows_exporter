@@ -21,12 +21,13 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAppPoolWAS struct {
-	perfDataCollectorAppPoolWAS *pdh.Collector[perfDataCounterValuesAppPoolWAS]
+	perfDataCollectorAppPoolWAS pdhtypes.Collector[perfDataCounterValuesAppPoolWAS]
 	perfDataObjectAppPoolWAS    []perfDataCounterValuesAppPoolWAS
 
 	currentApplicationPoolState        *prometheus.Desc
@@ -84,7 +85,14 @@ func (c *Collector) buildAppPoolWAS() error {
 		return fmt.Errorf("failed to create APP_POOL_WAS collector: %w", err)
 	}
 
-	// APP_POOL_WAS
+	c.buildAppPoolWASDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildAppPoolWASDescriptors() {
+	// The uptime counters are PERF_ELAPSED_TIME. Their raw value is the start
+	// time, which internal/pdh turns into the elapsed time in seconds.
 	c.currentApplicationPoolState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_application_pool_state"),
 		"The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending) (CurrentApplicationPoolState)",
@@ -92,8 +100,8 @@ func (c *Collector) buildAppPoolWAS() error {
 		nil,
 	)
 	c.currentApplicationPoolUptime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "current_application_pool_start_time"),
-		"The unix timestamp for the application pool start time (CurrentApplicationPoolUptime)",
+		prometheus.BuildFQName(types.Namespace, Name, "current_application_pool_uptime_seconds"),
+		"The time, in seconds, since the application pool was last started or recycled (CurrentApplicationPoolUptime)",
 		[]string{"app"},
 		nil,
 	)
@@ -116,7 +124,7 @@ func (c *Collector) buildAppPoolWAS() error {
 		nil,
 	)
 	c.timeSinceLastWorkerProcessFailure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "time_since_last_worker_process_failure"),
+		prometheus.BuildFQName(types.Namespace, Name, "time_since_last_worker_process_failure_seconds"),
 		"The length of time, in seconds, since the last worker process failure occurred for the application pool (TimeSinceLastWorkerProcessFailure)",
 		[]string{"app"},
 		nil,
@@ -128,8 +136,8 @@ func (c *Collector) buildAppPoolWAS() error {
 		nil,
 	)
 	c.totalApplicationPoolUptime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_application_pool_start_time"),
-		"The unix timestamp for the application pool of when the Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
+		prometheus.BuildFQName(types.Namespace, Name, "total_application_pool_uptime_seconds"),
+		"The time, in seconds, since the application pool was first started after the Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
 		[]string{"app"},
 		nil,
 	)
@@ -163,8 +171,6 @@ func (c *Collector) buildAppPoolWAS() error {
 		[]string{"app"},
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
@@ -242,7 +248,7 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolUptime,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.TotalApplicationPoolUptime,
 			data.Name,
 		)

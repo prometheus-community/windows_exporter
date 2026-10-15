@@ -29,7 +29,7 @@ import (
 
 type collectorW3SVCW3WP struct {
 	w3SVCW3WPPerfDataCollector   pdhtypes.Collector[perfDataCounterValuesW3SVCW3WP]
-	w3SVCW3WPPerfDataCollectorV8 *pdh.Collector[perfDataCounterValuesW3SVCW3WPV8]
+	w3SVCW3WPPerfDataCollectorV8 pdhtypes.Collector[perfDataCounterValuesW3SVCW3WPV8]
 	perfDataObjectW3SVCW3WP      []perfDataCounterValuesW3SVCW3WP
 	perfDataObjectW3SVCW3WPV8    []perfDataCounterValuesW3SVCW3WPV8
 
@@ -372,25 +372,25 @@ func (c *Collector) buildW3SVCW3WPDescriptors() {
 	)
 	c.w3SVCW3WPWebSocketRequestsActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_current_websocket_requests"),
-		"",
+		"Current number of WebSocket requests being processed by the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionAttempts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_attempts_total"),
-		"",
+		"Total number of WebSocket connection attempts since the worker process started",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionsAccepted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_accepted_total"),
-		"",
+		"Total number of WebSocket connections accepted since the worker process started",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionsRejected = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_rejected_total"),
-		"",
+		"Total number of WebSocket connections rejected since the worker process started",
 		[]string{"app", "pid"},
 		nil,
 	)
@@ -470,7 +470,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPWebSocketRequestsActive,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPWebSocketRequestsActive,
 			name,
 			pid,
@@ -533,7 +533,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumThreads,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPMaximumThreads,
 			name,
 			pid,
@@ -549,7 +549,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPRequestsActive,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPRequestsActive,
 			name,
 			pid,
