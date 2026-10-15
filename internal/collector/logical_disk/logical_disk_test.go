@@ -46,28 +46,21 @@ func TestCollector(t *testing.T) {
 	})
 }
 
-// TestCollectorAvgQueueIsCumulative checks that the raw "Avg. Disk Read/Write Queue Length"
-// values are not averages, but the same cumulative values as "% Disk Read/Write Time".
-// This is why the avg_*_requests_queued metrics are kept only for compatibility.
-func TestCollectorAvgQueueIsCumulative(t *testing.T) {
+// TestCollectorAvgQueueRemoved checks that the removed avg_*_requests_queued gauges are
+// gone while their replacements are still emitted. The raw "Avg. Disk Read/Write Queue
+// Length" values were the same cumulative values as "% Disk Read/Write Time".
+func TestCollectorAvgQueueRemoved(t *testing.T) {
 	metrics := testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
 		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
 		VolumeInclude:     types.RegExpAny,
 	})
 
-	for deprecated, replacement := range map[string]string{
+	for removed, replacement := range map[string]string{
 		"windows_logical_disk_avg_read_requests_queued":  "windows_logical_disk_read_seconds_total",
 		"windows_logical_disk_avg_write_requests_queued": "windows_logical_disk_write_seconds_total",
 	} {
-		want := testutils.MetricValuesByLabel(metrics, replacement, "volume")
-		values := testutils.MetricValuesByLabel(metrics, deprecated, "volume")
-
-		require.NotEmpty(t, values, "%s was not emitted", deprecated)
-
-		for volume, got := range values {
-			require.Contains(t, want, volume)
-			require.InDelta(t, want[volume], got, 1e-6, "%s{volume=%q}", deprecated, volume)
-		}
+		require.Empty(t, testutils.MetricValuesByLabel(metrics, removed, "volume"), "%s is still emitted", removed)
+		require.NotEmpty(t, testutils.MetricValuesByLabel(metrics, replacement, "volume"), "%s was not emitted", replacement)
 	}
 }
 

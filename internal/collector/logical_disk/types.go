@@ -20,20 +20,18 @@ package logical_disk
 type perfDataCounterValues struct {
 	Name string
 
-	AvgDiskReadQueueLength  float64 `perfdata:"Avg. Disk Read Queue Length"`
-	AvgDiskSecPerRead       float64 `perfdata:"Avg. Disk sec/Read"`
-	AvgDiskSecPerTransfer   float64 `perfdata:"Avg. Disk sec/Transfer"`
-	AvgDiskSecPerWrite      float64 `perfdata:"Avg. Disk sec/Write"`
-	AvgDiskWriteQueueLength float64 `perfdata:"Avg. Disk Write Queue Length"`
-	CurrentDiskQueueLength  float64 `perfdata:"Current Disk Queue Length"`
-	FreeSpace               float64 `perfdata:"Free Megabytes"`
-	DiskReadBytesPerSec     float64 `perfdata:"Disk Read Bytes/sec"`
-	DiskReadsPerSec         float64 `perfdata:"Disk Reads/sec"`
-	DiskWriteBytesPerSec    float64 `perfdata:"Disk Write Bytes/sec"`
-	DiskWritesPerSec        float64 `perfdata:"Disk Writes/sec"`
-	PercentDiskReadTime     float64 `perfdata:"% Disk Read Time"`
-	PercentDiskWriteTime    float64 `perfdata:"% Disk Write Time"`
-	PercentFreeSpace        float64 `perfdata:"% Free Space,secondvalue"`
-	PercentIdleTime         float64 `perfdata:"% Idle Time"`
-	SplitIOPerSec           float64 `perfdata:"Split IO/Sec"`
+	AvgDiskSecPerRead      float64 `perfdata:"Avg. Disk sec/Read"`
+	AvgDiskSecPerTransfer  float64 `perfdata:"Avg. Disk sec/Transfer"`
+	AvgDiskSecPerWrite     float64 `perfdata:"Avg. Disk sec/Write"`
+	CurrentDiskQueueLength float64 `perfdata:"Current Disk Queue Length"`
+	FreeSpace              float64 `perfdata:"Free Megabytes"`
+	DiskReadBytesPerSec    float64 `perfdata:"Disk Read Bytes/sec"`
+	DiskReadsPerSec        float64 `perfdata:"Disk Reads/sec"`
+	DiskWriteBytesPerSec   float64 `perfdata:"Disk Write Bytes/sec"`
+	DiskWritesPerSec       float64 `perfdata:"Disk Writes/sec"`
+	PercentDiskReadTime    float64 `perfdata:"% Disk Read Time"`
+	PercentDiskWriteTime   float64 `perfdata:"% Disk Write Time"`
+	PercentFreeSpace       float64 `perfdata:"% Free Space,secondvalue"`
+	PercentIdleTime        float64 `perfdata:"% Idle Time"`
+	SplitIOPerSec          float64 `perfdata:"Split IO/Sec"`
 }

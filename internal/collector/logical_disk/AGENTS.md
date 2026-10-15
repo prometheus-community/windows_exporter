@@ -21,7 +21,9 @@ multi-instance. These notes were recorded on a Windows Server 2025
   cumulative busy time in 100 ns ticks. `internal/pdh` converts the
   `PERF_PRECISION_100NS_TIMER` counters to seconds. The queue length and
   `PERF_AVERAGE_TIMER` values arrive in ticks and need the 1e-7 factor; the
-  counter time base is 10 MHz here.
+  counter time base is 10 MHz here. The queue length counters duplicate the
+  busy time, so the collector no longer reads them; the average queue length is
+  `rate(windows_logical_disk_{read,write}_seconds_total[5m])`.
 - `Avg. Disk sec/Read`, `/Write` and `/Transfer` are `PERF_AVERAGE_TIMER`.
   Their base is the operation count and equals `Disk Reads/sec` (3073),
   `Disk Writes/sec` (1698) and their sum (4771).
@@ -50,11 +52,9 @@ Counters the collector reads:
 | `% Disk Write Time` | `PERF_PRECISION_100NS_TIMER` | 11319205 |  |
 | `% Free Space` | `PERF_RAW_FRACTION` | 49907 | 129254 |
 | `% Idle Time` | `PERF_PRECISION_100NS_TIMER` | 115960642 |  |
-| `Avg. Disk Read Queue Length` | `PERF_COUNTER_100NS_QUEUELEN_TYPE` | 9858832 |  |
 | `Avg. Disk sec/Read` | `PERF_AVERAGE_TIMER` | 9858832 | 3073 |
 | `Avg. Disk sec/Transfer` | `PERF_AVERAGE_TIMER` | 21178037 | 4771 |
 | `Avg. Disk sec/Write` | `PERF_AVERAGE_TIMER` | 11319205 | 1698 |
-| `Avg. Disk Write Queue Length` | `PERF_COUNTER_100NS_QUEUELEN_TYPE` | 11319205 |  |
 | `Current Disk Queue Length` | `PERF_COUNTER_RAWCOUNT` | 0 |  |
 | `Disk Read Bytes/sec` | `PERF_COUNTER_BULK_COUNT` | 131518976 |  |
 | `Disk Reads/sec` | `PERF_COUNTER_COUNTER` | 3073 |  |
@@ -66,7 +66,7 @@ Counters the collector reads:
 Not read by the collector:
 
 - `PERF_AVERAGE_BULK`: `Avg. Disk Bytes/Read`, `Avg. Disk Bytes/Transfer`, `Avg. Disk Bytes/Write`
-- `PERF_COUNTER_100NS_QUEUELEN_TYPE`: `Avg. Disk Queue Length`
+- `PERF_COUNTER_100NS_QUEUELEN_TYPE`: `Avg. Disk Queue Length`, `Avg. Disk Read Queue Length` (raw 9858832), `Avg. Disk Write Queue Length` (raw 11319205)
 - `PERF_COUNTER_BULK_COUNT`: `Disk Bytes/sec`
 - `PERF_COUNTER_COUNTER`: `Disk Transfers/sec`
 - `PERF_PRECISION_100NS_TIMER`: `% Disk Time`

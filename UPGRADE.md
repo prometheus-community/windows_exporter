@@ -234,6 +234,8 @@ Removed:
 | Metric                                            | Reason                                                                 |
 |---------------------------------------------------|------------------------------------------------------------------------|
 | `windows_memory_free_system_page_table_entries`   | Saturates near 2^32 on 64-bit Windows, where system PTEs are not a scarce resource |
+| `windows_logical_disk_avg_read_requests_queued`   | Running sum that only grew, never an average queue length. Use `rate(windows_logical_disk_read_seconds_total[5m])` |
+| `windows_logical_disk_avg_write_requests_queued`  | Running sum that only grew, never an average queue length. Use `rate(windows_logical_disk_write_seconds_total[5m])` |
 
 Deprecated. These are still exported in 0.32 and will be removed in a later release:
 
@@ -245,12 +247,10 @@ Deprecated. These are still exported in 0.32 and will be removed in a later rele
 | `windows_hyperv_virtual_storage_device_lower_latency_seconds`      | `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`, used the same way |
 | `windows_hyperv_virtual_storage_device_queue_length`               | `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])` |
 | `windows_hyperv_virtual_storage_device_lower_queue_length`         | `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total[5m])` |
-| `windows_logical_disk_avg_read_requests_queued`                    | `rate(windows_logical_disk_read_seconds_total[5m])`       |
-| `windows_logical_disk_avg_write_requests_queued`                   | `rate(windows_logical_disk_write_seconds_total[5m])`      |
 | `windows_cache_data_map_hits_percent`                              | `windows_cache_data_map_hits_total`                       |
 | `windows_scheduled_task_last_result`                               | `windows_scheduled_task_last_result_status`               |
 
-The deprecated Hyper-V storage latency and queue gauges and the logical disk `avg_*_requests_queued` gauges never held current values.
+The deprecated Hyper-V storage latency and queue gauges and the removed logical disk `avg_*_requests_queued` gauges never held current values.
 They exported a running sum that only grows, so graphs of them rise steadily. The replacements give the actual average latency and queue length.
 
 Changed type, same name:

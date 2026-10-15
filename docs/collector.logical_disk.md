@@ -29,8 +29,6 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 |--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|---------|-------------------------------------------------------------------|
 | `windows_logical_disk_info`                      | A metric with a constant '1' value labeled with logical disk information                                                  | gauge   | `disk`,`type`,`volume`,`volume_name`,`filesystem`,`serial_number` |
 | `windows_logical_disk_requests_queued`           | Number of requests outstanding on the disk at the time the performance data is collected                                  | gauge   | `volume`                                                          |
-| `windows_logical_disk_avg_read_requests_queued`  | **Deprecated:** use `rate(windows_logical_disk_read_seconds_total)`. Cumulative read queue length in seconds, see below   | gauge   | `volume`                                                          |
-| `windows_logical_disk_avg_write_requests_queued` | **Deprecated:** use `rate(windows_logical_disk_write_seconds_total)`. Cumulative write queue length in seconds, see below | gauge   | `volume`                                                          |
 | `windows_logical_disk_read_bytes_total`          | Rate at which bytes are transferred from the disk during read operations                                                  | counter | `volume`                                                          |
 | `windows_logical_disk_reads_total`               | Rate of read operations on the disk                                                                                       | counter | `volume`                                                          |
 | `windows_logical_disk_write_bytes_total`         | Rate at which bytes are transferred to the disk during write operations                                                   | counter | `volume`                                                          |
@@ -47,14 +45,14 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 | `windows_logical_disk_readonly`                  | Whether the logical disk is read-only                                                                                     | gauge   | `volume`                                                          |
 | `windows_logical_disk_bitlocker_status`          | BitLocker status for the logical disk                                                                                     | gauge   | `volume`,`status`                                                 |
 
-### Deprecated average queue length metrics
+### Average queue length
 `Avg. Disk Read Queue Length` and `Avg. Disk Write Queue Length` are averages that Windows computes from two samples.
-windows_exporter reads their raw values, which only grow: the queue length summed over time, in seconds.
+Their raw values only grow: the queue length summed over time, in seconds.
 These raw values are the same as the ones of `% Disk Read Time` and `% Disk Write Time`,
 which are exposed as `windows_logical_disk_read_seconds_total` and `windows_logical_disk_write_seconds_total`.
 
-`windows_logical_disk_avg_read_requests_queued` and `windows_logical_disk_avg_write_requests_queued` keep exposing
-the raw values as gauges for compatibility. They are deprecated and will be removed in a future release.
+The former `windows_logical_disk_avg_read_requests_queued` and `windows_logical_disk_avg_write_requests_queued`
+gauges exposed these raw values and were removed in 0.32.
 Use the rate of the `*_seconds_total` counters for the average queue length instead:
 ```
 rate(windows_logical_disk_read_seconds_total[5m])

@@ -93,8 +93,6 @@ type Collector struct {
 	// lastMountErr is the last logged error of getAllMountedVolumes.
 	lastMountErr string
 
-	avgReadQueue     *prometheus.Desc
-	avgWriteQueue    *prometheus.Desc
 	freeSpace        *prometheus.Desc
 	idleTime         *prometheus.Desc
 	information      *prometheus.Desc
@@ -226,22 +224,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.requestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
-		[]string{"volume"},
-		nil,
-	)
-
-	c.avgReadQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "avg_read_requests_queued"),
-		"DEPRECATED: use rate(windows_logical_disk_read_seconds_total). "+
-			"Cumulative read queue length in seconds, identical to windows_logical_disk_read_seconds_total (LogicalDisk.AvgDiskReadQueueLength)",
-		[]string{"volume"},
-		nil,
-	)
-
-	c.avgWriteQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "avg_write_requests_queued"),
-		"DEPRECATED: use rate(windows_logical_disk_write_seconds_total). "+
-			"Cumulative write queue length in seconds, identical to windows_logical_disk_write_seconds_total (LogicalDisk.AvgDiskWriteQueueLength)",
 		[]string{"volume"},
 		nil,
 	)
@@ -418,24 +400,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 				c.requestsQueued,
 				prometheus.GaugeValue,
 				data.CurrentDiskQueueLength,
-				data.Name,
-			)
-
-			// The raw value of a PERF_COUNTER_100NS_QUEUELEN_TYPE counter is the queue length
-			// integrated over time in 100ns ticks, not an average. It shares its source with
-			// "% Disk Read/Write Time". Kept as gauge for compatibility: as a counter,
-			// OpenMetrics exposition would rename the series to *_total.
-			ch <- prometheus.MustNewConstMetric(
-				c.avgReadQueue,
-				prometheus.GaugeValue,
-				data.AvgDiskReadQueueLength*pdh.TicksToSecondScaleFactor,
-				data.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.avgWriteQueue,
-				prometheus.GaugeValue,
-				data.AvgDiskWriteQueueLength*pdh.TicksToSecondScaleFactor,
 				data.Name,
 			)
 
