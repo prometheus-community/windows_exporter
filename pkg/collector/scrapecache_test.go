@@ -63,11 +63,17 @@ func (l *eventLog) take() []string {
 
 // recordingCache is a scrapecache.Cache that records its calls.
 type recordingCache struct {
-	log    *eventLog
-	active atomic.Bool
+	log        *eventLog
+	active     atomic.Bool
+	beginPanic atomic.Bool
+	endPanic   atomic.Bool
 }
 
 func (c *recordingCache) BeginScrape() {
+	if c.beginPanic.Load() {
+		panic("begin panic")
+	}
+
 	c.active.Store(true)
 	c.log.addf("begin")
 }
@@ -81,6 +87,10 @@ func (c *recordingCache) EndScrape(err error) {
 	}
 
 	c.log.addf("end %v", err)
+
+	if c.endPanic.Load() {
+		panic("end panic")
+	}
 }
 
 func (c *recordingCache) Reset() {
@@ -166,6 +176,40 @@ func TestScrapeCacheLifecycle(t *testing.T) {
 
 	require.NoError(t, collection.Close())
 	require.Equal(t, []string{"close", "reset"}, owner.log.take(), "caches are reset after Close")
+}
+
+// TestScrapeCachePanics verifies that a panic in a cache fails the collector
+// like a panic in Collect, instead of crashing the exporter.
+func TestScrapeCachePanics(t *testing.T) {
+	owner := newCacheOwner()
+	collection := collector.New(collector.Map{"test": owner})
+
+	require.NoError(t, collection.Build(t.Context(), slog.New(slog.DiscardHandler)))
+	t.Cleanup(func() { require.NoError(t, collection.Close()) })
+
+	handler, err := collection.NewHandler(time.Minute, slog.New(slog.DiscardHandler), nil)
+	require.NoError(t, err)
+
+	owner.log.take()
+	owner.cache.endPanic.Store(true)
+
+	out := scrape(t, handler)
+	require.Contains(t, out, `windows_exporter_collector_success{collector="test"} 0`)
+	require.Contains(t, out, "windows_test 1", "metrics of Collect are kept")
+	require.Equal(t, []string{"begin", "collect in scrape=true", "end <nil>"}, owner.log.take())
+
+	owner.cache.endPanic.Store(false)
+	owner.cache.beginPanic.Store(true)
+
+	out = scrape(t, handler)
+	require.Contains(t, out, `windows_exporter_collector_success{collector="test"} 0`)
+	require.Empty(t, owner.log.take(), "Collect is not called when the scrape of the caches fails to begin")
+
+	owner.cache.beginPanic.Store(false)
+
+	out = scrape(t, handler)
+	require.Contains(t, out, `windows_exporter_collector_success{collector="test"} 1`)
+	require.Equal(t, []string{"begin", "collect in scrape=true", "end <nil>"}, owner.log.take())
 }
 
 func TestScrapeCacheEndsAfterTimedOutCollect(t *testing.T) {

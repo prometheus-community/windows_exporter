@@ -123,8 +123,11 @@ type Cache struct {
 	// add series afterwards.
 	resets uint64
 
+	// scrapeMu guards active and the creation of current, so that the
+	// workers of a scrape create one scrape and none outlives EndScrape.
+	scrapeMu sync.Mutex
 	// active is set between BeginScrape and EndScrape.
-	active atomic.Bool
+	active bool
 	// current is the scrape that Scrape created after BeginScrape, or nil.
 	current atomic.Pointer[Scrape]
 }
@@ -157,8 +160,10 @@ func (c *Cache) Begin() *Scrape {
 
 // BeginScrape begins a scrape. The collection calls it before Collect.
 func (c *Cache) BeginScrape() {
+	c.scrapeMu.Lock()
 	c.current.Store(nil)
-	c.active.Store(true)
+	c.active = true
+	c.scrapeMu.Unlock()
 }
 
 // EndScrape ends the scrape begun by BeginScrape. The collection calls it
@@ -168,9 +173,11 @@ func (c *Cache) BeginScrape() {
 // the scrape is committed, unless Collect failed before it created a metric:
 // then the series of the previous scrapes stay.
 func (c *Cache) EndScrape(err error) {
-	c.active.Store(false)
-
+	c.scrapeMu.Lock()
+	c.active = false
 	s := c.current.Swap(nil)
+	c.scrapeMu.Unlock()
+
 	if s == nil {
 		return
 	}
@@ -188,22 +195,30 @@ func (c *Cache) EndScrape(err error) {
 // the first call. It is nil outside of a scrape begun by the collection, for
 // example when Collect is called directly; a nil Scrape creates metrics
 // without the cache.
+//
+// Only Collect and the workers it waits for may call Scrape: after Collect
+// returned, it returns nil or the scrape of a later Collect call.
 func (c *Cache) Scrape() *Scrape {
 	if s := c.current.Load(); s != nil {
 		return s
 	}
 
-	if !c.active.Load() {
+	c.scrapeMu.Lock()
+	defer c.scrapeMu.Unlock()
+
+	// Another worker of the scrape may have created it meanwhile.
+	if s := c.current.Load(); s != nil {
+		return s
+	}
+
+	if !c.active {
 		return nil
 	}
 
 	s := c.Begin()
-	if c.current.CompareAndSwap(nil, s) {
-		return s
-	}
+	c.current.Store(s)
 
-	// Another worker of the scrape created it first.
-	return c.current.Load()
+	return s
 }
 
 // discard ends the scrape without dropping any series.
