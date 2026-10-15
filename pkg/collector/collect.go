@@ -158,7 +158,9 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 	switch state.tryCollect() {
 	case started:
 	case notAvailable:
-		logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s skipped, because it isn't initialized", name))
+		logger.LogAttrs(ctx, slog.LevelDebug, "collector skipped, because it isn't initialized",
+			slog.String("collector", name),
+		)
 
 		return unavailable
 	case busy:
@@ -167,7 +169,9 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 			level = slog.LevelWarn
 		}
 
-		logger.LogAttrs(ctx, level, fmt.Sprintf("collector %s skipped, because its call from an earlier scrape is still running", name))
+		logger.LogAttrs(ctx, level, "collector skipped, because its call from an earlier scrape is still running",
+			slog.String("collector", name),
+		)
 
 		return pending
 	}
@@ -218,9 +222,16 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 			c.sendCollectorDuration(ch, name, duration)
 
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				logger.LogAttrs(ctx, slog.LevelWarn, fmt.Sprintf("collector %s timeouted after %s, resulting in %d metrics", name, duration, numMetrics))
+				logger.LogAttrs(ctx, slog.LevelWarn, "collector timed out",
+					slog.String("collector", name),
+					slog.Duration("duration", duration),
+					slog.Int("metrics", numMetrics),
+				)
 			} else {
-				logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s canceled after %s, resulting in %d metrics", name, duration, numMetrics),
+				logger.LogAttrs(ctx, slog.LevelDebug, "collector canceled",
+					slog.String("collector", name),
+					slog.Duration("duration", duration),
+					slog.Int("metrics", numMetrics),
 					slog.Any("err", ctx.Err()),
 				)
 			}
@@ -253,36 +264,31 @@ func (c *Collection) sendCollectorDuration(ch chan<- prometheus.Metric, name str
 }
 
 func logCollectorResult(ctx context.Context, logger *slog.Logger, name string, err error, duration time.Duration, numMetrics int) collectorStatusCode {
-	slogAttrs := make([]slog.Attr, 0)
-
-	result := "succeeded"
-
-	if err != nil {
-		if !expectedCollectionError(err) {
-			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) {
-				err = fmt.Errorf("%w. Check application logs from initialization phase for more information", err)
-			}
-
-			logger.LogAttrs(ctx, slog.LevelWarn,
-				fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
-				slog.Any("err", err),
-			)
-
-			return failed
-		}
-
-		slogAttrs = append(slogAttrs, slog.Any("err", err))
-
-		result = "succeeded with warnings"
+	attrs := []slog.Attr{
+		slog.String("collector", name),
+		slog.Duration("duration", duration),
+		slog.Int("metrics", numMetrics),
 	}
 
-	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf(
-		"collector %s %s after %s, resulting in %d metrics", name, result, duration, numMetrics,
-	),
-		slogAttrs...,
-	)
+	if err == nil {
+		logger.LogAttrs(ctx, slog.LevelDebug, "collector succeeded", attrs...)
 
-	return success
+		return success
+	}
+
+	if expectedCollectionError(err) {
+		logger.LogAttrs(ctx, slog.LevelDebug, "collector succeeded with warnings", append(attrs, slog.Any("err", err))...)
+
+		return success
+	}
+
+	if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) {
+		err = fmt.Errorf("%w. Check application logs from initialization phase for more information", err)
+	}
+
+	logger.LogAttrs(ctx, slog.LevelWarn, "collector failed", append(attrs, slog.Any("err", err))...)
+
+	return failed
 }
 
 // expectedCollectionError checks every cause so an expected error cannot hide an independent failure.

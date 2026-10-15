@@ -191,7 +191,9 @@ func run(ctx context.Context, args []string) int {
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if configFile != nil && *configFile != "" {
-		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file: "+*configFile)
+		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file",
+			slog.String("file", *configFile),
+		)
 	}
 
 	// Log the build and the account before the collectors are built,
@@ -252,7 +254,9 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
-	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ", "))
+	logger.LogAttrs(ctx, slog.LevelInfo, "enabled collectors",
+		slog.String("collectors", strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ",")),
+	)
 
 	handlerOpts := &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
@@ -275,7 +279,9 @@ func run(ctx context.Context, args []string) int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("started windows_exporter in %s", time.Since(startTime)))
+	logger.LogAttrs(ctx, slog.LevelInfo, "started windows_exporter",
+		slog.Duration("duration", time.Since(startTime)),
+	)
 
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
@@ -339,7 +345,9 @@ func logCurrentUser(ctx context.Context, logger *slog.Logger) {
 		return
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, "Running as "+u.Username)
+	logger.LogAttrs(ctx, slog.LevelInfo, "running as user",
+		slog.String("user", u.Username),
+	)
 
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
 		logger.LogAttrs(ctx, slog.LevelWarn, "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
@@ -415,7 +423,9 @@ func closeCollection(ctx context.Context, logger *slog.Logger, collection *colle
 			)
 		}
 	case <-timer.C:
-		logger.LogAttrs(ctx, slog.LevelWarn, fmt.Sprintf("collectors didn't close within %s", collectionCloseTimeout))
+		logger.LogAttrs(ctx, slog.LevelWarn, "collectors didn't close in time",
+			slog.Duration("timeout", collectionCloseTimeout),
+		)
 	}
 }
 

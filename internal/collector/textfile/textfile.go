@@ -187,7 +187,9 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 
 	for _, metric := range metricFamily.GetMetric() {
 		if metric.TimestampMs != nil {
-			logger.Warn(fmt.Sprintf("Ignoring unsupported custom timestamp on textfile metric %v", metric))
+			logger.Warn("ignoring unsupported custom timestamp on textfile metric",
+				slog.String("metric", metric.String()),
+			)
 		}
 
 		labels := metric.GetLabel()

@@ -337,7 +337,9 @@ func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
 		sqlInstances = append(sqlInstances, instance)
 	}
 
-	c.logger.Debug(fmt.Sprintf("detected MSSQL Instances: %#v\n", sqlInstances))
+	c.logger.Debug("detected MSSQL instances",
+		slog.String("instances", fmt.Sprintf("%#v", sqlInstances)),
+	)
 
 	return sqlInstances, nil
 }
@@ -382,11 +384,18 @@ func (c *Collector) collect[T any](
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance.name, duration),
+			c.logger.LogAttrs(ctx, slog.LevelDebug, "mssql class collector failed",
+				slog.String("class", collector),
+				slog.String("instance", sqlInstance.name),
+				slog.Duration("duration", duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance.name, duration))
+			c.logger.LogAttrs(ctx, slog.LevelDebug, "mssql class collector succeeded",
+				slog.String("class", collector),
+				slog.String("instance", sqlInstance.name),
+				slog.Duration("duration", duration),
+			)
 		}
 
 		if collector == "" {

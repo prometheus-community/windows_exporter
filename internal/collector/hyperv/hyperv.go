@@ -333,10 +333,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	for _, name := range collectorsEnabled {
 		if buildNumber < subCollectors[name].minBuildNumber {
-			c.logger.Warn(fmt.Sprintf(
-				"collector %s requires windows build version %d. Current build version: %d",
-				name, subCollectors[name].minBuildNumber, buildNumber,
-			))
+			c.logger.Warn("sub-collector requires a newer Windows build",
+				slog.String("sub_collector", name),
+				slog.Int("required_build", int(subCollectors[name].minBuildNumber)),
+				slog.Int("build", int(buildNumber)),
+			)
 
 			continue
 		}

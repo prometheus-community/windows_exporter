@@ -246,11 +246,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			errs = append(errs, fmt.Errorf("failed to collect object %s: %w", perfDataObject.Name, err))
 			success = 0.0
 
-			c.logger.Debug(fmt.Sprintf("performancecounter collector %s failed after %s", perfDataObject.Name, duration),
+			c.logger.Debug("performancecounter object collection failed",
+				slog.String("object", perfDataObject.Name),
+				slog.Duration("duration", duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("performancecounter collector %s succeeded after %s", perfDataObject.Name, duration))
+			c.logger.Debug("performancecounter object collection succeeded",
+				slog.String("object", perfDataObject.Name),
+				slog.Duration("duration", duration),
+			)
 		}
 
 		ch <- prometheus.MustNewConstMetric(

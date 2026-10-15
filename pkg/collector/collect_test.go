@@ -168,7 +168,7 @@ func TestCollectTimedOutCollectorDoesNotOverlap(t *testing.T) {
 		// The first call is still running, and no second call was started.
 		require.Equal(t, int32(1), slow.calls.Load())
 		require.Equal(t, int32(1), slow.maxActive.Load())
-		require.Equal(t, 1, logs.warnings("timeouted"))
+		require.Equal(t, 1, logs.warnings("timed out"))
 		require.Equal(t, 1, logs.warnings("is still running"))
 
 		// After the first call returns, the next scrape starts a new one.

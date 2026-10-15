@@ -132,7 +132,10 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 			// Includes values too large for a float64, which ParseFloat reports as an error.
 			timeout = maxScrapeTimeout
 		case err != nil, math.IsNaN(seconds), seconds <= 0:
-			logger.WarnContext(r.Context(), fmt.Sprintf("Invalid X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %s", v, defaultScrapeTimeout))
+			logger.LogAttrs(r.Context(), slog.LevelWarn, "invalid X-Prometheus-Scrape-Timeout-Seconds header, using the default timeout",
+				slog.String("value", v),
+				slog.Duration("timeout", defaultScrapeTimeout),
+			)
 		default:
 			timeout = toDuration(seconds)
 		}

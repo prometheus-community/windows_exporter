@@ -47,7 +47,8 @@ func (c *Collector) collectInstance(ch chan<- prometheus.Metric) error {
 
 		regKey, err := registry.OpenKey(registry.LOCAL_MACHINE, regKeyName, registry.QUERY_VALUE)
 		if err != nil {
-			c.logger.Debug(fmt.Sprintf("couldn't open registry %s:", regKeyName),
+			c.logger.Debug("couldn't open registry key",
+				slog.String("key", regKeyName),
 				slog.Any("err", err),
 			)
 

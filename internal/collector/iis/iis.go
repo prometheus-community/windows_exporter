@@ -259,7 +259,9 @@ func (c *Collector) getIISVersion() simpleVersion {
 		return simpleVersion{}
 	}
 
-	c.logger.Debug(fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
+	c.logger.Debug("detected IIS version",
+		slog.String("version", fmt.Sprintf("%d.%d", major, minor)),
+	)
 
 	return simpleVersion{
 		major: major,
