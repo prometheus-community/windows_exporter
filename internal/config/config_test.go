@@ -152,15 +152,22 @@ func TestNewConfigFileResolverFlags(t *testing.T) {
 	// kingpin's built-in flags, like --help, are not configuration options.
 	builtin := kingpin.New("test", "test")
 
-	for _, flag := range newApp(mainFlags).Model().Flags {
-		switch {
-		case builtin.GetFlag(flag.Name) != nil,
-			// selects the configuration file itself
-			flag.Name == "config.file",
-			// prints the available sub-collectors and exits
-			flag.Name == "collector.exchange.list",
-			// CLI-only diagnostic mode; not valid in a config file
-			flag.Name == "scrape.stdout":
+	// cliOnly lists the flags that have no configuration file key by design.
+	cliOnly := map[string]string{
+		"config.file":             "selects the configuration file itself",
+		"collector.exchange.list": "prints the available sub-collectors and exits",
+		"scrape.stdout":           "CLI-only diagnostic mode; not valid in a config file",
+	}
+
+	app := newApp(mainFlags)
+
+	// A renamed or removed flag must not stay exempt under its old name.
+	for name := range cliOnly {
+		require.NotNil(t, app.GetFlag(name), "the CLI-only flag %s does not exist", name)
+	}
+
+	for _, flag := range app.Model().Flags {
+		if _, ok := cliOnly[flag.Name]; ok || builtin.GetFlag(flag.Name) != nil {
 			continue
 		}
 
