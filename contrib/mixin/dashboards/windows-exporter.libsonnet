@@ -17,6 +17,7 @@ local descriptions = {
   GPU: 'GPU utilization, memory, sensors and top processes of one Windows host.',
   'Hyper-V': 'Hyper-V virtual machines, virtual disks, switches and network adapters of one Windows host.',
   Time: 'Clock synchronization, NTP sources and clock offset of one Windows host.',
+  MSSQL: 'Activity, waits, locks, memory, databases and availability replicas of one SQL Server instance on a Windows host.',
   Exporter: 'Scrape status, collector health and resource usage of windows_exporter on one host.',
 };
 
@@ -35,8 +36,10 @@ local references(value) = std.set([
 // config.collectors selects the collectors the dashboards render,
 // config.enableFleetTab and config.enableOverviewTab the tabs across
 // collectors, and config.dashboard* their UIDs, titles, description and tags,
-// see config.libsonnet. Returns the full dashboard with all tabs and, with
-// config.enableTabDashboards, a dashboard per tab by its file name.
+// see config.libsonnet. Returns the full dashboard with all tabs except
+// config.separateDashboardTabs and, with config.enableTabDashboards, a
+// dashboard per tab by its file name. Separate tabs always render as
+// dashboards of their own.
 function(config)
   local known = std.objectFields((import '../config.libsonnet')._config.collectors);
   local unknown = std.setDiff(std.objectFields(config.collectors), known);
@@ -51,7 +54,13 @@ function(config)
   local uid(title) = config.dashboardUIDPrefix + '-' + slug(title);
   // overview is the UID of the Overview dashboard that Fleet links hosts to,
   // or null for the Overview tab of the same dashboard.
-  local tabs(overview) = [
+  local knownSlugs = [slug(title) for title in std.objectFields(descriptions)];
+  local unknownSeparate = std.setDiff(std.set(config.separateDashboardTabs), std.set(knownSlugs));
+  assert std.length(unknownSeparate) == 0 : 'Unknown tabs in _config.separateDashboardTabs: ' + std.join(', ', unknownSeparate);
+  // The Fleet tab of the full dashboard links hosts to its Overview tab.
+  assert !std.member(config.separateDashboardTabs, 'fleet') && !std.member(config.separateDashboardTabs, 'overview') : 'The Fleet and Overview tabs cannot be in _config.separateDashboardTabs';
+  local separate(tab) = std.member(config.separateDashboardTabs, slug(tab.layout.spec.title));
+  local allTabs(overview) = [
     tab
     for tab in [
       if config.enableFleetTab then (import 'fleet.libsonnet')(on, config, overview),
@@ -68,13 +77,14 @@ function(config)
       (import 'gpu.libsonnet')(on),
       (import 'hyper_v.libsonnet')(on),
       (import 'time.libsonnet')(on),
+      (import 'mssql.libsonnet')(on),
       (import 'exporter.libsonnet')(on),
     ]
     if tab != null && !tab.empty
   ];
-  local fullTabs = tabs(null);
+  local fullTabs = [tab for tab in allTabs(null) if !separate(tab)];
 
-  local panelNames = std.flattenArrays([std.objectFields(tab.elements) for tab in fullTabs]);
+  local panelNames = std.flattenArrays([std.objectFields(tab.elements) for tab in allTabs(null)]);
   assert std.length(panelNames) == std.length(std.set(panelNames)) : 'Panel IDs must be unique across tabs';
 
   local variables = (import 'variables.libsonnet')(on);
@@ -171,7 +181,7 @@ function(config)
       b.tabs([tab.layout for tab in fullTabs]),
       dropdown=false,
     ),
-    tabs: if config.enableTabDashboards then {
+    tabs: {
       ['windows-exporter-' + slug(tab.layout.spec.title) + '.json']: new(
         uid(tab.layout.spec.title),
         config.dashboardTitlePrefix + ' / ' + tab.layout.spec.title,
@@ -179,6 +189,7 @@ function(config)
         tab.elements,
         tab.layout.spec.layout,
       )
-      for tab in tabs(if config.enableOverviewTab then uid('Overview'))
-    } else {},
+      for tab in allTabs(if config.enableOverviewTab then uid('Overview'))
+      if config.enableTabDashboards || separate(tab)
+    },
   }

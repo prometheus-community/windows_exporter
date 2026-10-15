@@ -110,6 +110,15 @@ assert custom['windows-exporter.json'].metadata.name == 'win-full' : 'custom pre
 assert std.objectFields(dashboards(function(collectors) collectors, { enableTabDashboards: false })) == ['windows-exporter.json'] : 'enableTabDashboards: false renders tab dashboards';
 
 assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
+// MSSQL renders only as a dashboard of its own unless separateDashboardTabs drops it.
+local withMSSQL = dashboards(only({ mssql: true }));
+assert !std.objectHas(results.all, 'MSSQL') : 'all: the full dashboard has the MSSQL tab';
+assert std.objectHas(withMSSQL, 'windows-exporter-mssql.json') : 'mssql: got no MSSQL dashboard';
+assert withMSSQL['windows-exporter-mssql.json'].metadata.name == 'windows-exporter-mssql' : 'mssql: got UID ' + withMSSQL['windows-exporter-mssql.json'].metadata.name;
+assert variableNames(withMSSQL['windows-exporter-mssql.json']) == ['datasource', 'job', 'hostname', 'instance', 'mssql_instance', 'database'] : 'mssql: got variables ' + std.join(', ', variableNames(withMSSQL['windows-exporter-mssql.json']));
+assert std.objectFields(dashboards(only({ mssql: true }), { enableTabDashboards: false })) == ['windows-exporter-mssql.json', 'windows-exporter.json'] : 'enableTabDashboards: false drops the separate MSSQL dashboard';
+local mssqlInFull = summary(render(only({ mssql: true }), { separateDashboardTabs: [] }));
+assert mssqlInFull.MSSQL == ['Summary', 'Activity', 'Waits and locks', 'Memory and buffer pool', 'Databases', 'tempdb and transactions', 'Availability groups'] : 'mssql in full: got ' + std.manifestJson(mssqlInFull);
 assert expect('defaults', {
   CPU: ['Summary', 'Utilization', 'Scheduling', 'System calls and frequency'],
   Disk: ['Summary', 'Volumes', 'Volume I/O', 'Physical disks'],

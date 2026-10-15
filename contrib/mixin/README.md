@@ -264,8 +264,8 @@ queries, IDs, variables, annotations, transformations, and tab/row layout.
 `mise run check-dashboards` regenerates them, marks new dashboard files with
 `git add --intent-to-add` and runs `git diff --exit-code`, displaying any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
-`enableFleetTab`, `enableOverviewTab`, `enableTabDashboards` and the dashboard
-metadata below.
+`enableFleetTab`, `enableOverviewTab`, `enableTabDashboards`,
+`separateDashboardTabs` and the dashboard metadata below.
 
 ### Metadata
 
@@ -297,6 +297,21 @@ instead of replacing them:
 
 In the Fleet dashboard, a hostname links to the Overview dashboard; in the full
 dashboard, it links to the Overview tab.
+
+`separateDashboardTabs` lists tabs, by the slug in their UID, that render only
+as dashboards of their own and are left out of the full dashboard. They render
+even with `enableTabDashboards: false`. It defaults to `['mssql']`, so the MSSQL
+dashboard (`windows-exporter-mssql`) is separate. Set it to `[]` to add the MSSQL
+tab to the full dashboard:
+
+```jsonnet
+(import 'mixin.libsonnet') {
+  _config+:: {
+    collectors+: { mssql: true },
+    separateDashboardTabs: [],
+  },
+}.grafanaDashboards['windows-exporter.json']
+```
 
 ### Collectors
 

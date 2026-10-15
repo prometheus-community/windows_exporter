@@ -9,7 +9,7 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
+  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs and the MSSQL dashboard, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `mssql`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
   The sample shows every tab; build the dashboard from the [mixin](../contrib/mixin#collectors) with your collectors to hide the others.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
@@ -20,6 +20,9 @@ Import the JSON files through **Dashboards > New > Import** and pick the Prometh
 |-----------|------|-----|
 | Windows Exporter / Full | [windows-exporter-dashboard.json](windows-exporter-dashboard.json) | `windows-exporter-full` |
 | Windows Exporter / `<tab>` | `windows-exporter-<tab>.json`, for example [windows-exporter-cpu.json](windows-exporter-cpu.json) | `windows-exporter-<tab>`, for example `windows-exporter-cpu` |
+| Windows Exporter / MSSQL | [windows-exporter-mssql.json](windows-exporter-mssql.json) | `windows-exporter-mssql` |
+
+The MSSQL dashboard is not a tab of the full dashboard. The [mixin](../contrib/mixin#metadata) adds it as a tab with `separateDashboardTabs: []`.
 
 The tab dashboards show only the variables their panels use.
 The **Windows Exporter** dropdown in the links of the tab dashboards opens the other imported dashboards and keeps the time range and variables.
@@ -37,6 +40,8 @@ Before these UIDs, the full dashboard used the UID `Kdaassddw`; importing the ne
 | Network interface | Interfaces shown in the Overview and Network tabs.                          |
 | Process           | One or more process names shown in the Processes tab, or All.               |
 | Top N processes   | Maximum processes per graph: 5, 10 (default), or 20.                         |
+| SQL Server instance | The SQL Server instance shown in the MSSQL dashboard.                     |
+| Database          | One or more databases shown in the Databases row of the MSSQL dashboard.    |
 
 The **Reboots** annotation marks each reboot of the selected host on all graphs.
 
@@ -58,6 +63,7 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | GPU      | Utilization by engine type, memory capacity, commitment and locality, temperature, fans, power, clocks, and top processes by GPU utilization and memory.                                                                   |
 | Hyper-V  | VM count and health, Hyper-V WMI health, host CPU time, CPU and memory per VM, virtual disks, virtual switches and VM network adapters.                             |
 | Time     | Time zone, clock sync source, NTP time sources, clock offset and NTP round-trip delay.                                                                              |
+| MSSQL    | A separate dashboard for one SQL Server instance: failed mssql sub-collectors, connections, batch requests, compilations, logins, access methods and errors; wait time by wait class, lock waits, average lock wait, deadlocks and lock timeouts; server memory against its target, memory by consumer, page life expectancy, buffer pool I/O and memory grants; size, log usage, transactions, log flushes and log flush write time per database; tempdb free space, the version store and active transactions; send and redo queues and traffic of Always On availability replicas. |
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |
 
 Click a hostname in the Fleet tab to open that host in the Overview tab. In the Fleet dashboard, it opens the Overview dashboard.
