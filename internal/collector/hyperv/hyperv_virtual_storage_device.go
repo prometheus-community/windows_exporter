@@ -32,16 +32,12 @@ type collectorVirtualStorageDevice struct {
 	perfDataObjectVirtualStorageDevice    []perfDataCounterValuesVirtualStorageDevice
 
 	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
-	virtualStorageDeviceQueueLength              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
 	virtualStorageDeviceReadBytes                *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Bytes/sec
 	virtualStorageDeviceReadOperations           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Operations/Sec
 	virtualStorageDeviceWriteBytes               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Bytes/sec
 	virtualStorageDeviceWriteOperations          *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Operations/Sec
-	virtualStorageDeviceLatency                  *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Latency
 	virtualStorageDeviceThroughput               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Throughput
 	virtualStorageDeviceNormalizedThroughput     *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Normalized Throughput
-	virtualStorageDeviceLowerQueueLength         *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Queue Length
-	virtualStorageDeviceLowerLatency             *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
 	virtualStorageDeviceIOQuotaReplenishmentRate *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\IO Quota Replenishment Rate
 	virtualStorageDeviceIOLatency                *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Latency
 	virtualStorageDeviceLowerIOLatency           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
@@ -51,7 +47,6 @@ type perfDataCounterValuesVirtualStorageDevice struct {
 	Name string
 
 	VirtualStorageDeviceErrorCount               float64 `perfdata:"Error Count"`
-	VirtualStorageDeviceQueueLength              float64 `perfdata:"Queue Length"`
 	VirtualStorageDeviceReadBytes                float64 `perfdata:"Read Bytes/sec"`
 	VirtualStorageDeviceReadOperations           float64 `perfdata:"Read Count"`
 	VirtualStorageDeviceWriteBytes               float64 `perfdata:"Write Bytes/sec"`
@@ -59,7 +54,6 @@ type perfDataCounterValuesVirtualStorageDevice struct {
 	VirtualStorageDeviceLatency                  float64 `perfdata:"Latency"`
 	VirtualStorageDeviceThroughput               float64 `perfdata:"Throughput"`
 	VirtualStorageDeviceNormalizedThroughput     float64 `perfdata:"Normalized Throughput"`
-	VirtualStorageDeviceLowerQueueLength         float64 `perfdata:"Lower Queue Length"`
 	VirtualStorageDeviceLowerLatency             float64 `perfdata:"Lower Latency"`
 	VirtualStorageDeviceIOQuotaReplenishmentRate float64 `perfdata:"IO Quota Replenishment Rate"`
 }
@@ -81,13 +75,6 @@ func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 	c.virtualStorageDeviceErrorCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_errors_total"),
 		"Represents the total number of errors that have occurred on this virtual device.",
-		[]string{"device"},
-		nil,
-	)
-	c.virtualStorageDeviceQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_queue_length"),
-		"DEPRECATED: use rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total). "+
-			"Cumulative queue length in 100ns ticks, identical to the raw latency.",
 		[]string{"device"},
 		nil,
 	)
@@ -115,13 +102,6 @@ func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 		[]string{"device"},
 		nil,
 	)
-	c.virtualStorageDeviceLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_latency_seconds"),
-		"DEPRECATED: use windows_hyperv_virtual_storage_device_io_latency_seconds_total. "+
-			"Cumulative IO transfer latency in 100ns ticks for this virtual device.",
-		[]string{"device"},
-		nil,
-	)
 	c.virtualStorageDeviceThroughput = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_throughput_total"),
 		"Represents the total number of IO transfers completed by this virtual device.",
@@ -131,20 +111,6 @@ func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 	c.virtualStorageDeviceNormalizedThroughput = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_normalized_throughput_total"),
 		"Represents the total number of IO transfers completed by this virtual device, normalized to 8KB transfers.",
-		[]string{"device"},
-		nil,
-	)
-	c.virtualStorageDeviceLowerQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_queue_length"),
-		"DEPRECATED: use rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total). "+
-			"Cumulative queue length in 100ns ticks on the underlying storage subsystem, identical to the raw lower latency.",
-		[]string{"device"},
-		nil,
-	)
-	c.virtualStorageDeviceLowerLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_latency_seconds"),
-		"DEPRECATED: use windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total. "+
-			"Cumulative IO transfer latency in 100ns ticks on the underlying storage subsystem for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -191,13 +157,6 @@ func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 		)
 
 		ch <- scrape.MustNewConstMetric(
-			c.virtualStorageDeviceQueueLength,
-			prometheus.GaugeValue,
-			data.VirtualStorageDeviceQueueLength,
-			data.Name,
-		)
-
-		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceReadBytes,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceReadBytes,
@@ -226,13 +185,6 @@ func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 		)
 
 		ch <- scrape.MustNewConstMetric(
-			c.virtualStorageDeviceLatency,
-			prometheus.GaugeValue,
-			data.VirtualStorageDeviceLatency,
-			data.Name,
-		)
-
-		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceThroughput,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceThroughput,
@@ -243,20 +195,6 @@ func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 			c.virtualStorageDeviceNormalizedThroughput,
 			prometheus.CounterValue,
 			data.VirtualStorageDeviceNormalizedThroughput,
-			data.Name,
-		)
-
-		ch <- scrape.MustNewConstMetric(
-			c.virtualStorageDeviceLowerQueueLength,
-			prometheus.GaugeValue,
-			data.VirtualStorageDeviceLowerQueueLength,
-			data.Name,
-		)
-
-		ch <- scrape.MustNewConstMetric(
-			c.virtualStorageDeviceLowerLatency,
-			prometheus.GaugeValue,
-			data.VirtualStorageDeviceLowerLatency,
 			data.Name,
 		)
 

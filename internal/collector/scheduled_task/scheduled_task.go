@@ -59,7 +59,6 @@ type Collector struct {
 	config Config
 	logger *slog.Logger
 
-	lastResult       *prometheus.Desc
 	lastResultStatus *prometheus.Desc
 	missedRuns       *prometheus.Desc
 	state            *prometheus.Desc
@@ -196,14 +195,6 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	c.lastResult = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
-		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
-			"1 if the last result code of the registered task is zero, 0 otherwise",
-		[]string{"task"},
-		nil,
-	)
-
 	c.lastResultStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result_status"),
 		"The last result status of a scheduled task, 1 if the current status, 0 otherwise",
@@ -338,18 +329,6 @@ func (c *Collector) taskMetrics(task ScheduledTask) []prometheus.Metric {
 	if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
 		return metrics
 	}
-
-	lastResult := 0.0
-	if task.LastTaskResult == SCHED_S_SUCCESS {
-		lastResult = 1.0
-	}
-
-	metrics = append(metrics, prometheus.MustNewConstMetric(
-		c.lastResult,
-		prometheus.GaugeValue,
-		lastResult,
-		task.Path,
-	))
 
 	if !c.config.MissedRuns {
 		return metrics

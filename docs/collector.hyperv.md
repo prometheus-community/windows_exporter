@@ -276,8 +276,6 @@ Example alert:
 | `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total`                   | Time in seconds that processor spent running                                                                       | counter | `vm`, `core`          |
 | `windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total`           | The time spent waiting for a virtual processor to be dispatched onto a logical processor. Divide its rate by the rate of `windows_hyperv_hypervisor_virtual_processor_dispatches_total` for the average wait per dispatch | counter | `vm`, `core`          |
 | `windows_hyperv_hypervisor_virtual_processor_dispatches_total`                 | The number of times the virtual processor was dispatched onto a logical processor                                  | counter | `vm`, `core`          |
-| `windows_hyperv_hypervisor_virtual_processor_time_seconds_total`                       | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total`. Time in seconds that processor spent in different modes (`state`: `hypervisor`, `guest`, `remote`) | counter | `vm`, `core`, `state` |
-| `windows_hyperv_hypervisor_virtual_processor_total_run_time_seconds_total`             | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total`. Time in seconds that processor spent running | counter | `vm`, `core`          |
 
 ### Hyper-V Virtual Network Adapter
 
@@ -350,31 +348,22 @@ Example alert:
 | Name                                                                   | Description                                                                                                                                           | Type    | Labels   |
 |------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|---------|----------|
 | `windows_hyperv_virtual_storage_device_errors_total`              | Represents the total number of errors that have occurred on this virtual device.                                                                      | counter | `device` |
-| `windows_hyperv_virtual_storage_device_queue_length`                   | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.        | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_read_bytes_total`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_read_total`          | Represents the total number of read operations that have occurred on this virtual device.                                                             | counter | `device` |
 | `windows_hyperv_virtual_storage_device_written_bytes_total`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_written_total`       | Represents the total number of write operations that have occurred on this virtual device.                                                            | counter | `device` |
 | `windows_hyperv_virtual_storage_device_io_latency_seconds_total`       | Represents the total IO transfer latency for this virtual device.                                                                                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_latency_seconds`                | **Deprecated:** use `windows_hyperv_virtual_storage_device_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below.       | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_throughput_total`               | Represents the total number of IO transfers completed by this virtual device.                                                                         | counter | `device` |
 | `windows_hyperv_virtual_storage_device_normalized_throughput_total`    | Represents the total number of IO transfers completed by this virtual device, normalized to 8KB transfers.                                            | counter | `device` |
 | `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total` | Represents the total IO transfer latency on the underlying storage subsystem for this virtual device.                                                 | counter | `device` |
-| `windows_hyperv_virtual_storage_device_lower_queue_length`             | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.  | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_latency_seconds`          | **Deprecated:** use `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below. | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_io_quota_replenishment_total`   | Represents the IO quota replenishment counter for this virtual device. Use `rate()` for the replenishment rate.                                       | counter | `device` |
 
-#### Deprecated latency and queue length metrics
+#### Latency and queue length
 
 The `Latency`, `Lower Latency`, `Queue Length` and `Lower Queue Length` performance counters
-are averages that Windows computes from two samples. windows_exporter reads their raw values,
-which only grow: the sum of all IO latencies in 100ns ticks. The raw queue length values are
-the same as the raw latency values.
-
-`windows_hyperv_virtual_storage_device_latency_seconds`, `windows_hyperv_virtual_storage_device_lower_latency_seconds`,
-`windows_hyperv_virtual_storage_device_queue_length` and `windows_hyperv_virtual_storage_device_lower_queue_length`
-keep exposing these raw values as gauges for compatibility. They are deprecated and will be removed in a future release.
-Use the `*_io_latency_seconds_total` counters instead:
+are averages that Windows computes from two samples. Their raw values only grow: the sum of
+all IO latencies in 100ns ticks, and the raw queue length values are the same as the raw
+latency values. windows_exporter publishes them as the `*_io_latency_seconds_total` counters:
 
 ```promql
 # Average IO latency in seconds

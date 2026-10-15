@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, SQL Server, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, SQL Server, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, removed and retyped metrics](#renamed-removed-and-retyped-metrics) |
 | You query metrics in MHz, percent, minutes, milliseconds, microseconds, kilobytes, megabytes or parts per billion, counters without a `_total` suffix, or Exchange, Hyper-V DataStore and Virtual SMB, IIS application pool, mscluster, NPS or SQL Server counters | Update queries | [Base units and counter names](#base-units-and-counter-names) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, lock counts or replica queues, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times, DNS zone transfers or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
@@ -211,7 +211,7 @@ The `status` values are unchanged, but `disabled` is never reported anymore and 
 Alerts on `windows_logical_disk_bitlocker_status{status="disabled"}` won't fire anymore. To find unencrypted volumes, use `status="off"`.
 See [the logical_disk documentation](docs/collector.logical_disk.md#bitlocker-status) for all values.
 
-## Renamed, deprecated and retyped metrics
+## Renamed, removed and retyped metrics
 
 Renamed:
 
@@ -297,20 +297,15 @@ Removed:
 | `windows_logical_disk_avg_write_requests_queued`  | Running sum that only grew, never an average queue length. Use `rate(windows_logical_disk_write_seconds_total[5m])` |
 | `windows_cache_data_map_hits_percent`             | Deprecated in earlier 0.32 builds. It was the raw hit count, not a percentage. Use `rate(windows_cache_data_map_hits_total[5m]) / rate(windows_cache_data_maps_total[5m])` |
 | `windows_mscluster_cluster_quorum_log_file_size`, `windows_mscluster_cluster_resource_dll_deadlock_period` | Obsolete cluster properties without a meaning on supported Windows versions |
+| `windows_hyperv_hypervisor_virtual_processor_time_total`           | Duplicate. Use `windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total` |
+| `windows_hyperv_hypervisor_virtual_processor_total_run_time_total` | Duplicate. Use `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total` |
+| `windows_hyperv_virtual_storage_device_latency_seconds`            | Running sum in 100ns ticks. Use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m]) / rate(windows_hyperv_virtual_storage_device_throughput_total[5m])` |
+| `windows_hyperv_virtual_storage_device_lower_latency_seconds`      | Running sum in 100ns ticks. Use `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total` the same way |
+| `windows_hyperv_virtual_storage_device_queue_length`               | Running sum in 100ns ticks. Use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])` |
+| `windows_hyperv_virtual_storage_device_lower_queue_length`         | Running sum in 100ns ticks. Use `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total[5m])` |
+| `windows_scheduled_task_last_result`                               | Use `windows_scheduled_task_last_result_status{status="success"}` |
 
-Deprecated. These are still exported in 0.32 and will be removed in a later release:
-
-| Deprecated                                                         | Use instead                                               |
-|--------------------------------------------------------------------|-----------------------------------------------------------|
-| `windows_hyperv_hypervisor_virtual_processor_time_seconds_total`           | `windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total` |
-| `windows_hyperv_hypervisor_virtual_processor_total_run_time_seconds_total` | `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total`  |
-| `windows_hyperv_virtual_storage_device_latency_seconds`            | `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m]) / rate(windows_hyperv_virtual_storage_device_throughput_total[5m])` |
-| `windows_hyperv_virtual_storage_device_lower_latency_seconds`      | `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`, used the same way |
-| `windows_hyperv_virtual_storage_device_queue_length`               | `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])` |
-| `windows_hyperv_virtual_storage_device_lower_queue_length`         | `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total[5m])` |
-| `windows_scheduled_task_last_result`                               | `windows_scheduled_task_last_result_status`               |
-
-The deprecated Hyper-V storage latency and queue gauges and the removed logical disk `avg_*_requests_queued` gauges never held current values.
+The removed Hyper-V storage latency and queue gauges and logical disk `avg_*_requests_queued` gauges never held current values.
 They exported a running sum that only grows, so graphs of them rise steadily. The replacements give the actual average latency and queue length.
 
 Changed type, same name:
@@ -462,8 +457,6 @@ These metrics keep their values. The name changed to add the unit, to describe t
 | `windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total` | `windows_hyperv_hypervisor_root_virtual_processor_total_run_time_seconds_total` | Same value |
 | `windows_hyperv_hypervisor_virtual_processor_mode_time_total`           | `windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total`           | Same value |
 | `windows_hyperv_hypervisor_virtual_processor_run_time_total`            | `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total`            | Same value |
-| `windows_hyperv_hypervisor_virtual_processor_time_total`                | `windows_hyperv_hypervisor_virtual_processor_time_seconds_total`                | Same value |
-| `windows_hyperv_hypervisor_virtual_processor_total_run_time_total`      | `windows_hyperv_hypervisor_virtual_processor_total_run_time_seconds_total`      | Same value |
 | `windows_hyperv_root_partition_1G_device_pages`                         | `windows_hyperv_root_partition_1g_device_pages`                                 | Same value |
 | `windows_hyperv_root_partition_1G_gpa_pages`                            | `windows_hyperv_root_partition_1g_gpa_pages`                                    | Same value |
 | `windows_hyperv_root_partition_2M_device_pages`                         | `windows_hyperv_root_partition_2m_device_pages`                                 | Same value |

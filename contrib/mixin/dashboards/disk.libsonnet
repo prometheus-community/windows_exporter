@@ -392,7 +392,7 @@ function(on)
 
       b.joinedTable(202, 'Drives', 'Model, size, partitions and operational status of each drive. Requires the diskdrive collector.', 'disk', [
         'max by (disk, model) (' + drive('info') + ')',
-        'max by (disk) (' + drive('size') + ')',
+        'max by (disk) (' + drive('size_bytes') + ')',
         'max by (disk) (' + drive('partitions') + ')',
         'max by (disk, status) (' + drive('status') + ' == 1)',
       ], [['disk', 'Disk'], ['model', 'Model'], ['Value #B', 'Size'], ['Value #C', 'Partitions'], ['status', 'Status']], [

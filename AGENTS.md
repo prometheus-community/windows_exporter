@@ -98,7 +98,8 @@ exercised a live Windows role.
 - Preserve metric names, label sets, types, units, defaults and configuration
   compatibility unless the change intentionally updates that contract. Update
   the corresponding collector documentation and affected queries together.
-  Follow existing deprecation patterns when replacing published metrics.
+  Replace published metrics with a hard rename: do not keep deprecated copies
+  or aliases, and list the change in `UPGRADE.md`.
 - Name metrics after the Prometheus conventions: publish base units (seconds,
   bytes, hertz, ratios from 0 to 1) and put the unit in the name (`_seconds`,
   `_bytes`, `_hertz`, `_ratio`), never `_mhz`, `_percent`, `_minutes`,

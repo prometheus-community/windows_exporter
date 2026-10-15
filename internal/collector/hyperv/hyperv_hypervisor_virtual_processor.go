@@ -35,12 +35,10 @@ type collectorHypervisorVirtualProcessor struct {
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
-	hypervisorVirtualProcessorTimeTotal         *prometheus.Desc
-	hypervisorVirtualProcessorModeTimeTotal     *prometheus.Desc // New name for better clarity
-	hypervisorVirtualProcessorTotalRunTimeTotal *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
-	hypervisorVirtualProcessorRunTimeTotal      *prometheus.Desc // New name for better clarity
-	hypervisorVirtualProcessorCPUWaitSeconds    *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
-	hypervisorVirtualProcessorDispatches        *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Dispatches/sec
+	hypervisorVirtualProcessorModeTimeTotal  *prometheus.Desc
+	hypervisorVirtualProcessorRunTimeTotal   *prometheus.Desc
+	hypervisorVirtualProcessorCPUWaitSeconds *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
+	hypervisorVirtualProcessorDispatches     *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Dispatches/sec
 }
 
 type perfDataCounterValuesHypervisorVirtualProcessor struct {
@@ -71,34 +69,18 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 }
 
 func (c *Collector) buildHypervisorVirtualProcessorDescriptors() {
-	c.hypervisorVirtualProcessorTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_seconds_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_mode_time_seconds_total. Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
-		[]string{"vm", "core", "state"},
-		nil,
-	)
-	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorModeTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_mode_time_seconds_total"),
 		"Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
-	// end same metric
-	c.hypervisorVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_seconds_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_run_time_seconds_total. Time in seconds that processor spent running",
-		[]string{"vm", "core"},
-		nil,
-	)
-	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorRunTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_run_time_seconds_total"),
 		"Time in seconds that processor spent running",
 		[]string{"vm", "core"},
 		nil,
 	)
-	// end same metric
 	c.hypervisorVirtualProcessorCPUWaitSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_cpu_wait_seconds_total"),
 		"The time spent waiting for a virtual processor to be dispatched onto a logical processor. "+
@@ -139,26 +121,6 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		vmName := parts[0]
 		coreID := coreParts[2]
 
-		ch <- scrape.MustNewConstMetric(
-			c.hypervisorVirtualProcessorTimeTotal,
-			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorHypervisorRunTimePercent,
-			vmName, coreID, "hypervisor",
-		)
-
-		ch <- scrape.MustNewConstMetric(
-			c.hypervisorVirtualProcessorTimeTotal,
-			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorGuestRunTimePercent,
-			vmName, coreID, "guest",
-		)
-
-		ch <- scrape.MustNewConstMetric(
-			c.hypervisorVirtualProcessorTimeTotal,
-			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorRemoteRunTimePercent,
-			vmName, coreID, "remote",
-		)
 		// Same metric with new name for better clarity, old one is kept for backward compatibility
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
@@ -181,12 +143,6 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 			vmName, coreID, "remote",
 		)
 		// end same metric
-		ch <- scrape.MustNewConstMetric(
-			c.hypervisorVirtualProcessorTotalRunTimeTotal,
-			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorTotalRunTimePercent,
-			vmName, coreID,
-		)
 		// Same metric with new name for better clarity, old one is kept for backward compatibility
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorRunTimeTotal,

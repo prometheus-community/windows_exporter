@@ -53,7 +53,6 @@ and an empty table of tasks with missed runs. Default: `false`
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
 `windows_scheduled_task_last_result_status` | The last result status of a scheduled task, 1 if the current status, 0 otherwise | gauge | task, status
 `windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run; only with `--collector.scheduled_task.missed-runs` | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
@@ -88,18 +87,13 @@ not establish whether the task succeeded or failed.
 See [Microsoft's Task Scheduler result codes](https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-error-and-success-constants)
 for details.
 
-### Deprecated metric
+### Result status
 
-`windows_scheduled_task_last_result` is deprecated. Use
-`windows_scheduled_task_last_result_status` to distinguish success, running,
+Use `windows_scheduled_task_last_result_status` to distinguish success, running,
 tasks that have never run, and other scheduler statuses. For example, use
 `windows_scheduled_task_last_result_status{status="success"} == 1` to select
-successful results.
-
-The deprecated metric remains available with its existing labels and values for
-compatibility. A running result code still produces 0, which does not necessarily
-mean the task failed. `windows_scheduled_task_last_result` and
-`windows_scheduled_task_missed_runs` are omitted when the result is `has_not_run`.
+successful results. `windows_scheduled_task_missed_runs` is omitted when the
+result is `has_not_run`.
 
 ### State
 
@@ -116,7 +110,6 @@ A task can be in the following states:
 This Windows task is only reported with `--collector.scheduled_task.exclude=""`.
 
 ```
-windows_scheduled_task_last_result{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1
 windows_scheduled_task_last_result_status{status="success",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1
 windows_scheduled_task_last_result_status{status="ready",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_last_result_status{status="running",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
@@ -149,14 +142,6 @@ Tasks that have never run:
 
 ```promql
 windows_scheduled_task_last_result_status{status="has_not_run"} == 1
-```
-
-For dashboards still using the deprecated success/failure metric, exclude running tasks:
-
-```promql
-(windows_scheduled_task_last_result == 0)
-unless on (job, instance, task)
-(windows_scheduled_task_state{state="running"} == 1)
 ```
 
 ## Alerting examples

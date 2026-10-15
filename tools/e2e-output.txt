@@ -321,9 +321,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_scheduled_task_last_result DEPRECATED: use windows_scheduled_task_last_result_status. 1 if the last result code of the registered task is zero, 0 otherwise
-# TYPE windows_scheduled_task_last_result gauge
-windows_scheduled_task_last_result{task="/Microsoft/Windows/PLA/GAEvents"} 0
 # HELP windows_scheduled_task_last_result_status The last result status of a scheduled task, 1 if the current status, 0 otherwise
 # TYPE windows_scheduled_task_last_result_status gauge
 windows_scheduled_task_last_result_status{status="disabled",task="/Microsoft/Windows/PLA/GAEvents"} 0

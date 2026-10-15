@@ -55,28 +55,33 @@ func TestCollector(t *testing.T) {
 	}
 }
 
-// TestCollectorVirtualStorageDeviceLatency checks that the deprecated latency gauges
-// expose the raw cumulative value in 100ns ticks of the *_io_latency_seconds_total counters.
+// TestCollectorVirtualStorageDeviceLatency checks that the latencies are published
+// as counters in seconds for every device, and that the removed gauges, which
+// exposed the same raw value in 100ns ticks, are gone.
 func TestCollectorVirtualStorageDeviceLatency(t *testing.T) {
 	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_storage_device"}})
 
-	for deprecated, replacement := range map[string]string{
-		"windows_hyperv_virtual_storage_device_latency_seconds":       "windows_hyperv_virtual_storage_device_io_latency_seconds_total",
-		"windows_hyperv_virtual_storage_device_lower_latency_seconds": "windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total",
-	} {
-		want := testutils.MetricValuesByLabel(metrics, deprecated, "device")
-		got := testutils.MetricValuesByLabel(metrics, replacement, "device")
+	devices := testutils.MetricValuesByLabel(metrics, "windows_hyperv_virtual_storage_device_throughput_total", "device")
 
-		require.Len(t, got, len(want))
+	for _, name := range []string{
+		"windows_hyperv_virtual_storage_device_io_latency_seconds_total",
+		"windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total",
+	} {
+		got := testutils.MetricValuesByLabel(metrics, name, "device")
+		require.Len(t, got, len(devices), name)
 
 		if len(got) > 0 {
-			require.Equal(t, dto.MetricType_COUNTER, metrics[replacement].GetType())
+			require.Equal(t, dto.MetricType_COUNTER, metrics[name].GetType())
 		}
+	}
 
-		for device, ticks := range want {
-			require.Contains(t, got, device)
-			require.InDelta(t, ticks*pdh.TicksToSecondScaleFactor, got[device], 1e-6, "%s{device=%q}", replacement, device)
-		}
+	for _, removed := range []string{
+		"windows_hyperv_virtual_storage_device_latency_seconds",
+		"windows_hyperv_virtual_storage_device_lower_latency_seconds",
+		"windows_hyperv_virtual_storage_device_queue_length",
+		"windows_hyperv_virtual_storage_device_lower_queue_length",
+	} {
+		require.NotContains(t, metrics, removed)
 	}
 }
 
@@ -115,7 +120,7 @@ func TestCollectorVirtualHardDisk(t *testing.T) {
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_virtual_hard_disk_size_bytes", labels); metric != nil {
 		device := labelValue(metric, "device")
 		require.NotEmpty(t, device, "the running VM's disk has no device")
-		require.Contains(t, testutils.MetricValuesByLabel(metrics, "windows_hyperv_virtual_storage_device_queue_length", "device"), device,
+		require.Contains(t, testutils.MetricValuesByLabel(metrics, "windows_hyperv_virtual_storage_device_throughput_total", "device"), device,
 			"device %q is not a virtual_storage_device instance", device)
 	}
 
