@@ -19,12 +19,33 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/svc"
 )
+
+func TestAppendToFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, serviceErrorLogName)
+	now := time.Date(2026, 10, 15, 14, 3, 5, 0, time.UTC)
+
+	appendToFile(path, "first failure", now)
+	appendToFile(path, "second failure\n", now.Add(time.Second))
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "repeated failures must not create a new file each time")
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, "2026-10-15T14:03:05Z first failure\n2026-10-15T14:03:06Z second failure\n", string(data))
+}
 
 func TestServiceExecuteStop(t *testing.T) {
 	t.Parallel()

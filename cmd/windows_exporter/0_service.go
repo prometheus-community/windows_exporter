@@ -23,8 +23,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -96,10 +98,11 @@ var IsService = func() bool {
 		}()
 	}()
 
+	// This event is informational. If it cannot be written, the exporter still
+	// starts: stopping the service here would report it as stopped while run
+	// keeps serving.
 	if err := logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "attempting to start exporter service"); err != nil {
 		logToFile(fmt.Sprintf("failed sent log to event log: %v", err))
-
-		exitCodeCh <- 2
 	}
 
 	return true
@@ -222,11 +225,24 @@ func logStartupError(ctx context.Context, msg string, err error) {
 	)
 }
 
+// serviceErrorLogName is the file in the temporary directory that logToFile appends to.
+const serviceErrorLogName = "windows_exporter.service.error.log"
+
+// logToFile is the last resort when the event log cannot be written. It appends
+// msg to one file in the temporary directory, so that repeated failures don't
+// leave a new file behind each time.
 func logToFile(msg string) {
-	if file, err := os.CreateTemp("", "windows_exporter.service.error.log"); err == nil {
-		_, _ = file.WriteString(msg)
-		_ = file.Close()
+	appendToFile(filepath.Join(os.TempDir(), serviceErrorLogName), msg, time.Now())
+}
+
+func appendToFile(path, msg string, now time.Time) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	if err != nil {
+		return
 	}
+
+	_, _ = file.WriteString(now.Format(time.RFC3339) + " " + strings.TrimSpace(msg) + "\n")
+	_ = file.Close()
 }
 
 // isWindowsService is a clone of "golang.org/x/sys/windows/svc:IsWindowsService", but with a fix
