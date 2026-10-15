@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -48,6 +49,10 @@ type Collector struct {
 
 	// unexpectedInstances holds instance names already logged as unparsable.
 	unexpectedInstances map[string]struct{}
+
+	// counters32 extends the 32-bit counters of each share.
+	counters32 map[string]*shareCounters32
+	generation uint64
 
 	readBytesTotal                            *prometheus.Desc
 	readBytesTransmittedViaSMBDirectTotal     *prometheus.Desc
@@ -71,6 +76,36 @@ type Collector struct {
 	metadataRequestsTotal *prometheus.Desc
 	requestQueueSecsTotal *prometheus.Desc
 	requestSecs           *prometheus.Desc
+}
+
+// shareCounters32 holds the 32-bit counters of one share, extended beyond
+// 2^32, and the 64-bit byte counter that shows a reconnect of the share.
+type shareCounters32 struct {
+	generation uint64
+	dataBytes  float64
+	counters   [numFields32]utils.Counter32
+}
+
+const numFields32 = 12
+
+// fields32 returns the 32-bit counters: the request counters
+// (PERF_COUNTER_COUNTER) and the PERF_AVERAGE_TIMER numerators. The byte
+// counters are 64-bit.
+func fields32(data *perfDataCounterValues) [numFields32]*float64 {
+	return [numFields32]*float64{
+		&data.AvgSecPerRead,
+		&data.AvgSecPerWrite,
+		&data.AvgSecPerDataRequest,
+		&data.CreditStallsPerSec,
+		&data.DataRequestsPerSec,
+		&data.MetadataRequestsPerSec,
+		&data.ReadRequestsTransmittedViaSMBDirectPerSec,
+		&data.ReadRequestsPerSec,
+		&data.TurboIOReadsPerSec,
+		&data.TurboIOWritesPerSec,
+		&data.WriteRequestsTransmittedViaSMBDirectPerSec,
+		&data.WriteRequestsPerSec,
+	}
 }
 
 func New(config *Config) *Collector {
@@ -102,6 +137,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 	c.unexpectedInstances = make(map[string]struct{})
+	c.counters32 = make(map[string]*shareCounters32)
 
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
@@ -215,6 +251,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect SMB Client Shares metrics: %w", err)
 	}
 
+	c.generation++
+
 	for _, data := range c.perfDataObject {
 		serverValue, shareValue, ok := parseInstanceName(data.Name)
 		if !ok {
@@ -228,6 +266,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 			continue
 		}
+
+		c.extendCounters32(&data)
 
 		// Request time spent on queue. Convert from ticks to seconds.
 		ch <- prometheus.MustNewConstMetric(
@@ -380,7 +420,38 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	for name, counters := range c.counters32 {
+		if counters.generation != c.generation {
+			delete(c.counters32, name)
+		}
+	}
+
 	return nil
+}
+
+// extendCounters32 replaces the raw 32-bit counters with values that keep
+// counting past 2^32.
+func (c *Collector) extendCounters32(data *perfDataCounterValues) {
+	fields := fields32(data)
+
+	counters, ok := c.counters32[data.Name]
+	if !ok {
+		counters = &shareCounters32{}
+		for i, field := range fields {
+			counters.counters[i] = utils.NewCounter32(*field)
+		}
+
+		c.counters32[data.Name] = counters
+	}
+
+	reset := data.DataBytesPerSec < counters.dataBytes
+
+	counters.generation = c.generation
+	counters.dataBytes = data.DataBytesPerSec
+
+	for i, field := range fields {
+		*field = counters.counters[i].Update(*field, reset)
+	}
 }
 
 // parseInstanceName splits an SMB Client Shares instance name such as

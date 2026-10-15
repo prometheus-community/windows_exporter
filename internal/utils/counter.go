@@ -39,3 +39,39 @@ func (c *Counter) AddValue(value uint32) {
 func (c *Counter) Value() float64 {
 	return c.totalValue
 }
+
+// Counter32 extends a raw 32-bit performance counter, such as a
+// PERF_COUNTER_COUNTER or the numerator of a PERF_AVERAGE_TIMER, beyond 2^32.
+// Unlike Counter, it starts at the raw value and follows a restart of the
+// source, so its value equals the raw value until the first wrap.
+type Counter32 struct {
+	lastValue  uint32
+	totalValue float64
+}
+
+// NewCounter32 creates a Counter32 from the first raw value.
+func NewCounter32(value float64) Counter32 {
+	return Counter32{
+		lastValue:  uint32(value),
+		totalValue: float64(uint32(value)),
+	}
+}
+
+// Update adds a raw value and returns the extended value. reset reports that
+// the source restarted, for example because a share was reconnected; the raw
+// value is then taken as is. Without that signal, a decrease from below 2^31
+// is also taken as a restart, since a wrap from there needs more than 2^31
+// increments between two samples. Any other decrease is a wrap.
+func (c *Counter32) Update(value float64, reset bool) float64 {
+	raw := uint32(value)
+
+	if reset || (raw < c.lastValue && c.lastValue < 1<<31) {
+		c.totalValue = float64(raw)
+	} else {
+		c.totalValue += float64(raw - c.lastValue)
+	}
+
+	c.lastValue = raw
+
+	return c.totalValue
+}

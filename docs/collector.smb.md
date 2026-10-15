@@ -26,6 +26,8 @@ Name | Description | Type | Labels
 `windows_smb_server_shares_sent_bytes_total` | Sent bytes on the SMB Server Share | counter | `share`
 `windows_smb_server_shares_files_opened_total` | Files opened on the SMB Server Share | counter | `share`
 
+Windows keeps `Read Requests/sec` and `Write Requests/sec` as 32-bit raw counters. The collector extends them past 2^32 per share, so `read_requests_total` and `write_requests_total` don't drop back to a low value when the raw counter wraps. The extended value starts at the raw value and follows the raw counter when the share restarts.
+
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 

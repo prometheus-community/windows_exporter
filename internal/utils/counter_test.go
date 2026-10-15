@@ -55,3 +55,17 @@ func TestCounter(t *testing.T) {
 
 	require.Equal(t, float64(math.MaxUint32)*2-9, c.Value()) //nolint:testifylint
 }
+
+func TestCounter32(t *testing.T) {
+	t.Parallel()
+
+	c := utils.NewCounter32(100)
+
+	require.Equal(t, 100.0, c.Update(100, false))                                    //nolint:testifylint
+	require.Equal(t, 150.0, c.Update(150, false))                                    //nolint:testifylint
+	require.Equal(t, float64(math.MaxUint32)-10, c.Update(math.MaxUint32-10, false)) //nolint:testifylint
+	require.Equal(t, float64(math.MaxUint32)+21, c.Update(20, false))                //nolint:testifylint
+	require.Equal(t, 5.0, c.Update(5, true))                                         //nolint:testifylint
+	require.Equal(t, 15.0, c.Update(15, false))                                      //nolint:testifylint
+	require.Equal(t, 3.0, c.Update(3, false))                                        //nolint:testifylint
+}

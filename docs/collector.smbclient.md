@@ -35,6 +35,9 @@ Name | Description | Type | Labels
 `windows_smbclient_write_requests_total` | The write requests on this share | counter | `server`, `share`|
 `windows_smbclient_read_seconds_total` | Seconds waiting for read requests on this share | counter | `server`, `share`|
 `windows_smbclient_write_seconds_total` | Seconds waiting for write requests on this share | counter | `server`, `share`|
+
+Windows keeps the request counters and the time sums behind `read_seconds_total`, `write_seconds_total` and `request_seconds_total` as 32-bit raw counters. The time sums wrap after 2^32 ticks, about 430 seconds of summed request time. The collector extends these counters past 2^32 per share, so they don't drop back to a low value when the raw counter wraps. The extended value starts at the raw value and follows the raw counter when the share reconnects.
+
 ## Useful queries
 ```
 # Average request queue length (includes read and write).

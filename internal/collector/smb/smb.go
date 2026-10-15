@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,6 +43,10 @@ type Collector struct {
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
+	// counters32 extends the 32-bit request counters of each share.
+	counters32 map[string]*shareCounters32
+	generation uint64
+
 	treeConnectCount     *prometheus.Desc
 	currentOpenFileCount *prometheus.Desc
 	receivedBytes        *prometheus.Desc
@@ -50,6 +55,16 @@ type Collector struct {
 	metadataRequests     *prometheus.Desc
 	sentBytes            *prometheus.Desc
 	filesOpened          *prometheus.Desc
+}
+
+// shareCounters32 holds the 32-bit counters of one share, extended beyond
+// 2^32, and the 64-bit byte counters that show a restart of the share.
+type shareCounters32 struct {
+	generation    uint64
+	receivedBytes float64
+	sentBytes     float64
+	readRequests  utils.Counter32
+	writeRequests utils.Counter32
 }
 
 func New(config *Config) *Collector {
@@ -128,6 +143,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.counters32 = make(map[string]*shareCounters32)
+
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "SMB Server Shares", pdh.InstancesAll)
@@ -145,7 +162,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect SMB Server Shares metrics: %w", err)
 	}
 
+	c.generation++
+
 	for _, data := range c.perfDataObject {
+		c.extendCounters32(&data)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.currentOpenFileCount,
 			prometheus.GaugeValue,
@@ -203,5 +224,34 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	for name, counters := range c.counters32 {
+		if counters.generation != c.generation {
+			delete(c.counters32, name)
+		}
+	}
+
 	return nil
+}
+
+// extendCounters32 replaces the raw 32-bit request counters with values that
+// keep counting past 2^32. Read Requests/sec and Write Requests/sec are
+// PERF_COUNTER_COUNTER (32-bit), the byte counters are 64-bit.
+func (c *Collector) extendCounters32(data *perfDataCounterValues) {
+	counters, ok := c.counters32[data.Name]
+	if !ok {
+		counters = &shareCounters32{
+			readRequests:  utils.NewCounter32(data.ReadRequests),
+			writeRequests: utils.NewCounter32(data.WriteRequests),
+		}
+		c.counters32[data.Name] = counters
+	}
+
+	reset := data.ReceivedBytes < counters.receivedBytes || data.SentBytes < counters.sentBytes
+
+	counters.generation = c.generation
+	counters.receivedBytes = data.ReceivedBytes
+	counters.sentBytes = data.SentBytes
+
+	data.ReadRequests = counters.readRequests.Update(data.ReadRequests, reset)
+	data.WriteRequests = counters.writeRequests.Update(data.WriteRequests, reset)
 }
