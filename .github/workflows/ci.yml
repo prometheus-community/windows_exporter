@@ -79,9 +79,42 @@ jobs:
           # renovate: golang=go
           go-version: '1.27.2'
 
+      # Windows file versions and MSI versions only compare numbers, so every
+      # 0.32.0 beta and the final release would all be 0.32.0.0 and MDM tools
+      # would not update between them. The fourth field orders them:
+      # beta.N and alpha.N are N, rc.N is 100+N and the release is 1000.
+      # Builds between tags keep the number of the tag they follow.
+      - name: Compute file version
+        run: |
+          # Several tags can point at one commit, such as an rc on the last
+          # beta, and git describe would pick the first by name.
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="$(git describe --tags --abbrev=0)"
+          fi
+          if [[ ! "$tag" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)(-(alpha|beta|rc)\.([0-9]+))?$ ]]; then
+            echo "::error::Cannot derive a file version from tag $tag"
+            exit 1
+          fi
+          build=1000
+          number="${BASH_REMATCH[4]}"
+          case "${BASH_REMATCH[3]}" in
+            alpha|beta) build="$((10#$number))"; limit=99 ;;
+            rc) build="$((100 + 10#$number))"; limit=899 ;;
+          esac
+          if [[ -n "$number" ]] && (( 10#$number > limit )); then
+            echo "::error::Pre-release number of tag $tag does not fit the file version scheme"
+            exit 1
+          fi
+          mkdir -p output
+          printf '%s\n' "${BASH_REMATCH[1]}.$build" | tee output/FILE_VERSION
+
       - name: Generate Windows resources
         working-directory: cmd/windows_exporter
-        run: go run github.com/tc-hib/go-winres@v0.3.3 make --product-version=git-tag --file-version=git-tag --arch=amd64,arm64
+        run: |
+          file_version="$(cat ../../output/FILE_VERSION)"
+          go run github.com/tc-hib/go-winres@v0.3.3 make --product-version="$file_version" --file-version="$file_version" --arch=amd64,arm64
 
       - name: Build snapshot
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
@@ -196,10 +229,11 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
+          $FileVersion = Get-Content output\FILE_VERSION
 
           foreach($Arch in "amd64", "arm64") {
-            Write-Host "Building windows_exporter $Version msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
+            Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\

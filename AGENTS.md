@@ -37,6 +37,11 @@ their runtime behavior.
   0.31.x package there: its `taskkill /T` follows stale parent process IDs and
   can kill the runner agent, which fails the job with "The hosted runner lost
   communication with the server" and no logs.
+- Release builds give the executable and the MSI a numeric four-part version
+  computed in the CI build job (`output/FILE_VERSION`): the fourth field is N
+  for `alpha.N`/`beta.N`, 100+N for `rc.N` and 1000 for the release, so MDM
+  tools that compare file versions update from one beta to the next and to the
+  final release. Windows Installer itself ignores the fourth field.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
