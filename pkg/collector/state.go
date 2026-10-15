@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 )
 
 var (
@@ -40,12 +41,46 @@ type collectionState struct {
 	miApp      *mi.Application
 	miSession  *mi.Session
 
+	// scrapeSlot admits one scrape at a time to the collection and its filtered views.
+	// Independent collections don't share collector instances, so they don't wait for each other.
+	scrapeSlot chan struct{}
+
 	// closeMu serializes Close calls.
 	closeMu sync.Mutex
 }
 
 func newCollectionState() *collectionState {
-	return &collectionState{collectors: make(map[string]*collectorState)}
+	return &collectionState{
+		collectors: make(map[string]*collectorState),
+		scrapeSlot: make(chan struct{}, 1),
+	}
+}
+
+// acquireScrapeSlot waits for the scrape slot until ctx is done.
+func (s *collectionState) acquireScrapeSlot(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	select {
+	case s.scrapeSlot <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	// Both cases may have been ready. Don't start a scrape that nobody waits for anymore.
+	if err := ctx.Err(); err != nil {
+		<-s.scrapeSlot
+
+		return err
+	}
+
+	return nil
+}
+
+// releaseScrapeSlot releases the slot acquired by acquireScrapeSlot.
+func (s *collectionState) releaseScrapeSlot() {
+	<-s.scrapeSlot
 }
 
 // collector returns the state of the named collector, creating it on first use.
@@ -204,6 +239,9 @@ func (s *collectorState) build(ctx context.Context, logger *slog.Logger, miSessi
 		}
 	}()
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	scrapecache.Reset(collector)
+
 	return collector.Build(logger, miSession)
 }
 
@@ -237,6 +275,9 @@ func (s *collectorState) close(ctx context.Context, collector Collector) (err er
 			err = fmt.Errorf("panic: %v. stack: %s", r, string(debug.Stack()))
 		}
 	}()
+
+	// Release the cached metrics, also if Close panics.
+	defer scrapecache.Reset(collector)
 
 	return collector.Close()
 }

@@ -175,9 +175,6 @@ func (c *Collector) buildResourceGroupDescriptors() {
 		[]string{"name"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier build.
-	c.resourceGroupMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -209,7 +206,7 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 		{name: "State", desc: c.resourceGroupState},
 	}
 
-	scrape := c.resourceGroupMetricCache.Begin()
+	scrape := c.resourceGroupMetricCache.Scrape()
 
 	var nodeNamesKey []byte
 	for _, nodeName := range nodeNames {
@@ -256,8 +253,6 @@ func (c *Collector) publishResourceGroups(ch chan<- prometheus.Metric, groups []
 			ch <- metric
 		}
 	}
-
-	commitScrape(scrape, len(groups), resultErr)
 
 	return resultErr
 }

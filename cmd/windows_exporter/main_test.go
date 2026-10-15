@@ -212,6 +212,154 @@ func TestScrapeStdout(t *testing.T) {
 	require.Contains(t, output, `windows_exporter_collector_success{collector="cpu"} 1`)
 }
 
+// serveTest serves handler with the exporter's server settings on a free loopback port.
+func serveTest(t *testing.T, ctx context.Context, handler http.Handler) (*http.Server, string) {
+	t.Helper()
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	server := newServer(ctx, handler)
+
+	go func() {
+		_ = server.Serve(listener)
+	}()
+
+	t.Cleanup(func() {
+		_ = server.Close()
+	})
+
+	return server, "http://" + listener.Addr().String() + "/"
+}
+
+func TestNewServerWriteTimeout(t *testing.T) {
+	t.Parallel()
+
+	server := newServer(t.Context(), http.NotFoundHandler())
+
+	// A scrape that uses its full budget must still be able to write its response.
+	require.Greater(t, server.WriteTimeout, httphandler.MaxScrapeTimeout)
+}
+
+func TestNewServerCancelsInFlightRequests(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	started := make(chan struct{})
+
+	_, uri := serveTest(t, ctx, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+
+		select {
+		case <-r.Context().Done():
+			_, _ = io.WriteString(w, "canceled")
+		case <-time.After(30 * time.Second):
+			_, _ = io.WriteString(w, "not canceled")
+		}
+	}))
+
+	type result struct {
+		body string
+		err  error
+	}
+
+	resultCh := make(chan result, 1)
+
+	go func() {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, uri, nil)
+		if err != nil {
+			resultCh <- result{err: err}
+
+			return
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			resultCh <- result{err: err}
+
+			return
+		}
+
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		resultCh <- result{body: string(body), err: err}
+	}()
+
+	<-started
+	cancel()
+
+	select {
+	case res := <-resultCh:
+		require.NoError(t, res.err)
+		require.Equal(t, "canceled", res.body)
+	case <-time.After(10 * time.Second):
+		t.Fatal("in-flight request wasn't canceled with the server context")
+	}
+}
+
+func TestShutdownServerClosesStuckRequests(t *testing.T) {
+	t.Parallel()
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+
+	t.Cleanup(func() {
+		close(release)
+	})
+
+	// The handler ignores its context, like a scrape stuck in a native call.
+	server, uri := serveTest(t, t.Context(), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(started)
+		<-release
+
+		_, _ = io.WriteString(w, "released")
+	}))
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, uri, nil)
+		if err != nil {
+			errCh <- err
+
+			return
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+
+		errCh <- err
+	}()
+
+	<-started
+
+	start := time.Now()
+	err := shutdownServer(t.Context(), server, 100*time.Millisecond)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Less(t, time.Since(start), 5*time.Second)
+
+	// Close drops the connection of the stuck request, so the client doesn't wait for it.
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("connection of the stuck request wasn't closed")
+	}
+}
+
+func TestShutdownServerIdle(t *testing.T) {
+	t.Parallel()
+
+	server, _ := serveTest(t, t.Context(), http.NotFoundHandler())
+
+	require.NoError(t, shutdownServer(t.Context(), server, time.Second))
+}
+
 func TestSetPriorityWindows(t *testing.T) {
 	t.Parallel()
 

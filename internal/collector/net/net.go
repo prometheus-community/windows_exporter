@@ -33,7 +33,9 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -151,19 +153,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.CollectorsEnabled = make([]string, 0)
 
-	var nicExclude, nicInclude string
-
 	var collectorsEnabled string
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.net.nic-exclude",
 		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&nicExclude)
+		"", &c.config.NicExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.net.nic-include",
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&nicInclude)
+		".+", &c.config.NicInclude,
+	)
 
 	app.Flag(
 		"collector.net.enabled",
@@ -172,18 +174,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
-
-		var err error
-
-		c.config.NicExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicExclude))
-		if err != nil {
-			return fmt.Errorf("collector.net.nic-exclude: %w", err)
-		}
-
-		c.config.NicInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicInclude))
-		if err != nil {
-			return fmt.Errorf("collector.net.nic-include: %w", err)
-		}
 
 		return nil
 	})
@@ -195,10 +185,13 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels, &c.nicMetricCache}
+}
+
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
-	c.nicMetricCache.Reset()
-	c.labels.Reset()
 	c.adapterAddressesBuf = nil
 
 	return nil
@@ -310,10 +303,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.nicMetricCache.Reset()
-	c.labels.Reset()
-
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
@@ -356,8 +345,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Network Information metrics: %w", err)
 	}
 
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	for _, data := range c.perfDataObject {
 		if c.config.NicExclude.MatchString(data.Name) || !c.config.NicInclude.MatchString(data.Name) {
@@ -471,7 +459,7 @@ func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
-	scrape := c.nicMetricCache.Begin()
+	scrape := c.nicMetricCache.Scrape()
 
 	var addresses []byte
 
@@ -507,8 +495,6 @@ func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 			ch <- metric
 		}
 	}
-
-	scrape.Commit()
 
 	return nil
 }
