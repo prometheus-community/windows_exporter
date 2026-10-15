@@ -211,9 +211,6 @@ func (c *Collector) buildResourceDescriptors() {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier build.
-	c.resourceMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -307,7 +304,7 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 	}
 
 	nodeNamesValue := string(nodeNamesKey)
-	scrape := c.resourceMetricCache.Begin()
+	scrape := c.resourceMetricCache.Scrape()
 
 	for _, resource := range resources {
 		if !resource.IdentityValid {
@@ -377,8 +374,6 @@ func (c *Collector) publishResources(ch chan<- prometheus.Metric, resources []cl
 			ch <- metric
 		}
 	}
-
-	commitScrape(scrape, len(resources), resultErr)
 
 	return resultErr
 }

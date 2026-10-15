@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -242,7 +243,9 @@ func TestCollectMetricsCache(t *testing.T) {
 	for i, scrape := range []ScheduledTasks{tasks, tasks, changed, changed} {
 		// Collect once outside the registry, which calls Collect for Describe too.
 		collected := make(chan prometheus.Metric, len(scrape)*18)
+		cacheScrape := scrapecache.Begin(c)
 		c.collectMetrics(collected, scrape)
+		cacheScrape.End(nil)
 		close(collected)
 
 		var sent []prometheus.Metric
@@ -295,7 +298,9 @@ func TestCollectMetricsCache(t *testing.T) {
 	_, ok = scrape.Load("/Added", taskValues{state: TASK_STATE_QUEUED, lastTaskResult: SCHED_S_TASK_QUEUED})
 	require.True(t, ok)
 
-	// Build creates new descriptors, so the cache must not return metrics built from the old ones.
+	// Build creates new descriptors, so the collection resets the caches of
+	// the collector before it, which must include the metric cache.
+	scrapecache.Reset(c)
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	scrape = c.metricCache.Begin()
@@ -353,7 +358,9 @@ func BenchmarkCollectMetrics(b *testing.B) {
 					c.metricCache.Reset()
 				}
 
+				cacheScrape := scrapecache.Begin(c)
 				c.collectMetrics(ch, tasks)
+				cacheScrape.End(nil)
 
 				for len(ch) > 0 {
 					<-ch
