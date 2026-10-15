@@ -34,19 +34,20 @@ func TestUTF16String(t *testing.T) {
 }
 
 // TestEnglishCounterSets checks the English names of a v2 counter set that
-// every supported Windows version registers.
+// every supported Windows version registers. Classic sets like Processor
+// Information are not v2 counter sets.
 func TestEnglishCounterSets(t *testing.T) {
-	guid, ok := englishCounterSets()["processor information"]
-	require.True(t, ok, "Processor Information counter set not found")
+	guid, ok := englishCounterSets()["smb client shares"]
+	require.True(t, ok, "SMB Client Shares counter set not found")
 
 	names := counterNames(&guid, langIDEnglish)
-	require.Contains(t, mapValues(names), "% Processor Time")
+	require.Contains(t, mapValues(names), "Avg. sec/Read")
 }
 
 // TestLocalizedCounterPaths checks that an English path maps to the counter
 // set's names in the UI language. On an English system, there is nothing to map.
 func TestLocalizedCounterPaths(t *testing.T) {
-	paths := localizedCounterPaths("Processor Information", "_Total", "% Processor Time")
+	paths := localizedCounterPaths("SMB Client Shares", "*", "Avg. sec/Read")
 
 	for _, langID := range uiLanguages() {
 		if langID == langIDEnglish {
