@@ -26,6 +26,56 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
+	"github.com/prometheus-community/windows_exporter/internal/collector/container"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
+	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/file"
+	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
+	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
+	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
+	"github.com/prometheus-community/windows_exporter/internal/collector/license"
+	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
+	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
+	"github.com/prometheus-community/windows_exporter/internal/collector/net"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
+	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
+	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
+	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
+	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
+	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
+	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
+	"github.com/prometheus-community/windows_exporter/internal/collector/service"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/storage_spaces"
+	"github.com/prometheus-community/windows_exporter/internal/collector/system"
+	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
+	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
+	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/update"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -111,12 +161,38 @@ func TestRegistrations(t *testing.T) {
 	t.Run("ConfigDefaults", func(t *testing.T) {
 		t.Parallel()
 
+		// The defaults of every collector, listed independently of the
+		// registrations.
+		defaults := map[string]any{
+			ad.Name: ad.ConfigDefaults, adcs.Name: adcs.ConfigDefaults, adfs.Name: adfs.ConfigDefaults,
+			cache.Name: cache.ConfigDefaults, container.Name: container.ConfigDefaults, cpu.Name: cpu.ConfigDefaults,
+			cpu_info.Name: cpu_info.ConfigDefaults, dfsr.Name: dfsr.ConfigDefaults, dhcp.Name: dhcp.ConfigDefaults,
+			diskdrive.Name: diskdrive.ConfigDefaults, dmi.Name: dmi.ConfigDefaults, dns.Name: dns.ConfigDefaults,
+			exchange.Name: exchange.ConfigDefaults, file.Name: file.ConfigDefaults, fsrmquota.Name: fsrmquota.ConfigDefaults,
+			gpu.Name: gpu.ConfigDefaults, hyperv.Name: hyperv.ConfigDefaults, iis.Name: iis.ConfigDefaults,
+			license.Name: license.ConfigDefaults, logical_disk.Name: logical_disk.ConfigDefaults, memory.Name: memory.ConfigDefaults,
+			mscluster.Name: mscluster.ConfigDefaults, msmq.Name: msmq.ConfigDefaults, mssql.Name: mssql.ConfigDefaults,
+			net.Name: net.ConfigDefaults, netframework.Name: netframework.ConfigDefaults, nps.Name: nps.ConfigDefaults,
+			os.Name: os.ConfigDefaults, pagefile.Name: pagefile.ConfigDefaults, performancecounter.Name: performancecounter.ConfigDefaults,
+			physical_disk.Name: physical_disk.ConfigDefaults, printer.Name: printer.ConfigDefaults, process.Name: process.ConfigDefaults,
+			registry.Name: registry.ConfigDefaults, remote_fx.Name: remote_fx.ConfigDefaults, scheduled_task.Name: scheduled_task.ConfigDefaults,
+			service.Name: service.ConfigDefaults, smb.Name: smb.ConfigDefaults, smbclient.Name: smbclient.ConfigDefaults,
+			smtp.Name: smtp.ConfigDefaults, storage_spaces.Name: storage_spaces.ConfigDefaults, system.Name: system.ConfigDefaults,
+			tcp.Name: tcp.ConfigDefaults, terminal_services.Name: terminal_services.ConfigDefaults, textfile.Name: textfile.ConfigDefaults,
+			time.Name: time.ConfigDefaults, udp.Name: udp.ConfigDefaults, update.Name: update.ConfigDefaults,
+			vmware.Name: vmware.ConfigDefaults, wmi.Name: wmi.ConfigDefaults,
+		}
+
+		require.Len(t, defaults, len(registrations))
+
 		for _, r := range registrations {
-			var want Config
+			want, ok := defaults[r.name]
+			if !assert.True(t, ok, "collector %s has no defaults in the test", r.name) {
+				continue
+			}
 
-			r.setDefaults(&want)
-
-			assert.Equal(t, r.field(&want), r.field(&ConfigDefaults), "ConfigDefaults of collector %s", r.name)
+			got := reflect.ValueOf(r.field(&ConfigDefaults)).Elem().Interface()
+			assert.Equal(t, want, got, "ConfigDefaults of collector %s", r.name)
 		}
 	})
 
