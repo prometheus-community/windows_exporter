@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Hyper-V, logical disk queue, cache, IIS output cache, memory, scheduled task or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Hyper-V, logical disk queue, cache, IIS output cache, memory, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, SQL Server lock counts or DHCP denials                         | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
@@ -247,12 +247,13 @@ Changed type, same name:
 | `windows_iis_server_output_cache_items`, `windows_iis_worker_output_cache_items`                     | counter | gauge   |
 | `windows_iis_server_output_cache_memory_bytes`, `windows_iis_worker_output_cache_memory_bytes`       | counter | gauge   |
 | `windows_iis_server_output_cache_active_flushed_items`, `windows_iis_worker_output_cache_active_flushed_items` | counter | gauge   |
+| `windows_smb_server_shares_current_open_file_count`, `windows_smb_server_shares_tree_connect_count` | counter | gauge   |
 | `windows_cache_copy_read_hits_total`                                   | gauge   | counter |
 | `windows_udp_datagram_received_total`                                  | gauge   | counter |
 | `windows_hyperv_legacy_network_adapter_bytes_dropped_total`            | gauge   | counter |
 
-The IIS values are current occupancy, so query them directly instead of with `rate()`.
-If Prometheus scrapes with OpenMetrics, the IIS metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
+The IIS and SMB values are current occupancy, so query them directly instead of with `rate()`.
+If Prometheus scrapes with OpenMetrics, the IIS and SMB metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
 The cache, UDP and Hyper-V metrics already end in `_total`, so only their type metadata changes; `rate()` queries keep working.
 
 Label changes on existing metrics:

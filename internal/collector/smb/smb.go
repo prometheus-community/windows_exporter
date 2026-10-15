@@ -148,14 +148,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	for _, data := range c.perfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.currentOpenFileCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.CurrentOpenFileCount,
 			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.treeConnectCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.TreeConnectCount,
 			data.Name,
 		)

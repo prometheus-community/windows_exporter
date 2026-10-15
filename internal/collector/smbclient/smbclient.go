@@ -41,6 +41,7 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
@@ -96,6 +97,8 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -193,7 +196,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
 	}
@@ -209,13 +212,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	}
 
 	for _, data := range c.perfDataObject {
-		parsed := strings.FieldsFunc(data.Name, func(r rune) bool { return r == '\\' })
-		if len(parsed) != 2 {
-			return fmt.Errorf("unexpected number of fields in SMB Client Shares instance name: %q", data.Name)
-		}
+		serverValue, shareValue, ok := parseInstanceName(data.Name)
+		if !ok {
+			c.logger.Warn("skipping SMB Client Shares instance with unexpected name",
+				slog.String("instance", data.Name),
+			)
 
-		serverValue := parsed[0]
-		shareValue := parsed[1]
+			continue
+		}
 
 		// Request time spent on queue. Convert from ticks to seconds.
 		ch <- prometheus.MustNewConstMetric(
@@ -369,4 +373,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	}
 
 	return nil
+}
+
+// parseInstanceName splits an SMB Client Shares instance name such as
+// \\server\share into its server and share parts.
+func parseInstanceName(name string) (string, string, bool) {
+	parsed := strings.FieldsFunc(name, func(r rune) bool { return r == '\\' })
+	if len(parsed) != 2 {
+		return "", "", false
+	}
+
+	return parsed[0], parsed[1], true
 }
