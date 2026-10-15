@@ -211,6 +211,43 @@ func TestMetricsHTTPHandlerScrapeTimeout(t *testing.T) {
 	}
 }
 
+func TestMetricsHTTPHandlerCanceledScrape(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		options *httphandler.Options
+	}{
+		{name: "exporter metrics", options: &httphandler.Options{}},
+		{name: "exporter metrics disabled", options: &httphandler.Options{DisableExporterMetrics: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The collector's delay and the cancellation use synthetic time.
+			synctest.Test(t, func(t *testing.T) {
+				collection := collector.New(collector.Map{"test": &testCollector{name: "test", delay: time.Second}})
+				handler := httphandler.New(slog.New(slog.DiscardHandler), collection, tc.options)
+
+				// The request is canceled while the collector runs, like at exporter shutdown.
+				ctx, cancel := context.WithCancel(t.Context())
+				time.AfterFunc(100*time.Millisecond, cancel)
+
+				request := httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", nil)
+				request.Header.Set("X-Prometheus-Scrape-Timeout-Seconds", "10")
+
+				response := httptest.NewRecorder()
+				handler.ServeHTTP(response, request)
+
+				// A failed scrape records up=0 instead of a partial result with false collector failures.
+				require.Equal(t, http.StatusServiceUnavailable, response.Code)
+				require.Contains(t, response.Body.String(), "Scrape canceled")
+				require.NotContains(t, response.Body.String(), "windows_exporter_collector_success")
+
+				// Finish the delayed collector and its drain goroutine before leaving the bubble.
+				time.Sleep(time.Second)
+				synctest.Wait()
+			})
+		})
+	}
+}
+
 func TestMetricsHTTPHandlerScrapeBudget(t *testing.T) {
 	const maxScrapeTimeout = 5 * time.Minute
 

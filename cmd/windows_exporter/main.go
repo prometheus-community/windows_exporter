@@ -319,8 +319,10 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
-	// Cancel in-flight scrapes before the server drains, so that they return what they have
-	// collected instead of holding the shutdown until their scrape budget ends.
+	// In-flight scrapes must be canceled before the server drains, so that they end with
+	// 503 Service Unavailable instead of holding the shutdown until their scrape budget ends.
+	// On a signal or service stop, serveCtx is canceled already as a child of ctx; this call
+	// also covers a server that stopped for another reason.
 	cancelServe()
 
 	if err = shutdownServer(ctx, server, serverShutdownTimeout); err != nil {
@@ -362,10 +364,14 @@ func shutdownServer(ctx context.Context, server *http.Server, timeout time.Durat
 	}
 
 	if closeErr := server.Close(); closeErr != nil {
-		return errors.Join(err, fmt.Errorf("failed to close server: %w", closeErr))
+		err = errors.Join(err, fmt.Errorf("failed to close server: %w", closeErr))
 	}
 
-	return fmt.Errorf("in-flight requests didn't complete within %s, closed their connections: %w", timeout, err)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("in-flight requests didn't complete within %s, closed their connections: %w", timeout, err)
+	}
+
+	return fmt.Errorf("failed to shut down server, closed it: %w", err)
 }
 
 func logCurrentUser(ctx context.Context, logger *slog.Logger) {

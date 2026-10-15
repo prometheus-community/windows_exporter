@@ -19,6 +19,7 @@ package httphandler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -32,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 )
 
 // Interface guard.
@@ -172,35 +174,50 @@ func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Lo
 	}
 
 	// Scrapes are serialized by the collection, so the handler doesn't limit requests in flight.
-	var regHandler http.Handler
-	if c.exporterMetricsRegistry != nil {
-		regHandler = promhttp.HandlerFor(
-			mergedGatherer{first: c.exporterMetricsRegistry, second: reg},
-			promhttp.HandlerOpts{
-				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:     promhttp.ContinueOnError,
-				Registry:          c.exporterMetricsRegistry,
-				EnableOpenMetrics: true,
-				ProcessStartTime:  c.metricCollectors.GetStartTime(),
-			},
-		)
-
-		// Note that we have to use h.exporterMetricsRegistry here to
-		// use the same promhttp metrics for all expositions.
-		regHandler = promhttp.InstrumentMetricHandler(
-			c.exporterMetricsRegistry, regHandler,
-		)
-	} else {
-		regHandler = promhttp.HandlerFor(
-			reg,
-			promhttp.HandlerOpts{
-				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:     promhttp.ContinueOnError,
-				EnableOpenMetrics: true,
-				ProcessStartTime:  c.metricCollectors.GetStartTime(),
-			},
-		)
+	opts := promhttp.HandlerOpts{
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		ErrorHandling:     promhttp.ContinueOnError,
+		EnableOpenMetrics: true,
+		ProcessStartTime:  c.metricCollectors.GetStartTime(),
 	}
 
-	return regHandler, nil
+	if c.exporterMetricsRegistry == nil {
+		return canceledScrapeHandler(logger, reg, opts), nil
+	}
+
+	// Note that we have to use h.exporterMetricsRegistry here to
+	// use the same promhttp metrics for all expositions.
+	opts.Registry = c.exporterMetricsRegistry
+
+	return promhttp.InstrumentMetricHandler(
+		c.exporterMetricsRegistry,
+		canceledScrapeHandler(logger, mergedGatherer{first: c.exporterMetricsRegistry, second: reg}, opts),
+	), nil
+}
+
+// canceledScrapeHandler serves the metrics of gatherer like [promhttp.HandlerFor], but fails the
+// response with 503 Service Unavailable if the request was canceled while it gathered, for example
+// because the exporter shuts down. The collectors return early then, so the response would report
+// collectors as timed out or failed and miss their series. A failed scrape records up=0 instead.
+// A scrape that ends at its deadline is still served, with the timed-out collectors marked.
+func canceledScrapeHandler(logger *slog.Logger, gatherer prometheus.Gatherer, opts promhttp.HandlerOpts) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mfs, err := gatherer.Gather()
+
+		if ctx := r.Context(); errors.Is(ctx.Err(), context.Canceled) {
+			logger.DebugContext(ctx, "scrape canceled, metrics not served",
+				slog.Any("cause", context.Cause(ctx)),
+			)
+
+			http.Error(w, "Scrape canceled: "+context.Cause(ctx).Error(), http.StatusServiceUnavailable)
+
+			return
+		}
+
+		gathered := prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) {
+			return mfs, err
+		})
+
+		promhttp.HandlerFor(gathered, opts).ServeHTTP(w, r)
+	})
 }
