@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -129,17 +129,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var processExclude, processInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.process.exclude",
 		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&processExclude)
+		"", &c.config.ProcessExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.process.include",
 		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&processInclude)
+		".+", &c.config.ProcessInclude,
+	)
 
 	app.Flag(
 		"collector.process.iis",
@@ -150,22 +150,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.process.cmdline",
 		"If enabled, the full cmdline is exposed to the windows_process_info metrics.",
 	).Default(strconv.FormatBool(c.config.EnableCMDLine)).BoolVar(&c.config.EnableCMDLine)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.ProcessExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processExclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.exclude: %w", err)
-		}
-
-		c.config.ProcessInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processInclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.include: %w", err)
-		}
-
-		return nil
-	})
 
 	return c
 }
@@ -195,9 +179,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.infoCache = nil
 	c.lookupCache = sync.Map{}
 
-	// The flags wrap the expressions in ^(?:...)$, the defaults of [New] are [types.RegExpAny] and [types.RegExpEmpty].
-	if slices.Contains([]string{"^(?:.+)$", "^(?:.*)$", types.RegExpAny.String()}, c.config.ProcessInclude.String()) &&
-		slices.Contains([]string{"^(?:)$", types.RegExpEmpty.String()}, c.config.ProcessExclude.String()) {
+	if utils.IsMatchAll(c.config.ProcessInclude) && utils.IsMatchNone(c.config.ProcessExclude) {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 

@@ -148,6 +148,10 @@ exercised a live Windows role.
   YAML key is the collector name and a `docs/collector.<name>.md`;
   `TestRegistrations` checks that they agree. The configuration file schema in
   `internal/config` only checks keys: the flags parse and validate the values.
+  Register include/exclude expression flags with `utils.RegexpFlag`, which
+  anchors the expression, stores the compiled `*regexp.Regexp` in the config
+  and names the flag in parse errors; use `utils.IsMatchAll`/`IsMatchNone` to
+  detect unfiltered defaults.
 - For textfiles, keep HELP/type metadata consistent across files and preserve
   unrelated valid series when reporting duplicates or parse failures. Publish
   producer output by replacing a temporary file in the same directory. File

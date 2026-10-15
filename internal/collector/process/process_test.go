@@ -23,19 +23,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkProcessCollector(b *testing.B) {
-	// PrinterInclude is not set in testing context (kingpin flags not parsed), causing the collector to skip all processes.
-	localProcessInclude := ".+"
-	// No context name required as collector source is WMI
-	testutils.FuncBenchmarkCollector(b, process.Name, process.NewWithFlags, func(app *kingpin.Application) {
-		app.GetFlag("collector.process.include").StringVar(&localProcessInclude)
-	})
+	testutils.FuncBenchmarkCollector(b, process.Name, process.NewWithFlags)
 }
 
 func TestCollector(t *testing.T) {

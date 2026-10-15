@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -112,33 +113,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var printerInclude, printerExclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.printer.include",
 		"Regular expression to match printers to collect metrics for",
-	).Default(".+").StringVar(&printerInclude)
+		".+", &c.config.PrinterInclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.printer.exclude",
 		"Regular expression to match printers to exclude",
-	).Default("").StringVar(&printerExclude)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.PrinterInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", printerInclude))
-		if err != nil {
-			return fmt.Errorf("collector.printer.include: %w", err)
-		}
-
-		c.config.PrinterExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", printerExclude))
-		if err != nil {
-			return fmt.Errorf("collector.printer.exclude: %w", err)
-		}
-
-		return nil
-	})
+		"", &c.config.PrinterExclude,
+	)
 
 	return c
 }

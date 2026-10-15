@@ -189,6 +189,12 @@ func (c *Resolver) setDefault(v getFlagger) error {
 		}
 
 		if err := checkFlagValue(f, values); err != nil {
+			// Some flag values, like those of utils.RegexpFlag, name their flag
+			// in their errors, because kingpin doesn't for command line values.
+			if strings.HasPrefix(err.Error(), name+": ") {
+				return fmt.Errorf("line %d: %w", c.lines[name], err)
+			}
+
 			return fmt.Errorf("line %d: %s: %w", c.lines[name], name, err)
 		}
 
