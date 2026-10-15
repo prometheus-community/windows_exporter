@@ -227,7 +227,7 @@ Renamed:
 | `windows_remote_fx_net_retransmission_rate`          | `windows_remote_fx_net_retransmitted_packets_total` and `windows_remote_fx_net_retransmission_sampled_packets_total` | Counters, see below |
 | `windows_ad_atq_average_request_latency`             | `windows_ad_atq_average_request_latency_seconds`               | Now in seconds, was milliseconds   |
 | `windows_ad_sam_group_evaluation_latency`            | `windows_ad_sam_group_evaluation_latency_seconds`              | Now in seconds, was milliseconds   |
-| `windows_ad_security_descriptor_propagation_access_wait_total_seconds` | `windows_ad_security_descriptor_propagation_average_exclusion_time` | Same raw value, which is an average, not a total in seconds |
+| `windows_ad_security_descriptor_propagation_access_wait_total_seconds` | `windows_ad_security_descriptor_propagation_average_exclusion_time_seconds` | Now in seconds, was the raw millisecond average; it is an average, not a total |
 | `windows_ad_security_descriptor_propagation_events_total` | `windows_ad_security_descriptor_propagation_suboperations_total` | Same value, it counts sub-operations, not events |
 | `windows_ad_security_descriptor_propagation_items_queued_total` | `windows_ad_security_descriptor_propagation_items_queued` | Now a gauge, query it without `rate()` |
 

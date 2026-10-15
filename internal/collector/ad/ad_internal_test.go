@@ -94,7 +94,7 @@ func TestCollectMetrics(t *testing.T) {
 		{name: "windows_ad_sam_user_creation_successful_requests_total", metricType: dto.MetricType_COUNTER, value: 10},
 		{name: "windows_ad_security_descriptor_propagation_suboperations_total", metricType: dto.MetricType_COUNTER, value: 17},
 		{name: "windows_ad_security_descriptor_propagation_events_queued", metricType: dto.MetricType_GAUGE, value: 3},
-		{name: "windows_ad_security_descriptor_propagation_average_exclusion_time", metricType: dto.MetricType_GAUGE, value: 42},
+		{name: "windows_ad_security_descriptor_propagation_average_exclusion_time_seconds", metricType: dto.MetricType_GAUGE, value: 0.042},
 		{name: "windows_ad_security_descriptor_propagation_items_queued", metricType: dto.MetricType_GAUGE, value: 5},
 		{name: "windows_ad_atq_estimated_delay_seconds", metricType: dto.MetricType_GAUGE, value: 0.25},
 		{name: "windows_ad_atq_average_request_latency_seconds", metricType: dto.MetricType_GAUGE, value: 1.5},

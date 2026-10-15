@@ -42,68 +42,68 @@ type Collector struct {
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
-	addressBookClientSessions                         *prometheus.Desc
-	addressBookOperationsTotal                        *prometheus.Desc
-	approximateHighestDistinguishedNameTag            *prometheus.Desc
-	atqAverageRequestLatencySeconds                   *prometheus.Desc
-	atqCurrentThreads                                 *prometheus.Desc
-	atqEstimatedDelaySeconds                          *prometheus.Desc
-	atqOutstandingRequests                            *prometheus.Desc
-	bindsTotal                                        *prometheus.Desc
-	changeMonitorUpdatesPending                       *prometheus.Desc
-	changeMonitorsRegistered                          *prometheus.Desc
-	databaseOperationsTotal                           *prometheus.Desc
-	directoryOperationsTotal                          *prometheus.Desc
-	directorySearchSubOperationsTotal                 *prometheus.Desc
-	directoryServiceThreads                           *prometheus.Desc
-	interSiteReplicationDataBytesTotal                *prometheus.Desc
-	intraSiteReplicationDataBytesTotal                *prometheus.Desc
-	ldapActiveThreads                                 *prometheus.Desc
-	ldapClientSessions                                *prometheus.Desc
-	ldapClosedConnectionsTotal                        *prometheus.Desc
-	ldapLastBindTimeSeconds                           *prometheus.Desc
-	ldapOpenedConnectionsTotal                        *prometheus.Desc
-	ldapSearchesTotal                                 *prometheus.Desc
-	ldapUdpOperationsTotal                            *prometheus.Desc
-	ldapWritesTotal                                   *prometheus.Desc
-	linkValuesCleanedTotal                            *prometheus.Desc
-	nameCacheHitsTotal                                *prometheus.Desc
-	nameCacheLookupsTotal                             *prometheus.Desc
-	nameTranslationsTotal                             *prometheus.Desc
-	phantomObjectsCleanedTotal                        *prometheus.Desc
-	phantomObjectsVisitedTotal                        *prometheus.Desc
-	replicationHighestUsn                             *prometheus.Desc
-	replicationInboundLinkValueUpdatesRemaining       *prometheus.Desc
-	replicationInboundObjectsFilteredTotal            *prometheus.Desc
-	replicationInboundObjectsUpdatedTotal             *prometheus.Desc
-	replicationInboundPropertiesFilteredTotal         *prometheus.Desc
-	replicationInboundPropertiesUpdatedTotal          *prometheus.Desc
-	replicationInboundSyncObjectsRemaining            *prometheus.Desc
-	replicationPendingOperations                      *prometheus.Desc
-	replicationPendingSynchronizations                *prometheus.Desc
-	replicationSyncRequestsSchemaMismatchFailureTotal *prometheus.Desc
-	replicationSyncRequestsSuccessTotal               *prometheus.Desc
-	replicationSyncRequestsTotal                      *prometheus.Desc
-	samComputerCreationRequestsTotal                  *prometheus.Desc
-	samComputerCreationSuccessfulRequestsTotal        *prometheus.Desc
-	samEnumerationsTotal                              *prometheus.Desc
-	samGroupEvaluationLatencySeconds                  *prometheus.Desc
-	samGroupMembershipEvaluationsNonTransitiveTotal   *prometheus.Desc
-	samGroupMembershipEvaluationsTotal                *prometheus.Desc
-	samGroupMembershipEvaluationsTransitiveTotal      *prometheus.Desc
-	samGroupMembershipGlobalCatalogEvaluationsTotal   *prometheus.Desc
-	samMembershipChangesTotal                         *prometheus.Desc
-	samPasswordChangesTotal                           *prometheus.Desc
-	samQueryDisplayRequestsTotal                      *prometheus.Desc
-	samUserCreationRequestsTotal                      *prometheus.Desc
-	samUserCreationSuccessfulRequestsTotal            *prometheus.Desc
-	searchesTotal                                     *prometheus.Desc
-	securityDescriptorPropagationAverageExclusionTime *prometheus.Desc
-	securityDescriptorPropagationEventsQueued         *prometheus.Desc
-	securityDescriptorPropagationSubOperationsTotal   *prometheus.Desc
-	securityDescriptorPropagationItemsQueued          *prometheus.Desc
-	tombstonesObjectsCollectedTotal                   *prometheus.Desc
-	tombstonesObjectsVisitedTotal                     *prometheus.Desc
+	addressBookClientSessions                                *prometheus.Desc
+	addressBookOperationsTotal                               *prometheus.Desc
+	approximateHighestDistinguishedNameTag                   *prometheus.Desc
+	atqAverageRequestLatencySeconds                          *prometheus.Desc
+	atqCurrentThreads                                        *prometheus.Desc
+	atqEstimatedDelaySeconds                                 *prometheus.Desc
+	atqOutstandingRequests                                   *prometheus.Desc
+	bindsTotal                                               *prometheus.Desc
+	changeMonitorUpdatesPending                              *prometheus.Desc
+	changeMonitorsRegistered                                 *prometheus.Desc
+	databaseOperationsTotal                                  *prometheus.Desc
+	directoryOperationsTotal                                 *prometheus.Desc
+	directorySearchSubOperationsTotal                        *prometheus.Desc
+	directoryServiceThreads                                  *prometheus.Desc
+	interSiteReplicationDataBytesTotal                       *prometheus.Desc
+	intraSiteReplicationDataBytesTotal                       *prometheus.Desc
+	ldapActiveThreads                                        *prometheus.Desc
+	ldapClientSessions                                       *prometheus.Desc
+	ldapClosedConnectionsTotal                               *prometheus.Desc
+	ldapLastBindTimeSeconds                                  *prometheus.Desc
+	ldapOpenedConnectionsTotal                               *prometheus.Desc
+	ldapSearchesTotal                                        *prometheus.Desc
+	ldapUdpOperationsTotal                                   *prometheus.Desc
+	ldapWritesTotal                                          *prometheus.Desc
+	linkValuesCleanedTotal                                   *prometheus.Desc
+	nameCacheHitsTotal                                       *prometheus.Desc
+	nameCacheLookupsTotal                                    *prometheus.Desc
+	nameTranslationsTotal                                    *prometheus.Desc
+	phantomObjectsCleanedTotal                               *prometheus.Desc
+	phantomObjectsVisitedTotal                               *prometheus.Desc
+	replicationHighestUsn                                    *prometheus.Desc
+	replicationInboundLinkValueUpdatesRemaining              *prometheus.Desc
+	replicationInboundObjectsFilteredTotal                   *prometheus.Desc
+	replicationInboundObjectsUpdatedTotal                    *prometheus.Desc
+	replicationInboundPropertiesFilteredTotal                *prometheus.Desc
+	replicationInboundPropertiesUpdatedTotal                 *prometheus.Desc
+	replicationInboundSyncObjectsRemaining                   *prometheus.Desc
+	replicationPendingOperations                             *prometheus.Desc
+	replicationPendingSynchronizations                       *prometheus.Desc
+	replicationSyncRequestsSchemaMismatchFailureTotal        *prometheus.Desc
+	replicationSyncRequestsSuccessTotal                      *prometheus.Desc
+	replicationSyncRequestsTotal                             *prometheus.Desc
+	samComputerCreationRequestsTotal                         *prometheus.Desc
+	samComputerCreationSuccessfulRequestsTotal               *prometheus.Desc
+	samEnumerationsTotal                                     *prometheus.Desc
+	samGroupEvaluationLatencySeconds                         *prometheus.Desc
+	samGroupMembershipEvaluationsNonTransitiveTotal          *prometheus.Desc
+	samGroupMembershipEvaluationsTotal                       *prometheus.Desc
+	samGroupMembershipEvaluationsTransitiveTotal             *prometheus.Desc
+	samGroupMembershipGlobalCatalogEvaluationsTotal          *prometheus.Desc
+	samMembershipChangesTotal                                *prometheus.Desc
+	samPasswordChangesTotal                                  *prometheus.Desc
+	samQueryDisplayRequestsTotal                             *prometheus.Desc
+	samUserCreationRequestsTotal                             *prometheus.Desc
+	samUserCreationSuccessfulRequestsTotal                   *prometheus.Desc
+	searchesTotal                                            *prometheus.Desc
+	securityDescriptorPropagationAverageExclusionTimeSeconds *prometheus.Desc
+	securityDescriptorPropagationEventsQueued                *prometheus.Desc
+	securityDescriptorPropagationSubOperationsTotal          *prometheus.Desc
+	securityDescriptorPropagationItemsQueued                 *prometheus.Desc
+	tombstonesObjectsCollectedTotal                          *prometheus.Desc
+	tombstonesObjectsVisitedTotal                            *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -344,9 +344,9 @@ func (c *Collector) buildDescriptors() {
 		nil,
 		nil,
 	)
-	c.securityDescriptorPropagationAverageExclusionTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_average_exclusion_time"),
-		"Average time the security descriptor propagator waits for exclusive access to database elements during a sub-operation, as reported by Windows; the unit is not documented (DS Security Descriptor Propagator Average Exclusion Time).",
+	c.securityDescriptorPropagationAverageExclusionTimeSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_average_exclusion_time_seconds"),
+		"Average time in seconds the security descriptor propagator waits for exclusive access to database elements during a sub-operation (DS Security Descriptor Propagator Average Exclusion Time, reported in milliseconds like the other latency counters of the object).",
 		nil,
 		nil,
 	)
@@ -454,7 +454,7 @@ func (c *Collector) buildDescriptors() {
 	)
 	c.samGroupEvaluationLatencySeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_evaluation_latency_seconds"),
-		"Mean latency in seconds of the last 100 group evaluations performed for authentication, by evaluation type (SAM Account/Resource Group Evaluation Latency).",
+		"Mean latency in seconds of the last 100 group evaluations performed for authentication, by evaluation type (SAM Account/Resource Group Evaluation Latency, reported in milliseconds like the other latency counters of the object).",
 		[]string{"evaluation_type"},
 		nil,
 	)
@@ -1097,9 +1097,9 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCou
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.securityDescriptorPropagationAverageExclusionTime,
+		c.securityDescriptorPropagationAverageExclusionTimeSeconds,
 		prometheus.GaugeValue,
-		data.DsSecurityDescriptorPropagatorAverageExclusionTime,
+		data.DsSecurityDescriptorPropagatorAverageExclusionTime/1000,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

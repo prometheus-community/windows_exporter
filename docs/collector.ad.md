@@ -49,7 +49,7 @@ Name | Description | Type | Labels
 `windows_ad_directory_search_suboperations_total` | Total number of directory search sub-operations; one sub-operation roughly corresponds to one object examined (DS Search sub-operations) | counter | None
 `windows_ad_security_descriptor_propagation_suboperations_total` | Total number of security descriptor propagation sub-operations; one sub-operation roughly corresponds to one object examined (DS Security Descriptor sub-operations) | counter | None
 `windows_ad_security_descriptor_propagation_events_queued` | Number of security descriptor propagation events that are queued but not yet processed (DS Security Descriptor Propagations Events) | gauge | None
-`windows_ad_security_descriptor_propagation_average_exclusion_time` | Average time the security descriptor propagator waits for exclusive access to database elements during a sub-operation, as reported by Windows; the unit is not documented (DS Security Descriptor Propagator Average Exclusion Time) | gauge | None
+`windows_ad_security_descriptor_propagation_average_exclusion_time_seconds` | Average time in seconds the security descriptor propagator waits for exclusive access to database elements during a sub-operation (DS Security Descriptor Propagator Average Exclusion Time, reported in milliseconds like the other latency counters of the object) | gauge | None
 `windows_ad_security_descriptor_propagation_items_queued` | Number of objects remaining to examine while processing the current security descriptor propagation event (DS Security Descriptor Propagator Runtime Queue) | gauge | None
 `windows_ad_directory_service_threads` | Number of threads in use by the directory service (DS Threads in Use) | gauge | None
 `windows_ad_ldap_closed_connections_total` | Total number of closed LDAP connections (LDAP Closed Connections) | counter | None
@@ -67,7 +67,7 @@ Name | Description | Type | Labels
 `windows_ad_sam_group_membership_global_catalog_evaluations_total` | Total number of SAM group membership evaluations that required a global catalog (SAM GC Evaluations) | counter | None
 `windows_ad_sam_group_membership_evaluations_nontransitive_total` | Total number of non-transitive SAM group membership evaluations (SAM Non-Transitive Membership Evaluations) | counter | None
 `windows_ad_sam_group_membership_evaluations_transitive_total` | Total number of transitive SAM group membership evaluations (SAM Transitive Membership Evaluations) | counter | None
-`windows_ad_sam_group_evaluation_latency_seconds` | Mean latency in seconds of the last 100 group evaluations performed for authentication, by evaluation type (SAM Account/Resource Group Evaluation Latency) | gauge | `evaluation_type`
+`windows_ad_sam_group_evaluation_latency_seconds` | Mean latency in seconds of the last 100 group evaluations performed for authentication, by evaluation type (SAM Account/Resource Group Evaluation Latency, reported in milliseconds like the other latency counters of the object) | gauge | `evaluation_type`
 `windows_ad_sam_computer_creation_requests_total` | Total number of attempts to create computer accounts (SAM Machine Creation Attempts) | counter | None
 `windows_ad_sam_computer_creation_successful_requests_total` | Total number of computer accounts created successfully (SAM Successful Computer Creations) | counter | None
 `windows_ad_sam_user_creation_requests_total` | Total number of attempts to create user accounts (SAM User Creation Attempts) | counter | None
