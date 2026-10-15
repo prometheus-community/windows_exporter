@@ -38,6 +38,7 @@ type Collection struct {
 	isView bool
 
 	scrapeDurationDesc          *prometheus.Desc
+	scrapeQueueTimeoutDesc      *prometheus.Desc
 	collectorScrapeDurationDesc *prometheus.Desc
 	collectorScrapeSuccessDesc  *prometheus.Desc
 	collectorScrapeTimeoutDesc  *prometheus.Desc

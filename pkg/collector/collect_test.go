@@ -40,8 +40,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// The tests in this file share the package-level scrape slot, so they don't run in parallel.
-
 func TestCollectErrorStatus(t *testing.T) {
 	failure := errors.New("collector failed")
 
@@ -114,6 +112,7 @@ func TestCollectErrorStatus(t *testing.T) {
 			out := scrape(t, handler)
 			require.Contains(t, out, `windows_exporter_collector_success{collector="test"} `+tc.success)
 			require.Contains(t, out, `windows_exporter_collector_timeout{collector="test"} 0`)
+			require.Contains(t, out, "windows_exporter_scrape_queue_timeout 0")
 			require.Contains(t, out, "windows_test_test 42", "partial metrics must still be exported")
 
 			warnings := 0
@@ -155,6 +154,8 @@ func TestCollectTimedOutCollectorDoesNotOverlap(t *testing.T) {
 			require.Contains(t, out, `windows_exporter_collector_timeout{collector="slow"} 1`)
 			require.Contains(t, out, `windows_exporter_collector_success{collector="slow"} 0`)
 			require.NotContains(t, out, "windows_test_slow")
+			// The scrape itself started, only the collector timed out.
+			require.Contains(t, out, "windows_exporter_scrape_queue_timeout 0")
 
 			if handler == all {
 				require.Contains(t, out, `windows_exporter_collector_success{collector="fast"} 1`)
@@ -202,7 +203,7 @@ func TestCollectAdmission(t *testing.T) {
 
 		select {
 		case out := <-second:
-			require.Contains(t, out, `windows_exporter_collector_timeout{collector="test"} 1`)
+			requireNotStarted(t, out, "test")
 		case <-time.After(10 * time.Second):
 			t.Fatal("canceled scrape didn't return")
 		}
@@ -224,15 +225,63 @@ func TestCollectAdmission(t *testing.T) {
 
 		select {
 		case out := <-second:
-			require.Contains(t, out, `windows_exporter_collector_timeout{collector="test"} 1`)
+			requireNotStarted(t, out, "test")
 			require.Less(t, time.Since(start), 10*time.Second)
 		case <-time.After(10 * time.Second):
 			t.Fatal("queued scrape didn't return at its deadline")
 		}
 
 		close(running.block)
-		<-first
+
+		out := <-first
+		require.Contains(t, out, `windows_exporter_collector_success{collector="test"} 1`)
+		require.Contains(t, out, "windows_exporter_scrape_queue_timeout 0")
 		require.Equal(t, int32(1), running.calls.Load())
+	})
+
+	t.Run("filtered view queues behind its collection", func(t *testing.T) {
+		running := newBlockingCollector()
+		other := &fakeCollector{name: "other"}
+		collection := collector.New(collector.Map{"test": running, "other": other})
+		first := scrapeInBackground(t.Context(), collection, time.Minute, "test")
+
+		<-running.started
+
+		// The view scrapes only a collector that is idle, but it shares the scrape slot with the collection.
+		second := scrapeInBackground(t.Context(), collection, 100*time.Millisecond, "other")
+
+		select {
+		case out := <-second:
+			requireNotStarted(t, out, "other")
+		case <-time.After(10 * time.Second):
+			t.Fatal("queued scrape didn't return at its deadline")
+		}
+
+		close(running.block)
+		<-first
+		require.Equal(t, int32(0), other.calls.Load())
+	})
+
+	t.Run("independent collections don't queue", func(t *testing.T) {
+		running := newBlockingCollector()
+		first := scrapeInBackground(t.Context(), collector.New(collector.Map{"test": running}), time.Minute)
+
+		<-running.started
+
+		independent := &fakeCollector{name: "test"}
+		second := scrapeInBackground(t.Context(), collector.New(collector.Map{"test": independent}), time.Minute)
+
+		select {
+		case out := <-second:
+			require.Contains(t, out, `windows_exporter_collector_success{collector="test"} 1`)
+			require.Contains(t, out, "windows_exporter_scrape_queue_timeout 0")
+		case <-time.After(10 * time.Second):
+			t.Fatal("scrape of an independent collection waited for another collection")
+		}
+
+		close(running.block)
+		<-first
+		require.Equal(t, int32(1), independent.calls.Load())
 	})
 
 	t.Run("canceled before admission", func(t *testing.T) {
@@ -245,7 +294,7 @@ func TestCollectAdmission(t *testing.T) {
 		handler, err := collection.NewHandlerWithContext(ctx, time.Minute, slog.New(slog.DiscardHandler), nil)
 		require.NoError(t, err)
 
-		require.Contains(t, scrape(t, handler), `windows_exporter_collector_timeout{collector="test"} 1`)
+		requireNotStarted(t, scrape(t, handler), "test")
 		require.Equal(t, int32(0), test.calls.Load())
 	})
 
@@ -555,11 +604,21 @@ func (c *blockingCollector) Collect(ch chan<- prometheus.Metric, maxScrapeDurati
 	return c.fakeCollector.Collect(ch, maxScrapeDuration)
 }
 
+// requireNotStarted checks that a scrape reported the scrape slot timeout, without blaming the collector.
+func requireNotStarted(t *testing.T, out, name string) {
+	t.Helper()
+
+	require.Contains(t, out, "windows_exporter_scrape_queue_timeout 1")
+	require.Contains(t, out, fmt.Sprintf(`windows_exporter_collector_success{collector=%q} 0`, name))
+	require.Contains(t, out, fmt.Sprintf(`windows_exporter_collector_timeout{collector=%q} 0`, name))
+}
+
 // scrapeInBackground starts a scrape with a handler bound to ctx and returns its output, or the error text.
-func scrapeInBackground(ctx context.Context, collection *collector.Collection, timeout time.Duration) <-chan string {
+// It scrapes the given collectors through a filtered view, or the whole collection if there are none.
+func scrapeInBackground(ctx context.Context, collection *collector.Collection, timeout time.Duration, collectors ...string) <-chan string {
 	out := make(chan string, 1)
 
-	handler, err := collection.NewHandlerWithContext(ctx, timeout, slog.New(slog.DiscardHandler), nil)
+	handler, err := collection.NewHandlerWithContext(ctx, timeout, slog.New(slog.DiscardHandler), collectors)
 	if err != nil {
 		out <- err.Error()
 

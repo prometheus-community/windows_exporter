@@ -398,6 +398,7 @@ The scrape timeout comes from the `X-Prometheus-Scrape-Timeout-Seconds` header, 
 - The margin takes at most half of the client's timeout. A short `scrape_timeout` no longer leaves a negative or near-zero budget.
 - The timeout is limited to 5 minutes. Invalid header values fall back to 10 seconds.
 - If a collector is still running from an earlier, timed-out scrape, later scrapes skip it and report `windows_exporter_collector_timeout` as `1` until it finishes. In 0.31 a second copy of the collector started and ran in parallel.
+- Scrapes run one at a time. A scrape whose timeout ends while it waits for an earlier scrape doesn't run any collector. It reports the new metric `windows_exporter_scrape_queue_timeout` as `1`, and `windows_exporter_collector_success` and `windows_exporter_collector_timeout` as `0` for every collector. `windows_exporter_collector_timeout` is `1` only for collectors that ran out of time.
 - A collector that failed to start, for example because its Windows feature isn't installed, reports `windows_exporter_collector_success` as `0` and is no longer called on every scrape. It logs one warning at startup.
 
 The exporter's own metrics now also include Go scheduler metrics (`go_sched_*`), unless `--web.disable-exporter-metrics` is set.

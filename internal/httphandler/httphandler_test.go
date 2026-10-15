@@ -194,6 +194,8 @@ func TestMetricsHTTPHandlerScrapeTimeout(t *testing.T) {
 				handler.ServeHTTP(response, request)
 
 				require.Equal(t, http.StatusOK, response.Code)
+				// A collector timeout is not a queued scrape.
+				require.Contains(t, response.Body.String(), "windows_exporter_scrape_queue_timeout 0")
 
 				if tc.timeout {
 					require.Contains(t, response.Body.String(), `windows_exporter_collector_timeout{collector="test"} 1`)

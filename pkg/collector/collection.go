@@ -166,6 +166,12 @@ func New(collectors Map) *Collection {
 			nil,
 			nil,
 		),
+		scrapeQueueTimeoutDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_queue_timeout"),
+			"windows_exporter: Whether the scrape ended before it started the collectors, because an earlier scrape was still running.",
+			nil,
+			nil,
+		),
 		collectorScrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, "exporter", "collector_duration_seconds"),
 			"windows_exporter: Duration of a collection.",
@@ -401,6 +407,7 @@ func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
 		state:                       c.state,
 		isView:                      true,
 		scrapeDurationDesc:          c.scrapeDurationDesc,
+		scrapeQueueTimeoutDesc:      c.scrapeQueueTimeoutDesc,
 		collectorScrapeDurationDesc: c.collectorScrapeDurationDesc,
 		collectorScrapeSuccessDesc:  c.collectorScrapeSuccessDesc,
 		collectorScrapeTimeoutDesc:  c.collectorScrapeTimeoutDesc,
