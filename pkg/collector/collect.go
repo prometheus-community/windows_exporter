@@ -48,7 +48,7 @@ const (
 	// unavailable means the collector was skipped because its Build failed or the collection is closed.
 	unavailable
 	// notStarted means the scrape ended before it started any collector, because an earlier scrape
-	// held the scrape slot. The collector itself didn't time out.
+	// held the scrape slot until the scrape timed out or was canceled. The collector itself didn't time out.
 	notStarted
 )
 
@@ -71,7 +71,8 @@ func (c *Collection) collectAll(ctx context.Context, ch chan<- prometheus.Metric
 			c.sendCollectorStatus(ch, collectorStatus{name: name, statusCode: notStarted})
 		}
 
-		c.sendScrapeQueueTimeout(ch, true)
+		// A canceled scrape, for example at shutdown or after the client went away, did not time out.
+		c.sendScrapeQueueTimeout(ch, errors.Is(err, context.DeadlineExceeded))
 		c.sendScrapeDuration(ch, collectorStartTime)
 
 		return

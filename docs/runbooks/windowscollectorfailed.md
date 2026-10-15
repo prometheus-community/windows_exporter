@@ -28,7 +28,7 @@ metrics may stop evaluating even though the exporter remains reachable.
    exists and is running on the host.
 4. Compare `windows_exporter_collector_duration_seconds` with the scrape timeout.
    `windows_exporter_collector_timeout == 1` means the collector ran out of
-   time. Test the relevant performance counters locally with Windows Performance
+   time, or its call from an earlier scrape is still running. Test the relevant performance counters locally with Windows Performance
    Monitor.
 5. If every collector of the host fails at the same time, check
    `windows_exporter_scrape_queue_timeout`. A value of `1` means the scrape

@@ -168,7 +168,7 @@ func New(collectors Map) *Collection {
 		),
 		scrapeQueueTimeoutDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_queue_timeout"),
-			"windows_exporter: Whether the scrape ended before it started the collectors, because an earlier scrape was still running.",
+			"windows_exporter: Whether the scrape timed out while it waited for an earlier scrape, so that it didn't start the collectors.",
 			nil,
 			nil,
 		),
