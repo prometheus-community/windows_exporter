@@ -17,11 +17,20 @@
 
 package adfs
 
+// PERF_AVERAGE_TIMER counters. The raw value is the summed query time in ticks
+// of the counter's time base, the second value the number of queries.
+const (
+	counterArtifactDBQueryTime = "Average Artifact Database Query Time"
+	counterConfigDBQueryTime   = "Average Config Database Query Time"
+)
+
 type perfDataCounterValues struct {
 	AdLoginConnectionFailures                      float64 `perfdata:"AD Login Connection Failures"`
 	ArtifactDBFailures                             float64 `perfdata:"Artifact Database Connection Failures"`
-	AvgArtifactDBQueryTime                         float64 `perfdata:"Average Artifact Database Query Time"`
-	AvgConfigDBQueryTime                           float64 `perfdata:"Average Config Database Query Time"`
+	ArtifactDBQueryTimeTicks                       float64 `perfdata:"Average Artifact Database Query Time"`
+	ArtifactDBQueries                              float64 `perfdata:"Average Artifact Database Query Time,secondvalue"`
+	ConfigDBQueryTimeTicks                         float64 `perfdata:"Average Config Database Query Time"`
+	ConfigDBQueries                                float64 `perfdata:"Average Config Database Query Time,secondvalue"`
 	CertificateAuthentications                     float64 `perfdata:"Certificate Authentications"`
 	ConfigDBFailures                               float64 `perfdata:"Configuration Database Connection Failures"`
 	DeviceAuthentications                          float64 `perfdata:"Device Authentications"`

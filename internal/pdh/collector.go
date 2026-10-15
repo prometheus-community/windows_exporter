@@ -345,11 +345,18 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 			counter.Type = counterInfo.DwType
 			counter.MetricType = metricType(resultType, counter.Type)
 
-			if counter.Type == PERF_ELAPSED_TIME {
+			switch counter.Type {
+			case PERF_ELAPSED_TIME:
 				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess && ret != NoData {
 					errs = append(errs, fmt.Errorf("GetCounterTimeBase: %w", NewPdhError(ret)))
 
 					continue
+				}
+			case PERF_AVERAGE_TIMER:
+				// Only [Collector.Frequency] uses the time base of an average
+				// timer, so a missing one is not an error. Collect retries it.
+				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
+					counter.Frequency = 0
 				}
 			}
 		}
@@ -434,6 +441,29 @@ func (c *Collector[T]) MetricType(counterName string) (prometheus.ValueType, boo
 	for _, counter := range c.counters {
 		if counter.Name == counterName {
 			return counter.MetricType, counter.MetricType != 0
+		}
+	}
+
+	return 0, false
+}
+
+// Frequency returns the time base in ticks per second of the raw timer counter
+// named counterName. The raw value of a PERF_AVERAGE_TIMER counter is the sum
+// of the measured durations in these ticks; divide it by the frequency to get
+// seconds. It returns false if the counter is unknown, is not such a timer or
+// its time base is not known yet. [Collector.Collect] reads a missing time
+// base again.
+func (c *Collector[T]) Frequency(counterName string) (int64, bool) {
+	if c == nil {
+		return 0, false
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, counter := range c.counters {
+		if counter.Name == counterName {
+			return counter.Frequency, counter.Frequency > 0
 		}
 	}
 
@@ -540,12 +570,19 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	return nil
 }
 
-// loadTimeBase reads the time base of a raw elapsed time counter that had none
-// when the collector was created. Early after a reboot, PDH can report no data
+// hasTimeBase reports whether the raw value of a counter of counterType is
+// measured in ticks of the counter's time base.
+func hasTimeBase(counterType uint32) bool {
+	return counterType == PERF_ELAPSED_TIME || counterType == PERF_AVERAGE_TIMER
+}
+
+// loadTimeBase reads the time base of a raw timer counter that had none when
+// the collector was created. Early after a reboot, PDH can report no data
 // for it, e.g. for APP_POOL_WAS while WAS is still starting (#2313). Without a
-// time base, the counter has no valid value and every instance is omitted.
+// time base, an elapsed time counter has no valid value and every instance is
+// omitted.
 func (c *Collector[T]) loadTimeBase(counter *Counter) {
-	if c.resultType != CounterTypeRaw || counter.Type != PERF_ELAPSED_TIME || counter.Frequency > 0 {
+	if c.resultType != CounterTypeRaw || !hasTimeBase(counter.Type) || counter.Frequency > 0 {
 		return
 	}
 

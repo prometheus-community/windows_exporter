@@ -20,7 +20,6 @@ package adfs
 import (
 	"fmt"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -45,8 +44,10 @@ type Collector struct {
 
 	adLoginConnectionFailures                          *prometheus.Desc
 	artifactDBFailures                                 *prometheus.Desc
-	avgArtifactDBQueryTime                             *prometheus.Desc
-	avgConfigDBQueryTime                               *prometheus.Desc
+	artifactDBQueries                                  *prometheus.Desc
+	artifactDBQueryTime                                *prometheus.Desc
+	configDBQueries                                    *prometheus.Desc
+	configDBQueryTime                                  *prometheus.Desc
 	certificateAuthentications                         *prometheus.Desc
 	configDBFailures                                   *prometheus.Desc
 	deviceAuthentications                              *prometheus.Desc
@@ -115,6 +116,19 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.buildDescriptors()
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "AD FS", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create AD FS collector: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Collector) buildDescriptors() {
 	c.adLoginConnectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ad_login_connection_failures_total"),
 		"Total number of connection failures to an Active Directory domain controller",
@@ -349,9 +363,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.avgArtifactDBQueryTime = prometheus.NewDesc(
+	c.artifactDBQueryTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "db_artifact_query_time_seconds_total"),
-		"Accumulator of time taken for an artifact database query",
+		"Total time spent on artifact database queries, in seconds",
+		nil,
+		nil,
+	)
+	c.artifactDBQueries = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "db_artifact_queries_total"),
+		"Total number of artifact database queries",
 		nil,
 		nil,
 	)
@@ -361,9 +381,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.avgConfigDBQueryTime = prometheus.NewDesc(
+	c.configDBQueryTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "db_config_query_time_seconds_total"),
-		"Accumulator of time taken for a configuration database query",
+		"Total time spent on configuration database queries, in seconds",
+		nil,
+		nil,
+	)
+	c.configDBQueries = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "db_config_queries_total"),
+		"Total number of configuration database queries",
 		nil,
 		nil,
 	)
@@ -373,15 +399,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "AD FS", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create AD FS collector: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
@@ -392,263 +409,290 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoDataUnexpected)
 	}
 
+	// The query times are PERF_AVERAGE_TIMER counters: the raw value is the
+	// summed duration in ticks of the counter's time base.
+	artifactDBFrequency, _ := c.perfDataCollector.Frequency(counterArtifactDBQueryTime)
+	configDBFrequency, _ := c.perfDataCollector.Frequency(counterConfigDBQueryTime)
+
+	c.collectMetrics(ch, c.perfDataObject[0], artifactDBFrequency, configDBFrequency)
+
+	return nil
+}
+
+// collectMetrics sends the metrics of data. A query time is only sent if the
+// frequency of its counter is known.
+func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCounterValues, artifactDBFrequency, configDBFrequency int64) {
 	ch <- prometheus.MustNewConstMetric(
 		c.adLoginConnectionFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AdLoginConnectionFailures,
+		data.AdLoginConnectionFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.certificateAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].CertificateAuthentications,
+		data.CertificateAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.deviceAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DeviceAuthentications,
+		data.DeviceAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.extranetAccountLockouts,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ExtranetAccountLockouts,
+		data.ExtranetAccountLockouts,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.federatedAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].FederatedAuthentications,
+		data.FederatedAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.passportAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].PassportAuthentications,
+		data.PassportAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.passiveRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].PassiveRequests,
+		data.PassiveRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.passwordChangeFailed,
 		prometheus.CounterValue,
-		c.perfDataObject[0].PasswordChangeFailed,
+		data.PasswordChangeFailed,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.passwordChangeSucceeded,
 		prometheus.CounterValue,
-		c.perfDataObject[0].PasswordChangeSucceeded,
+		data.PasswordChangeSucceeded,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.tokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].TokenRequests,
+		data.TokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.windowsIntegratedAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WindowsIntegratedAuthentications,
+		data.WindowsIntegratedAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthAuthZRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthAuthZRequests,
+		data.OAuthAuthZRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientAuthentications,
+		data.OAuthClientAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientAuthenticationsFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientAuthenticationFailures,
+		data.OAuthClientAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientCredentialsRequestFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientCredentialRequestFailures,
+		data.OAuthClientCredentialRequestFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientCredentialsRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientCredentialRequests,
+		data.OAuthClientCredentialRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientPrivateKeyJwtAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientPrivateKeyJWTAuthenticationFailures,
+		data.OAuthClientPrivateKeyJWTAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientPrivateKeyJwtAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientPrivateKeyJWTAuthentications,
+		data.OAuthClientPrivateKeyJWTAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientSecretBasicAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientBasicAuthenticationFailures,
+		data.OAuthClientBasicAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientSecretBasicAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientBasicAuthentications,
+		data.OAuthClientBasicAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientSecretPostAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientSecretPostAuthenticationFailures,
+		data.OAuthClientSecretPostAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientSecretPostAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientSecretPostAuthentications,
+		data.OAuthClientSecretPostAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientWindowsIntegratedAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientWindowsAuthenticationFailures,
+		data.OAuthClientWindowsAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthClientWindowsIntegratedAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthClientWindowsAuthentications,
+		data.OAuthClientWindowsAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthLogonCertificateRequestFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthLogonCertRequestFailures,
+		data.OAuthLogonCertRequestFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthLogonCertificateTokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthLogonCertTokenRequests,
+		data.OAuthLogonCertTokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthPasswordGrantRequestFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthPasswordGrantRequestFailures,
+		data.OAuthPasswordGrantRequestFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthPasswordGrantRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthPasswordGrantRequests,
+		data.OAuthPasswordGrantRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.oAuthTokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].OAuthTokenRequests,
+		data.OAuthTokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samlPTokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].SamlPTokenRequests,
+		data.SamlPTokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ssoAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].SsoAuthenticationFailures,
+		data.SsoAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ssoAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].SsoAuthentications,
+		data.SsoAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.wsFedTokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WsFedTokenRequests,
+		data.WsFedTokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.wsTrustTokenRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WsTrustTokenRequests,
+		data.WsTrustTokenRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.upAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].UsernamePasswordAuthenticationFailures,
+		data.UsernamePasswordAuthenticationFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.upAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].UsernamePasswordAuthentications,
+		data.UsernamePasswordAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.externalAuthenticationFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ExternalAuthNFailures,
+		data.ExternalAuthNFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.externalAuthentications,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ExternalAuthentications,
+		data.ExternalAuthentications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.artifactDBFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ArtifactDBFailures,
+		data.ArtifactDBFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.avgArtifactDBQueryTime,
+		c.artifactDBQueries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AvgArtifactDBQueryTime*math.Pow(10, -8),
+		data.ArtifactDBQueries,
 	)
+
+	if artifactDBFrequency > 0 {
+		ch <- prometheus.MustNewConstMetric(
+			c.artifactDBQueryTime,
+			prometheus.CounterValue,
+			data.ArtifactDBQueryTimeTicks/float64(artifactDBFrequency),
+		)
+	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.configDBFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ConfigDBFailures,
+		data.ConfigDBFailures,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.avgConfigDBQueryTime,
+		c.configDBQueries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AvgConfigDBQueryTime*math.Pow(10, -8),
+		data.ConfigDBQueries,
 	)
+
+	if configDBFrequency > 0 {
+		ch <- prometheus.MustNewConstMetric(
+			c.configDBQueryTime,
+			prometheus.CounterValue,
+			data.ConfigDBQueryTimeTicks/float64(configDBFrequency),
+		)
+	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.federationMetadataRequests,
 		prometheus.CounterValue,
-		c.perfDataObject[0].FederationMetadataRequests,
+		data.FederationMetadataRequests,
 	)
-
-	return nil
 }
