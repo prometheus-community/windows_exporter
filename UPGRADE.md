@@ -116,6 +116,10 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
   ```
 
   The key `scrape_interval` was accepted by 0.31 but had no effect. It now fails validation.
+- **pagefile and smbclient blocks.** In a configuration file, the `collector` blocks of the `pagefile` and `smbclient` collectors are named after the collectors. The keys `paging` and `smb_client` were accepted by 0.31 but had no effect, as both collectors have no options. They now fail validation.
+- **Invalid values.** An invalid value in the configuration file, such as `compress: maybe`, stops the exporter with the line and key of the value, also when the same flag is set on the command line.
+
+The configuration file now accepts every value the matching command-line flag accepts: quoted booleans and numbers (`compress: "true"`, `max-size: "10"`), comma-separated lists for list options (`enabled: cluster,node`), YAML lists for comma-separated options (`collectors.enabled: [cpu, memory]`) and YAML merge keys (`<<`). 0.31 rejected them.
 
 Removed settings stop the exporter at startup if they are still set: `--collector.process.counter-version` (see [process collector](#process-collector)), `--collector.container.containerd-state-dir` (see [container collector](#container-collector)) and the collector names `filetime` and `thermalzone` in `--collectors.enabled`. The same applies to their configuration file keys.
 
@@ -741,6 +745,7 @@ The scrape timeout comes from the `X-Prometheus-Scrape-Timeout-Seconds` header, 
 - The margin takes at most half of the client's timeout. A short `scrape_timeout` no longer leaves a negative or near-zero budget.
 - The timeout is limited to 5 minutes. Invalid header values fall back to 10 seconds.
 - If a collector is still running from an earlier, timed-out scrape, later scrapes skip it and report `windows_exporter_collector_timeout` as `1` until it finishes. In 0.31 a second copy of the collector started and ran in parallel.
+- Scrapes run one at a time. In 0.31 concurrent scrapes ran in parallel: the in-flight limit applied to a handler that was created for each request, and the collection's concurrency channel was never used. A scrape whose timeout ends while it waits for an earlier scrape doesn't run any collector. It reports the new metric `windows_exporter_scrape_queue_timeout` as `1`, and `windows_exporter_collector_success` and `windows_exporter_collector_timeout` as `0` for every collector. `windows_exporter_collector_timeout` is `1` only for collectors that ran out of time or are still running from an earlier scrape.
 - A collector that failed to start, for example because its Windows feature isn't installed, reports `windows_exporter_collector_success` as `0` and is no longer called on every scrape. It logs one warning at startup.
 
 The exporter's own metrics now also include Go scheduler metrics (`go_sched_*`), unless `--web.disable-exporter-metrics` is set.
@@ -765,6 +770,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
 - `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
 - New field in `collector.Config`: `StorageSpaces`.
+- The YAML keys of `collector.Config.Paging` and `collector.Config.SMBClient` are now `pagefile` and `smbclient`, the collector names, instead of `paging` and `smb_client`. The Go field names are unchanged. Both configurations are empty, so this only matters if you decode YAML with unknown fields rejected.
 - `scheduled_task.ConfigDefaults.TaskExclude`, also used when `scheduled_task.Config.TaskExclude` is nil, now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.MissedRuns`, false by default.
 - `collector.Config.ThermalZone` was removed together with the `thermalzone` collector.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.

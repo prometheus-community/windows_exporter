@@ -1,6 +1,8 @@
 name: CI
 
-# Windows tests are gated on Go, workflow and Go test script changes for pull requests and branch pushes.
+# Pull requests run the Windows tests only when Go sources, modules, test data,
+# tools/, the configuration examples or this workflow change. Pushes, tags and
+# releases always run them.
 on:
   push:
     branches:
@@ -38,25 +40,34 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Manual, tag, release, and new-branch runs have no previous revision to compare.
-          if [[ "$EVENT_NAME" != "pull_request" && "$EVENT_NAME" != "push" ]] ||
-            [[ "$GITHUB_REF" == refs/tags/* || -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+          # Pushes to main and the release branches, tags, releases and manual
+          # runs always test, so a gap in the filter below cannot let a
+          # regression reach a branch that ships.
+          if [[ "$EVENT_NAME" != "pull_request" || -z "$BASE_SHA" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            BASE_SHA=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
-          elif ! git cat-file -e "$BASE_SHA^{commit}"; then
-            # A force push may remove the previous commit from the fetched history.
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          BASE_SHA=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
 
-          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.go' '.github/workflows/ci.yml' 'tools/build-go-tests.ps1' 'tools/run-go-tests.ps1')
+          # Everything that changes the tested binaries or the fixtures: Go
+          # sources, module versions, test data, the fixture and test scripts
+          # in tools/ and this workflow. internal/config/config_test.go also
+          # validates config.yaml, docs/example_config.yml and the examples in
+          # docs/collector.*.md. Git pathspec wildcards also match "/".
+          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- \
+            '*.go' \
+            'go.mod' \
+            'go.sum' \
+            ':(glob)**/testdata/**' \
+            'tools/' \
+            'config.yaml' \
+            'docs/example_config.yml' \
+            'docs/collector.*.md' \
+            '.github/workflows/ci.yml')
           if [[ -n "$changed_files" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
@@ -324,6 +335,17 @@ jobs:
       - name: Generate checksums
         run: |
           $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          # Checksum only a complete set of artifacts.
+          foreach($Arch in "amd64", "arm64") {
+            foreach($Extension in "exe", "msi") {
+              $Artifact = "output\windows_exporter-$Version-$Arch.$Extension"
+              if (-not (Test-Path -PathType Leaf $Artifact)) {
+                throw "Missing release artifact $Artifact"
+              }
+            }
+          }
 
           $checksums = Get-ChildItem -Path output -File |
             Where-Object { $_.Name -match '^windows_exporter-.*\.(exe|msi)$' } |
@@ -1779,17 +1801,13 @@ jobs:
             ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
 
+  # Linting type-checks the Windows build from Linux: GOOS=windows selects the
+  # same files, the code uses no cgo, and Linux checkouts keep LF line endings.
   lint:
-    runs-on: windows-2025
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      # `gofmt` linter run by golangci-lint fails on CRLF line endings (the default for Windows)
-      - name: Set git to use LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: 'false'
@@ -1799,8 +1817,13 @@ jobs:
           # renovate: golang=go
           go-version: '1.27.2'
 
+      # Only the lint step targets Windows; the action installs the Linux
+      # golangci-lint binary for the runner.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        env:
+          GOOS: windows
+          GOARCH: amd64
         with:
           # renovate: github=golangci/golangci-lint
           version: v2.14.0

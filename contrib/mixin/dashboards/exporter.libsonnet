@@ -112,10 +112,13 @@ function(on)
         graphMode: 'area',
       }),
 
-      b.panel.new(94, 'Timed-out collectors', 'stat')
-      + b.panel.withDescription('Number of collectors that timed out on the latest scrape. The graph shows the count over the selected time range.')
+      b.panel.new(94, 'Timeouts', 'stat')
+      + b.panel.withDescription('Number of collectors that timed out on the latest scrape, and whether the latest scrape timed out while it waited for an earlier scrape, so that no collector ran. The graph shows the values over the selected time range.')
       + b.panel.withQueries([
-        b.query.new('count(windows_exporter_collector_timeout{job=~"$job", instance="$instance"} == 1) or vector(0)', 'A'),
+        b.query.new('count(windows_exporter_collector_timeout{job=~"$job", instance="$instance"} == 1) or vector(0)', 'A')
+        + b.query.withLegendFormat('collectors'),
+        b.query.new('max(windows_exporter_scrape_queue_timeout{job=~"$job", instance="$instance"}) or vector(0)', 'B')
+        + b.query.withLegendFormat('queued scrape'),
       ])
       + b.panel.withDefaults({
         decimals: 0,

@@ -145,6 +145,8 @@ windows_exporter_collector_timeout{collector="time"} 0
 windows_exporter_collector_timeout{collector="udp"} 0
 # HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
 # TYPE windows_exporter_scrape_duration_seconds gauge
+# HELP windows_exporter_scrape_queue_timeout windows_exporter: Whether the scrape timed out while it waited for an earlier scrape, so that it didn't start the collectors.
+# TYPE windows_exporter_scrape_queue_timeout gauge
 # HELP windows_logical_disk_free_bytes Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)
 # TYPE windows_logical_disk_free_bytes gauge
 # HELP windows_logical_disk_idle_seconds_total Seconds that the disk was idle (LogicalDisk.PercentIdleTime)
