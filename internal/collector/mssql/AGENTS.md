@@ -3,7 +3,10 @@
 The collector reads the SQL Server performance objects (`Access Methods`,
 `Buffer Manager`, `Databases`, `Locks`, `Wait Statistics` and others) with
 `pdh.CounterTypeRaw`, one PDH collector per SQL Server instance. It needs a
-SQL Server Database Engine; CI does not provision one. These notes were
+SQL Server Database Engine. CI provisions SQL Server Express (instance
+`CISQL`, database `CIWindowsExporter`) and lists `mssql` in
+`WINDOWS_EXPORTER_TEST_COLLECTORS`, so live tests must fail there instead of
+skipping. Express has no availability groups. These notes were
 recorded on Windows Server 2025 (build 26100) with SQL Server 2022 Developer
 Edition (`PatchLevel` 16.0.1000.6), named instance `NONDEFAULT`.
 
@@ -35,7 +38,15 @@ Edition (`PatchLevel` 16.0.1000.6), named instance `NONDEFAULT`.
   `Cumulative wait time (ms) per second`, `Waits in progress` and
   `Waits started per second`. All counters are
   `PERF_COUNTER_LARGE_RAWCOUNT`, so the meaning comes from the instance name.
-  All values stayed 0 over 10 seconds on this idle instance.
+  SQL Server recomputes every item about every 5 seconds over its last
+  interval. Under lock contention, `Waits started per second` showed 5 and
+  then 0 while `sys.dm_os_wait_stats` kept growing, so all items are gauges.
+- `Buffer cache hit ratio` (`PERF_RAW_FRACTION`) is windowed as well: value
+  and base are the page lookups of the last refresh, so it is a gauge.
+  `Worktables From Cache Ratio` has a growing base and is a running total.
+- `TestMetricTypesMatchCounterTypes` compares the published types with
+  `pdh.Collector.MetricType` against a live instance; deliberate exceptions
+  (`Log Growths`, `Log Shrinks`, `Log Truncations`) are listed there.
 - Every `.../sec` counter, and several counters without `/sec` (for example
   `Mars Deadlocks`, the `SOAP ...` and `Lob...Count` counters,
   `Log Flush Wait Time`, `Group Commit Time`, `Transaction Delay`,

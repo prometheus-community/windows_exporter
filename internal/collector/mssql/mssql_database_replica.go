@@ -100,8 +100,8 @@ func (c *Collector) buildDatabaseReplica() error {
 
 	// Win32_PerfRawData_{instance}_SQLServerDatabaseReplica
 	c.dbReplicaDatabaseFlowControlDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_flow_control_wait_seconds"),
-		"(DatabaseReplica.DatabaseFlowControlDelay)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_flow_control_wait_seconds_total"),
+		"(DatabaseReplica.DatabaseFlowControlDelay) Total time spent in database flow control wait, in seconds",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -124,8 +124,8 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaGroupCommitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commit_stall_seconds"),
-		"(DatabaseReplica.GroupCommitTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commit_stall_seconds_total"),
+		"(DatabaseReplica.GroupCommitTime) Total time transactions waited for group commit, in seconds",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -184,14 +184,14 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaLogremainingforundo = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_remaining_for_undo"),
-		"(DatabaseReplica.Logremainingforundo)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_remaining_for_undo_bytes"),
+		"(DatabaseReplica.Logremainingforundo) Log remaining to finish the undo phase, in bytes",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogSendQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_send_queue"),
-		"(DatabaseReplica.LogSendQueue)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_send_queue_bytes"),
+		"(DatabaseReplica.LogSendQueue) Log waiting to be sent to the database replica, in bytes",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -202,8 +202,8 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaRecoveryQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_recovery_queue_records"),
-		"(DatabaseReplica.RecoveryQueue)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_recovery_queue_bytes"),
+		"(DatabaseReplica.RecoveryQueue) Hardened log waiting to be redone on the secondary, in bytes",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -215,7 +215,7 @@ func (c *Collector) buildDatabaseReplica() error {
 	)
 	c.dbReplicaRedoBytesRemaining = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redo_remaining_bytes"),
-		"(DatabaseReplica.RedoBytesRemaining)",
+		"(DatabaseReplica.RedoBytesRemaining) Log remaining to be redone to finish the reverting phase, in bytes",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -232,14 +232,14 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaTotalLogrequiringundo = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_total_log_requiring_undo"),
-		"(DatabaseReplica.TotalLogrequiringundo)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_total_log_requiring_undo_bytes"),
+		"(DatabaseReplica.TotalLogrequiringundo) Log that needs to be undone, in bytes",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaTransactionDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_transaction_delay_seconds"),
-		"(DatabaseReplica.TransactionDelay)",
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_transaction_delay_seconds_total"),
+		"(DatabaseReplica.TransactionDelay) Total time transaction termination waited for acknowledgement, in seconds",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
@@ -266,7 +266,7 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 	for _, data := range c.dbReplicaPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaDatabaseFlowControlDelay,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DbReplicaDatabaseFlowControlDelay/1e6,
 			sqlInstance.name, data.Name,
 		)
@@ -294,7 +294,7 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaGroupCommitTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DbReplicaGroupCommitTime/1e6,
 			sqlInstance.name, data.Name,
 		)
@@ -365,14 +365,14 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogremainingforundo,
 			prometheus.GaugeValue,
-			data.DbReplicaLogRemainingForUndo,
+			data.DbReplicaLogRemainingForUndo*1024,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogSendQueue,
 			prometheus.GaugeValue,
-			data.DbReplicaLogSendQueue,
+			data.DbReplicaLogSendQueue*1024,
 			sqlInstance.name, data.Name,
 		)
 
@@ -386,7 +386,7 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRecoveryQueue,
 			prometheus.GaugeValue,
-			data.DbReplicaRecoveryQueue,
+			data.DbReplicaRecoveryQueue*1024,
 			sqlInstance.name, data.Name,
 		)
 
@@ -400,7 +400,7 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRedoBytesRemaining,
 			prometheus.GaugeValue,
-			data.DbReplicaRedoBytesRemaining,
+			data.DbReplicaRedoBytesRemaining*1024,
 			sqlInstance.name, data.Name,
 		)
 
@@ -421,13 +421,13 @@ func (c *Collector) emitDatabaseReplicaMetrics(ch chan<- prometheus.Metric, sqlI
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaTotalLogrequiringundo,
 			prometheus.GaugeValue,
-			data.DbReplicaTotalLogRequiringUndo,
+			data.DbReplicaTotalLogRequiringUndo*1024,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaTransactionDelay,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DbReplicaTransactionDelay/1000.0,
 			sqlInstance.name, data.Name,
 		)

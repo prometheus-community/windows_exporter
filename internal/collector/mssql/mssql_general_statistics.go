@@ -116,7 +116,7 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsHTTPAuthenticatedRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_http_authenticated_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_http_authenticated_requests_total"),
 		"(GeneralStatistics.HTTPAuthenticatedRequests)",
 		[]string{"mssql_instance"},
 		nil,
@@ -140,7 +140,7 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsMarsDeadlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_mars_deadlocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_mars_deadlocks_total"),
 		"(GeneralStatistics.MarsDeadlocks)",
 		[]string{"mssql_instance"},
 		nil,
@@ -158,55 +158,55 @@ func (c *Collector) buildGeneralStatistics() error {
 		nil,
 	)
 	c.genStatsSOAPEmptyRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_empty_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_empty_requests_total"),
 		"(GeneralStatistics.SOAPEmptyRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPMethodInvocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_method_invocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_method_invocations_total"),
 		"(GeneralStatistics.SOAPMethodInvocations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSessionInitiateRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_initiate_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_initiate_requests_total"),
 		"(GeneralStatistics.SOAPSessionInitiateRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSessionTerminateRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_terminate_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_terminate_requests_total"),
 		"(GeneralStatistics.SOAPSessionTerminateRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSQLRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapsql_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapsql_requests_total"),
 		"(GeneralStatistics.SOAPSQLRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPWSDLRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapwsdl_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapwsdl_requests_total"),
 		"(GeneralStatistics.SOAPWSDLRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSQLTraceIOProviderLockWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_sql_trace_io_provider_lock_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_sql_trace_io_provider_lock_waits_total"),
 		"(GeneralStatistics.SQLTraceIOProviderLockWaits)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempDBRecoveryUnitID = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_recovery_unit_ids_generated"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_recovery_unit_ids_generated_total"),
 		"(GeneralStatistics.Tempdbrecoveryunitid)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempDBrowSetID = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_rowset_ids_generated"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_rowset_ids_generated_total"),
 		"(GeneralStatistics.Tempdbrowsetid)",
 		[]string{"mssql_instance"},
 		nil,
@@ -255,6 +255,12 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), err)
 	}
 
+	c.emitGeneralStatisticsMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitGeneralStatisticsMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsActiveTempTables,
 		prometheus.GaugeValue,
@@ -278,7 +284,7 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsHTTPAuthenticatedRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsHTTPAuthenticatedRequests,
 		sqlInstance.name,
 	)
@@ -306,7 +312,7 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsMarsDeadlocks,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsMarsDeadlocks,
 		sqlInstance.name,
 	)
@@ -327,63 +333,63 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPEmptyRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPEmptyRequests,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPMethodInvocations,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPMethodInvocations,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionInitiateRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSessionInitiateRequests,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionTerminateRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSessionTerminateRequests,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSQLRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSQLRequests,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPWSDLRequests,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPWSDLRequests,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSQLTraceIOProviderLockWaits,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsSQLTraceIOProviderLockWaits,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBRecoveryUnitID,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsTempdbRecoveryUnitID,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBrowSetID,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsTempdbRowsetID,
 		sqlInstance.name,
 	)
@@ -422,8 +428,6 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 		c.genStatsPerfDataObject[0].GenStatsUserConnections,
 		sqlInstance.name,
 	)
-
-	return nil
 }
 
 func (c *Collector) closeGeneralStatistics() {

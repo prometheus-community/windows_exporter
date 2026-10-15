@@ -68,14 +68,14 @@ func (c *Collector) buildLocks() error {
 	}
 
 	c.locksWaitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_wait_time_seconds"),
-		"(Locks.AverageWaitTimems Total time in seconds which locks have been holding resources)",
+		prometheus.BuildFQName(types.Namespace, Name, "locks_wait_time_seconds_total"),
+		"(Locks.AverageWaitTimems) Total time lock requests waited, in seconds. Numerator of Average Wait Time (ms)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_count"),
-		"(Locks.AverageWaitTimems_Base count of how often requests have run into locks)",
+		prometheus.BuildFQName(types.Namespace, Name, "locks_count_total"),
+		"(Locks.AverageWaitTimems_Base) Total number of lock requests that waited. Base of Average Wait Time (ms)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
@@ -104,8 +104,8 @@ func (c *Collector) buildLocks() error {
 		nil,
 	)
 	c.locksLockWaitTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_wait_seconds"),
-		"(Locks.LockWaitTimems)",
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_wait_seconds_total"),
+		"(Locks.LockWaitTimems) Total time lock requests waited, in seconds",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
@@ -138,14 +138,14 @@ func (c *Collector) emitLocksMetrics(ch chan<- prometheus.Metric, sqlInstance ms
 	for _, data := range c.locksPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.locksWaitTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.LocksAverageWaitTimeMS/1000.0,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksCount,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.LocksAverageWaitTimeMSBase,
 			sqlInstance.name, data.Name,
 		)
@@ -180,7 +180,7 @@ func (c *Collector) emitLocksMetrics(ch chan<- prometheus.Metric, sqlInstance ms
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockWaitTimeMS,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.LocksLockWaitTimeMS/1000.0,
 			sqlInstance.name, data.Name,
 		)

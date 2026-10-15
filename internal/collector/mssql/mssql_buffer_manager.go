@@ -56,7 +56,9 @@ type collectorBufferManager struct {
 }
 
 type perfDataCounterValuesBufMan struct {
-	BufManBackgroundWriterPagesPerSec   float64 `perfdata:"Background writer pages/sec"`
+	BufManBackgroundWriterPagesPerSec float64 `perfdata:"Background writer pages/sec"`
+	// PERF_LARGE_RAW_FRACTION. SQL Server refreshes value and base every few seconds with the
+	// hits and lookups of the last interval, so both are gauges.
 	BufManBufferCacheHitRatio           float64 `perfdata:"Buffer cache hit ratio"`
 	BufManBufferCacheHitRatioBase       float64 `perfdata:"Buffer cache hit ratio,secondvalue"`
 	BufManCheckpointPagesPerSec         float64 `perfdata:"Checkpoint pages/sec"`
@@ -222,7 +224,7 @@ func (c *Collector) buildBufferManager() error {
 	)
 	c.bufManReadaheadtime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_issuing_seconds"),
-		"(BufferManager.Readaheadtime)",
+		"(BufferManager.Readaheadtime) Total time spent issuing read-ahead, in seconds",
 		[]string{"mssql_instance"},
 		nil,
 	)
@@ -246,6 +248,12 @@ func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sq
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), err)
 	}
 
+	c.emitBufferManagerMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitBufferManagerMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	for _, data := range c.bufManPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBackgroundwriterpages,
@@ -397,7 +405,7 @@ func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sq
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManReadaheadtime,
 			prometheus.CounterValue,
-			data.BufManReadaheadTimePerSec,
+			data.BufManReadaheadTimePerSec/1e6, // microseconds
 			sqlInstance.name,
 		)
 
@@ -408,8 +416,6 @@ func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sq
 			sqlInstance.name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) closeBufferManager() {

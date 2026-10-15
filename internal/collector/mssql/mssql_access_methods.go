@@ -119,8 +119,10 @@ type perfDataCounterValuesAccessMethods struct {
 	AccessMethodsUsedTreePageCookie            float64 `perfdata:"Used tree page cookie"`
 	AccessMethodsWorkfilesCreatedPerSec        float64 `perfdata:"Workfiles Created/sec"`
 	AccessMethodsWorktablesCreatedPerSec       float64 `perfdata:"Worktables Created/sec"`
-	AccessMethodsWorktablesFromCacheRatio      float64 `perfdata:"Worktables From Cache Ratio"`
-	AccessMethodsWorktablesFromCacheRatioBase  float64 `perfdata:"Worktables From Cache Ratio,secondvalue"`
+	// PERF_LARGE_RAW_FRACTION, but SQL Server keeps both values as running totals since
+	// the instance started, unlike Buffer cache hit ratio. Published as counters.
+	AccessMethodsWorktablesFromCacheRatio     float64 `perfdata:"Worktables From Cache Ratio"`
+	AccessMethodsWorktablesFromCacheRatioBase float64 `perfdata:"Worktables From Cache Ratio,secondvalue"`
 }
 
 func (c *Collector) buildAccessMethods() error {
