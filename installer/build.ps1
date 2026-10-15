@@ -21,20 +21,46 @@ if (-not $MsiVersion) {
 
 # Get absolute path to executable before switching directories
 $PathToExecutable = Resolve-Path $PathToExecutable
-# Set working dir to this directory, reset previous on exit
+# Set working dir to this directory and restore the previous one on exit,
+# including on errors.
 Push-Location $PSScriptRoot
-Trap {
-    # Reset working dir on error
+try {
+    mkdir -Force Work | Out-Null
+    Copy-Item -Force $PathToExecutable Work/windows_exporter.exe
+
+    $msi = "windows_exporter-$Version-$Arch.msi"
+    Write-Verbose "Creating $msi"
+    $wixArch = @{"amd64" = "x64"; "arm64" = "arm64"}[$Arch]
+
+    # A package left over from an earlier build must not pass for this one.
+    if (Test-Path $msi) { Remove-Item -Force $msi }
+
+    # Pass the arguments as an array so that values such as the version are
+    # never parsed as PowerShell code.
+    $wixArgs = @(
+        "build"
+        "-sw1149"
+        "-arch", $wixArch
+        "-o", ".\$msi"
+        ".\files.wxs"
+        ".\main.wxs"
+        "-d", "ProductName=windows_exporter"
+        "-d", "Version=$MsiVersion"
+        "-ext", "WixToolset.Firewall.wixext"
+        "-ext", "WixToolset.UI.wixext"
+        "-ext", "WixToolset.Util.wixext"
+    )
+    & wix @wixArgs
+    # $ErrorActionPreference does not apply to native commands.
+    if ($LASTEXITCODE -ne 0) {
+        throw "wix build failed with exit code $LASTEXITCODE for $msi"
+    }
+
+    if (-not (Test-Path -PathType Leaf $msi)) {
+        throw "wix build did not create $msi"
+    }
+
+    Write-Verbose "Done!"
+} finally {
     Pop-Location
 }
-
-mkdir -Force Work | Out-Null
-Copy-Item -Force $PathToExecutable Work/windows_exporter.exe
-
-Write-Verbose "Creating windows_exporter-${Version}-${Arch}.msi"
-$wixArch = @{"amd64" = "x64"; "arm64" = "arm64"}[$Arch]
-
-Invoke-Expression "wix build -sw1149 -arch $wixArch -o .\windows_exporter-$($Version)-$($Arch).msi .\files.wxs .\main.wxs -d ProductName=windows_exporter -d Version=$($MsiVersion) -ext WixToolset.Firewall.wixext -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext"
-
-Write-Verbose "Done!"
-Pop-Location

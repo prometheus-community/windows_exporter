@@ -25943,12 +25943,34 @@
                                                 "editorMode": "code",
                                                 "expr": "count(windows_exporter_collector_timeout{job=~\"$job\", instance=\"$instance\"} == 1) or vector(0)",
                                                 "instant": false,
-                                                "legendFormat": "__auto",
+                                                "legendFormat": "collectors",
                                                 "range": true
                                             },
                                             "version": "v0"
                                         },
                                         "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max(windows_exporter_scrape_queue_timeout{job=~\"$job\", instance=\"$instance\"}) or vector(0)",
+                                                "instant": false,
+                                                "legendFormat": "queued scrape",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
                                     }
                                 }
                             ],
@@ -25956,10 +25978,10 @@
                             "transformations": []
                         }
                     },
-                    "description": "Number of collectors that timed out on the latest scrape. The graph shows the count over the selected time range.",
+                    "description": "Number of collectors that timed out on the latest scrape, and whether the latest scrape timed out while it waited for an earlier scrape, so that no collector ran. The graph shows the values over the selected time range.",
                     "id": 94,
                     "links": [],
-                    "title": "Timed-out collectors",
+                    "title": "Timeouts",
                     "vizConfig": {
                         "group": "stat",
                         "kind": "VizConfig",

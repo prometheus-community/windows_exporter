@@ -174,9 +174,10 @@ or enabled collector set from your checkout.
 ```
 
 Inspect `windows_exporter_collector_success`,
-`windows_exporter_collector_duration_seconds` and
-`windows_exporter_collector_timeout`, plus the affected metric families. HTTP 200
-alone does not mean every collector succeeded. PDH rate counters need a second
+`windows_exporter_collector_duration_seconds`,
+`windows_exporter_collector_timeout` and `windows_exporter_scrape_queue_timeout`
+(the scrape timed out waiting for an earlier scrape, so no collector ran), plus the
+affected metric families. HTTP 200 alone does not mean every collector succeeded. PDH rate counters need a second
 sample after initialization.
 
 To validate changed code, build a separate executable and run it on an unused

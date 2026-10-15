@@ -1,5 +1,7 @@
 name: Mixin
 
+# The runbook check in "mise run test" reads docs/runbooks, so runbook
+# changes run this workflow too.
 on:
   pull_request:
     paths:
