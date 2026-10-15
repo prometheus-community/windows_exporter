@@ -44,6 +44,7 @@ const (
 
 	backupTimeFormat = "2006-01-02T15-04-05.000"
 	gzipSuffix       = ".gz"
+	tempSuffix       = ".tmp"
 )
 
 // errCompressionAborted is returned by compressFile when the log file is closed.
@@ -113,6 +114,11 @@ func newRotatingFileWithRename(
 	r.file, r.size = file, size
 	r.checkAfter = now().Add(r.retryInterval)
 
+	// A compression that was interrupted, for example because the process
+	// was killed, leaves its temporary file behind. Its backup still exists
+	// uncompressed.
+	r.removeCompressionTempFiles()
+
 	// A file that is already too large is rotated right away. If that fails,
 	// the logger still starts and the rotation is retried on a later write.
 	if r.size >= r.maxSize {
@@ -170,7 +176,6 @@ func (r *rotatingFile) Write(p []byte) (int, error) {
 	return n, err
 }
 
-// Close closes the log file and waits for compression and pruning of rotated files.
 // Close closes the log file and waits up to closeTimeout for the background
 // cleanup of rotated files. If the cleanup is still running then, Close aborts
 // the compression, which keeps the rotated file uncompressed.
@@ -301,6 +306,24 @@ func (r *rotatingFile) nameParts() (string, string, string) {
 	return filepath.Dir(r.path), strings.TrimSuffix(base, ext) + "-", ext
 }
 
+// removeCompressionTempFiles removes the temporary files of compressions of
+// this log file's backups. Errors only leave files behind, so they are ignored.
+func (r *rotatingFile) removeCompressionTempFiles() {
+	dir, prefix, ext := r.nameParts()
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.Type().IsRegular() && strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ext+gzipSuffix+tempSuffix) {
+			_ = os.Remove(filepath.Join(dir, name))
+		}
+	}
+}
+
 func exists(path string) bool {
 	_, err := os.Lstat(path)
 
@@ -416,7 +439,7 @@ func compressFile(path string, stop <-chan struct{}) (err error) {
 
 	defer func() { _ = src.Close() }()
 
-	tmp := path + gzipSuffix + ".tmp"
+	tmp := path + gzipSuffix + tempSuffix
 
 	dst, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o640)
 	if err != nil {

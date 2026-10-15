@@ -256,6 +256,31 @@ func TestRotatingFileCloseBoundsCleanup(t *testing.T) {
 	require.Less(t, time.Since(start), file.closeTimeout+cleanupAbortTimeout+time.Second)
 }
 
+func TestRotatingFileRemovesCompressionTempFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "windows_exporter.log")
+
+	for _, name := range []string{
+		"windows_exporter-2026-10-15T14-03-05.000.log",
+		"windows_exporter-2026-10-15T14-03-05.000.log.gz.tmp",
+		"other-2026-10-15T14-03-05.000.log.gz.tmp",
+	} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600))
+	}
+
+	file, err := newRotatingFile(path, 100, 0, true, time.Now)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+
+	require.Equal(t, []string{
+		"other-2026-10-15T14-03-05.000.log.gz.tmp",
+		"windows_exporter-2026-10-15T14-03-05.000.log",
+		"windows_exporter.log",
+	}, dirEntries(t, dir))
+}
+
 func TestCompressFileAborts(t *testing.T) {
 	t.Parallel()
 
