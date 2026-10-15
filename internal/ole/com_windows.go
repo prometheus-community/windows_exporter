@@ -88,15 +88,37 @@ type nativeScalar interface {
 // nativeObject requires the common COM interface layout without extra Go data.
 type nativeObject interface{ ~struct{ Object } }
 
-// Method returns the address of the zero-based native vtable slot.
-func (o *Object) Method(slot uintptr) uintptr {
-	return *(*uintptr)(unsafe.Add(unsafe.Pointer(o.VTable), slot*unsafe.Sizeof(uintptr(0))))
+// ErrNilObject reports a call on a nil interface pointer, an interface without
+// a vtable, or an empty vtable slot. Dereferencing them would crash the process
+// instead of failing the call.
+var ErrNilObject = errors.New("COM interface or vtable slot is nil")
+
+// Method returns the address of the zero-based native vtable slot. It returns
+// ErrNilObject instead of dereferencing a nil interface, a nil vtable or
+// calling an empty slot.
+func (o *Object) Method(slot uintptr) (uintptr, error) {
+	if o == nil || o.VTable == nil {
+		return 0, ErrNilObject
+	}
+
+	fn := *(*uintptr)(unsafe.Add(unsafe.Pointer(o.VTable), slot*unsafe.Sizeof(uintptr(0))))
+	if fn == 0 {
+		return 0, fmt.Errorf("COM vtable slot %d: %w", slot, ErrNilObject)
+	}
+
+	return fn, nil
 }
 
 // Release relinquishes an owned interface reference. Do not call it on borrowed
-// iterator items. Like IUnknown::Release, it does not return an HRESULT.
+// iterator items. Like IUnknown::Release, it does not return an HRESULT, and
+// releasing a nil interface does nothing.
 func (o *Object) Release() {
-	_ = Call(o.Method(2), uintptr(unsafe.Pointer(o)))
+	fn, err := o.Method(2)
+	if err != nil {
+		return
+	}
+
+	_ = Call(fn, uintptr(unsafe.Pointer(o)))
 	runtime.KeepAlive(o)
 }
 
@@ -108,7 +130,12 @@ func (o *Object) Release() {
 func (o *Object) Get[T nativeScalar](slot uintptr) (T, error) {
 	var value T
 
-	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
+	fn, err := o.Method(slot)
+	if err != nil {
+		return value, err
+	}
+
+	hr := Call(fn, uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
 	runtime.KeepAlive(o)
 
 	return value, ResultError(hr)
@@ -122,8 +149,13 @@ func (o *Object) Get[T nativeScalar](slot uintptr) (T, error) {
 func (o *Object) GetArg[T nativeScalar](slot, arg uintptr) (T, error) {
 	var value T
 
+	fn, err := o.Method(slot)
+	if err != nil {
+		return value, err
+	}
+
 	hr := Call(
-		o.Method(slot),
+		fn,
 		uintptr(unsafe.Pointer(o)),
 		arg,
 		uintptr(unsafe.Pointer(&value)),
@@ -138,7 +170,12 @@ func (o *Object) GetArg[T nativeScalar](slot, arg uintptr) (T, error) {
 func (o *Object) GetObject[T nativeObject](slot uintptr) (*T, error) {
 	var value *T
 
-	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
+	fn, err := o.Method(slot)
+	if err != nil {
+		return nil, err
+	}
+
+	hr := Call(fn, uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
 	runtime.KeepAlive(o)
 
 	if err := ResultError(hr); err != nil {
@@ -160,8 +197,13 @@ func (o *Object) GetObject[T nativeObject](slot uintptr) (*T, error) {
 func (o *Object) GetObjectArg[T nativeObject](slot, arg uintptr) (*T, error) {
 	var value *T
 
+	fn, err := o.Method(slot)
+	if err != nil {
+		return nil, err
+	}
+
 	hr := Call(
-		o.Method(slot),
+		fn,
 		uintptr(unsafe.Pointer(o)),
 		arg,
 		uintptr(unsafe.Pointer(&value)),
@@ -181,7 +223,12 @@ func (o *Object) GetObjectArg[T nativeObject](slot, arg uintptr) (*T, error) {
 
 // Put calls a native setter with a scalar argument.
 func (o *Object) Put(slot, arg uintptr) error {
-	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), arg)
+	fn, err := o.Method(slot)
+	if err != nil {
+		return err
+	}
+
+	hr := Call(fn, uintptr(unsafe.Pointer(o)), arg)
 	runtime.KeepAlive(o)
 
 	return ResultError(hr)

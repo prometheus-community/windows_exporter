@@ -264,3 +264,39 @@ func TestVariantLayout(t *testing.T) {
 	require.Equal(t, uintptr(24), unsafe.Sizeof(Variant{}))
 	require.Equal(t, uintptr(8), unsafe.Offsetof(Variant{}.Value))
 }
+
+// TestNilObject checks that calls on a nil interface, a nil vtable or an empty
+// vtable slot fail instead of crashing the process.
+func TestNilObject(t *testing.T) {
+	var methods [8]uintptr
+
+	for name, object := range map[string]*Object{
+		"nil interface": nil,
+		"nil vtable":    {},
+		"empty slot":    {VTable: &methods[0]},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := object.Method(7)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			_, err = object.Get[int32](7)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			_, err = object.GetArg[int32](7, 0)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			_, err = object.GetObject[nativeTestObject](7)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			_, err = object.GetObjectArg[nativeTestObject](7, 0)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			require.ErrorIs(t, object.Put(7, 0), ErrNilObject)
+
+			_, err = object.String(7)
+			require.ErrorIs(t, err, ErrNilObject)
+
+			require.NotPanics(t, object.Release)
+		})
+	}
+}

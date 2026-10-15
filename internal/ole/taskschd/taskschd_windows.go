@@ -67,8 +67,13 @@ func (s *TaskService) Connect() error {
 	domain := ole.NewEmptyVariant()
 	password := ole.NewEmptyVariant()
 
+	fn, err := s.Method(taskServiceConnect)
+	if err != nil {
+		return err
+	}
+
 	hr := ole.Call(
-		s.Method(taskServiceConnect),
+		fn,
 		uintptr(unsafe.Pointer(s)),
 		uintptr(unsafe.Pointer(server)),
 		uintptr(unsafe.Pointer(user)),
