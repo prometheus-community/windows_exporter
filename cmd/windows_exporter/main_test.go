@@ -24,8 +24,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
@@ -76,6 +78,21 @@ func TestRun(t *testing.T) {
 			args:            []string{"--config.file=config.yaml", "--web.listen-address=127.0.0.1:8084"},
 			config:          `{"web":{"listen-address":"127.0.0.1:8083"}}`,
 			metricsEndpoint: "http://127.0.0.1:8084/metrics",
+		},
+		{
+			name:     "invalid telemetry.path without leading slash",
+			args:     []string{"--web.listen-address=127.0.0.1:8085", "--telemetry.path=metrics"},
+			exitCode: 1,
+		},
+		{
+			name:     "invalid telemetry.path health",
+			args:     []string{"--web.listen-address=127.0.0.1:8085", "--telemetry.path=/health"},
+			exitCode: 1,
+		},
+		{
+			name:     "invalid scrape.timeout-margin",
+			args:     []string{"--web.listen-address=127.0.0.1:8085", "--scrape.timeout-margin=-1"},
+			exitCode: 1,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -182,6 +199,75 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 	}
 
 	return fmt.Errorf("listener not listening: %w", err)
+}
+
+func TestNewServeMux(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		path    string
+		debug   bool
+		wantErr string
+	}{
+		{path: "/metrics"},
+		{path: "/"},
+		{path: "/custom/metrics"},
+		{path: "/metrics/"},
+		{path: "/debug/pprof/"},
+		{path: "metrics", wantErr: "must start with /"},
+		{path: "", wantErr: "must start with /"},
+		{path: "/health", wantErr: "reserved for the health endpoint"},
+		{path: "/debug/pprof/", debug: true, wantErr: "cannot be registered"},
+		{path: "/debug/pprof/trace", debug: true, wantErr: "cannot be registered"},
+		{path: "/metrics/{name", wantErr: "cannot be registered"},
+	} {
+		t.Run(fmt.Sprintf("%s debug=%t", tc.path, tc.debug), func(t *testing.T) {
+			t.Parallel()
+
+			metricsHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte("metrics"))
+			})
+
+			mux, err := newServeMux(tc.path, tc.debug, metricsHandler)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				require.Nil(t, mux)
+
+				return
+			}
+
+			require.NoError(t, err)
+
+			for _, path := range []string{tc.path, healthPath} {
+				rec := httptest.NewRecorder()
+				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+				require.Equal(t, http.StatusOK, rec.Code, path)
+
+				if path == tc.path {
+					require.Equal(t, "metrics", rec.Body.String(), path)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTimeoutMargin(t *testing.T) {
+	t.Parallel()
+
+	for _, margin := range []float64{0, 0.5, 30} {
+		require.NoError(t, validateTimeoutMargin(margin), margin)
+	}
+
+	for _, margin := range []float64{-0.5, math.NaN(), math.Inf(1), math.Inf(-1)} {
+		require.Error(t, validateTimeoutMargin(margin), margin)
+	}
+}
+
+func TestUnknownCollectors(t *testing.T) {
+	t.Parallel()
+
+	require.Empty(t, unknownCollectors([]string{"cpu", "", "net"}))
+	require.Equal(t, []string{"nope", "CPU"}, unknownCollectors([]string{"cpu", "nope", "", "nope", "CPU"}))
 }
 
 func TestScrapeStdout(t *testing.T) {
