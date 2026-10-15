@@ -525,3 +525,58 @@ func TestParseEmptyValue(t *testing.T) {
 		})
 	}
 }
+
+// TestRegexpFlags verifies that every include and exclude flag of the
+// collectors accepts a value from the configuration file, and that an invalid
+// expression fails the parsing with an error that names the flag.
+func TestRegexpFlags(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{
+		"collector.iis.app-exclude",
+		"collector.iis.app-include",
+		"collector.iis.site-exclude",
+		"collector.iis.site-include",
+		"collector.logical_disk.volume-exclude",
+		"collector.logical_disk.volume-include",
+		"collector.net.nic-exclude",
+		"collector.net.nic-include",
+		"collector.physical_disk.disk-exclude",
+		"collector.physical_disk.disk-include",
+		"collector.printer.exclude",
+		"collector.printer.include",
+		"collector.process.exclude",
+		"collector.process.include",
+		"collector.scheduled_task.exclude",
+		"collector.scheduled_task.include",
+		"collector.service.exclude",
+		"collector.service.include",
+		"collector.smtp.server-exclude",
+		"collector.smtp.server-include",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			app := kingpin.New("test", "test")
+			app.Flag("config.file", "config").String()
+			collector.NewWithFlags(app)
+
+			require.NotNil(t, app.GetFlag(name))
+
+			err := config.Parse(app, []string{"--" + name + "=("})
+			require.ErrorContains(t, err, name+": error parsing regexp: missing closing ): `^(?:()$`")
+
+			parts := strings.SplitN(name, ".", 3)
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			data := fmt.Sprintf("%s:\n  %s:\n    %s: \"foo|bar\"\n", parts[0], parts[1], parts[2])
+			require.NoError(t, os.WriteFile(path, []byte(data), 0o600))
+
+			app = kingpin.New("test", "test")
+			app.Flag("config.file", "config").String()
+			collector.NewWithFlags(app)
+
+			require.NoError(t, config.Parse(app, []string{"--config.file=" + path}))
+			require.Equal(t, "foo|bar", app.GetFlag(name).Model().Value.String())
+		})
+	}
+}

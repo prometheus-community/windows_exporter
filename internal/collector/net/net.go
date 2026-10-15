@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -151,19 +152,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.CollectorsEnabled = make([]string, 0)
 
-	var nicExclude, nicInclude string
-
 	var collectorsEnabled string
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.net.nic-exclude",
 		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&nicExclude)
+		"", &c.config.NicExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.net.nic-include",
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&nicInclude)
+		".+", &c.config.NicInclude,
+	)
 
 	app.Flag(
 		"collector.net.enabled",
@@ -172,18 +173,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
-
-		var err error
-
-		c.config.NicExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicExclude))
-		if err != nil {
-			return fmt.Errorf("collector.net.nic-exclude: %w", err)
-		}
-
-		c.config.NicInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicInclude))
-		if err != nil {
-			return fmt.Errorf("collector.net.nic-include: %w", err)
-		}
 
 		return nil
 	})

@@ -143,7 +143,10 @@ exercised a live Windows role.
 - Keep CLI and YAML validation consistent. Reject unknown fields, unsupported
   sub-collector names and invalid values; preserve CLI precedence and repeated
   flag/list behavior. Changes to config shapes also need schema, flag parsing
-  and documentation updates.
+  and documentation updates. Register include/exclude expression flags with
+  `utils.RegexpFlag`, which anchors the expression, stores the compiled
+  `*regexp.Regexp` in the config and names the flag in parse errors; use
+  `utils.IsMatchAll`/`IsMatchNone` to detect unfiltered defaults.
 - For textfiles, keep HELP/type metadata consistent across files and preserve
   unrelated valid series when reporting duplicates or parse failures. Publish
   producer output by replacing a temporary file in the same directory. File

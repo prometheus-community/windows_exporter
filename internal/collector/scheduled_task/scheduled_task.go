@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"github.com/prometheus-community/windows_exporter/internal/ole/taskschd"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -50,7 +51,7 @@ const defaultTaskExclude = "/Microsoft/.+"
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	TaskExclude: regexp.MustCompile("^(?:" + defaultTaskExclude + ")$"),
+	TaskExclude: utils.MustCompileAnchored(defaultTaskExclude),
 	TaskInclude: types.RegExpAny,
 	MissedRuns:  false,
 }
@@ -145,40 +146,24 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var taskExclude, taskInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.scheduled_task.exclude",
 		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included. "+
 			"The default excludes the tasks of Windows itself.",
-	).Default(defaultTaskExclude).StringVar(&taskExclude)
+		defaultTaskExclude, &c.config.TaskExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&taskInclude)
+		".+", &c.config.TaskInclude,
+	)
 
 	app.Flag(
 		"collector.scheduled_task.missed-runs",
 		"Read and publish windows_scheduled_task_missed_runs. "+
 			"Reading the missed runs of a task costs the Task Scheduler service two requests per scrape.",
 	).Default(strconv.FormatBool(ConfigDefaults.MissedRuns)).BoolVar(&c.config.MissedRuns)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.TaskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskExclude))
-		if err != nil {
-			return fmt.Errorf("collector.scheduled_task.exclude: %w", err)
-		}
-
-		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
-		if err != nil {
-			return fmt.Errorf("collector.scheduled_task.include: %w", err)
-		}
-
-		return nil
-	})
 
 	return c
 }

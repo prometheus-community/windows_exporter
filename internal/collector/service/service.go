@@ -35,6 +35,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -143,17 +144,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.ServiceStartModeInclude = make([]string, 0)
 
-	var serviceExclude, serviceInclude, serviceStartModeInclude string
+	var serviceStartModeInclude string
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.service.exclude",
 		"Regexp of service to exclude. Service name (not the display name!) must both match include and not match exclude to be included.",
-	).Default("").StringVar(&serviceExclude)
+		"", &c.config.ServiceExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.service.include",
 		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&serviceInclude)
+		".+", &c.config.ServiceInclude,
+	)
 
 	app.Flag(
 		"collector.service.start-mode-include",
@@ -161,18 +164,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(strings.Join(ConfigDefaults.ServiceStartModeInclude, ",")).StringVar(&serviceStartModeInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.ServiceExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceExclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.exclude: %w", err)
-		}
-
-		c.config.ServiceInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceInclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.include: %w", err)
-		}
-
 		c.config.ServiceStartModeInclude = strings.Split(serviceStartModeInclude, ",")
 
 		return nil

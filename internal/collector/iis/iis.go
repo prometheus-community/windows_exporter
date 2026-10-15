@@ -30,6 +30,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -99,53 +100,29 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var appExclude, appInclude, siteExclude, siteInclude string
-
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.iis.app-exclude",
 		"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&appExclude)
+		"", &c.config.AppExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.iis.app-include",
 		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&appInclude)
+		".+", &c.config.AppInclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.iis.site-exclude",
 		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&siteExclude)
+		"", &c.config.SiteExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.iis.site-include",
 		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&siteInclude)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.AppExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", appExclude))
-		if err != nil {
-			return fmt.Errorf("collector.iis.app-exclude: %w", err)
-		}
-
-		c.config.AppInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", appInclude))
-		if err != nil {
-			return fmt.Errorf("collector.iis.app-include: %w", err)
-		}
-
-		c.config.SiteExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", siteExclude))
-		if err != nil {
-			return fmt.Errorf("collector.iis.site-exclude: %w", err)
-		}
-
-		c.config.SiteInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", siteInclude))
-		if err != nil {
-			return fmt.Errorf("collector.iis.site-include: %w", err)
-		}
-
-		return nil
-	})
+		".+", &c.config.SiteInclude,
+	)
 
 	return c
 }
