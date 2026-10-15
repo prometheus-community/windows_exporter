@@ -29,13 +29,6 @@ import (
 // Interface guard.
 var _ prometheus.Collector = (*Handler)(nil)
 
-// scrapeSlot admits one scrape at a time, across all collections.
-// We expose metrics directly from the memory region of the Win32 API.
-// We should not allow more than one request at a time.
-//
-//nolint:gochecknoglobals
-var scrapeSlot = make(chan struct{}, 1)
-
 // Handler implements [prometheus.Collector] for a set of Windows Collection.
 type Handler struct {
 	maxScrapeDuration time.Duration
@@ -99,30 +92,4 @@ func (p *Handler) Collect(ch chan<- prometheus.Metric) {
 	defer cancel()
 
 	p.collection.collectAll(ctx, ch, p.logger)
-}
-
-// acquireScrapeSlot waits for the scrape slot until ctx is done.
-func acquireScrapeSlot(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	select {
-	case scrapeSlot <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-
-	// Both cases may have been ready. Don't start a scrape that nobody waits for anymore.
-	if err := ctx.Err(); err != nil {
-		<-scrapeSlot
-
-		return err
-	}
-
-	return nil
-}
-
-func releaseScrapeSlot() {
-	<-scrapeSlot
 }
