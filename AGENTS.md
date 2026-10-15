@@ -112,6 +112,9 @@ exercised a live Windows role.
   instance occurrences within a sample; their suffixes are not stable identities.
   Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
+  `pdh.Collector.Collect` reuses the backing array of its destination slice
+  and `Row.Values`; do not keep rows, sub-slices or pointers into it across
+  scrapes.
 - PDH collectors add counters by English path. On a Windows installation
   without en-US resources, the 009 name table holds localized names for v2
   (manifest-based) counter sets such as `SMB Server Shares` or `HTTP Service`;
