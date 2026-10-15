@@ -37,6 +37,8 @@ None
 
 `*` The `connection_broker_*` metrics are only collected if the server has the `Remote Desktop Connection Broker` role and its performance counters can be read. If the counters can't be read, the collector logs a warning and still exports the session metrics.
 
+The per-session process metrics (`handles`, `page_fault_total`, `page_file_bytes*`, `cpu_time_seconds_total`, `pool_*_bytes`, `private_bytes`, `threads`, `virtual_bytes*` and `working_set_bytes*`) are read from the `Terminal Services Session` performance object. Some hosts don't register this object, for example some Windows Server Core installations. There, the collector logs one warning at startup, skips these metrics and still exports `session_info` and the Connection Broker metrics.
+
 
 ### Example metric
 

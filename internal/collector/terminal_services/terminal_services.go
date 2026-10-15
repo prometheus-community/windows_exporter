@@ -44,6 +44,12 @@ const (
 	connectionBrokerServiceName = "Tssdis"
 )
 
+// terminalServicesSessionObject is the performance object of the per-session
+// process metrics. Tests replace it to simulate a host without the object.
+//
+//nolint:gochecknoglobals
+var terminalServicesSessionObject = "Terminal Services Session"
+
 type Config struct{}
 
 //nolint:gochecknoglobals
@@ -288,9 +294,18 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		return fmt.Errorf("failed to open WTS server: %w", err)
 	}
 
-	c.perfDataCollectorTerminalServicesSession, err = pdh.NewQueryCollector[perfDataCounterValuesTerminalServicesSession](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewQueryCollector[perfDataCounterValuesTerminalServicesSession](c.logger, c.perfDataQuery, pdh.CounterTypeRaw, terminalServicesSessionObject, pdh.InstancesAll)
 	if err != nil {
-		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
+		// Some hosts, e.g. some Windows Server Core installations, don't
+		// register the Terminal Services Session object. session_info comes
+		// from the WTS API, so keep it and skip only the per-session process
+		// metrics, instead of failing the whole collector.
+		c.logger.Warn("failed to create Terminal Services Session collector, skipping per-session performance metrics",
+			slog.Any("err", err),
+		)
+
+		c.perfDataCollectorTerminalServicesSession.Close()
+		c.perfDataCollectorTerminalServicesSession = nil
 	}
 
 	return nil
@@ -305,6 +320,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
 	}
 
+	// Without session and Connection Broker counters, the query has nothing to sample.
+	if c.perfDataCollectorTerminalServicesSession == nil && !c.connectionBrokerEnabled {
+		return errors.Join(errs...)
+	}
+
 	// The session and Connection Broker counters read this sample. Unlike
 	// netframework, a failed sample, including pdh.ErrNoData, skips both, so
 	// they don't publish the values of an earlier sample again.
@@ -314,8 +334,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return errors.Join(errs...)
 	}
 
-	if err := c.collectTSSessionCounters(ch); err != nil {
-		errs = append(errs, fmt.Errorf("failed collecting terminal services session count metrics: %w", err))
+	if c.perfDataCollectorTerminalServicesSession != nil {
+		if err := c.collectTSSessionCounters(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting terminal services session count metrics: %w", err))
+		}
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
