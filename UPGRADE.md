@@ -87,7 +87,7 @@ collector:
             metric: windows_thermalzone_throttle_reasons
 ```
 
-`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `object_instance`.
+`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `object_instance`. In 0.31 the default label was `instance`, which Prometheus stored as `exported_instance` (or, with `honor_labels: true`, as `instance`, replacing the target label); replace it with `object_instance` in queries.
 
 `windows_thermalzone_percent_passive_limit` and `windows_thermalzone_throttle_reasons` keep their names.
 The temperature is exported in Kelvin, because `performancecounter` doesn't convert units. Replace `windows_thermalzone_temperature_celsius` in queries with:
@@ -712,7 +712,7 @@ Label values are unchanged. **The old keys are no longer exported, there are no 
 | `storage_spaces` | `windows_storage_spaces_pool_*`                            | `name`                | `pool`           |
 | `storage_spaces` | `windows_storage_spaces_virtual_disk_*`                    | `name`                | `virtual_disk`   |
 | `wmi`            | `windows_wmi_query_success`, `windows_wmi_query_duration_seconds` | `name`         | `query`          |
-| `performancecounter` | objects without `instance_label` | `instance` | `object_instance` |
+| `performancecounter` | objects without `instance_label` | `instance` (stored by Prometheus as `exported_instance`, or as `instance` with `honor_labels: true`) | `object_instance` |
 
 The `node_name` label of `windows_mscluster_resource_owner_node` and `windows_mscluster_resourcegroup_owner_node` is now `node`, like the label of the node metrics, so the owner can be joined with `on (node)`. The `owner_group` label of the resource metrics is now `resource_group`, like the label of the resource group metrics.
 Info attributes that are not the instance key keep their names, for example the `name` label of `windows_cpu_info` (the processor model) and of `windows_gpu_info` (the adapter name).
