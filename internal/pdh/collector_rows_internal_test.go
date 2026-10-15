@@ -19,6 +19,7 @@ package pdh
 
 import (
 	"log/slog"
+	"reflect"
 	"runtime"
 	"testing"
 	"unsafe"
@@ -85,6 +86,75 @@ func TestStructFields(t *testing.T) {
 
 	_, _, _, err = structFields[float64]()
 	require.ErrorContains(t, err, "expected a struct, got float64")
+}
+
+// TestStructFieldsIndexIsByteOffset checks that the index of a counter field
+// is the byte offset that structRowAccessor writes to, not a field number.
+func TestStructFieldsIndexIsByteOffset(t *testing.T) {
+	t.Parallel()
+
+	type values struct {
+		Name string
+		A    float64 `perfdata:"A"`
+		B    float64 `perfdata:"B"`
+		C    float64 `perfdata:"B,secondvalue"`
+	}
+
+	fields, _, errs, err := structFields[values]()
+	require.NoError(t, err)
+	require.Empty(t, errs)
+
+	var row values
+
+	require.Equal(t, []int{
+		int(unsafe.Offsetof(row.A)),
+		int(unsafe.Offsetof(row.B)),
+		int(unsafe.Offsetof(row.C)),
+	}, []int{fields[0].index, fields[1].index, fields[2].index})
+}
+
+// TestValidateFloatOffsets checks that field numbers or other indexes that do
+// not address a float64 field are rejected before they are written through.
+func TestValidateFloatOffsets(t *testing.T) {
+	t.Parallel()
+
+	type values struct {
+		Name string
+		A    float64 `perfdata:"A"`
+		B    float64 `perfdata:"B"`
+		C    float64 `perfdata:"C"`
+	}
+
+	valueType := reflect.TypeFor[values]()
+
+	var row values
+
+	valid := []counterField{
+		{tag: "A", index: int(unsafe.Offsetof(row.A))},
+		{tag: "C", index: int(unsafe.Offsetof(row.C))},
+	}
+	require.NoError(t, validateFloatOffsets(valueType, valid))
+
+	// Field numbers, as reflect.StructField.Index[0] would give them.
+	fieldNumbers := make([]counterField, 0, 3)
+
+	for _, f := range reflect.VisibleFields(valueType) {
+		if tag, ok := f.Tag.Lookup("perfdata"); ok {
+			fieldNumbers = append(fieldNumbers, counterField{tag: tag, index: f.Index[0]})
+		}
+	}
+
+	require.ErrorContains(t, validateFloatOffsets(valueType, fieldNumbers), "is not the byte offset of a float64 field")
+
+	for _, index := range []int{
+		int(unsafe.Offsetof(row.Name)),  // a string, not a float64
+		int(unsafe.Offsetof(row.A)) + 4, // misaligned
+		int(unsafe.Sizeof(row)),         // past the end
+		int(unsafe.Sizeof(row)) - 4,     // overlaps the end
+		-8,                              // before the start
+	} {
+		require.Error(t, validateFloatOffsets(valueType, []counterField{{tag: "X", index: index}}), "index %d", index)
+	}
 }
 
 // TestStructRowAccessorWithoutName checks that a struct without a Name field

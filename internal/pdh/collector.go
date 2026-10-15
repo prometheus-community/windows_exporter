@@ -194,7 +194,41 @@ func structFields[T any]() ([]counterField, rowAccessor[T], []error, error) {
 		})
 	}
 
+	// structRowAccessor writes through these offsets with unsafe, so an index
+	// that is not the offset of a float64 field, e.g. a field number, would
+	// corrupt memory. Refuse it instead.
+	if err := validateFloatOffsets(valueType, fields); err != nil {
+		return nil, rowAccessor[T]{}, nil, err
+	}
+
 	return fields, structRowAccessor[T](nameOffset), errs, nil
+}
+
+// validateFloatOffsets checks that the index of every field is the byte
+// offset of a float64 field stored in the struct t.
+func validateFloatOffsets(t reflect.Type, fields []counterField) error {
+	floatOffsets := make(map[int]struct{}, len(fields))
+
+	for _, f := range reflect.VisibleFields(t) {
+		if f.Type.Kind() != reflect.Float64 {
+			continue
+		}
+
+		if offset, ok := fieldOffset(t, f.Index); ok {
+			floatOffsets[offset] = struct{}{}
+		}
+	}
+
+	size := int(t.Size())
+	floatSize := int(unsafe.Sizeof(float64(0)))
+
+	for _, f := range fields {
+		if _, ok := floatOffsets[f.index]; !ok || f.index%floatSize != 0 || f.index+floatSize > size {
+			return fmt.Errorf("perfdata field %q: %d is not the byte offset of a float64 field of %s", f.tag, f.index, t)
+		}
+	}
+
+	return nil
 }
 
 // fieldOffset returns the byte offset of the field with the index sequence
@@ -972,7 +1006,15 @@ func (r *rowSet[T]) finish() {
 			continue
 		}
 
-		rows[kept] = rows[row]
+		if row != kept {
+			rows[kept] = rows[row]
+
+			// Do not leave two rows that share a Row.Values array.
+			var zero T
+
+			rows[row] = zero
+		}
+
 		kept++
 	}
 
