@@ -688,9 +688,9 @@ const pdhBufferSlack = 8
 // getCounterArray reads the counter array of instance into buf and returns the number of items.
 // ok is false if the counter has no data in this sample.
 func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (uint32, bool, error) {
-	getArray, name := GetRawCounterArray, "GetRawCounterArray"
+	name := "GetRawCounterArray"
 	if c.resultType == CounterTypeFormatted {
-		getArray, name = GetFormattedCounterArrayDouble, "GetFormattedCounterArrayDouble"
+		name = "GetFormattedCounterArrayDouble"
 	}
 
 	var itemCount uint32
@@ -699,7 +699,14 @@ func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (
 	bytesNeeded := uint32(len(*buf))
 
 	for {
-		ret := getArray(instance, &bytesNeeded, &itemCount, unsafe.SliceData(*buf))
+		// Direct calls instead of a function value keep bytesNeeded and
+		// itemCount on the stack.
+		var ret uint32
+		if c.resultType == CounterTypeFormatted {
+			ret = GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, unsafe.SliceData(*buf))
+		} else {
+			ret = GetRawCounterArray(instance, &bytesNeeded, &itemCount, unsafe.SliceData(*buf))
+		}
 
 		if ret == ErrorSuccess {
 			return itemCount, true, nil
@@ -913,7 +920,7 @@ func (r *rowSet[T]) nameDuplicates() {
 
 			for {
 				suffix++
-				instanceName = name + "#" + strconv.Itoa(suffix)
+				instanceName = r.nameCache.suffixed(name, suffix)
 
 				if _, literalName := r.occurrences[instanceName]; !literalName {
 					break
@@ -1043,8 +1050,11 @@ func formatCounterPath(object, instance, counterName string) string {
 // Names that a sample did not decode are removed at its end, because instance names that
 // contain process IDs, like those of GPU Engine, change all the time.
 type instanceNameCache struct {
-	names  map[string]*cachedInstanceName
-	sample uint64
+	names map[string]*cachedInstanceName
+	// suffixedNames maps a name and an occurrence suffix to the name with
+	// the suffix, e.g. svchost and 3 to svchost#3.
+	suffixedNames map[instanceKey]*cachedInstanceName
+	sample        uint64
 }
 
 type cachedInstanceName struct {
@@ -1088,11 +1098,39 @@ func (cache *instanceNameCache) decode(p *uint16) string {
 	return name
 }
 
-// removeUnseen removes the names that the current sample did not decode.
+// suffixed returns name with the occurrence suffix #suffix. Duplicate names,
+// like those of the many svchost processes, need the same suffixed names in
+// every sample.
+func (cache *instanceNameCache) suffixed(name string, suffix int) string {
+	key := instanceKey{name: name, occurrence: suffix}
+
+	if cached, ok := cache.suffixedNames[key]; ok {
+		cached.sample = cache.sample
+
+		return cached.name
+	}
+
+	if cache.suffixedNames == nil {
+		cache.suffixedNames = map[instanceKey]*cachedInstanceName{}
+	}
+
+	suffixedName := name + "#" + strconv.Itoa(suffix)
+	cache.suffixedNames[key] = &cachedInstanceName{name: suffixedName, sample: cache.sample}
+
+	return suffixedName
+}
+
+// removeUnseen removes the names that the current sample did not use.
 func (cache *instanceNameCache) removeUnseen() {
 	for raw, cached := range cache.names {
 		if cached.sample != cache.sample {
 			delete(cache.names, raw)
+		}
+	}
+
+	for key, cached := range cache.suffixedNames {
+		if cached.sample != cache.sample {
+			delete(cache.suffixedNames, key)
 		}
 	}
 }

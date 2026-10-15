@@ -160,8 +160,8 @@ func TestRowSetReusesRows(t *testing.T) {
 	}, dst)
 }
 
-// TestRowSetSampleDoesNotAllocate checks that a sample of known instances
-// into a reused slice does not allocate.
+// TestRowSetSampleDoesNotAllocate checks that a sample of known instances,
+// including duplicate names, into a reused slice does not allocate.
 func TestRowSetSampleDoesNotAllocate(t *testing.T) {
 	c := newRowSetTestCollector(true)
 
@@ -170,7 +170,8 @@ func TestRowSetSampleDoesNotAllocate(t *testing.T) {
 	items := make([]RawCounterItem, instances)
 	for i := range items {
 		items[i] = RawCounterItem{
-			SzName:   windows.StringToUTF16Ptr("instance_" + string(rune('A'+i%26)) + string(rune('a'+i/26))),
+			// Every name occurs four times, like svchost.
+			SzName:   windows.StringToUTF16Ptr("instance_" + string(rune('A'+i%25))),
 			RawValue: RawCounter{CStatus: CstatusValidData, FirstValue: int64(i)},
 		}
 	}
@@ -195,9 +196,34 @@ func TestRowSetSampleDoesNotAllocate(t *testing.T) {
 	sample()
 
 	require.Len(t, dst, instances)
+	require.Equal(t, "instance_A#3", dst[75].Name)
 	require.Zero(t, testing.AllocsPerRun(10, sample))
 
 	runtime.KeepAlive(items)
+}
+
+// TestInstanceNameCacheSuffixed checks that suffixed names are built once
+// while their instances exist.
+func TestInstanceNameCacheSuffixed(t *testing.T) {
+	t.Parallel()
+
+	var cache instanceNameCache
+
+	cache.startSample()
+
+	first := cache.suffixed("svchost", 2)
+	require.Equal(t, "svchost#2", first)
+	require.Equal(t, "svchost#3", cache.suffixed("svchost", 3))
+	cache.removeUnseen()
+
+	cache.startSample()
+
+	second := cache.suffixed("svchost", 2)
+	require.Same(t, unsafe.StringData(first), unsafe.StringData(second), "name built again")
+	cache.removeUnseen()
+
+	require.Len(t, cache.suffixedNames, 1, "name of a vanished instance kept")
+	require.Contains(t, cache.suffixedNames, instanceKey{name: "svchost", occurrence: 2})
 }
 
 // TestCollectReusesRows checks that Collect keeps the backing array of dst and
