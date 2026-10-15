@@ -140,6 +140,9 @@ exercised a live Windows role.
   patterns, and MI NULL values from populated unions. Respect borrowed/owned
   pointers, allocator-specific cleanup and COM thread initialization; use the
   native COM helpers rather than restoring the removed `go-ole` dependency.
+  Run COM calls of `Collect` on an `ole.Worker` started in `Build` and closed
+  in `Close`, and wait for it with `ole.Do` and the scrape budget. Initializing
+  and uninitializing COM per scrape unloads in-process COM servers each time.
 - Keep CLI and YAML validation consistent. Reject unknown fields, unsupported
   sub-collector names and invalid values; preserve CLI precedence and repeated
   flag/list behavior. Changes to config shapes also need schema, flag parsing

@@ -501,8 +501,12 @@ func BenchmarkGetScheduledTasks(b *testing.B) {
 			c := New(&Config{TaskExclude: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", bc.exclude))})
 			require.NoError(b, c.Build(slog.New(slog.DiscardHandler), nil))
 
+			b.Cleanup(func() { require.NoError(b, c.Close()) })
+
+			reader := c.taskReader()
+
 			for b.Loop() {
-				if _, err := c.taskReader().getScheduledTasks(); err != nil {
+				if _, err := ole.Do(b.Context(), c.worker, reader.getScheduledTasks); err != nil {
 					b.Fatal(err)
 				}
 			}
