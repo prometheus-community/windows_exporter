@@ -124,6 +124,14 @@ exercised a live Windows role.
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
   `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
   never `0` (no MI timeout), so one stalled provider cannot block startup.
+- Collectors that reuse metrics or label pairs between scrapes keep an
+  `internal/metriccache` or `internal/labelcache` field and list it in
+  `ScrapeCaches()` (`internal/scrapecache`). The collection resets these caches
+  before `Build` and after `Close`, and begins a scrape before and ends it after
+  each `Collect`; `Collect` gets it with `Scrape()`. Do not call `Begin`,
+  `Commit` or `Reset` in collectors. A direct `Collect` call, as in most tests,
+  runs without the caches; use `testutils.Collect` or `scrapecache.Begin` to
+  test the cached path.
 - Release resources after partial initialization and on error paths. A non-nil
   PDH collector returned with an error still belongs to the caller and must be
   closed. Sub-collector cleanup closures must read the initialized field when

@@ -57,5 +57,5 @@ func TestCollectorWithoutMISession(t *testing.T) {
 
 	ch := make(chan prometheus.Metric, 1000)
 
-	require.NoError(t, c.Collect(ch, time.Second))
+	require.NoError(t, testutils.Collect(c, ch, time.Second))
 }

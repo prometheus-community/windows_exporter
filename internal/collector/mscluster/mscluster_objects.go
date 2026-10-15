@@ -183,13 +183,3 @@ func publishCachedObjectFields(ch chan<- prometheus.Metric, scrape *metriccache.
 
 	return key, resultErr
 }
-
-// commitScrape commits a scrape unless it collected nothing because reading
-// the objects failed, so a failed read keeps the cached metrics.
-func commitScrape[K, V comparable](scrape *metriccache.Scrape[K, V], collected int, err error) {
-	if collected == 0 && err != nil {
-		return
-	}
-
-	scrape.Commit()
-}

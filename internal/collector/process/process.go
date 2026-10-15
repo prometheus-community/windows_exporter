@@ -31,6 +31,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -174,6 +175,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels}
+}
+
 func (c *Collector) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -181,7 +187,6 @@ func (c *Collector) Close() error {
 	c.snapshot = snapshotBuffer{}
 	c.processes = nil
 	c.infoCache = nil
-	c.labels.Reset()
 
 	// The session belongs to the caller of Build.
 	c.miSession = nil
@@ -380,8 +385,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 	infos := c.resolveProcessInfo(processes)
 
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	for i, process := range processes {
 		name := process.name

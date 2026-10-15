@@ -102,9 +102,6 @@ func (c *Collector) buildNetworkDescriptors() {
 		[]string{"name"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier build.
-	c.networkMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -128,7 +125,7 @@ func (c *Collector) publishNetworks(ch chan<- prometheus.Metric, networks []clus
 		{name: "State", desc: c.networkState},
 	}
 
-	scrape := c.networkMetricCache.Begin()
+	scrape := c.networkMetricCache.Scrape()
 
 	var key []byte
 
@@ -141,8 +138,6 @@ func (c *Collector) publishNetworks(ch chan<- prometheus.Metric, networks []clus
 		// build does not matter.
 		key, resultErr = publishCachedObjectFields(ch, scrape, key, "network", network, fields, 0, resultErr)
 	}
-
-	commitScrape(scrape, len(networks), resultErr)
 
 	return resultErr
 }

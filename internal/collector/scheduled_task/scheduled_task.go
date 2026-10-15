@@ -32,6 +32,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"github.com/prometheus-community/windows_exporter/internal/ole/taskschd"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -187,9 +188,12 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) Close() error {
-	c.metricCache.Reset()
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.metricCache}
+}
 
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -226,9 +230,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
-
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
 
 	return nil
 }
@@ -276,7 +277,7 @@ func (c *Collector) taskReader() taskReader {
 }
 
 func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
-	scrape := c.metricCache.Begin()
+	scrape := c.metricCache.Scrape()
 
 	for _, task := range scheduledTasks {
 		values := taskValues{
@@ -293,8 +294,6 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 			ch <- metric
 		}
 	}
-
-	scrape.Commit()
 }
 
 // taskMetrics builds the metrics of a task.

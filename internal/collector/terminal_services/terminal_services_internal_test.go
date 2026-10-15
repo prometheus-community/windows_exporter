@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +49,10 @@ func TestCollectorWithoutSessionObject(t *testing.T) {
 	for range 2 {
 		ch := make(chan prometheus.Metric, 1024)
 
-		require.NoError(t, c.Collect(ch, time.Second))
+		cacheScrape := scrapecache.Begin(c)
+		err := c.Collect(ch, time.Second)
+		cacheScrape.End(err)
+		require.NoError(t, err)
 		close(ch)
 
 		for metric := range ch {

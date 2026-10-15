@@ -679,9 +679,6 @@ func (c *Collector) buildClusterDescriptors() {
 		[]string{"name"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier build.
-	c.clusterMetricCache.Reset()
 }
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
@@ -695,11 +692,7 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric, maxScrapeDuratio
 }
 
 func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.Object, build uint16, resultErr error) error {
-	scrape := c.clusterMetricCache.Begin()
-
 	if cluster.Name == "" {
-		commitScrape(scrape, 0, resultErr)
-
 		return resultErr
 	}
 
@@ -797,8 +790,7 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "DetectedCloudPlatform", desc: c.clusterDetectedCloudPlatform, minBuild: ws2022, older: neverPublish},
 	}
 
-	_, resultErr = publishCachedObjectFields(ch, scrape, nil, "cluster", cluster, fields, build, resultErr)
-	commitScrape(scrape, 1, resultErr)
+	_, resultErr = publishCachedObjectFields(ch, c.clusterMetricCache.Scrape(), nil, "cluster", cluster, fields, build, resultErr)
 
 	return resultErr
 }

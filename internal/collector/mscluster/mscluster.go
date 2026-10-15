@@ -30,6 +30,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -122,6 +123,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{
+		&c.clusterMetricCache,
+		&c.networkMetricCache,
+		&c.nodeMetricCache,
+		&c.resourceMetricCache,
+		&c.resourceGroupMetricCache,
+	}
+}
+
 func (c *Collector) Close() error {
 	c.lifecycleMu.Lock()
 	defer c.lifecycleMu.Unlock()
@@ -129,7 +141,7 @@ func (c *Collector) Close() error {
 	return c.closeSources()
 }
 
-// closeSources releases the ClusAPI sources and drops the cached metrics. A
+// closeSources releases the ClusAPI sources. A
 // source whose Close fails is dropped as well: the clusapi.Cluster has already
 // released its handle, and a later Build must be able to create new sources
 // (Grafana Alloy rebuilds collectors in place).
@@ -154,12 +166,6 @@ func (c *Collector) closeSources() error {
 	closeSource(c.resourceSource, func() { c.resourceSource = nil })
 	closeSource(c.resourceGroupSource, func() { c.resourceGroupSource = nil })
 	closeSource(c.sharedVolumesSource, func() { c.sharedVolumesSource = nil })
-
-	c.clusterMetricCache.Reset()
-	c.networkMetricCache.Reset()
-	c.nodeMetricCache.Reset()
-	c.resourceMetricCache.Reset()
-	c.resourceGroupMetricCache.Reset()
 
 	return errors.Join(errs...)
 }

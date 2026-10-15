@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -184,13 +185,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels}
+}
+
 func (c *Collector) Close() error {
 	for _, fn := range c.closeFns {
 		fn()
 	}
 
 	c.closeFns = nil
-	c.labels.Reset()
 
 	return nil
 }
@@ -359,8 +364,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	var g recovery.Group
 

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -289,7 +290,11 @@ func BenchmarkResourcePublication(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		if err := c.publishResources(ch, resources, []string{"nodeA", "nodeB"}, nil); err != nil {
+		cacheScrape := scrapecache.Begin(c)
+		err := c.publishResources(ch, resources, []string{"nodeA", "nodeB"}, nil)
+		cacheScrape.End(err)
+
+		if err != nil {
 			b.Fatal(err)
 		}
 
@@ -305,7 +310,9 @@ func TestResourceMetricCache(t *testing.T) {
 
 	publish := func(resource clusapi.Resource, nodeNames ...string) ([]prometheus.Metric, error) {
 		ch := make(chan prometheus.Metric, 100)
+		cacheScrape := scrapecache.Begin(c)
 		err := c.publishResources(ch, []clusapi.Resource{resource}, nodeNames, nil)
+		cacheScrape.End(err)
 
 		close(ch)
 
