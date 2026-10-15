@@ -121,7 +121,6 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		vmName := parts[0]
 		coreID := coreParts[2]
 
-		// Same metric with new name for better clarity, old one is kept for backward compatibility
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
 			prometheus.CounterValue,
@@ -142,15 +141,14 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 			data.HypervisorVirtualProcessorRemoteRunTimePercent,
 			vmName, coreID, "remote",
 		)
-		// end same metric
-		// Same metric with new name for better clarity, old one is kept for backward compatibility
+
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorTotalRunTimePercent,
 			vmName, coreID,
 		)
-		// end same metric
+
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorCPUWaitSeconds,
 			prometheus.CounterValue,

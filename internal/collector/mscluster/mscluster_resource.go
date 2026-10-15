@@ -129,13 +129,13 @@ func (c *Collector) buildResourceDescriptors() {
 	)
 	c.resourceIsAlivePollInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "is_alive_poll_interval_seconds"),
-		"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it is operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the IsAlivePollInterval property for the resource type associated with the resource.",
+		"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it is operational. The series is omitted while the resource uses the interval of its resource type (0xFFFFFFFF).",
 		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceLooksAlivePollInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "looks_alive_poll_interval_seconds"),
-		"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it appears operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the LooksAlivePollInterval property for the resource type associated with the resource.",
+		"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it appears operational. The series is omitted while the resource uses the interval of its resource type (0xFFFFFFFF).",
 		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
