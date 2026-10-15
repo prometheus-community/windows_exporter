@@ -194,9 +194,11 @@ $cat.GetCounters('NTDS') | ForEach-Object {
 }
 ```
 
-Roles that are rarely available on development machines (AD DS, AD CS,
-AD FS, DFSR, RemoteFX sessions) have such dumps recorded in the `AGENTS.md`
-of their collector.
+Every PDH-based collector except `exchange`, `smtp` and `vmware` has such a
+dump in the `AGENTS.md` of its directory, including roles that are rarely
+available on development machines (AD DS, AD CS, AD FS, DFSR, Hyper-V, IIS,
+SQL Server, NPS, RemoteFX sessions). Check a type or unit question there
+first.
 
 ## Dashboards, rules and runbooks
 
