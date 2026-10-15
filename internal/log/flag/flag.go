@@ -41,4 +41,17 @@ func AddFlags(a *kingpin.Application, config *log.Config) {
 	}
 
 	a.Flag(FileFlagName, FileFlagHelp).Default(config.File.String()).SetValue(config.File)
+
+	a.Flag(
+		"log.rotation.max-size",
+		"Size in megabytes at which the log file is rotated. 0 disables rotation. Requires log.file to be a file path.",
+	).Default("0").IntVar(&config.Rotation.MaxSize)
+	a.Flag(
+		"log.rotation.max-backups",
+		"Number of rotated log files to keep. 0 keeps all.",
+	).Default("0").IntVar(&config.Rotation.MaxBackups)
+	a.Flag(
+		"log.rotation.compress",
+		"Compress rotated log files with gzip.",
+	).Default("false").BoolVar(&config.Rotation.Compress)
 }

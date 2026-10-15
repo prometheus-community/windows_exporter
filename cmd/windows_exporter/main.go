@@ -175,11 +175,17 @@ func run(ctx context.Context, args []string) int {
 		_ = logFile.Set("stderr")
 	}
 
-	logger, err := log.New(logConfig)
+	logger, logCloser, err := log.New(logConfig)
 	if err != nil {
 		logStartupError(ctx, "failed to create logger", err)
 
 		return 1
+	}
+
+	if logCloser != nil {
+		defer func() {
+			_ = logCloser.Close()
+		}()
 	}
 
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")

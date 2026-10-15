@@ -97,6 +97,9 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 | `--web.config.file`       | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
 | `--config.file`           | [Using a config file](#using-a-configuration-file) from path                                                                                                                                     | None          |
 | `--log.file`              | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
+| `--log.rotation.max-size` | Size in megabytes at which the log file is rotated. Requires `--log.file` to be a path. If another process holds the file open without delete sharing, the exporter keeps writing to it and retries the rotation every minute. A moved or deleted log file is recreated within a minute. | `0` (off)     |
+| `--log.rotation.max-backups` | Number of rotated log files to keep. `0` keeps all.                                                                                                                                         | `0`           |
+| `--log.rotation.compress` | Compress rotated log files with gzip.                                                                                                                                                            | `false`       |
 
 ## Installation
 
