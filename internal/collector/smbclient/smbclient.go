@@ -82,17 +82,39 @@ type Collector struct {
 // 2^32, and the 64-bit byte counter that shows a reconnect of the share.
 type shareCounters32 struct {
 	generation uint64
-	dataBytes  float64
-	counters   [numFields32]utils.Counter32
+	restart    [numRestartSignals]float64
+	counters   [numTimers32 + numCounts32]utils.Counter32
 }
 
-const numFields32 = 12
+const (
+	numTimers32       = 3
+	numCounts32       = 9
+	numRestartSignals = 4
 
-// fields32 returns the 32-bit counters: the request counters
-// (PERF_COUNTER_COUNTER) and the PERF_AVERAGE_TIMER numerators. The byte
-// counters are 64-bit.
-func fields32(data *perfDataCounterValues) [numFields32]*float64 {
-	return [numFields32]*float64{
+	// restartBelow treats a drop of a request count from below 2^31 as a
+	// share restart: a wrap from there needs 2^31 requests between two
+	// scrapes. Timer sums grow by 10^7 per second for each outstanding
+	// request, so they can wrap from anywhere and don't use it.
+	restartBelow = 1 << 31
+
+	staleGenerations = 3
+)
+
+// restartSignals returns 64-bit counters that only drop when the share
+// restarts, for example after an idle disconnect and a reconnect.
+func restartSignals(data *perfDataCounterValues) [numRestartSignals]float64 {
+	return [numRestartSignals]float64{
+		data.DataBytesPerSec,
+		data.ReadBytesPerSec,
+		data.WriteBytesPerSec,
+		data.AvgDataQueueLength,
+	}
+}
+
+// fields32 returns the 32-bit counters: first the PERF_AVERAGE_TIMER
+// numerators, then the request counters (PERF_COUNTER_COUNTER).
+func fields32(data *perfDataCounterValues) [numTimers32 + numCounts32]*float64 {
+	return [numTimers32 + numCounts32]*float64{
 		&data.AvgSecPerRead,
 		&data.AvgSecPerWrite,
 		&data.AvgSecPerDataRequest,
@@ -420,13 +442,20 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	c.pruneCounters32()
+
+	return nil
+}
+
+// pruneCounters32 drops the state of shares missing from the last
+// staleGenerations scrapes. A share missing from a single sample keeps its
+// state, so its extended counters don't fall back to the raw value.
+func (c *Collector) pruneCounters32() {
 	for name, counters := range c.counters32 {
-		if counters.generation != c.generation {
+		if c.generation-counters.generation >= staleGenerations {
 			delete(c.counters32, name)
 		}
 	}
-
-	return nil
 }
 
 // extendCounters32 replaces the raw 32-bit counters with values that keep
@@ -434,20 +463,32 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 func (c *Collector) extendCounters32(data *perfDataCounterValues) {
 	fields := fields32(data)
 
+	signals := restartSignals(data)
+
 	counters, ok := c.counters32[data.Name]
 	if !ok {
-		counters = &shareCounters32{}
+		counters = &shareCounters32{restart: signals}
+
 		for i, field := range fields {
-			counters.counters[i] = utils.NewCounter32(*field)
+			var below uint32
+			if i >= numTimers32 {
+				below = restartBelow
+			}
+
+			counters.counters[i] = utils.NewCounter32(*field, below)
 		}
 
 		c.counters32[data.Name] = counters
 	}
 
-	reset := data.DataBytesPerSec < counters.dataBytes
+	var reset bool
+
+	for i, signal := range signals {
+		reset = reset || signal < counters.restart[i]
+	}
 
 	counters.generation = c.generation
-	counters.dataBytes = data.DataBytesPerSec
+	counters.restart = signals
 
 	for i, field := range fields {
 		*field = counters.counters[i].Update(*field, reset)

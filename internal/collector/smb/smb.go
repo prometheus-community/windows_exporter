@@ -57,6 +57,14 @@ type Collector struct {
 	filesOpened          *prometheus.Desc
 }
 
+const (
+	// restartBelow treats a drop of a request count from below 2^31 as a
+	// share restart: a wrap from there needs 2^31 requests between two scrapes.
+	restartBelow = 1 << 31
+
+	staleGenerations = 3
+)
+
 // shareCounters32 holds the 32-bit counters of one share, extended beyond
 // 2^32, and the 64-bit byte counters that show a restart of the share.
 type shareCounters32 struct {
@@ -224,24 +232,32 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
-	for name, counters := range c.counters32 {
-		if counters.generation != c.generation {
-			delete(c.counters32, name)
-		}
-	}
+	c.pruneCounters32()
 
 	return nil
 }
 
+// pruneCounters32 drops the state of shares missing from the last
+// staleGenerations scrapes. A share missing from a single sample keeps its
+// state, so its extended counters don't fall back to the raw value.
+func (c *Collector) pruneCounters32() {
+	for name, counters := range c.counters32 {
+		if c.generation-counters.generation >= staleGenerations {
+			delete(c.counters32, name)
+		}
+	}
+}
+
 // extendCounters32 replaces the raw 32-bit request counters with values that
 // keep counting past 2^32. Read Requests/sec and Write Requests/sec are
-// PERF_COUNTER_COUNTER (32-bit), the byte counters are 64-bit.
+// PERF_COUNTER_COUNTER (32-bit), the byte counters are 64-bit. A drop of a
+// byte counter shows that the share restarted.
 func (c *Collector) extendCounters32(data *perfDataCounterValues) {
 	counters, ok := c.counters32[data.Name]
 	if !ok {
 		counters = &shareCounters32{
-			readRequests:  utils.NewCounter32(data.ReadRequests),
-			writeRequests: utils.NewCounter32(data.WriteRequests),
+			readRequests:  utils.NewCounter32(data.ReadRequests, restartBelow),
+			writeRequests: utils.NewCounter32(data.WriteRequests, restartBelow),
 		}
 		c.counters32[data.Name] = counters
 	}
