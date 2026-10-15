@@ -21,9 +21,21 @@ Scrapes publish the values of the last refresh. Default: `5m`.
 ## Metrics
 
 ### Hyper-V Datastore
-### Hyper-V Datastore Metrics Documentation
 
-This documentation outlines the available metrics for monitoring Hyper-V Datastore performance and resource usage using Prometheus. All metrics are prefixed with `windows_hyperv_datastore`.
+Sub-collector `datastore`. It reads the `Hyper-V DataStore` performance counter set. Each virtual machine has its own
+instances, named after the VM GUID, for example `<VM GUID> configuration file` and `<VM GUID> runtime file`. They
+describe the files in which Hyper-V keeps the configuration and runtime state of the virtual machine (`.vmcx`,
+`.vmrs`, see [virtual machine file types](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/deploy/upgrade-virtual-machine-version-in-hyper-v-on-windows-or-windows-server)), for example their fragmentation, free space in their tables and the reads and writes to them. All metrics are
+prefixed with `windows_hyperv_datastore`.
+
+> [!NOTE]
+> A Hyper-V DataStore is not a storage volume, unlike a datastore in VMware vSphere. These metrics don't report the
+> capacity or usage of the volumes that hold the virtual machines. For Cluster Shared Volumes, use the `shared_volumes`
+> sub-collector of the [`mscluster`](collector.mscluster.md) collector. For volumes of a single host, use the
+> [`logical_disk`](collector.logical_disk.md) collector.
+>
+> The counter set has no instances on a host without virtual machines. The sub-collector then exports no
+> `windows_hyperv_datastore_*` series and doesn't report an error.
 
 | Metric Name                                                            | Description                                                                     | Type    | Labels    |
 |------------------------------------------------------------------------|---------------------------------------------------------------------------------|---------|-----------|
