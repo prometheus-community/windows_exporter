@@ -39,17 +39,22 @@ type collectorHypervisorVirtualProcessor struct {
 	hypervisorVirtualProcessorModeTimeTotal     *prometheus.Desc // New name for better clarity
 	hypervisorVirtualProcessorTotalRunTimeTotal *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
 	hypervisorVirtualProcessorRunTimeTotal      *prometheus.Desc // New name for better clarity
-	hypervisorVirtualProcessorContextSwitches   *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
+	hypervisorVirtualProcessorCPUWaitSeconds    *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
+	hypervisorVirtualProcessorDispatches        *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Dispatches/sec
 }
 
 type perfDataCounterValuesHypervisorVirtualProcessor struct {
 	Name string
 
+	// The run time counters and CPU Wait Time Per Dispatch are PERF_PRECISION_100NS_TIMER.
+	// Their raw values are cumulative times, which pdh scales to seconds. Despite its name
+	// and help text, CPU Wait Time Per Dispatch is the total wait time, not an average.
 	HypervisorVirtualProcessorGuestRunTimePercent      float64 `perfdata:"% Guest Run Time"`
 	HypervisorVirtualProcessorHypervisorRunTimePercent float64 `perfdata:"% Hypervisor Run Time"`
 	HypervisorVirtualProcessorTotalRunTimePercent      float64 `perfdata:"% Total Run Time"`
 	HypervisorVirtualProcessorRemoteRunTimePercent     float64 `perfdata:"% Remote Run Time"`
 	HypervisorVirtualProcessorCPUWaitTimePerDispatch   float64 `perfdata:"CPU Wait Time Per Dispatch"`
+	HypervisorVirtualProcessorDispatches               float64 `perfdata:"Logical Processor Dispatches/sec"`
 }
 
 func (c *Collector) buildHypervisorVirtualProcessor() error {
@@ -60,42 +65,53 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Virtual Processor collector: %w", err)
 	}
 
+	c.buildHypervisorVirtualProcessorDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildHypervisorVirtualProcessorDescriptors() {
 	c.hypervisorVirtualProcessorTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_mode_time_total. Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
+		"DEPRECATED: use hypervisor_virtual_processor_mode_time_total. Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
 	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorModeTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_mode_time_total"),
-		"Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
+		"Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
 	// end same metric
 	c.hypervisorVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_run_time_total. Time that processor spent",
+		"DEPRECATED: use hypervisor_virtual_processor_run_time_total. Time in seconds that processor spent running",
 		[]string{"vm", "core"},
 		nil,
 	)
 	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorRunTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_run_time_total"),
-		"Time that processor spent",
+		"Time in seconds that processor spent running",
 		[]string{"vm", "core"},
 		nil,
 	)
 	// end same metric
-	c.hypervisorVirtualProcessorContextSwitches = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total"),
-		"The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor.",
+	c.hypervisorVirtualProcessorCPUWaitSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_cpu_wait_seconds_total"),
+		"The time spent waiting for a virtual processor to be dispatched onto a logical processor. "+
+			"Divide its rate by the rate of windows_hyperv_hypervisor_virtual_processor_dispatches_total for the average wait per dispatch.",
 		[]string{"vm", "core"},
 		nil,
 	)
-
-	return nil
+	c.hypervisorVirtualProcessorDispatches = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_dispatches_total"),
+		"The number of times the virtual processor was dispatched onto a logical processor.",
+		[]string{"vm", "core"},
+		nil,
+	)
 }
 
 func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
@@ -104,6 +120,10 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Virtual Processor metrics: %w", err)
 	}
 
+	return c.publishHypervisorVirtualProcessor(ch, scrape)
+}
+
+func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	for _, data := range c.perfDataObjectHypervisorVirtualProcessor {
 		// The name format is <VM Name>:Hv VP <vcore id>
 		parts := strings.Split(data.Name, ":")
@@ -176,9 +196,16 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		)
 		// end same metric
 		ch <- scrape.MustNewConstMetric(
-			c.hypervisorVirtualProcessorContextSwitches,
+			c.hypervisorVirtualProcessorCPUWaitSeconds,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorCPUWaitTimePerDispatch,
+			vmName, coreID,
+		)
+
+		ch <- scrape.MustNewConstMetric(
+			c.hypervisorVirtualProcessorDispatches,
+			prometheus.CounterValue,
+			data.HypervisorVirtualProcessorDispatches,
 			vmName, coreID,
 		)
 	}
