@@ -205,12 +205,12 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_memory_physical_free_bytes gauge
 # HELP windows_memory_physical_total_bytes The amount of actual physical memory, in bytes.
 # TYPE windows_memory_physical_total_bytes gauge
-# HELP windows_memory_pool_nonpaged_allocs_total The number of calls to allocate space in the nonpaged pool. The nonpaged pool is an area of system memory area for objects that cannot be written to disk, and must remain in physical memory as long as they are allocated (PoolNonpagedAllocs)
-# TYPE windows_memory_pool_nonpaged_allocs_total gauge
+# HELP windows_memory_pool_nonpaged_allocs Number of allocations in the nonpaged pool, regardless of their size. The nonpaged pool is an area of system memory for objects that cannot be written to disk, and must remain in physical memory as long as they are allocated (PoolNonpagedAllocs)
+# TYPE windows_memory_pool_nonpaged_allocs gauge
 # HELP windows_memory_pool_nonpaged_bytes Number of bytes in the non-paged pool, an area of the system virtual memory that is used for objects that cannot be written to disk, but must remain in physical memory as long as they are allocated (PoolNonpagedBytes)
 # TYPE windows_memory_pool_nonpaged_bytes gauge
-# HELP windows_memory_pool_paged_allocs_total Number of calls to allocate space in the paged pool, regardless of the amount of space allocated in each call (PoolPagedAllocs)
-# TYPE windows_memory_pool_paged_allocs_total counter
+# HELP windows_memory_pool_paged_allocs Number of allocations in the paged pool, regardless of their size (PoolPagedAllocs)
+# TYPE windows_memory_pool_paged_allocs gauge
 # HELP windows_memory_pool_paged_bytes (PoolPagedBytes)
 # TYPE windows_memory_pool_paged_bytes gauge
 # HELP windows_memory_pool_paged_resident_bytes The size, in bytes, of the portion of the paged pool that is currently resident and active in physical memory. The paged pool is an area of the system virtual memory that is used for objects that can be written to disk when they are not being used (PoolPagedResidentBytes)
