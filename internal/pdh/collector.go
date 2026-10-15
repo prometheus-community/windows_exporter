@@ -118,7 +118,10 @@ type Counter struct {
 // the order of the counter arrays, so it is not a stable identity across
 // samples. A suffix such as "#2" in Name was reported by Windows, never added
 // by this package. If T has no Occurrence field, only the first instance of
-// each name is collected, so that the rows have unique names.
+// each name that has valid data is collected, so that the rows have unique
+// names. Dropping instances is logged once per collector as a warning; a row
+// type for an object that can report a name more than once must declare
+// Occurrence.
 //
 // An instance is only collected if every counter has a valid value for it in that
 // sample. Use [Collector.MetricType] for the metric type of a counter.
@@ -527,6 +530,13 @@ type collectState struct {
 	// sample, so their buckets are not allocated again.
 	index map[instanceKey]int
 	seen  map[string]int
+
+	// keys backs rowSet.keys.
+	keys []instanceKey
+
+	// duplicatesLogged is true once a sample dropped duplicate instances of a
+	// row type without an Occurrence field.
+	duplicatesLogged bool
 }
 
 // collect replaces the content of dst with one sample.
@@ -574,6 +584,8 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	}
 
 	rows.finish()
+
+	state.keys = rows.keys
 
 	state.valid = rows.valid
 
@@ -704,6 +716,12 @@ type rowSet[T any] struct {
 	seen map[string]int
 	// valid has len(c.counters) entries per row.
 	valid []bool
+	// keys has the instance key of each row.
+	keys []instanceKey
+	// duplicates is true if a row has an occurrence above 0.
+	duplicates bool
+	// duplicatesLogged points to collectState.duplicatesLogged.
+	duplicatesLogged *bool
 }
 
 func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] {
@@ -725,6 +743,9 @@ func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] 
 		nameCache: &state.names,
 		seen:      state.seen,
 		valid:     state.valid[:0],
+		keys:      state.keys[:0],
+
+		duplicatesLogged: &state.duplicatesLogged,
 	}
 }
 
@@ -740,16 +761,6 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	// Count before checking status so invalid items do not shift subsequent duplicates.
 	occurrence := r.seen[instanceName]
 	r.seen[instanceName]++
-
-	if occurrence > 0 && !r.c.rows.keepsOccurrences {
-		r.c.logger.Debug("skipping duplicate instance name",
-			slog.String("counter", counter.Name),
-			slog.String("instance", instanceName),
-			slog.Int("occurrence", occurrence),
-		)
-
-		return 0, false
-	}
 
 	if status != CstatusValidData && status != CstatusNewData {
 		r.c.logger.Debug("skipping counter item with invalid data status",
@@ -774,6 +785,8 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	r.index[key] = index
 
 	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName, occurrence))
+	r.keys = append(r.keys, key)
+	r.duplicates = r.duplicates || occurrence > 0
 
 	n := len(r.c.counters)
 	r.valid = slices.Grow(r.valid, n)[:len(r.valid)+n]
@@ -859,6 +872,7 @@ func (r *rowSet[T]) finish() {
 		}
 
 		rows[kept] = rows[row]
+		r.keys[kept] = r.keys[row]
 		kept++
 	}
 
@@ -867,10 +881,55 @@ func (r *rowSet[T]) finish() {
 			slog.String("object", r.c.object),
 			slog.Int("instances", dropped),
 		)
-
-		clear(rows[kept:])
-		*r.dst = rows[:kept]
 	}
+
+	r.keys = r.keys[:kept]
+
+	if r.duplicates && !r.c.rows.keepsOccurrences {
+		kept = r.keepFirstOccurrences(rows[:kept])
+	}
+
+	clear(rows[kept:])
+	*r.dst = rows[:kept]
+}
+
+// keepFirstOccurrences keeps, for row types without an Occurrence field, the
+// first instance of each name among the rows that remain after finish, so
+// that an instance without valid data does not hide a later one with the
+// same name. It returns the number of rows kept at the start of rows.
+func (r *rowSet[T]) keepFirstOccurrences(rows []T) int {
+	first := make(map[string]int, len(rows))
+
+	for i, key := range r.keys {
+		if j, ok := first[key.name]; !ok || key.occurrence < r.keys[j].occurrence {
+			first[key.name] = i
+		}
+	}
+
+	kept := 0
+
+	for i, key := range r.keys {
+		if first[key.name] != i {
+			continue
+		}
+
+		rows[kept] = rows[i]
+		r.keys[kept] = key
+		kept++
+	}
+
+	if dropped := len(rows) - kept; dropped > 0 && !*r.duplicatesLogged {
+		*r.duplicatesLogged = true
+
+		r.c.logger.Warn("Windows reported instance names more than once, only the first instance of each name is collected",
+			slog.String("object", r.c.object),
+			slog.Int("instances", dropped),
+		)
+	}
+
+	r.keys = r.keys[:kept]
+
+	return kept
 }
 
 // panicError logs a panic recovered while collecting and returns it as an error.

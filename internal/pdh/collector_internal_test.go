@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"runtime"
 	"slices"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -256,10 +257,20 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 						rows.finish()
 
 						want := slices.DeleteFunc(slices.Clone(tc.want), func(row wantRow) bool {
-							// Without an Occurrence field, only the first instance of a name is collected.
-							return (!partialRows && (math.IsNaN(row.a) || math.IsNaN(row.b))) ||
-								(!keepsOccurrences && row.occurrence > 0)
+							return !partialRows && (math.IsNaN(row.a) || math.IsNaN(row.b))
 						})
+
+						if !keepsOccurrences {
+							// Without an Occurrence field, only the first remaining instance of a name is collected.
+							seen := map[string]bool{}
+							want = slices.DeleteFunc(want, func(row wantRow) bool {
+								duplicate := seen[row.name]
+								seen[row.name] = true
+
+								return duplicate
+							})
+						}
+
 						require.Len(t, dst, len(want))
 
 						for _, expected := range want {
@@ -585,6 +596,35 @@ func TestInstanceNameCache(t *testing.T) {
 
 // TestRowSetReusesState checks that a sample does not see the instances of an
 // earlier sample that shared its state, even if that sample did not finish.
+// TestRowSetWarnsOnceAboutDroppedDuplicates checks that dropping duplicate
+// instances of a row type without an Occurrence field is logged once.
+func TestRowSetWarnsOnceAboutDroppedDuplicates(t *testing.T) {
+	t.Parallel()
+
+	var logs strings.Builder
+
+	c := newRowSetTestCollector(true)
+	c.logger = slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	c.rows.keepsOccurrences = false
+	state := &collectState{}
+
+	for range 3 {
+		var dst []rowSetValues
+
+		rows := newRowSet(c, &dst, state)
+		addDuplicateTestItems(&rows, CounterTypeRaw, 0, []string{"a", "a", "b"}, []float64{1, 2, 3})
+		addDuplicateTestItems(&rows, CounterTypeRaw, 1, []string{"a", "a", "b"}, []float64{4, 5, 6})
+		rows.finish()
+
+		state.keys = rows.keys
+
+		require.Len(t, dst, 2)
+		require.InDelta(t, 1, dst[0].A, 0, "the first instance of a is kept")
+	}
+
+	require.Equal(t, 1, strings.Count(logs.String(), "level=WARN"), logs.String())
+}
+
 func TestRowSetReusesState(t *testing.T) {
 	t.Parallel()
 

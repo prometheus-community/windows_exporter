@@ -124,6 +124,25 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 	return c.publishHypervisorVirtualProcessor(ch, scrape)
 }
 
+// assignVirtualProcessorVMs sets the Occurrence of each virtual processor row
+// to the index of its VM among the VMs with the same name, so that all cores
+// of one VM get the same vm label. pdh counts occurrences per instance name
+// ("<VM>:Hv VP <n>"), which would give the second core of the second VM the
+// occurrence of the first VM if the first VM has a single core. Windows lists
+// the virtual processors of a VM together, starting with core 0, in the order
+// that the rows keep, so each core 0 starts the next VM with that name.
+func assignVirtualProcessorVMs(rows []perfDataCounterValuesHypervisorVirtualProcessor, coreIDs []string) {
+	vms := make(map[string]int, len(rows))
+
+	for i := range rows {
+		if coreIDs[i] == "0" {
+			vms[rows[i].Name]++
+		}
+
+		rows[i].Occurrence = max(vms[rows[i].Name]-1, 0)
+	}
+}
+
 func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
 	rows := c.perfDataObjectHypervisorVirtualProcessor
 	coreIDs := make([]string, len(rows))
@@ -143,6 +162,8 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		rows[i].Name = parts[0]
 		coreIDs[i] = coreParts[2]
 	}
+
+	assignVirtualProcessorVMs(rows, coreIDs)
 
 	// VMs with the same name report the same instance names, see suffixDuplicateVMs.
 	suffixDuplicateVMs(rows,

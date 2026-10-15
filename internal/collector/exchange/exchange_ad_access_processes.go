@@ -42,6 +42,9 @@ type collectorADAccessProcesses struct {
 
 type perfDataCounterValuesADAccessProcesses struct {
 	Name string
+	// Occurrence makes pdh return every process with the same name; the
+	// label logic in collectADAccessProcesses keeps them apart.
+	Occurrence int
 
 	LdapReadTime                    float64 `perfdata:"LDAP Read Time"`
 	LdapReadOperationsTotal         float64 `perfdata:"LDAP Read Time,secondvalue"`

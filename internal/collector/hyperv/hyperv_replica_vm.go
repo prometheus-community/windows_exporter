@@ -57,7 +57,8 @@ type collectorReplicaVM struct {
 }
 
 type perfDataCounterValuesReplicaVM struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	AverageReplicationLatency float64 `perfdata:"Average Replication Latency"`
 	AverageReplicationSize    float64 `perfdata:"Average Replication Size"`
@@ -197,6 +198,11 @@ func (c *Collector) collectReplicaVMPerfData(ch chan<- prometheus.Metric, scrape
 	} else if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Replica VM metrics: %w", err)
 	}
+
+	suffixDuplicateVMs(c.perfDataObjectReplicaVM,
+		func(row *perfDataCounterValuesReplicaVM) *string { return &row.Name },
+		func(row *perfDataCounterValuesReplicaVM) int { return row.Occurrence },
+	)
 
 	for _, data := range c.perfDataObjectReplicaVM {
 		ch <- scrape.MustNewConstMetric(

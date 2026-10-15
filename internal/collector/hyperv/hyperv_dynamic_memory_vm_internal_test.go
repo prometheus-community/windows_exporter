@@ -56,6 +56,24 @@ func TestNameDynamicMemoryVMs(t *testing.T) {
 	}, names)
 }
 
+// TestNameDynamicMemoryVMsLiteralUnknown checks that a VM named "(unknown)"
+// and an unnamed VM are published apart.
+func TestNameDynamicMemoryVMsLiteralUnknown(t *testing.T) {
+	t.Parallel()
+
+	rows := []perfDataCounterValuesDynamicMemoryVM{
+		{Name: pdh.InstanceEmpty},
+		{Name: vmUnknown},
+		{Name: pdh.InstanceEmpty, Occurrence: 1},
+	}
+
+	nameDynamicMemoryVMs(rows)
+
+	require.Equal(t, "(unknown)#1", rows[0].Name)
+	require.Equal(t, "(unknown)", rows[1].Name)
+	require.Equal(t, "(unknown)#2", rows[2].Name)
+}
+
 // TestVirtualProcessorDuplicateVMs checks that the virtual processors of VMs
 // with the same name are published with a suffixed vm label and an unchanged
 // core label.
@@ -70,6 +88,11 @@ func TestVirtualProcessorDuplicateVMs(t *testing.T) {
 		{Name: "dup:Hv VP 1", HypervisorVirtualProcessorDispatches: 2},
 		{Name: "dup:Hv VP 0", Occurrence: 1, HypervisorVirtualProcessorDispatches: 3},
 		{Name: "other:Hv VP 0", HypervisorVirtualProcessorDispatches: 4},
+		// The first "web" VM has one core, the second two. pdh reports the
+		// second VM's core 1 as the first occurrence of "web:Hv VP 1".
+		{Name: "web:Hv VP 0", HypervisorVirtualProcessorDispatches: 5},
+		{Name: "web:Hv VP 0", Occurrence: 1, HypervisorVirtualProcessorDispatches: 6},
+		{Name: "web:Hv VP 1", HypervisorVirtualProcessorDispatches: 7},
 	}
 
 	registry := prometheus.NewPedanticRegistry()
@@ -97,5 +120,8 @@ func TestVirtualProcessorDuplicateVMs(t *testing.T) {
 		}
 	}
 
-	require.Equal(t, map[string]float64{"dup/0": 1, "dup/1": 2, "dup#1/0": 3, "other/0": 4}, got)
+	require.Equal(t, map[string]float64{
+		"dup/0": 1, "dup/1": 2, "dup#1/0": 3, "other/0": 4,
+		"web/0": 5, "web#1/0": 6, "web#1/1": 7,
+	}, got)
 }

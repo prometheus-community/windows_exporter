@@ -115,7 +115,8 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 Windows reports no instance name for VMs managed by the Host Compute Service, such as the WSL 2 VM.
 The first such VM has `vm="(unknown)"`, further ones `vm="(unknown)#1"`, `vm="(unknown)#2"` and so on.
-VMs with the same name get the same suffixes, here and in the VM Vid Partition and Hypervisor Virtual Processor metrics.
+VMs with the same name get the same suffixes, here and in the VM Vid Partition, Hypervisor Virtual Processor and Replica VM performance counter metrics, and so do virtual switches with the same name.
+All cores of one VM share its suffix; this relies on Windows listing the virtual processors of a VM together, starting with core 0.
 The suffix only keeps the series unique and does not identify the VM across scrapes or between these metric groups.
 
 ### Hyper-V Host

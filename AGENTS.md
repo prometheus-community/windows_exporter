@@ -111,10 +111,12 @@ exercised a live Windows role.
 - Keep the typed PDH collectors and `perfdata` tags. `internal/pdh` passes
   instance names through unchanged, so a `#N` in a name always comes from
   Windows (IIS recycling, `Ethernet#2`). Some objects report one name several
-  times per sample (`Process`, `.NET CLR *`, Hyper-V objects of VMs with the
-  same name). Rows without an `Occurrence int` field get only the first of
-  them; collectors that publish all declare the field and choose the label
-  value, usually with `pdh.SuffixDuplicates`. Those suffixes are not stable
+  times per sample (`Process`, `.NET CLR *`, Exchange ADAccess processes,
+  Hyper-V objects keyed by user-chosen VM or switch names). Rows without an
+  `Occurrence int` field get only the first valid instance of a name, and pdh
+  logs a warning once. Any object keyed by names users or applications choose
+  can repeat them: declare the field there and choose the label value,
+  usually with `pdh.SuffixDuplicates`. Those suffixes are not stable
   identities. Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
 - PDH collectors add counters by English path. On a Windows installation

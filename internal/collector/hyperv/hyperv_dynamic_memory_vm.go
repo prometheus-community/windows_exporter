@@ -231,9 +231,20 @@ const vmUnknown = "(unknown)"
 // VMs are named vmUnknown before suffixDuplicateVMs keeps several of them, or
 // VMs with the same name, apart.
 func nameDynamicMemoryVMs(rows []perfDataCounterValuesDynamicMemoryVM) {
+	// A VM can be named "(unknown)" itself. The unnamed VMs then count as
+	// further occurrences of that name, so that they get a suffix.
+	unknownVMs := 0
+
+	for _, row := range rows {
+		if row.Name == vmUnknown {
+			unknownVMs = max(unknownVMs, row.Occurrence+1)
+		}
+	}
+
 	for i := range rows {
 		if rows[i].Name == pdh.InstanceEmpty {
 			rows[i].Name = vmUnknown
+			rows[i].Occurrence += unknownVMs
 		}
 	}
 
