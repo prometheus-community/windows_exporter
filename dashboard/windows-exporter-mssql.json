@@ -3168,7 +3168,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_data_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_data_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3191,7 +3191,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_log_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_log_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3214,7 +3214,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_log_used_percent{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_log_used_percent{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3237,7 +3237,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_active_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_active_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3260,7 +3260,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (rate(windows_mssql_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
+                                                "expr": "max by (database) (rate(windows_mssql_databases_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3283,7 +3283,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (rate(windows_mssql_write_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
+                                                "expr": "max by (database) (rate(windows_mssql_databases_write_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -3493,7 +3493,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_data_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_data_files_size_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{database}}",
                                                 "range": true
@@ -3608,7 +3608,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (windows_mssql_log_used_percent{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
+                                                "expr": "max by (database) (windows_mssql_databases_log_used_percent{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{database}}",
                                                 "range": true
@@ -3724,7 +3724,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (rate(windows_mssql_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
+                                                "expr": "max by (database) (rate(windows_mssql_databases_transactions{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{database}}",
                                                 "range": true
@@ -3839,7 +3839,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (rate(windows_mssql_log_flushed_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
+                                                "expr": "max by (database) (rate(windows_mssql_databases_log_flushed_bytes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{database}}",
                                                 "range": true
@@ -3954,7 +3954,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (database) (rate(windows_mssql_log_flush_write_seconds_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]) / (rate(windows_mssql_log_flushes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]) > 0))",
+                                                "expr": "max by (database) (rate(windows_mssql_databases_log_flush_write_seconds_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]) / (rate(windows_mssql_databases_log_flushes{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\", database=~\"$database\"}[$__rate_interval]) > 0))",
                                                 "instant": false,
                                                 "legendFormat": "{{database}}",
                                                 "range": true

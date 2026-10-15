@@ -1,8 +1,8 @@
 local b = import 'builders.libsonnet';
 local metric(name, labels='') = 'windows_mssql_' + name + '{job=~"$job", instance="$instance", mssql_instance="$mssql_instance"' + (if labels == '' then '' else ', ' + labels) + '}';
 local rate(name, labels='') = 'rate(' + metric(name, labels) + '[$__rate_interval])';
-local database(name) = metric(name, 'database=~"$database"');
-local databaseRate(name) = rate(name, 'database=~"$database"');
+local database(name) = metric('databases_' + name, 'database=~"$database"');
+local databaseRate(name) = rate('databases_' + name, 'database=~"$database"');
 local requirement = ' Requires the mssql collector, which is not enabled by default.';
 // Buffer pool pages are 8 KiB.
 local pageBytes = '8192';
