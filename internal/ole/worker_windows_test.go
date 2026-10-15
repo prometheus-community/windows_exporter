@@ -20,6 +20,7 @@ package ole
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 	"unsafe"
@@ -85,6 +86,36 @@ func TestWorkerRecoversPanics(t *testing.T) {
 	value, err = Do(t.Context(), w, func() (int, error) { return 7, errTest })
 	require.ErrorIs(t, err, errTest)
 	require.Equal(t, 7, value, "partial results are returned with the error")
+}
+
+// TestWorkerGoexit checks that a function calling runtime.Goexit, which
+// recovery.Run does not stop, ends the worker instead of hanging Do.
+func TestWorkerGoexit(t *testing.T) {
+	w, err := NewWorker()
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := Do(context.Background(), w, func() (int, error) {
+			runtime.Goexit()
+
+			return 0, nil
+		})
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, ErrWorkerStopped)
+	case <-time.After(10 * time.Second):
+		t.Fatal("Do did not return after the worker exited")
+	}
+
+	_, err = Do(context.Background(), w, func() (int, error) { return 1, nil })
+	require.ErrorIs(t, err, ErrWorkerStopped, "later calls do not block")
+
+	require.NoError(t, w.Close(time.Second))
 }
 
 func TestWorkerBudget(t *testing.T) {

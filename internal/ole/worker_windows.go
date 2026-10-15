@@ -126,6 +126,9 @@ func (w *Worker) Close(timeout time.Duration) error {
 
 // Do runs fn on the worker and returns its result. A panic in fn is returned
 // as an error wrapping [recovery.ErrPanic], and the worker keeps running.
+// COM objects that fn created before the panic leak unless fn releases them
+// in deferred calls. If fn calls runtime.Goexit, the worker uninitializes COM
+// and exits, and this and every later call return ErrWorkerStopped.
 //
 // If ctx is done before the worker starts or finishes fn, Do returns an error
 // wrapping ErrWorkerTimeout and the cause of ctx. A function that already
@@ -167,6 +170,8 @@ func Do[T any](ctx context.Context, w *Worker, fn func() (T, error)) (T, error) 
 	case w.jobs <- job:
 	case <-w.stop:
 		return zero, ErrWorkerStopped
+	case <-w.done:
+		return zero, ErrWorkerStopped
 	case <-ctx.Done():
 		return zero, fmt.Errorf("%w: worker busy: %w", ErrWorkerTimeout, context.Cause(ctx))
 	}
@@ -174,6 +179,15 @@ func Do[T any](ctx context.Context, w *Worker, fn func() (T, error)) (T, error) 
 	select {
 	case r := <-resultCh:
 		return r.value, r.err
+	case <-w.done:
+		// The worker exited, normally after fn sent its result, but also if fn
+		// called runtime.Goexit, which recovery.Run does not stop.
+		select {
+		case r := <-resultCh:
+			return r.value, r.err
+		default:
+			return zero, ErrWorkerStopped
+		}
 	case <-ctx.Done():
 		return zero, fmt.Errorf("%w: %w", ErrWorkerTimeout, context.Cause(ctx))
 	}
