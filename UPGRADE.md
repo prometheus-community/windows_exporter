@@ -115,6 +115,10 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
   ```
 
   The key `scrape_interval` was accepted by 0.31 but had no effect. It now fails validation.
+- **pagefile and smbclient blocks.** In a configuration file, the `collector` blocks of the `pagefile` and `smbclient` collectors are named after the collectors. The keys `paging` and `smb_client` were accepted by 0.31 but had no effect, as both collectors have no options. They now fail validation.
+- **Invalid values.** An invalid value in the configuration file, such as `compress: maybe`, stops the exporter with the line and key of the value, also when the same flag is set on the command line.
+
+The configuration file now accepts every value the matching command-line flag accepts: quoted booleans and numbers (`compress: "true"`, `max-size: "10"`), comma-separated lists for list options (`enabled: cluster,node`), YAML lists for comma-separated options (`collectors.enabled: [cpu, memory]`) and YAML merge keys (`<<`). 0.31 rejected them.
 
 Removed settings stop the exporter at startup if they are still set: `--collector.process.counter-version` (see [process collector](#process-collector)), `--collector.container.containerd-state-dir` (see [container collector](#container-collector)) and the collector names `filetime` and `thermalzone` in `--collectors.enabled`. The same applies to their configuration file keys.
 
@@ -422,6 +426,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - `container.Config.ContainerDStateDir` was replaced by `container.Config.CRIEndpoint`. See [container collector](#container-collector).
 - `process.Config.CounterVersion` was removed. See [process collector](#process-collector).
 - New field in `collector.Config`: `StorageSpaces`.
+- The YAML keys of `collector.Config.Paging` and `collector.Config.SMBClient` are now `pagefile` and `smbclient`, the collector names, instead of `paging` and `smb_client`. The Go field names are unchanged. Both configurations are empty, so this only matters if you decode YAML with unknown fields rejected.
 - `scheduled_task.ConfigDefaults.TaskExclude`, also used when `scheduled_task.Config.TaskExclude` is nil, now excludes `/Microsoft/.+`, like the flag. New field `scheduled_task.Config.MissedRuns`, false by default.
 - `collector.Config.ThermalZone` was removed together with the `thermalzone` collector.
 - New method `Collection.NewHandlerWithContext`. `Collection.NewHandler` is unchanged.
