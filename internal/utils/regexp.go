@@ -50,13 +50,15 @@ func MustCompileAnchored(expr string) *regexp.Regexp {
 }
 
 // IsMatchAll reports whether re is an include filter that matches every name:
-// the default of an include flag or [types.RegExpAny].
+// the default of an include flag, [types.RegExpAny] or nil, which the New function of
+// a collector replaces with the default.
 func IsMatchAll(re *regexp.Regexp) bool {
 	return re == nil || slices.Contains(matchAllExpressions, re.String())
 }
 
 // IsMatchNone reports whether re is an exclude filter that matches no name:
-// the default of an exclude flag or [types.RegExpEmpty].
+// the default of an exclude flag, [types.RegExpEmpty] or nil, which the New function
+// of a collector replaces with the default.
 func IsMatchNone(re *regexp.Regexp) bool {
 	return re == nil || slices.Contains(matchNoneExpressions, re.String())
 }
