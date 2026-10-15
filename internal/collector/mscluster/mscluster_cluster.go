@@ -92,12 +92,10 @@ type collectorCluster struct {
 	clusterQuarantineThreshold                     *prometheus.Desc
 	clusterQuorumArbitrationTimeMax                *prometheus.Desc
 	clusterQuorumArbitrationTimeMin                *prometheus.Desc
-	clusterQuorumLogFileSize                       *prometheus.Desc
 	clusterQuorumTypeValue                         *prometheus.Desc
 	clusterRequestReplyTimeout                     *prometheus.Desc
 	clusterResiliencyDefaultPeriod                 *prometheus.Desc
 	clusterResiliencyLevel                         *prometheus.Desc
-	clusterResourceDllDeadlockPeriod               *prometheus.Desc
 	clusterRootMemoryReserved                      *prometheus.Desc
 	clusterRouteHistoryLength                      *prometheus.Desc
 	clusterS2DBusTypes                             *prometheus.Desc
@@ -177,12 +175,10 @@ type msClusterCluster struct {
 	QuarantineThreshold                     uint `mi:"QuarantineThreshold"`
 	QuorumArbitrationTimeMax                uint `mi:"QuorumArbitrationTimeMax"`
 	QuorumArbitrationTimeMin                uint `mi:"QuorumArbitrationTimeMin"`
-	QuorumLogFileSize                       uint `mi:"QuorumLogFileSize"`
 	QuorumTypeValue                         uint `mi:"QuorumTypeValue"`
 	RequestReplyTimeout                     uint `mi:"RequestReplyTimeout"`
 	ResiliencyDefaultPeriod                 uint `mi:"ResiliencyDefaultPeriod"`
 	ResiliencyLevel                         uint `mi:"ResiliencyLevel"`
-	ResourceDllDeadlockPeriod               uint `mi:"ResourceDllDeadlockPeriod"`
 	RootMemoryReserved                      uint `mi:"RootMemoryReserved"`
 	RouteHistoryLength                      uint `mi:"RouteHistoryLength"`
 	S2DBusTypes                             uint `mi:"S2DBusTypes"`
@@ -529,12 +525,6 @@ func (c *Collector) buildClusterDescriptors() {
 		[]string{"name"},
 		nil,
 	)
-	c.clusterQuorumLogFileSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_log_file_size"),
-		"This property is obsolete.",
-		[]string{"name"},
-		nil,
-	)
 	c.clusterQuorumTypeValue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_type_value"),
 		"Get the current quorum type value. -1: Unknown; 1: Node; 2: FileShareWitness; 3: Storage; 4: None",
@@ -556,12 +546,6 @@ func (c *Collector) buildClusterDescriptors() {
 	c.clusterResiliencyLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "resiliency_level"),
 		"The resiliency level for the cluster.",
-		[]string{"name"},
-		nil,
-	)
-	c.clusterResourceDllDeadlockPeriod = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCluster, "resource_dll_deadlock_period"),
-		"This property is obsolete.",
 		[]string{"name"},
 		nil,
 	)
@@ -765,12 +749,10 @@ func (c *Collector) publishCluster(ch chan<- prometheus.Metric, cluster clusapi.
 		{name: "QuarantineThreshold", desc: c.clusterQuarantineThreshold, minBuild: ws2016},
 		{name: "QuorumArbitrationTimeMax", desc: c.clusterQuorumArbitrationTimeMax},
 		{name: "QuorumArbitrationTimeMin", desc: c.clusterQuorumArbitrationTimeMin, absent: zero},
-		{name: "QuorumLogFileSize", desc: c.clusterQuorumLogFileSize},
 		{name: "QuorumTypeValue", desc: c.clusterQuorumTypeValue},
 		{name: "RequestReplyTimeout", desc: c.clusterRequestReplyTimeout},
 		{name: "ResiliencyDefaultPeriod", desc: c.clusterResiliencyDefaultPeriod, minBuild: ws2016},
 		{name: "ResiliencyLevel", desc: c.clusterResiliencyLevel, minBuild: ws2016},
-		{name: "ResourceDllDeadlockPeriod", desc: c.clusterResourceDllDeadlockPeriod, absent: zero},
 		{name: "RootMemoryReserved", desc: c.clusterRootMemoryReserved, scale: 1 << 20, absent: zero},
 		{name: "RouteHistoryLength", desc: c.clusterRouteHistoryLength},
 		{name: "S2DBusTypes", desc: c.clusterS2DBusTypes, minBuild: ws2016},

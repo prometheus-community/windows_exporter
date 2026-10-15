@@ -72,28 +72,28 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 
 func (c *Collector) buildHypervisorVirtualProcessorDescriptors() {
 	c.hypervisorVirtualProcessorTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_mode_time_total. Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_seconds_total"),
+		"DEPRECATED: use hypervisor_virtual_processor_mode_time_seconds_total. Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
 	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorModeTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_mode_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_mode_time_seconds_total"),
 		"Time in seconds that processor spent in different modes (hypervisor, guest, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
 	// end same metric
 	c.hypervisorVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_total"),
-		"DEPRECATED: use hypervisor_virtual_processor_run_time_total. Time in seconds that processor spent running",
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_seconds_total"),
+		"DEPRECATED: use hypervisor_virtual_processor_run_time_seconds_total. Time in seconds that processor spent running",
 		[]string{"vm", "core"},
 		nil,
 	)
 	// New metric with better name for clarity, old one is kept for backward compatibility
 	c.hypervisorVirtualProcessorRunTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_run_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_run_time_seconds_total"),
 		"Time in seconds that processor spent running",
 		[]string{"vm", "core"},
 		nil,

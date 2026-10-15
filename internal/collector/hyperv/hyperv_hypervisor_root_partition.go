@@ -174,37 +174,37 @@ func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 		nil,
 	)
 	c.hypervisorRootPartition1GDevicePages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1G_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1g_device_pages"),
 		"The number of 1G pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartition1GGPAPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1G_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1g_gpa_pages"),
 		"The number of 1G pages present in the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartition2MDevicePages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2M_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2m_device_pages"),
 		"The number of 2M pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartition2MGPAPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2M_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2m_gpa_pages"),
 		"The number of 2M pages present in the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartition4KDevicePages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4K_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4k_device_pages"),
 		"The number of 4K pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartition4KGPAPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4K_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4k_gpa_pages"),
 		"The number of 4K pages present in the GPA space of the partition",
 		nil,
 		nil,

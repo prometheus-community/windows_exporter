@@ -79,7 +79,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 
 func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 	c.virtualStorageDeviceErrorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_error_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_errors_total"),
 		"Represents the total number of errors that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,

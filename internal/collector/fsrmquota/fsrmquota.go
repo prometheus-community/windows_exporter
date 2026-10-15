@@ -204,7 +204,7 @@ func (c *Collector) emitQuotas(ch chan<- prometheus.Metric, dst []msftFSRMQuota)
 
 func (c *Collector) buildDescriptors() {
 	c.quotasCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "count"),
+		prometheus.BuildFQName(types.Namespace, Name, "quotas"),
 		"Number of Quotas",
 		nil,
 		nil,

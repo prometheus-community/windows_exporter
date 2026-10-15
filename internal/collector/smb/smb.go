@@ -103,13 +103,13 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.currentOpenFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_current_open_file_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_open_files"),
 		"Current total count open files on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.treeConnectCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_tree_connect_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_tree_connects"),
 		"Count of user connections to the SMB Server Share",
 		[]string{"share"},
 		nil,

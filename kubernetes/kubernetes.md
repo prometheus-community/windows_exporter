@@ -72,7 +72,7 @@ kubectl --namespace monitoring port-forward svc/prometheus-k8s 9091:9090
 Navigate to the Prometheus UI and add a query to see the node CPU (replace the IP address with yours)
 
 ```
-sum by (mode) (irate(windows_cpu_time_total{instance="10.1.0.5:9182"}[5m]))
+sum by (mode) (irate(windows_cpu_time_seconds_total{instance="10.1.0.5:9182"}[5m]))
 ```
 
 ![windows cpu total time graph in prometheus ui](https://user-images.githubusercontent.com/648372/140547130-b535c766-6479-47d3-b2d3-cd8a551647df.png)

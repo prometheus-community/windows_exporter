@@ -45,7 +45,7 @@ func (c *Collector) buildMapiHTTPEmsMDB() error {
 	}
 
 	c.activeUserCountMapiHTTPEmsMDB = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mapihttp_emsmdb_active_user_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "mapihttp_emsmdb_active_users"),
 		"Number of unique outlook users that have shown some kind of activity in the last 2 minutes",
 		nil,
 		nil,

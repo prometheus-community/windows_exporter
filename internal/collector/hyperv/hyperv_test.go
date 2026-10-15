@@ -38,7 +38,7 @@ func BenchmarkCollector(b *testing.B) {
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, hyperv.New, nil)
 	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_dynamic_memory_vm_physical_bytes", prometheus.Labels{"vm": "GitHubActions"})
-	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_processor_count", prometheus.Labels{"vm": "GitHubActions"})
+	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_processors", prometheus.Labels{"vm": "GitHubActions"})
 
 	// An empty "Hyper-V DataStore" counter set is tolerated as an optional
 	// instance group, so require a series explicitly (#2328).

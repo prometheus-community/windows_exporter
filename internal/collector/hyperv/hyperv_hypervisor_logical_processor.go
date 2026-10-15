@@ -59,13 +59,13 @@ func (c *Collector) buildHypervisorLogicalProcessor() error {
 	}
 
 	c.hypervisorLogicalProcessorTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_time_seconds_total"),
 		"Time that processor spent in different modes (hypervisor, guest, idle)",
 		[]string{"core", "state"},
 		nil,
 	)
 	c.hypervisorLogicalProcessorTotalRunTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_total_run_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_total_run_time_seconds_total"),
 		"Time that processor spent",
 		[]string{"core"},
 		nil,

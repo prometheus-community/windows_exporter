@@ -153,7 +153,7 @@ func (c *Collector) buildVirtualSMB() error {
 		nil,
 	)
 	c.virtualSMBCurrentOpenFileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_current_open_file_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_open_files"),
 		"Represents the current number of open files in the virtual SMB",
 		[]string{"instance"},
 		nil,

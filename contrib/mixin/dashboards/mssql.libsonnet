@@ -81,7 +81,7 @@ function(on)
         ['sum by (resource) (' + rate('locks_lock_waits_total') + ')', '{{resource}}'],
       ]),
       b.graph(271, 'Average lock wait', 'Average wait time of the lock requests that waited, by lock resource type.' + requirement, 's', [
-        ['sum by (resource) (' + rate('locks_wait_time_seconds_total') + ') / (sum by (resource) (' + rate('locks_count_total') + ') > 0)', '{{resource}}'],
+        ['sum by (resource) (' + rate('locks_wait_time_seconds_total') + ') / (sum by (resource) (' + rate('locks_lock_waits_total') + ') > 0)', '{{resource}}'],
       ]),
       b.graph(272, 'Deadlocks and lock timeouts', 'Lock requests per second that resulted in a deadlock or timed out, across all lock resource types. Timeouts exclude NOWAIT requests.' + requirement, 'ops', [
         ['sum(' + rate('locks_deadlocks_total') + ')', 'deadlocks'],

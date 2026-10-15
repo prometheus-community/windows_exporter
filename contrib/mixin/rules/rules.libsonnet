@@ -7,8 +7,8 @@
         name: 'windows-exporter-recording',
         rules: [
           { record: 'windows:cpu_usage:ratio', expr: q.cpuUsage },
-          { record: 'windows:cpu_cores:count', expr: 'count without (core, mode) (%s)' % q.metric('windows_cpu_time_total', ['mode="idle"']) },
-          { record: 'windows:cpu_time:ratio_rate', expr: 'avg without (core) (%s)' % q.rate('windows_cpu_time_total') },
+          { record: 'windows:cpu_cores:count', expr: 'count without (core, mode) (%s)' % q.metric('windows_cpu_time_seconds_total', ['mode="idle"']) },
+          { record: 'windows:cpu_time:ratio_rate', expr: 'avg without (core) (%s)' % q.rate('windows_cpu_time_seconds_total') },
           { record: 'windows:memory_usage:ratio', expr: q.memoryUsage },
           {
             record: 'windows:memory_used:bytes',

@@ -104,8 +104,8 @@ func (c *Collector) buildADAccessProcesses() error {
 		nil,
 	)
 	c.longRunningLDAPOperationsPerMin = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "ldap_long_running_operations_total"),
-		"Total number of long running LDAP operations",
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_long_running_operations_per_second"),
+		"Long running LDAP operations per second, averaged over the last minute. Exchange reports the per-minute value as a raw count (Windows has no per-minute counter type); the collector divides it by 60",
 		[]string{"name"},
 		nil,
 	)
@@ -182,8 +182,8 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 
 		ch <- prometheus.MustNewConstMetric(
 			c.longRunningLDAPOperationsPerMin,
-			prometheus.CounterValue,
-			data.LongRunningLDAPOperationsPerMin*60,
+			prometheus.GaugeValue,
+			data.LongRunningLDAPOperationsPerMin/60,
 			labelName,
 		)
 	}

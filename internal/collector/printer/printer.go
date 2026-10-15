@@ -163,8 +163,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.printerJobCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "jobs_total"),
-		"Number of jobs processed by the printer since the last reset",
+		prometheus.BuildFQName(types.Namespace, Name, "jobs"),
+		"Number of jobs in the queue of the printer",
 		[]string{"printer"},
 		nil,
 	)
@@ -200,7 +200,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		// Win32_Printer JobCountSinceLastReset is PRINTER_INFO_2.cJobs, the number of queued jobs.
 		ch <- prometheus.MustNewConstMetric(
 			c.printerJobCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(printer.Jobs),
 			printer.Name,
 		)

@@ -205,7 +205,7 @@ func TestScrapeStdout(t *testing.T) {
 	output := buf.String()
 
 	// Must contain collector metrics.
-	require.Contains(t, output, "windows_cpu_time_total")
+	require.Contains(t, output, "windows_cpu_time_seconds_total")
 	// Must contain exporter build info (proves the HTTP handler path is used).
 	require.Contains(t, output, "windows_exporter_build_info")
 	// Must contain collector success metadata.

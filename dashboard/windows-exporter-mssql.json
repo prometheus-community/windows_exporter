@@ -2013,7 +2013,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (resource) (rate(windows_mssql_locks_wait_time_seconds_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\"}[$__rate_interval])) / (sum by (resource) (rate(windows_mssql_locks_count_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\"}[$__rate_interval])) > 0)",
+                                                "expr": "sum by (resource) (rate(windows_mssql_locks_wait_time_seconds_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\"}[$__rate_interval])) / (sum by (resource) (rate(windows_mssql_locks_lock_waits_total{job=~\"$job\", instance=\"$instance\", mssql_instance=\"$mssql_instance\"}[$__rate_interval])) > 0)",
                                                 "instant": false,
                                                 "legendFormat": "{{resource}}",
                                                 "range": true

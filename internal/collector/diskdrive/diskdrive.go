@@ -97,7 +97,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 	c.size = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "size"),
+		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
 		[]string{"name"},
 		nil,

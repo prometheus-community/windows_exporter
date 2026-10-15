@@ -22,10 +22,10 @@ Supported values are `ADAccessProcesses`, `TransportQueues`, `HttpProxy`, `Activ
 |-----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|---------|--------|
 | `windows_exchange_rpc_avg_latency_seconds`                                      | The latency in seconds, averaged for the past 1024 packets                                                       | gauge   | None   |
 | `windows_exchange_rpc_requests`                                             | Number of client requests currently being processed by  the RPC Client Access service                       | gauge   | None   |
-| `windows_exchange_rpc_active_user_count`                                    | Number of unique users that have shown some kind of activity in the last 2 minutes                          | gauge   | None   |
-| `windows_exchange_rpc_connection_count`                                     | Total number of client connections maintained                                                               | gauge   | None   |
+| `windows_exchange_rpc_active_users`                                    | Number of unique users that have shown some kind of activity in the last 2 minutes                          | gauge   | None   |
+| `windows_exchange_rpc_connections`                                     | Total number of client connections maintained                                                               | gauge   | None   |
 | `windows_exchange_rpc_operations_total`                                     | The rate at which RPC operations occur                                                                      | counter | None   |
-| `windows_exchange_rpc_user_count`                                           | Number of users                                                                                             | gauge   | None   |
+| `windows_exchange_rpc_users`                                           | Number of users                                                                                             | gauge   | None   |
 | `windows_exchange_ldap_read_time_seconds_total`                                       | Total time in seconds to send an LDAP read request and receive a response                                              | counter | `name` |
 | `windows_exchange_ldap_read_operations_total`                               | Total number of LDAP read operations                                                                        | counter | `name` |
 | `windows_exchange_ldap_search_time_seconds_total`                                     | Total time in seconds to send an LDAP search request and receive a response                                            | counter | `name` |
@@ -33,7 +33,7 @@ Supported values are `ADAccessProcesses`, `TransportQueues`, `HttpProxy`, `Activ
 | `windows_exchange_ldap_write_time_seconds_total`                                      | Total time in seconds to send an LDAP Add/Modify/Delete request and receive a response                                 | counter | `name` |
 | `windows_exchange_ldap_write_operations_total`                              | Total number of LDAP Add/Modify/Delete operations                                                           | counter | `name` |
 | `windows_exchange_ldap_timeout_errors_total`                                | Total number of LDAP timeout errors                                                                         | counter | `name` |
-| `windows_exchange_ldap_long_running_operations_total`                            | Total number of long running LDAP operations                                                                       | counter | `name` |
+| `windows_exchange_ldap_long_running_operations_per_second`                            | Long running LDAP operations per second, averaged over the last minute                                                                       | gauge   | `name` |
 | `windows_exchange_transport_queues_external_active_remote_delivery`         | External Active Remote Delivery Queue length                                                                | gauge   | `name` |
 | `windows_exchange_transport_queues_internal_active_remote_delivery`         | Internal Active Remote Delivery Queue length                                                                | gauge   | `name` |
 | `windows_exchange_transport_queues_active_mailbox_delivery`                 | Active Mailbox Delivery Queue length                                                                        | gauge   | `name` |
@@ -71,7 +71,7 @@ Supported values are `ADAccessProcesses`, `TransportQueues`, `HttpProxy`, `Activ
 | `windows_exchange_http_proxy_mailbox_proxy_failure_ratio`                    | Ratio (0-1) of failures between this CAS and MBX servers over the last 200 sample                                     | gauge   | `name` |
 | `windows_exchange_activesync_ping_cmds_pending`                             | Number of ping commands currently pending in the queue                                                      | gauge   | None   |
 | `windows_exchange_activesync_sync_cmds_total`                               | Number of sync commands processed per second. Clients use this command to synchronize items within a folder | counter | None   |
-| `windows_exchange_mapihttp_emsmdb_active_user_count`                        | Number of unique outlook users that have shown some kind of activity in the last 2 minutes                  | gauge   | None   |
+| `windows_exchange_mapihttp_emsmdb_active_users`                        | Number of unique outlook users that have shown some kind of activity in the last 2 minutes                  | gauge   | None   |
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
