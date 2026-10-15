@@ -115,10 +115,15 @@ func TestNewConfigFileResolver(t *testing.T) {
 		{name: "string as list", contents: "collectors:\n  enabled: [cpu, memory]\n"},
 		{name: "duration as string", contents: "collector:\n  hyperv:\n    virtual-hard-disk:\n      refresh-interval: 30s\n"},
 		{name: "renamed collector block", contents: "collector:\n  pagefile:\n  smbclient:\n"},
-		{name: "old collector block", contents: "collector:\n  paging:\n", errorText: "line 2: field paging not found"},
-		{name: "mapping as value", contents: "log:\n  level:\n    debug: true\n", errorText: "line 3: expected a value or a list of values"},
-		{name: "mapping in list", contents: "web:\n  listen-address:\n    - port: 9182\n", errorText: "line 3: expected a value in the list"},
+		{name: "old collector block", contents: "collector:\n  paging:\n", errorText: "line 2: field paging not found in collector"},
+		{name: "unknown nested key", contents: "collector:\n  cpu:\n    unknown: true\n", errorText: "line 3: field unknown not found in collector.cpu"},
+		{name: "unknown top-level key", contents: "unknown: value\n", errorText: "line 1: field unknown not found in the configuration"},
+		{name: "mapping as value", contents: "log:\n  level:\n    debug: true\n", errorText: "line 3: log.level must be a value or a list of values"},
+		{name: "mapping in list", contents: "web:\n  listen-address:\n    - port: 9182\n", errorText: "line 3: web.listen-address must be a value or a list of values"},
 		{name: "value as section", contents: "log: debug\n", errorText: "line 1: log must be a mapping"},
+		{name: "merge key", contents: "collector:\n  service: &filter\n    include: a\n  process:\n    <<: *filter\n    exclude: b\n"},
+		{name: "merged section", contents: "log: &log\n  level: debug\nweb:\n  <<: *log\n", errorText: "line 2: field level not found in web"},
+		{name: "duplicate key", contents: "log:\n  level: debug\n  level: info\n", errorText: "already defined"},
 		{
 			name:      "unknown wmi option",
 			contents:  "collector:\n  wmi:\n    query: |-\n      - name: test\n",
@@ -183,6 +188,11 @@ func TestNewConfigFileResolverFlags(t *testing.T) {
 			require.True(t, ok, "the configuration file has no key %s", flag.Name)
 
 			value, values := sampleConfigValue(t, field, block)
+
+			// These flags only accept some strings.
+			if sample, ok := map[string]string{"log.level": "debug", "log.format": "json"}[flag.Name]; ok {
+				value, values = sample, []string{sample}
+			}
 
 			contents := value
 			for _, key := range slices.Backward(keys) {
@@ -539,8 +549,8 @@ func TestParseEmptyValue(t *testing.T) {
 }
 
 // TestParseFlagValues verifies that the configuration file takes the values the
-// flags accept, whatever the Go type of the configuration, and that the flags
-// reject invalid values.
+// flags accept, whatever the Go type of the configuration, and that an invalid
+// value fails with its key and line, even if the command line sets the flag.
 func TestParseFlagValues(t *testing.T) {
 	t.Parallel()
 
@@ -549,6 +559,7 @@ func TestParseFlagValues(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		config    string
+		args      []string
 		flag      string
 		want      string
 		errorText string
@@ -564,12 +575,28 @@ func TestParseFlagValues(t *testing.T) {
 			flag: "collector.mscluster.enabled", want: "cluster,node",
 		},
 		{
-			name: "invalid bool", config: "log:\n  rotation:\n    compress: maybe\n",
-			errorText: "strconv.ParseBool",
+			name: "repeatable flag", config: "web:\n  listen-address: ['127.0.0.1:9182', '[::1]:9182']\n",
+			flag: "web.listen-address", want: "127.0.0.1:9182,[::1]:9182",
 		},
 		{
-			name: "invalid int", config: "log:\n  rotation:\n    max-size: ten\n",
-			errorText: "parsing \"ten\": invalid syntax",
+			name: "merge key", config: "collector:\n  service: &filter\n    include: a\n  process:\n    <<: *filter\n    exclude: b\n",
+			flag: "collector.process.include", want: "a",
+		},
+		{
+			name: "CLI overrides config", config: "log:\n  rotation:\n    compress: true\n",
+			args: []string{"--no-log.rotation.compress"}, flag: "log.rotation.compress", want: "false",
+		},
+		{
+			name: "invalid bool", config: "log:\n  rotation:\n    compress: maybe\n",
+			errorText: "line 3: log.rotation.compress: strconv.ParseBool",
+		},
+		{
+			name: "invalid int", config: "debug:\n  enabled: true\nlog:\n  rotation:\n    max-size: ten\n",
+			errorText: "line 5: log.rotation.max-size: strconv.Parse",
+		},
+		{
+			name: "invalid value set on the CLI", config: "log:\n  rotation:\n    compress: maybe\n",
+			args: []string{"--log.rotation.compress"}, errorText: "line 3: log.rotation.compress: strconv.ParseBool",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -578,13 +605,9 @@ func TestParseFlagValues(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
 			require.NoError(t, os.WriteFile(path, []byte(tc.config), 0o600))
 
-			resolver, err := config.NewConfigFileResolver(path)
-			require.NoError(t, err)
-
 			app := newApp(mainFlags)
-			require.NoError(t, resolver.Bind(app, nil))
 
-			_, err = app.Parse(nil)
+			err := config.Parse(app, append([]string{"--config.file=" + path}, tc.args...))
 			if tc.errorText != "" {
 				require.ErrorContains(t, err, tc.errorText)
 
