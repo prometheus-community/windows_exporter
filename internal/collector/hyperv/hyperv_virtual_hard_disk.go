@@ -150,9 +150,6 @@ func (c *Collector) buildVirtualHardDisk() error {
 		c.logger.Warn("Hyper-V Virtual Storage Device counters are not available, virtual hard disks have no device label",
 			slog.Any("err", err),
 		)
-
-		c.virtualHardDiskDevices.Close()
-		c.virtualHardDiskDevices = nil
 	}
 
 	c.virtualHardDiskRefresher = newVirtualHardDiskRefresher(

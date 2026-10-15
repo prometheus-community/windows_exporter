@@ -84,14 +84,15 @@ type rowAccessor[T any] struct {
 // counterField maps a counter to the field index passed to rowAccessor.setValue.
 type counterField struct {
 	// tag is the counter name, optionally suffixed with ",secondvalue".
-	tag        string
-	index      int
-	minOSBuild string
+	tag   string
+	index int
+	// minOSBuild is the Windows build that introduced the counter, or 0. A
+	// counter that is missing on an older build is skipped.
+	minOSBuild uint16
 }
 
 type Counter struct {
 	Name string
-	Desc string
 	// MetricType is the Prometheus metric type of the counter. It is zero
 	// until the counter info of one of its instances has been read.
 	MetricType prometheus.ValueType
@@ -112,9 +113,10 @@ type Counter struct {
 // An instance is only collected if every counter has a valid value for it in that
 // sample. Use [Collector.MetricType] for the metric type of a counter.
 //
-// If an error is returned together with a non-nil Collector, some counters
-// could not be added or the initial collection failed. The caller owns that
-// Collector and must Close it. If the Collector is nil, no resources are held.
+// NewCollector returns either a Collector and a nil error, or a nil Collector
+// and an error. If some counters cannot be added or the initial collection
+// fails, NewCollector releases the query and the counters it opened before it
+// returns the error, so the caller only closes a Collector it received.
 func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	return newStructCollector[T](logger, nil, resultType, object, instances)
 }
@@ -122,7 +124,8 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 // NewQueryCollector creates a collector like [NewCollector] whose counters are
 // part of query. [Query.Collect] samples them together with the other
 // collectors of the query; [Collector.Collect] reads the latest sample. Close
-// the collector before the query.
+// the collector before the query. On error, the counters it added are removed
+// from query again and the Collector is nil.
 func NewQueryCollector[T any](logger *slog.Logger, query *Query, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	if query == nil {
 		return nil, ErrPerformanceCounterNotInitialized
@@ -159,10 +162,23 @@ func newStructCollector[T any](logger *slog.Logger, query *Query, resultType Cou
 			continue
 		}
 
+		var minOSBuild uint16
+
+		if tag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
+			build, err := strconv.ParseUint(tag, 10, 16)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("field %s: invalid perfdata_min_build %q: %w", f.Name, tag, err))
+
+				continue
+			}
+
+			minOSBuild = uint16(build)
+		}
+
 		fields = append(fields, counterField{
 			tag:        counterName,
 			index:      f.Index[0],
-			minOSBuild: f.Tag.Get("perfdata_min_build"),
+			minOSBuild: minOSBuild,
 		})
 	}
 
@@ -290,16 +306,9 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 
 			var counterHandle pdhCounterHandle
 
-			//nolint:nestif
 			if ret := addEnglishCounter(handle, object, instance, counterName, &counterHandle); ret != ErrorSuccess {
-				if ret == CstatusNoCounter {
-					if f.minOSBuild != "" {
-						if minOSBuild, err := strconv.Atoi(f.minOSBuild); err == nil {
-							if uint16(minOSBuild) > osversion.Build() {
-								continue
-							}
-						}
-					}
+				if ret == CstatusNoCounter && f.minOSBuild > osversion.Build() {
+					continue
 				}
 
 				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
@@ -363,11 +372,7 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 	}
 
 	if len(collector.counters) == 0 {
-		// A shared query stays open for its other collectors, and its lock
-		// is held here, so only close a query of our own.
-		if query == nil {
-			collector.Close()
-		}
+		collector.release()
 
 		errs = append(errs, errors.New("no counters configured"))
 
@@ -375,7 +380,9 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 	}
 
 	if err := errors.Join(errs...); err != nil {
-		return collector, fmt.Errorf("failed to initialize collector: %w", err)
+		collector.release()
+
+		return nil, fmt.Errorf("failed to initialize collector: %w", err)
 	}
 
 	collector.state = &collectState{}
@@ -383,7 +390,9 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 	// Collect initial data because some counters need to be read twice to get the correct value.
 	if query != nil {
 		if ret := CollectQueryData(handle); ret != ErrorSuccess && ret != NoData {
-			return collector, fmt.Errorf("failed to collect initial data: %w", NewPdhError(ret))
+			collector.release()
+
+			return nil, fmt.Errorf("failed to collect initial data: %w", NewPdhError(ret))
 		}
 
 		return collector, nil
@@ -391,7 +400,10 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 
 	var collectValues []T
 	if err := collector.Collect(&collectValues); err != nil && !errors.Is(err, ErrNoData) {
-		return collector, fmt.Errorf("failed to collect initial data: %w", err)
+		// Collect has returned, and no one else has the collector yet.
+		collector.release()
+
+		return nil, fmt.Errorf("failed to collect initial data: %w", err)
 	}
 
 	return collector, nil
@@ -407,23 +419,6 @@ func metricType(resultType CounterType, counterType uint32) prometheus.ValueType
 	}
 
 	return prometheus.GaugeValue
-}
-
-func (c *Collector[T]) Describe() map[string]string {
-	if c == nil {
-		return map[string]string{}
-	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	desc := make(map[string]string, len(c.counters))
-
-	for _, counter := range c.counters {
-		desc[counter.Name] = counter.Desc
-	}
-
-	return desc
 }
 
 // MetricType returns the Prometheus metric type of the counter named
@@ -905,6 +900,13 @@ func (c *Collector[T]) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	c.release()
+}
+
+// release closes the query of the collector, or removes its counters from a
+// shared query, and leaves the collector closed. The caller holds the lock of
+// a shared query and c.mu, or is the only user of c, as newCollector is.
+func (c *Collector[T]) release() {
 	switch {
 	case c.handle == 0:
 	case c.query == nil:

@@ -124,9 +124,11 @@ exercised a live Windows role.
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
   `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
   never `0` (no MI timeout), so one stalled provider cannot block startup.
-- Release resources after partial initialization and on error paths. A non-nil
-  PDH collector returned with an error still belongs to the caller and must be
-  closed. Sub-collector cleanup closures must read the initialized field when
+- Release resources after partial initialization and on error paths. PDH
+  constructors release what they opened and return a nil collector or query
+  with an error, so close only what was returned without one; `Close` is
+  nil-safe (see [`internal/pdh/AGENTS.md`](internal/pdh/AGENTS.md)).
+  Sub-collector cleanup closures must read the initialized field when
   called; method values captured before initialization can retain nil receivers.
   Stop background workers before releasing the resources they use, and recover
   panics inside the goroutine that can panic.

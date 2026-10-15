@@ -376,17 +376,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return g.Wait()
 }
 
-// newPerfCollector adds the counters of object to query and retains
-// ownership of partially initialized collectors. Missing objects are optional;
-// missing individual counters remain errors.
+// newPerfCollector adds the counters of object to query. On error,
+// pdh.NewQueryCollector has already removed the counters it added. Missing
+// objects are optional; missing individual counters remain errors.
 func newPerfCollector[T any](logger *slog.Logger, query *pdh.Query, object string) (perfCollector[T], error) {
 	c, err := pdh.NewQueryCollector[T](logger, query, pdh.CounterTypeRaw, object, pdh.InstancesAll)
 	if err == nil {
 		return c, nil
-	}
-
-	if c != nil {
-		c.Close()
 	}
 
 	if onlyMissingObject(err) {

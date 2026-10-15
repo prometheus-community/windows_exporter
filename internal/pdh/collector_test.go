@@ -170,15 +170,135 @@ func TestCollectorInitializationError(t *testing.T) {
 		HandleCount string  `perfdata:"Handle Count"`
 	}
 
+	// NewCollector releases what it opened and returns no collector with an error.
 	collector, err := pdh.NewCollector[invalidProcess](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
 	require.ErrorContains(t, err, "field HandleCount must be a float64")
-	require.NotNil(t, collector)
-
-	t.Cleanup(collector.Close)
+	require.Nil(t, collector)
 
 	var data []invalidProcess
 
 	require.ErrorIs(t, collector.Collect(&data), pdh.ErrPerformanceCounterNotInitialized)
+
+	// Closing a nil collector is a no-op.
+	collector.Close()
+}
+
+// TestCollectorInitializationErrors checks that every constructor error
+// returns a nil collector.
+func TestCollectorInitializationErrors(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	t.Run("missing counter", func(t *testing.T) {
+		t.Parallel()
+
+		type missingCounter struct {
+			ThreadCount float64 `perfdata:"Thread Count"`
+			Missing     float64 `perfdata:"No Such Counter"`
+		}
+
+		collector, err := pdh.NewCollector[missingCounter](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+		require.ErrorIs(t, err, pdh.NewPdhError(pdh.CstatusNoCounter))
+		require.Nil(t, collector)
+	})
+
+	t.Run("missing object", func(t *testing.T) {
+		t.Parallel()
+
+		collector, err := pdh.NewDynamicCollector(logger, pdh.CounterTypeRaw, "No Such Object", pdh.InstancesAll, []string{"Thread Count"})
+		require.ErrorIs(t, err, pdh.NewPdhError(pdh.CstatusNoObject))
+		require.Nil(t, collector)
+	})
+
+	t.Run("NUL in counter path", func(t *testing.T) {
+		t.Parallel()
+
+		collector, err := pdh.NewDynamicCollector(logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll, []string{"Thread\x00Count"})
+		require.ErrorIs(t, err, pdh.NewPdhError(pdh.CstatusBadCountername))
+		require.Nil(t, collector)
+	})
+
+	t.Run("invalid perfdata_min_build", func(t *testing.T) {
+		t.Parallel()
+
+		type notANumber struct {
+			ThreadCount float64 `perfdata:"Thread Count" perfdata_min_build:"abc"`
+		}
+
+		type tooLarge struct {
+			// Truncated to uint16, this was build 0 and the counter was never skipped.
+			ThreadCount float64 `perfdata:"Thread Count" perfdata_min_build:"65536"`
+		}
+
+		type negative struct {
+			ThreadCount float64 `perfdata:"Thread Count" perfdata_min_build:"-1"`
+		}
+
+		_, err := pdh.NewCollector[notANumber](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+		require.ErrorContains(t, err, `field ThreadCount: invalid perfdata_min_build "abc"`)
+
+		_, err = pdh.NewCollector[tooLarge](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+		require.ErrorContains(t, err, `field ThreadCount: invalid perfdata_min_build "65536"`)
+
+		collector, err := pdh.NewCollector[negative](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+		require.ErrorContains(t, err, `field ThreadCount: invalid perfdata_min_build "-1"`)
+		require.Nil(t, collector)
+	})
+
+	t.Run("future counter is skipped", func(t *testing.T) {
+		t.Parallel()
+
+		type futureCounter struct {
+			ThreadCount float64 `perfdata:"Thread Count"`
+			Future      float64 `perfdata:"No Such Counter" perfdata_min_build:"65535"`
+		}
+
+		collector, err := pdh.NewCollector[futureCounter](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+		require.NoError(t, err)
+
+		t.Cleanup(collector.Close)
+	})
+}
+
+// TestQueryCollectorInitializationError checks that a failing collector
+// removes its counters from a shared query and leaves the other collectors of
+// the query working.
+func TestQueryCollectorInitializationError(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	query, err := pdh.NewQuery()
+	require.NoError(t, err)
+
+	t.Cleanup(query.Close)
+
+	type system struct {
+		Processes float64 `perfdata:"Processes"`
+	}
+
+	type missingCounter struct {
+		Processes float64 `perfdata:"Processes"`
+		Missing   float64 `perfdata:"No Such Counter"`
+	}
+
+	collector, err := pdh.NewQueryCollector[system](logger, query, pdh.CounterTypeRaw, "System", nil)
+	require.NoError(t, err)
+
+	t.Cleanup(collector.Close)
+
+	failed, err := pdh.NewQueryCollector[missingCounter](logger, query, pdh.CounterTypeRaw, "System", nil)
+	require.ErrorIs(t, err, pdh.NewPdhError(pdh.CstatusNoCounter))
+	require.Nil(t, failed)
+
+	require.NoError(t, query.Collect())
+
+	var data []system
+
+	require.NoError(t, collector.Collect(&data))
+	require.Len(t, data, 1)
+	require.Positive(t, data[0].Processes)
 }
 
 type processorInformation struct {

@@ -281,8 +281,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 				slog.Any("err", err),
 			)
 
-			c.perfDataCollectorBroker.Close()
-			c.perfDataCollectorBroker = nil
 			c.connectionBrokerEnabled = false
 		}
 	} else {
@@ -303,9 +301,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		c.logger.Warn("failed to create Terminal Services Session collector, skipping per-session performance metrics",
 			slog.Any("err", err),
 		)
-
-		c.perfDataCollectorTerminalServicesSession.Close()
-		c.perfDataCollectorTerminalServicesSession = nil
 	}
 
 	return nil
