@@ -1,4 +1,4 @@
-# dns collector
+# `dns` collector
 
 The collector reads the single-instance PDH object `DNS` with
 `pdh.CounterTypeRaw`, plus the `MicrosoftDNS_Statistic` class

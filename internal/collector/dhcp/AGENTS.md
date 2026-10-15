@@ -1,4 +1,4 @@
-# dhcp collector
+# `dhcp` collector
 
 The server metrics come from the single-instance PDH object `DHCP Server`,
 read with `pdh.CounterTypeRaw`. It exists only where the DHCP Server role is

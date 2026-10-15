@@ -1,4 +1,4 @@
-# pagefile collector
+# `pagefile` collector
 
 The collector reads the multi-instance PDH object `Paging File` with
 `pdh.CounterTypeRaw`. The object exists on every Windows host with a page

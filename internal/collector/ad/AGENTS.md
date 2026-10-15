@@ -1,4 +1,4 @@
-# ad collector
+# `ad` collector
 
 The collector reads the PDH object `DirectoryServices` (instance `NTDS`, the
 only instance) with `pdh.CounterTypeRaw`. The object exists only on a domain

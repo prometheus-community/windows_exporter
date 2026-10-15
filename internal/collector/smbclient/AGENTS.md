@@ -1,4 +1,4 @@
-# smbclient collector
+# `smbclient` collector
 
 The collector reads the `SMB Client Shares` PDH object with
 `pdh.CounterTypeRaw`. It is multi-instance, with one instance per share the

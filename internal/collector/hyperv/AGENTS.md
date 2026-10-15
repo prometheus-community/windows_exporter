@@ -1,4 +1,4 @@
-# hyperv collector
+# `hyperv` collector
 
 The collector reads 16 `Hyper-V ...` PDH objects with `pdh.CounterTypeRaw`
 from its sub-collectors, plus HCS, WMI and `virtdisk.dll` data. The objects

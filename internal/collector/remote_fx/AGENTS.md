@@ -1,4 +1,4 @@
-# remote_fx collector
+# `remote_fx` collector
 
 The collector reads `RemoteFX Network` and `RemoteFX Graphics` with
 `pdh.CounterTypeRaw`. Instances exist only while an RDP session is connected,

@@ -1,4 +1,4 @@
-# net collector
+# `net` collector
 
 The collector reads the `Network Interface` PDH object with
 `pdh.CounterTypeRaw`. The object exists on every Windows host; no role is

@@ -1,4 +1,4 @@
-# mssql collector
+# `mssql` collector
 
 The collector reads the SQL Server performance objects (`Access Methods`,
 `Buffer Manager`, `Databases`, `Locks`, `Wait Statistics` and others) with

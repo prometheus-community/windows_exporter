@@ -1,4 +1,4 @@
-# adfs collector
+# `adfs` collector
 
 The collector reads the single-instance PDH object `AD FS` with
 `pdh.CounterTypeRaw`. It exists only on a server running the AD FS service

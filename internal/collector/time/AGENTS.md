@@ -1,4 +1,4 @@
-# time collector
+# `time` collector
 
 The collector reads the single-instance PDH object `Windows Time Service` with
 `pdh.CounterTypeRaw`. The object needs the W32Time service. These notes were

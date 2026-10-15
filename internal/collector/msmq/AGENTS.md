@@ -1,4 +1,4 @@
-# msmq collector
+# `msmq` collector
 
 The collector reads the PDH object `MSMQ Queue` with `pdh.CounterTypeRaw`. The
 object exists only where the Message Queuing feature (MSMQ service) is

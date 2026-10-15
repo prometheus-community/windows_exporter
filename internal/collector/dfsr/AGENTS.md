@@ -1,4 +1,4 @@
-# dfsr collector
+# `dfsr` collector
 
 The collector reads three PDH objects with `pdh.CounterTypeRaw`:
 `DFS Replication Connections`, `DFS Replicated Folders` and

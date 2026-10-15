@@ -1,4 +1,4 @@
-# cache collector
+# `cache` collector
 
 The collector reads the single-instance PDH object `Cache` (file system cache)
 with `pdh.CounterTypeRaw`. The object exists on every Windows host, so no role

@@ -1,4 +1,4 @@
-# logical_disk collector
+# `logical_disk` collector
 
 The collector reads the `LogicalDisk` PDH object with `pdh.CounterTypeRaw`.
 The object exists on every Windows host; no role is needed. It is
@@ -9,7 +9,7 @@ multi-instance. These notes were recorded on a Windows Server 2025
   drive letter (here `HarddiskVolume1` and `HarddiskVolume4`) and the
   aggregate `_Total`. `internal/pdh` drops `_Total` because the collector
   asks for `pdh.InstancesAll`. The other instances pass through the volume
-  include and exclude regexps, and the instance name is the `volume` label.
+  include and exclude regular expressions, and the instance name is the `volume` label.
 - `% Free Space` is `PERF_RAW_FRACTION`. Its raw value equals
   `Free Megabytes` (49907) and its base is the volume size in megabytes
   (129254). The collector reads the base (`,secondvalue`) as the size in MB.

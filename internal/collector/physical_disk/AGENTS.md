@@ -1,4 +1,4 @@
-# physical_disk collector
+# `physical_disk` collector
 
 The collector reads the `PhysicalDisk` PDH object with `pdh.CounterTypeRaw`.
 The object exists on every Windows host; no role is needed. It is
@@ -8,7 +8,7 @@ multi-instance. These notes were recorded on a Windows Server 2025
 - Instances are the disk number, followed by the drive letters of its
   volumes when it has any: `0 C:`, `1`, `2`, `3`, `4`, plus the aggregate
   `_Total`. `internal/pdh` drops `_Total` because the collector asks for
-  `pdh.InstancesAll`. The collector matches the include and exclude regexps
+  `pdh.InstancesAll`. The collector matches the include and exclude regular expressions
   against the full instance name and then labels the metrics with the part
   before the first space (`0`).
 - The time counters share one raw value. `% Disk Read Time` and the first

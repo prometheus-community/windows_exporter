@@ -1,4 +1,4 @@
-# gpu collector
+# `gpu` collector
 
 The collector reads five PDH objects with `pdh.CounterTypeRaw`:
 `GPU Engine`, `GPU Adapter Memory`, `GPU Local Adapter Memory`,

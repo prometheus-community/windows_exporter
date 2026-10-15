@@ -1,4 +1,4 @@
-# nps collector
+# `nps` collector
 
 The collector reads the single-instance PDH objects `NPS Authentication Server`
 and `NPS Accounting Server` with `pdh.CounterTypeRaw`. They exist only where

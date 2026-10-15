@@ -1,4 +1,4 @@
-# adcs collector
+# `adcs` collector
 
 The collector reads the PDH object `Certification Authority` with
 `pdh.CounterTypeRaw`. It exists only on a server running Active Directory

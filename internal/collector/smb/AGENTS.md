@@ -1,4 +1,4 @@
-# smb collector
+# `smb` collector
 
 The collector reads the `SMB Server Shares` PDH object with
 `pdh.CounterTypeRaw`. The object comes with the SMB server (`LanmanServer`)

@@ -1,4 +1,4 @@
-# cpu collector
+# `cpu` collector
 
 The collector reads the multi-instance PDH object `Processor Information`
 with `pdh.CounterTypeRaw`. The object exists on every Windows host, so no role

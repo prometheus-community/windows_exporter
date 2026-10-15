@@ -1,4 +1,4 @@
-# system collector
+# `system` collector
 
 The collector reads the single-instance PDH object `System` with
 `pdh.CounterTypeRaw`. The object exists on every Windows host, so no role is
