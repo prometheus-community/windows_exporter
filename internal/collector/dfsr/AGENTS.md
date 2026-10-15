@@ -15,7 +15,12 @@ provision DFSR. These notes were recorded on a single Windows Server 2025 DC.
   - Gauges: `Staging/Conflict/Deleted Space In Use` (bytes),
     `USN Journal Unread Percentage`, connection `Bytes Received Per Second`,
     and `Bandwidth Savings Using DFS Replication`, which is a percentage
-    ("a value of 20 indicates ... 20% less bandwidth"), not bytes.
+    ("a value of 20 indicates ... 20% less bandwidth"), not bytes. The collector
+    publishes it and `USN Journal Unread Percentage` (0-100) as `_ratio`
+    gauges divided by 100.
+- The `collect*Metrics` functions take rows, so tests can check names, types
+  and values through a registry without a live DFSR service
+  (`dfsr_internal_test.go`).
 - Instances: folders are `<replicated folder>-{<GUID>}`, for example
   `SYSVOL Share-{DD658FCA-D7AE-487D-8E75-67481CEBE108}`; volumes are drive
   letters (`C:`). A DC without replication partner has no instance of

@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Active Directory latency or security descriptor propagation, Hyper-V, logical disk queue, cache, IIS output cache, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Active Directory latency or security descriptor propagation, DFSR, Hyper-V, logical disk queue, cache, IIS output cache, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, SQL Server lock counts, DHCP denials, AD LSA writes, AD computer creations or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
@@ -243,9 +243,15 @@ Renamed:
 | `windows_ad_security_descriptor_propagation_access_wait_total_seconds` | `windows_ad_security_descriptor_propagation_average_exclusion_time_seconds` | Now in seconds, was the raw millisecond average; it is an average, not a total |
 | `windows_ad_security_descriptor_propagation_events_total` | `windows_ad_security_descriptor_propagation_suboperations_total` | Same value, it counts sub-operations, not events |
 | `windows_ad_security_descriptor_propagation_items_queued_total` | `windows_ad_security_descriptor_propagation_items_queued` | Now a gauge, query it without `rate()` |
+| `windows_dfsr_connection_bandwidth_savings_using_dfs_replication_bytes_total` | `windows_dfsr_connection_bandwidth_savings_using_dfs_replication_ratio` | Now a gauge, 0-1 instead of percent |
+| `windows_dfsr_folder_bandwidth_savings_using_dfs_replication_bytes_total`     | `windows_dfsr_folder_bandwidth_savings_using_dfs_replication_ratio`     | Now a gauge, 0-1 instead of percent |
+| `windows_dfsr_volume_usn_journal_unread_percentage`  | `windows_dfsr_volume_usn_journal_unread_ratio`                 | 0-1 instead of percent             |
 
 The RemoteFX loss, FEC and retransmission gauges were not percentages. They exported the raw numerator of a Windows sample fraction, a running count that only grows.
 The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])`, and likewise with `windows_remote_fx_net_fec_packets_total` / `windows_remote_fx_net_fec_sampled_packets_total` and `windows_remote_fx_net_retransmitted_packets_total` / `windows_remote_fx_net_retransmission_sampled_packets_total`.
+
+The DFSR bandwidth savings metrics were never byte counts. Windows reports the share of bandwidth saved in percent, which 0.31 published as a byte counter.
+Multiply the new ratios by 100 to get the old values; alert on `windows_dfsr_volume_usn_journal_unread_ratio` reaching `1` instead of `100`.
 
 Removed:
 
