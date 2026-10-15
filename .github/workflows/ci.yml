@@ -1790,17 +1790,13 @@ jobs:
             ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
 
+  # Linting type-checks the Windows build from Linux: GOOS=windows selects the
+  # same files, the code uses no cgo, and Linux checkouts keep LF line endings.
   lint:
-    runs-on: windows-2025
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      # `gofmt` linter run by golangci-lint fails on CRLF line endings (the default for Windows)
-      - name: Set git to use LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: 'false'
@@ -1810,8 +1806,13 @@ jobs:
           # renovate: golang=go
           go-version: '1.27.2'
 
+      # Only the lint step targets Windows; the action installs the Linux
+      # golangci-lint binary for the runner.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        env:
+          GOOS: windows
+          GOARCH: amd64
         with:
           # renovate: github=golangci/golangci-lint
           version: v2.14.0
