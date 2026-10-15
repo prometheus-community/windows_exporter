@@ -181,6 +181,22 @@ go build -o windows_exporter.dev.exe ./cmd/windows_exporter/
 Adjust the collector list for the change. Leave the existing exporter instance
 running unless the user requests changes to it.
 
+To check a collector's metric types against Windows, list each counter of the
+PDH object with its type and raw value. Windows PowerShell 5.1 can do this
+through .NET; `RawValue` and `BaseValue` are what `pdh.CounterTypeRaw` returns
+as first and second value:
+
+```powershell
+$cat = [System.Diagnostics.PerformanceCounterCategory]'DirectoryServices'
+$cat.GetCounters('NTDS') | ForEach-Object {
+    $s = $_.NextSample()
+    '{0} | {1} | raw={2} base={3}' -f $_.CounterName, $_.CounterType, $s.RawValue, $s.BaseValue
+}
+```
+
+Roles that are rarely available on development machines (AD DS, AD CS,
+AD FS) have such dumps recorded in the `AGENTS.md` of their collector.
+
 ## Dashboards, rules and runbooks
 
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
