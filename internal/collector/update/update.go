@@ -119,10 +119,11 @@ const closeTimeout = 3 * time.Second
 // The worker observes the cancellation between searches only: a running
 // search is a synchronous WUA call that cannot be interrupted, and an online
 // search can take minutes. If the worker does not return in time, Close logs
-// a warning and returns. The worker owns all of its resources and shares none
-// with the caller: it keeps running until the search returns, then releases
-// its COM objects, uninitializes COM and exits on its own without starting
-// another search. If the process exits first, the search is abandoned.
+// a warning and returns. The worker keeps running until the search returns.
+// It owns its COM objects and only shares metricsBuf, under mu, with Collect.
+// After the cancellation it does not store the result of the running search:
+// it releases its COM objects, uninitializes COM and exits on its own without
+// starting another search. If the process exits first, the search is abandoned.
 func (c *Collector) Close() error {
 	if c.ctxCancelFn == nil {
 		return nil
@@ -296,10 +297,16 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		err = recovery.Run(func() error {
 			var err error
 
-			metricsBuf, err = c.fetchUpdates(logger, searcher)
+			metricsBuf, err = c.fetchUpdates(logger, searcher, len(metricsBuf))
 
 			return err
 		})
+
+		// A search that outlived Close publishes nothing.
+		if ctx.Err() != nil {
+			return
+		}
+
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to fetch updates",
 				slog.Any("err", err),
@@ -323,8 +330,11 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	}
 }
 
-func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher) ([]prometheus.Metric, error) {
-	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf)*2+1)
+// fetchUpdates searches for pending updates. previousLen, the number of
+// metrics of the previous search, sizes the buffer. fetchUpdates reads no
+// collector state that Collect or Close change.
+func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher, previousLen int) ([]prometheus.Metric, error) {
+	metricsBuf := make([]prometheus.Metric, 0, previousLen+1)
 
 	timeStart := time.Now()
 

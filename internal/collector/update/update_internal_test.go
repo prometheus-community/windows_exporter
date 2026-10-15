@@ -103,7 +103,7 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 
 			searcher, attempted, criteria := fakeUpdateSearch(tc.countError)
 
-			metrics, err := c.fetchUpdates(logger, searcher)
+			metrics, err := c.fetchUpdates(logger, searcher, 0)
 			if tc.countError {
 				require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 				require.Nil(t, metrics)
