@@ -18750,6 +18750,808 @@
                     }
                 }
             },
+            "panel-293": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "topk(10, sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / max by (vm) (windows_hyperv_vm_processors{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "The ten VMs with the highest CPU usage relative to their own virtual processors. Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left.",
+                    "id": 293,
+                    "links": [],
+                    "title": "Busiest VMs",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-294": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (device, disk, vm) (label_replace(topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (device, disk, vm) (label_replace(avg_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (device, disk, vm) (label_replace(max_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (device, disk, vm) (label_replace(avg_over_time((rate(windows_hyperv_virtual_storage_device_operations_read_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) + rate(windows_hyperv_virtual_storage_device_operations_written_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "device",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true,
+                                                "Time 4": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 2,
+                                                "Value #B": 3,
+                                                "Value #C": 4,
+                                                "Value #D": 5,
+                                                "disk": 0,
+                                                "vm": 1
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "Time above threshold",
+                                                "Value #B": "Average latency",
+                                                "Value #C": "Maximum latency",
+                                                "Value #D": "IOPS",
+                                                "disk": "Disk",
+                                                "vm": "VM"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Virtual disks that were above 0.01 s average latency per I/O in the time range, worst first. Time above threshold is counted in 5-minute steps, so permanently slow disks rank above short spikes. Disks with less than one I/O per second are ignored.",
+                    "id": 294,
+                    "links": [],
+                    "title": "Slowest virtual disks",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "device"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.hidden",
+                                                "value": true
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Time above threshold"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "s"
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "color-background"
+                                                }
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green",
+                                                            "value": null
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 900
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 3600
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": "^(Average|Maximum) latency$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "s"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "IOPS"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "iops"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": true,
+                                        "displayName": "Time above threshold"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-295": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(max by (instance, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Maximum size of all virtual hard disks of the VMs on this host.",
+                    "id": 295,
+                    "links": [],
+                    "title": "VHD size",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-296": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(max by (instance, path) (windows_hyperv_virtual_hard_disk_file_size_bytes{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Space the virtual hard disk files of the VMs on this host take on storage.",
+                    "id": 296,
+                    "links": [],
+                    "title": "VHD file size",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-297": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(clamp_min(max by (instance, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\"}) - max by (instance, path) (windows_hyperv_virtual_hard_disk_file_size_bytes{job=~\"$job\", instance=\"$instance\"}), 0))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Space the disks of the VMs on this host would still take if every disk grew to its full size.",
+                    "id": 297,
+                    "links": [],
+                    "title": "VHD growth if thick",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-298": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (vm) (label_replace(rate(windows_hyperv_virtual_network_adapter_outgoing_dropped_packets_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), \"vm_id\", \"$1\", \"adapter\", \".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*\") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processors{job=~\"$job\", instance=\"$instance\"}) + 1))",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}} outgoing",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (vm) (label_replace(rate(windows_hyperv_virtual_network_adapter_incoming_dropped_packets_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), \"vm_id\", \"$1\", \"adapter\", \".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*\") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processors{job=~\"$job\", instance=\"$instance\"}) + 1))",
+                                                "instant": false,
+                                                "legendFormat": "{{vm}} incoming",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Packets dropped per second by the network adapters of each VM; incoming drops are drawn below the axis. Adapters are matched to VMs by the VM GUID in their name.",
+                    "id": 298,
+                    "links": [],
+                    "title": "Dropped packets per VM",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "pps"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* incoming$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
             "panel-3": {
                 "kind": "Panel",
                 "spec": {
@@ -24364,7 +25166,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Memory a VM needs as a share of the memory it has. Above 100% the VM needs more memory than it is assigned.",
+                    "description": "Hyper-V memory demand of each VM as a share of its assigned memory. The demand follows the guest's commit charge, not the RAM in use, and is reported for static and dynamic memory. Above 100% the guest has committed more than its RAM: the rest is only reserved or paged out. Check paging inside the guest before adding RAM.",
                     "id": 73,
                     "links": [],
                     "title": "VM memory pressure",
@@ -30477,6 +31279,19 @@
                                                                     "x": 12,
                                                                     "y": 0
                                                                 }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-293"
+                                                                    },
+                                                                    "height": 8,
+                                                                    "width": 24,
+                                                                    "x": 0,
+                                                                    "y": 8
+                                                                }
                                                             }
                                                         ]
                                                     }
@@ -30583,6 +31398,58 @@
                                                                     "x": 16,
                                                                     "y": 0
                                                                 }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-294"
+                                                                    },
+                                                                    "height": 9,
+                                                                    "width": 24,
+                                                                    "x": 0,
+                                                                    "y": 8
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-295"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 8,
+                                                                    "x": 0,
+                                                                    "y": 17
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-296"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 8,
+                                                                    "x": 8,
+                                                                    "y": 17
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-297"
+                                                                    },
+                                                                    "height": 4,
+                                                                    "width": 8,
+                                                                    "x": 16,
+                                                                    "y": 17
+                                                                }
                                                             }
                                                         ]
                                                     }
@@ -30635,6 +31502,19 @@
                                                                     "width": 8,
                                                                     "x": 16,
                                                                     "y": 0
+                                                                }
+                                                            },
+                                                            {
+                                                                "kind": "GridLayoutItem",
+                                                                "spec": {
+                                                                    "element": {
+                                                                        "kind": "ElementReference",
+                                                                        "name": "panel-298"
+                                                                    },
+                                                                    "height": 8,
+                                                                    "width": 24,
+                                                                    "x": 0,
+                                                                    "y": 8
                                                                 }
                                                             }
                                                         ]

@@ -158,4 +158,6 @@ local hypervMemory = render(only({ hyperv: true, memory: true }));
 assert !std.objectHas(hypervFull.spec.elements, 'panel-290') : 'hyperv without memory: VM memory / host RAM stat rendered';
 assert std.objectHas(hypervMemory.spec.elements, 'panel-290') : 'hyperv with memory: VM memory / host RAM stat missing';
 
+assert std.all([std.objectHas(hypervFull.spec.elements, 'panel-' + id) for id in [293, 294, 295, 296, 297, 298]]) : 'hyperv: Hyper-V tab additions missing';
+
 results
