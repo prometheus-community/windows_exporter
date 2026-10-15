@@ -42,9 +42,10 @@ const (
 	defaultScrapeTimeout = 10 * time.Second
 	// minScrapeTimeout is the smallest time given to the collectors.
 	minScrapeTimeout = 10 * time.Millisecond
-	// maxScrapeTimeout is the largest time given to the collectors.
-	// The exporter's HTTP server ends responses after 5 minutes anyway.
-	maxScrapeTimeout = 5 * time.Minute
+	// MaxScrapeTimeout is the largest time given to the collectors, including the time a scrape
+	// waits for an earlier one. The HTTP server's write timeout must exceed it, so that a scrape
+	// that uses its full budget can still write its response.
+	MaxScrapeTimeout = 5 * time.Minute
 )
 
 type MetricsHTTPHandler struct {
@@ -120,7 +121,7 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // getScrapeTimeout returns the time the collectors get for this request.
 // It is the client's X-Prometheus-Scrape-Timeout-Seconds minus the timeout margin,
 // but the margin takes at most half of the client's timeout.
-// The result is between minScrapeTimeout and maxScrapeTimeout.
+// The result is between minScrapeTimeout and MaxScrapeTimeout.
 func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Request) time.Duration {
 	timeout := defaultScrapeTimeout
 
@@ -130,7 +131,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 		switch {
 		case math.IsInf(seconds, 1):
 			// Includes values too large for a float64, which ParseFloat reports as an error.
-			timeout = maxScrapeTimeout
+			timeout = MaxScrapeTimeout
 		case err != nil, math.IsNaN(seconds), seconds <= 0:
 			logger.WarnContext(r.Context(), fmt.Sprintf("Invalid X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %s", v, defaultScrapeTimeout))
 		default:
@@ -140,18 +141,18 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 	timeout = max(timeout-c.timeoutMargin, timeout/2)
 
-	return min(max(timeout, minScrapeTimeout), maxScrapeTimeout)
+	return min(max(timeout, minScrapeTimeout), MaxScrapeTimeout)
 }
 
-// toDuration converts seconds to a duration between 0 and maxScrapeTimeout.
+// toDuration converts seconds to a duration between 0 and MaxScrapeTimeout.
 // NaN and negative values become 0.
 func toDuration(seconds float64) time.Duration {
 	if math.IsNaN(seconds) || seconds <= 0 {
 		return 0
 	}
 
-	if seconds >= maxScrapeTimeout.Seconds() {
-		return maxScrapeTimeout
+	if seconds >= MaxScrapeTimeout.Seconds() {
+		return MaxScrapeTimeout
 	}
 
 	return time.Duration(seconds * float64(time.Second))

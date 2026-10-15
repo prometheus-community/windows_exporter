@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"maps"
 	"math"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/pprof"
@@ -53,8 +54,16 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// collectionCloseTimeout bounds how long the exporter waits for the collectors to close on shutdown.
-const collectionCloseTimeout = 10 * time.Second
+const (
+	// collectionCloseTimeout bounds how long the exporter waits for the collectors to close on shutdown.
+	collectionCloseTimeout = 10 * time.Second
+	// serverShutdownTimeout bounds how long the exporter waits for in-flight requests on shutdown,
+	// before it closes their connections.
+	serverShutdownTimeout = 5 * time.Second
+	// writeTimeoutMargin is the time a scrape gets on top of the largest scrape budget
+	// to encode and write its response.
+	writeTimeoutMargin = 30 * time.Second
+)
 
 func main() {
 	// os.Kill can't be caught. On Windows, Go delivers console close, logoff and shutdown events as SIGTERM.
@@ -277,13 +286,11 @@ func run(ctx context.Context, args []string) int {
 
 	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("started windows_exporter in %s", time.Since(startTime)))
 
-	server := &http.Server{
-		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      5 * time.Minute,
-		Handler:           mux,
-	}
+	// Requests derive their context from serveCtx, so that canceling it cancels in-flight scrapes.
+	serveCtx, cancelServe := context.WithCancel(ctx)
+	defer cancelServe()
+
+	server := newServer(serveCtx, mux)
 
 	errCh := make(chan error, 1)
 
@@ -312,21 +319,53 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Cancel in-flight scrapes before the server drains, so that they return what they have
+	// collected instead of holding the shutdown until their scrape budget ends.
+	cancelServe()
 
-	//nolint:contextcheck // create a new context for server shutdown
-	if err = server.Shutdown(ctx); err != nil {
-		//nolint:contextcheck
+	if err = shutdownServer(ctx, server, serverShutdownTimeout); err != nil {
 		logger.LogAttrs(ctx, slog.LevelError, "Failed to shutdown windows_exporter",
 			slog.Any("err", err),
 		)
 	} else {
-		//nolint:contextcheck
 		logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down")
 	}
 
+	// The deferred closeCollection closes the collectors after the server has shut down.
 	return 0
+}
+
+// newServer returns the HTTP server of the exporter. Requests derive their context from ctx.
+func newServer(ctx context.Context, handler http.Handler) *http.Server {
+	return &http.Server{
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		// A scrape may use the whole scrape budget before it writes the response.
+		WriteTimeout: httphandler.MaxScrapeTimeout + writeTimeoutMargin,
+		Handler:      handler,
+	}
+}
+
+// shutdownServer stops the server. It waits up to timeout for in-flight requests to complete.
+// Afterwards, it closes the remaining connections, so that a handler that doesn't return
+// can't block the shutdown.
+func shutdownServer(ctx context.Context, server *http.Server, timeout time.Duration) error {
+	// ctx is usually canceled already, as it is what triggered the shutdown.
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+	defer cancel()
+
+	err := server.Shutdown(shutdownCtx)
+	if err == nil {
+		return nil
+	}
+
+	if closeErr := server.Close(); closeErr != nil {
+		return errors.Join(err, fmt.Errorf("failed to close server: %w", closeErr))
+	}
+
+	return fmt.Errorf("in-flight requests didn't complete within %s, closed their connections: %w", timeout, err)
 }
 
 func logCurrentUser(ctx context.Context, logger *slog.Logger) {
