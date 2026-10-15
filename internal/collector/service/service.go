@@ -154,7 +154,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	utils.RegexpFlag(app,
 		"collector.service.include",
-		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
+		"Regexp of service to include. Service name (not the display name!) must both match include and not match exclude to be included.",
 		".+", &c.config.ServiceInclude,
 	)
 

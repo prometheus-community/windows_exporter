@@ -143,10 +143,15 @@ exercised a live Windows role.
 - Keep CLI and YAML validation consistent. Reject unknown fields, unsupported
   sub-collector names and invalid values; preserve CLI precedence and repeated
   flag/list behavior. Changes to config shapes also need schema, flag parsing
-  and documentation updates. Register include/exclude expression flags with
-  `utils.RegexpFlag`, which anchors the expression, stores the compiled
-  `*regexp.Regexp` in the config and names the flag in parse errors; use
-  `utils.IsMatchAll`/`IsMatchNone` to detect unfiltered defaults.
+  and documentation updates. A collector is registered once, in the
+  `registrations` table of `pkg/collector/map.go`, with a `Config` field whose
+  YAML key is the collector name and a `docs/collector.<name>.md`;
+  `TestRegistrations` checks that they agree. The configuration file schema in
+  `internal/config` only checks keys: the flags parse and validate the values.
+  Register include/exclude expression flags with `utils.RegexpFlag`, which
+  anchors the expression, stores the compiled `*regexp.Regexp` in the config
+  and names the flag in parse errors; use `utils.IsMatchAll`/`IsMatchNone` to
+  detect unfiltered defaults.
 - For textfiles, keep HELP/type metadata consistent across files and preserve
   unrelated valid series when reporting duplicates or parse failures. Publish
   producer output by replacing a temporary file in the same directory. File
@@ -227,10 +232,28 @@ Gate every tab, row, panel and variable on the collectors it queries with
 `jsonnet -J vendor tests/dashboard.test.jsonnet` to check the layout for several
 collector selections.
 
-From `contrib/mixin`, install the pinned tools with `make tools`, ensure they
-are on `PATH`, then run `make fmt`, `make generate`, `make check-dashboards` and
-`make test`. Keep generated artifacts in sync. The tests cover Jsonnet format,
-dashboard parity, promtool rules/tests, offline pint lint and runbook coverage.
+From `contrib/mixin`, install the tools pinned in `mise.toml` with
+`mise install`, then run `mise run fmt`, `mise run generate`,
+`mise run check-dashboards` and `mise run test`. Keep generated artifacts in
+sync. The tests cover Jsonnet format, dashboard parity, promtool rules/tests,
+offline pint lint, dashboard lint and runbook coverage.
+
+The tasks are POSIX shell scripts (`set -eu`, `trap`, `mktemp`, `$(...)`) that
+also call `rm`, `cp`, `diff`, `git` and, for `check-runbooks`, `python3`. On
+Windows, mise runs inline tasks with `cmd /c` by default, so run them in WSL, or
+from Git Bash with `MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS="bash -c"` and Git's
+`bash` (not `C:\Windows\System32\bash.exe`, which starts WSL) first on `PATH`.
+
+Without mise, run the Jsonnet tools with `go run` at the versions pinned in
+`mise.toml`, for example
+`go run github.com/google/go-jsonnet/cmd/jsonnet@v0.22.0` (also `jsonnetfmt`
+and `jsonnet-lint`) and
+`go run github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@v0.6.0 install`. That
+covers formatting, generation and the Jsonnet tests; promtool, pint and
+dashboard-linter still need their release binaries, so report those checks as
+skipped. A Windows checkout with `core.autocrlf` has CRLF sources, so compare
+generated output with `diff --strip-trailing-cr`.
+
 Preserve target/device labels, apply counter rates before aggregation, and
 handle zero denominators. Keep optional-role alerts configurable and provide a
 runbook for each alert. Check required collector availability and the Grafana

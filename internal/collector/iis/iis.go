@@ -164,7 +164,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
-		"ISS information",
+		"IIS information",
 		[]string{},
 		prometheus.Labels{"version": fmt.Sprintf("%d.%d", c.iisVersion.major, c.iisVersion.minor)},
 	)
