@@ -98,19 +98,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.writeRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_total"),
 		"Writes requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.readRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_total"),
 		"Read requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.metadataRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_total"),
 		"Metadata requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
@@ -122,7 +122,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.filesOpened = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_files_opened_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_files_opened_total"),
 		"Files opened on the SMB Server Share",
 		[]string{"share"},
 		nil,

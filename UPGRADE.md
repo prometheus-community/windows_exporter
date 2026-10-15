@@ -215,6 +215,10 @@ Renamed:
 | `windows_hyperv_virtual_storage_device_throughput`   | `windows_hyperv_virtual_storage_device_throughput_total`       | Now a counter, use `rate()`        |
 | `windows_filetime_mtime_timestamp_seconds`           | `windows_file_mtime_timestamp_seconds`                         | See [filetime](#filetime-collector-removed) |
 | `windows_memory_commit_limit`                        | `windows_memory_commit_limit_bytes`                            | Unit suffix added, same value      |
+| `windows_smb_server_shares_read_requests_count_total` | `windows_smb_server_shares_read_requests_total` | Same value |
+| `windows_smb_server_shares_write_requests_count_total` | `windows_smb_server_shares_write_requests_total` | Same value |
+| `windows_smb_server_shares_metadata_requests_count_total` | `windows_smb_server_shares_metadata_requests_total` | Same value |
+| `windows_smb_server_shares_files_opened_count_total` | `windows_smb_server_shares_files_opened_total` | Same value |
 
 Removed:
 
