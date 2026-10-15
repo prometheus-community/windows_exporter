@@ -291,7 +291,7 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 			var counterHandle pdhCounterHandle
 
 			//nolint:nestif
-			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
+			if ret := addEnglishCounter(handle, object, instance, counterName, &counterHandle); ret != ErrorSuccess {
 				if ret == CstatusNoCounter {
 					if f.minOSBuild != "" {
 						if minOSBuild, err := strconv.Atoi(f.minOSBuild); err == nil {
@@ -509,6 +509,8 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	defer state.names.removeUnseen()
 
 	for counterIndex := range c.counters {
+		c.loadTimeBase(&c.counters[counterIndex])
+
 		for _, instance := range c.counters[counterIndex].Instances {
 			itemCount, ok, err := c.getCounterArray(instance, &state.buf)
 			if err != nil {
@@ -536,6 +538,26 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	}
 
 	return nil
+}
+
+// loadTimeBase reads the time base of a raw elapsed time counter that had none
+// when the collector was created. Early after a reboot, PDH can report no data
+// for it, e.g. for APP_POOL_WAS while WAS is still starting (#2313). Without a
+// time base, the counter has no valid value and every instance is omitted.
+func (c *Collector[T]) loadTimeBase(counter *Counter) {
+	if c.resultType != CounterTypeRaw || counter.Type != PERF_ELAPSED_TIME || counter.Frequency > 0 {
+		return
+	}
+
+	for _, instance := range counter.Instances {
+		var frequency int64
+
+		if ret := GetCounterTimeBase(instance, &frequency); ret == ErrorSuccess && frequency > 0 {
+			counter.Frequency = frequency
+
+			return
+		}
+	}
 }
 
 // pdhBufferSlack is extra space allocated beyond the buffer size reported by PDH.

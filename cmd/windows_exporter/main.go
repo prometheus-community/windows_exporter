@@ -23,10 +23,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"math"
 	"net/http"
+	"net/http/httptest"
 	"net/http/pprof"
 	"os"
 	"os/signal"
@@ -93,6 +95,12 @@ func run(ctx context.Context, args []string) int {
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
 	var (
+		scrapeStdout = app.Flag(
+			"scrape.stdout",
+			"Collect metrics once and write them to stdout in Prometheus text format, then exit. "+
+				"Logs are sent to stderr unless --log.file is set explicitly. "+
+				"PDH rate counters need two samples; the first scrape after startup covers only a short interval.",
+		).Default("false").Bool()
 		configFile = app.Flag(
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
@@ -158,6 +166,13 @@ func run(ctx context.Context, args []string) int {
 		logStartupError(ctx, "Invalid process memory limit", err)
 
 		return 1
+	}
+
+	// When scraping to stdout, redirect logs to stderr so they don't
+	// mix with the metrics output. Only override if the user hasn't
+	// explicitly set --log.file to something other than the default.
+	if *scrapeStdout && logFile.String() == "stdout" {
+		_ = logFile.Set("stderr")
 	}
 
 	logger, logCloser, err := log.New(logConfig)
@@ -239,12 +254,18 @@ func run(ctx context.Context, args []string) int {
 
 	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ", "))
 
-	mux := http.NewServeMux()
-	mux.Handle("GET /health", httphandler.NewHealthHandler())
-	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
+	handlerOpts := &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
 		TimeoutMargin:          *timeoutMargin,
-	}))
+	}
+
+	if *scrapeStdout {
+		return scrapeToStdout(ctx, os.Stdout, logger, collectors, handlerOpts)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("GET /health", httphandler.NewHealthHandler())
+	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, handlerOpts))
 
 	if *debugEnabled {
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
@@ -409,6 +430,47 @@ func expandEnabledCollectors(enabled string) []string {
 	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
 
 	return slices.Compact(strings.Split(expanded, ","))
+}
+
+// scrapeToStdout performs a single scrape through the HTTP handler and writes
+// the response body to stdout. It reuses the same handler that serves /metrics
+// so the output is identical, including exporter self-instrumentation and
+// timeout margin.
+func scrapeToStdout(ctx context.Context, w io.Writer, logger *slog.Logger, collectors *collector.Collection, opts *httphandler.Options) int {
+	handler := httphandler.New(logger, collectors, opts)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/metrics", nil)
+	if err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "couldn't create request",
+			slog.Any("err", err),
+		)
+
+		return 1
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	result := rec.Result()
+	defer result.Body.Close()
+
+	if result.StatusCode != http.StatusOK {
+		logger.LogAttrs(ctx, slog.LevelError, "scrape failed",
+			slog.Int("status", result.StatusCode),
+		)
+
+		return 1
+	}
+
+	if _, err := io.Copy(w, result.Body); err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "failed to write metrics to stdout",
+			slog.Any("err", err),
+		)
+
+		return 1
+	}
+
+	return 0
 }
 
 // setProcessMemoryLimit applies the CLI contract: zero disables the soft limit.

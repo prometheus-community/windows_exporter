@@ -37,13 +37,13 @@ function(on)
         [serverRate('received_bytes_total'), share + ' received'],
       ], below='.* received$'),
       b.graph(227, 'Share requests', 'Read, write and metadata requests per second per share.' + serverRequirement, 'ops', [
-        [serverRate('read_requests_count_total'), share + ' read'],
-        [serverRate('write_requests_count_total'), share + ' write'],
-        [serverRate('metadata_requests_count_total'), share + ' metadata'],
+        [serverRate('read_requests_total'), share + ' read'],
+        [serverRate('write_requests_total'), share + ' write'],
+        [serverRate('metadata_requests_total'), share + ' metadata'],
       ]),
       b.graph(228, 'Open files', 'Files open per share.' + serverRequirement, 'short', [[server('current_open_file_count'), share]]),
       b.graph(229, 'Connections', 'Client connections (tree connects) per share.' + serverRequirement, 'short', [[server('tree_connect_count'), share]]),
-      b.graph(230, 'Files opened', 'Files opened per second per share.' + serverRequirement, 'ops', [[serverRate('files_opened_count_total'), share]]),
+      b.graph(230, 'Files opened', 'Files opened per second per share.' + serverRequirement, 'ops', [[serverRate('files_opened_total'), share]]),
 
       b.graph(231, 'Client traffic', 'Bytes read and written per second per remote share. Reads are drawn below the axis.' + clientRequirement, 'Bps', [
         [clientRate('write_bytes_total'), path + ' write'],

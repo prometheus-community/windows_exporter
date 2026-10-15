@@ -158,7 +158,9 @@ func TestNewConfigFileResolverFlags(t *testing.T) {
 			// selects the configuration file itself
 			flag.Name == "config.file",
 			// prints the available sub-collectors and exits
-			flag.Name == "collector.exchange.list":
+			flag.Name == "collector.exchange.list",
+			// CLI-only diagnostic mode; not valid in a config file
+			flag.Name == "scrape.stdout":
 			continue
 		}
 

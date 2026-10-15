@@ -4,6 +4,10 @@ Param (
     [String] $PathToExecutable,
     [Parameter(Mandatory = $true)]
     [String] $Version,
+    # Numeric version of the package, such as 0.32.0.5 for 0.32.0-beta.5.
+    # Defaults to the numeric part of Version.
+    [Parameter(Mandatory = $false)]
+    [String] $MsiVersion,
     [Parameter(Mandatory = $false)]
     [ValidateSet("amd64", "arm64")]
     [String] $Arch = "amd64"
@@ -11,7 +15,9 @@ Param (
 $ErrorActionPreference = "Stop"
 
 # The MSI version is not semver compliant, so just take the numerical parts
-$MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
+if (-not $MsiVersion) {
+    $MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
+}
 
 # Get absolute path to executable before switching directories
 $PathToExecutable = Resolve-Path $PathToExecutable
