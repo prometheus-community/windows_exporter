@@ -2919,7 +2919,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Bytes per second the buffer pool reads, reads ahead, and writes through checkpoints, the lazy writer and other page writes. Reads are drawn below the axis. Requires the mssql collector, which is not enabled by default.",
+                    "description": "Bytes per second of all physical page writes and the parts written by checkpoints and the lazy writer, and of all page reads and the part read ahead. Reads are drawn below the axis. Requires the mssql collector, which is not enabled by default.",
                     "id": 276,
                     "links": [],
                     "title": "Buffer pool I/O",
@@ -4539,7 +4539,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Log waiting to be sent to each secondary replica, and log received and waiting to be redone on it. Only hosts in an Always On availability group report replicas. Requires the mssql collector, which is not enabled by default.",
+                    "description": "Log of each availability database on this secondary replica not yet received from the primary (send queue), and received but not yet redone (redo queue). The replica label holds the database name. Only secondary replicas of an Always On availability group report these. Requires the mssql collector, which is not enabled by default.",
                     "id": 287,
                     "links": [],
                     "title": "Replica queues",
@@ -5500,7 +5500,7 @@
                         "text": "",
                         "value": ""
                     },
-                    "definition": "label_values(windows_mssql_instance_info{job=~\"$job\", instance=\"$instance\"}, mssql_instance)",
+                    "definition": "label_values(windows_mssql_collector_success{job=~\"$job\", instance=\"$instance\"}, mssql_instance)",
                     "hide": "dontHide",
                     "includeAll": false,
                     "label": "SQL Server instance",
@@ -5515,7 +5515,7 @@
                         "kind": "DataQuery",
                         "spec": {
                             "qryType": 1,
-                            "query": "label_values(windows_mssql_instance_info{job=~\"$job\", instance=\"$instance\"}, mssql_instance)",
+                            "query": "label_values(windows_mssql_collector_success{job=~\"$job\", instance=\"$instance\"}, mssql_instance)",
                             "refId": "PrometheusVariableQueryEditor-VariableQuery"
                         },
                         "version": "v0"

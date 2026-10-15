@@ -123,7 +123,7 @@ function(on) [variable for variable in [
                           hide: 'dontHide',
                           skipUrlSync: false,
                         }),
-  if on('mssql') then new('mssql_instance', 'label_values(windows_mssql_instance_info{job=~"$job", instance="$instance"}, mssql_instance)')
+  if on('mssql') then new('mssql_instance', 'label_values(windows_mssql_collector_success{job=~"$job", instance="$instance"}, mssql_instance)')
                       + query.spec.withLabel('SQL Server instance'),
   if on('mssql') then new('database', 'label_values(windows_mssql_databases_data_files_size_bytes{job=~"$job", instance="$instance", mssql_instance="$mssql_instance"}, database)')
                       + query.spec.withCurrent({

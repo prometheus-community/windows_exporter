@@ -57,6 +57,8 @@ function(config)
   local knownSlugs = [slug(title) for title in std.objectFields(descriptions)];
   local unknownSeparate = std.setDiff(std.set(config.separateDashboardTabs), std.set(knownSlugs));
   assert std.length(unknownSeparate) == 0 : 'Unknown tabs in _config.separateDashboardTabs: ' + std.join(', ', unknownSeparate);
+  // The Fleet tab of the full dashboard links hosts to its Overview tab.
+  assert !std.member(config.separateDashboardTabs, 'fleet') && !std.member(config.separateDashboardTabs, 'overview') : 'The Fleet and Overview tabs cannot be in _config.separateDashboardTabs';
   local separate(tab) = std.member(config.separateDashboardTabs, slug(tab.layout.spec.title));
   local allTabs(overview) = [
     tab

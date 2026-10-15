@@ -116,7 +116,7 @@ function(on)
       b.graph(275, 'Page life expectancy', 'Seconds a page stays in the buffer pool without references. Sudden drops mean pages are evicted to make room, for example for a large scan.' + requirement, 's', [
         [metric('bufman_page_life_expectancy_seconds'), 'page life expectancy'],
       ]),
-      b.graph(276, 'Buffer pool I/O', 'Bytes per second the buffer pool reads, reads ahead, and writes through checkpoints, the lazy writer and other page writes. Reads are drawn below the axis.' + requirement, 'Bps', [
+      b.graph(276, 'Buffer pool I/O', 'Bytes per second of all physical page writes and the parts written by checkpoints and the lazy writer, and of all page reads and the part read ahead. Reads are drawn below the axis.' + requirement, 'Bps', [
         [pageBytes + ' * ' + rate('bufman_page_writes'), 'writes'],
         [pageBytes + ' * ' + rate('bufman_checkpoint_pages'), 'checkpoint writes'],
         [pageBytes + ' * ' + rate('bufman_lazywrites'), 'lazy writes'],
@@ -180,7 +180,7 @@ function(on)
         [metric('transactions_nonsnapshot_version_active'), 'non-snapshot version'],
       ]),
 
-      b.graph(287, 'Replica queues', 'Log waiting to be sent to each secondary replica, and log received and waiting to be redone on it. Only hosts in an Always On availability group report replicas.' + requirement, 'bytes', [
+      b.graph(287, 'Replica queues', 'Log of each availability database on this secondary replica not yet received from the primary (send queue), and received but not yet redone (redo queue). The replica label holds the database name. Only secondary replicas of an Always On availability group report these.' + requirement, 'bytes', [
         ['max by (replica) (' + metric('dbreplica_log_send_queue_bytes') + ')', '{{replica}} send queue'],
         ['max by (replica) (' + metric('dbreplica_recovery_queue_bytes') + ')', '{{replica}} redo queue'],
       ]),
