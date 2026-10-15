@@ -228,9 +228,10 @@ are on `PATH`, then run `make fmt`, `make generate`, `make check-dashboards` and
 `make test`. Keep generated artifacts in sync. The tests cover Jsonnet format,
 dashboard parity, promtool rules/tests, offline pint lint and runbook coverage.
 `go test ./internal/metriccontract/` checks that every `windows_` metric name
-in `docs/collector.*.md`, the mixin and the dashboards is created by a
-collector; it reads the Go sources, so it also runs on Linux. Documentation
-lines about former or removed metrics are skipped.
+in the READMEs, `docs/collector.*.md`, the runbooks, the mixin and the
+dashboards is created by a collector; it reads the Go sources, so it also runs
+on Linux. When documentation names a renamed or removed metric on purpose, add
+it to `historicalReferences` in that test with the reason.
 Preserve target/device labels, apply counter rates before aggregation, and
 handle zero denominators. Keep optional-role alerts configurable and provide a
 runbook for each alert. Check required collector availability and the Grafana

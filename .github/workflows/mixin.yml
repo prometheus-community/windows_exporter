@@ -6,6 +6,9 @@ on:
       - contrib/mixin/**
       - dashboard/*.json
       - docs/collector.*.md
+      - docs/runbooks/**
+      - docs/README.md
+      - README.md
       - internal/metriccontract/**
       - .github/workflows/mixin.yml
   push:
@@ -17,6 +20,9 @@ on:
       - contrib/mixin/**
       - dashboard/*.json
       - docs/collector.*.md
+      - docs/runbooks/**
+      - docs/README.md
+      - README.md
       - internal/metriccontract/**
       - .github/workflows/mixin.yml
   workflow_dispatch:

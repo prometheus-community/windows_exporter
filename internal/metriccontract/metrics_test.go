@@ -65,14 +65,31 @@ var suffixes = []string{"_bucket", "_sum", "_count"}
 // recording rule name, like windows:cpu_time:ratio_rate.
 var referencePattern = regexp.MustCompile(`(?:^|[^a-zA-Z0-9_:%])(windows_(?:[a-zA-Z0-9_]|%s)+)`)
 
-// historyPattern finds documentation lines about metrics that are no longer
-// emitted, like the old name of a renamed metric.
-var historyPattern = regexp.MustCompile(`(?i)\b(former|formerly|previous|previously|renamed|replaced|replaces|deprecated|removed|no longer)\b`)
-
 // configPattern finds the lines of configuration examples in the
 // documentation that name user-defined metrics or objects, like the metric of
 // a performancecounter counter or the name of a registry group.
 var configPattern = regexp.MustCompile(`^\s*(?:-\s*)?"?(?:name|metric)"?\s*:`)
+
+// dynamicPrefixes are the prefixes of the metric names that are defined by
+// the user configuration.
+//
+//nolint:gochecknoglobals
+var dynamicPrefixes = []string{
+	"windows_performancecounter_",
+	"windows_registry_",
+	"windows_wmi_",
+}
+
+// historicalReferences are metric names the exporter no longer emits, which
+// the documentation names to describe a rename or removal. The reason names
+// where.
+//
+//nolint:gochecknoglobals
+var historicalReferences = map[string]string{
+	"windows_logical_disk_avg_read_requests_queued":  "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
+	"windows_logical_disk_avg_write_requests_queued": "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
+	"windows_net_route_info":                         "docs/collector.net.md: documented but never emitted, removed from the docs",
+}
 
 // ignoredReferences are windows_ names that are not metrics of the exporter.
 //
@@ -90,9 +107,18 @@ func TestMetricReferences(t *testing.T) {
 	emitted := emittedMetricPatterns(t)
 	require.NotEmpty(t, emitted)
 
+	// A partly dynamic name matches many references, so only the collectors
+	// with user-defined metric names may create one. A new one means that the
+	// evaluation of the sources missed a name.
 	for _, pattern := range emitted {
-		if strings.Contains(pattern, dynamic) {
-			t.Logf("partly dynamic metric name: %s", strings.ReplaceAll(pattern, dynamic, "*"))
+		if !strings.Contains(pattern, dynamic) {
+			continue
+		}
+
+		name := strings.ReplaceAll(pattern, dynamic, "*")
+		if !slices.ContainsFunc(dynamicPrefixes, func(prefix string) bool { return strings.HasPrefix(pattern, prefix) }) {
+			t.Errorf("metric name %s is partly dynamic. Build it from constants, or add its collector to dynamicPrefixes "+
+				"if its names are user-defined", name)
 		}
 	}
 
@@ -164,12 +190,21 @@ type reference struct {
 func metricReferences(t *testing.T) []reference {
 	t.Helper()
 
-	var files []string
+	files := []string{
+		filepath.Join(repoRoot, "README.md"),
+		filepath.Join(repoRoot, "docs", "README.md"),
+		filepath.Join(repoRoot, "contrib", "mixin", "README.md"),
+	}
 
 	docs, err := filepath.Glob(filepath.Join(repoRoot, "docs", "collector.*.md"))
 	require.NoError(t, err)
 
 	files = append(files, docs...)
+
+	runbooks, err := filepath.Glob(filepath.Join(repoRoot, "docs", "runbooks", "*.md"))
+	require.NoError(t, err)
+
+	files = append(files, runbooks...)
 
 	dashboards, err := filepath.Glob(filepath.Join(repoRoot, "dashboard", "*.json"))
 	require.NoError(t, err)
@@ -208,7 +243,7 @@ func metricReferences(t *testing.T) []reference {
 		seen := map[string]bool{}
 
 		for i, line := range strings.Split(string(data), "\n") {
-			if filepath.Ext(path) == ".md" && (historyPattern.MatchString(line) || configPattern.MatchString(line)) {
+			if filepath.Ext(path) == ".md" && configPattern.MatchString(line) {
 				continue
 			}
 
@@ -216,11 +251,17 @@ func metricReferences(t *testing.T) []reference {
 				name := line[match[2]:match[3]]
 
 				// A label value, like name="windows_nt", is not a metric.
-				if before := line[:match[2]]; strings.HasSuffix(before, `="`) || strings.HasSuffix(before, `~"`) {
+				before := line[:match[2]]
+				if strings.HasSuffix(before, `="`) || strings.HasSuffix(before, `~"`) ||
+					strings.HasSuffix(before, `='`) || strings.HasSuffix(before, `~'`) {
 					continue
 				}
 
 				if _, ok := ignoredReferences[name]; ok || seen[name] {
+					continue
+				}
+
+				if _, ok := historicalReferences[name]; ok {
 					continue
 				}
 
@@ -746,6 +787,11 @@ func (p *pkgSource) localValues(body *ast.BlockStmt, name string, depth int) ([]
 
 // evalField evaluates the values assigned to struct fields called name in
 // the package, by assignment or in composite literals.
+//
+// It over-approximates: it ignores the struct type and the receiver, so the
+// values of every field with that name in the package count. That can make a
+// stale reference resolve when another struct has a field with the same
+// name, but never makes an emitted name unresolved.
 func (p *pkgSource) evalField(name string, depth int) []string {
 	var result []string
 
