@@ -44,7 +44,8 @@ type collectorHypervisorVirtualProcessor struct {
 }
 
 type perfDataCounterValuesHypervisorVirtualProcessor struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	// The run time counters and CPU Wait Time Per Dispatch are PERF_PRECISION_100NS_TIMER.
 	// Their raw values are cumulative times, which pdh scales to seconds. Despite its name
@@ -124,11 +125,14 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 }
 
 func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
-	for _, data := range c.perfDataObjectHypervisorVirtualProcessor {
+	rows := c.perfDataObjectHypervisorVirtualProcessor
+	coreIDs := make([]string, len(rows))
+
+	for i := range rows {
 		// The name format is <VM Name>:Hv VP <vcore id>
-		parts := strings.Split(data.Name, ":")
+		parts := strings.Split(rows[i].Name, ":")
 		if len(parts) != 2 {
-			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", data.Name, "<VM Name>:Hv VP <vcore id>")
+			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", rows[i].Name, "<VM Name>:Hv VP <vcore id>")
 		}
 
 		coreParts := strings.Split(parts[1], " ")
@@ -136,8 +140,19 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 			return fmt.Errorf("unexpected format of core identifier in Hyper-V Hypervisor Virtual Processor: %q, expected %q", parts[1], "Hv VP <vcore id>")
 		}
 
-		vmName := parts[0]
-		coreID := coreParts[2]
+		rows[i].Name = parts[0]
+		coreIDs[i] = coreParts[2]
+	}
+
+	// VMs with the same name report the same instance names, see suffixDuplicateVMs.
+	suffixDuplicateVMs(rows,
+		func(row *perfDataCounterValuesHypervisorVirtualProcessor) *string { return &row.Name },
+		func(row *perfDataCounterValuesHypervisorVirtualProcessor) int { return row.Occurrence },
+	)
+
+	for i, data := range rows {
+		vmName := data.Name
+		coreID := coreIDs[i]
 
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,

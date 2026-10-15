@@ -279,6 +279,13 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
+	// Some objects, e.g. Process, report the same instance name more than
+	// once. Each occurrence is published with a "#N" suffix, see the docs.
+	pdh.SuffixDuplicates(rows,
+		func(row *pdh.Row) *string { return &row.Name },
+		func(row *pdh.Row) int { return row.Occurrence },
+	)
+
 	metricTypes := counterMetricTypes(perfDataObject)
 
 	var errs []error

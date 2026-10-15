@@ -108,9 +108,14 @@ exercised a live Windows role.
   factor. The disk and `smbclient` collectors still use the fixed 1e-7
   (10 MHz) factor.
   Never publish an invalid sample as zero: that can look like a counter reset.
-- Keep the typed PDH collectors and `perfdata` tags. Preserve duplicate
-  instance occurrences within a sample; their suffixes are not stable identities.
-  Do not remove every name ending in `_Total`: legitimate process and database
+- Keep the typed PDH collectors and `perfdata` tags. `internal/pdh` passes
+  instance names through unchanged, so a `#N` in a name always comes from
+  Windows (IIS recycling, `Ethernet#2`). Some objects report one name several
+  times per sample (`Process`, `.NET CLR *`, Hyper-V objects of VMs with the
+  same name). Rows without an `Occurrence int` field get only the first of
+  them; collectors that publish all declare the field and choose the label
+  value, usually with `pdh.SuffixDuplicates`. Those suffixes are not stable
+  identities. Do not remove every name ending in `_Total`: legitimate process and database
   names can use that suffix. Use the shared aggregate-instance policy.
 - PDH collectors add counters by English path. On a Windows installation
   without en-US resources, the 009 name table holds localized names for v2

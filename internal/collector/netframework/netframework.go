@@ -376,6 +376,34 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return g.Wait()
 }
 
+// clrInstance is implemented by the rows of the .NET CLR objects.
+type clrInstance interface {
+	instance() (name *string, occurrence int)
+}
+
+// suffixDuplicateProcesses keeps processes with the same name apart. The .NET
+// CLR objects name instances after the process image and report a name once
+// per process, e.g. "powershell" twice for two PowerShell processes. Later
+// processes get the suffix "#1", "#2" and so on, which depends on the order
+// of the sample and does not identify a process across scrapes.
+func suffixDuplicateProcesses[T any, P interface {
+	*T
+	clrInstance
+}](rows []T) {
+	pdh.SuffixDuplicates(rows,
+		func(row *T) *string {
+			name, _ := P(row).instance()
+
+			return name
+		},
+		func(row *T) int {
+			_, occurrence := P(row).instance()
+
+			return occurrence
+		},
+	)
+}
+
 // newPerfCollector adds the counters of object to query and retains
 // ownership of partially initialized collectors. Missing objects are optional;
 // missing individual counters remain errors.

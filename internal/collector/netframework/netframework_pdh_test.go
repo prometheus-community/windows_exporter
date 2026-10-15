@@ -415,6 +415,42 @@ func TestGCZeroBaseDoesNotPublishInvalidRatio(t *testing.T) {
 	require.True(t, foundAllocated)
 }
 
+// TestDuplicateProcessNames checks that processes with the same name, which
+// the CLR objects report with the same instance name, are published apart.
+func TestDuplicateProcessNames(t *testing.T) {
+	c := &Collector{}
+	c.describeClrExceptions()
+	c.perfClrExceptions = &fixturePerfCollector[perfDataClrExceptions]{rows: []perfDataClrExceptions{
+		{Name: "powershell", NumberofExcepsThrown: 1},
+		{Name: "powershell", Occurrence: 1, NumberofExcepsThrown: 2},
+		{Name: "powershell#1", NumberofExcepsThrown: 3},
+		{Name: "powershell", Occurrence: 2, NumberofExcepsThrown: 4},
+	}}
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(fixturePromCollector{collect: func(ch chan<- prometheus.Metric) {
+		require.NoError(t, c.collectClrExceptions(ch, nil, time.Second))
+	}})
+
+	families, err := registry.Gather()
+	require.NoError(t, err)
+
+	got := map[string]float64{}
+
+	for _, family := range families {
+		if family.GetName() != "windows_netframework_clrexceptions_exceptions_thrown_total" {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			got[metric.GetLabel()[0].GetValue()] = metric.GetCounter().GetValue()
+		}
+	}
+
+	// "powershell#1" is the name of a process, so the suffixes skip it.
+	require.Equal(t, map[string]float64{"powershell": 1, "powershell#2": 2, "powershell#1": 3, "powershell#3": 4}, got)
+}
+
 func TestMissingObjectErrorClassification(t *testing.T) {
 	missing := pdh.NewPdhError(pdh.CstatusNoObject)
 	unrelated := errors.New("access denied")

@@ -344,6 +344,46 @@ func TestBuildInvalidConfig(t *testing.T) {
 	}
 }
 
+// TestCollectorDuplicateInstances checks that the svchost processes, which the
+// Process object reports with the same name, are published with suffixes.
+func TestCollectorDuplicateInstances(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{{
+			Name: "process", Object: "Process", Instances: []string{"*"},
+			Counters: []performancecounter.Counter{{Name: "ID Process", Type: "gauge"}},
+		}},
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectorAdapter{*c})
+
+	families, err := registry.Gather()
+	require.NoError(t, err, "every series is unique")
+
+	instances := map[string]bool{}
+
+	for _, family := range families {
+		if family.GetName() != "windows_performancecounter_process_id_process" {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == "instance" {
+					instances[label.GetValue()] = true
+				}
+			}
+		}
+	}
+
+	require.True(t, instances["svchost"], "svchost")
+	require.True(t, instances["svchost#1"], "svchost#1")
+}
+
 func TestCollectorClose(t *testing.T) {
 	t.Parallel()
 

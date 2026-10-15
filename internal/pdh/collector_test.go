@@ -74,6 +74,70 @@ func TestCollector(t *testing.T) {
 	}
 }
 
+type processOccurrence struct {
+	Name       string
+	Occurrence int
+	ProcessID  float64 `perfdata:"ID Process"`
+}
+
+// TestCollectorOccurrences checks the duplicate names of the Process object,
+// which reports every svchost process as "svchost".
+func TestCollectorOccurrences(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	withOccurrence, err := pdh.NewCollector[processOccurrence](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.NoError(t, err)
+
+	defer withOccurrence.Close()
+
+	withoutOccurrence, err := pdh.NewCollector[process](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.NoError(t, err)
+
+	defer withoutOccurrence.Close()
+
+	var rows []processOccurrence
+
+	require.NoError(t, withOccurrence.Collect(&rows))
+
+	occurrences := map[string][]int{}
+	for _, row := range rows {
+		occurrences[row.Name] = append(occurrences[row.Name], row.Occurrence)
+	}
+
+	require.Greater(t, len(occurrences["svchost"]), 1, "svchost is reported more than once")
+
+	for name, seen := range occurrences {
+		require.NotContains(t, name, "#", "the collector adds no suffix")
+		require.ElementsMatch(t, seen, seq(len(seen)), "occurrences of %s", name)
+	}
+
+	var unique []process
+
+	require.NoError(t, withoutOccurrence.Collect(&unique))
+
+	names := map[string]int{}
+	for _, row := range unique {
+		names[row.Name]++
+	}
+
+	require.Equal(t, 1, names["svchost"], "without an Occurrence field only the first instance of a name is collected")
+
+	for name, count := range names {
+		require.Equal(t, 1, count, name)
+	}
+}
+
+func seq(n int) []int {
+	s := make([]int, n)
+	for i := range s {
+		s[i] = i
+	}
+
+	return s
+}
+
 func TestCollectorConcurrentCollect(t *testing.T) {
 	t.Parallel()
 

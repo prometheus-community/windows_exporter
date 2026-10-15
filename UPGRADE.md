@@ -334,6 +334,7 @@ Label changes on existing metrics:
 - The IIS HTTP request queue metrics (`windows_iis_http_requests_*`) have the label `app` instead of `site`. The value is unchanged: it always was the application pool that owns the HTTP.sys request queue, not a site. They are now filtered with `--collector.iis.app-include` and `--collector.iis.app-exclude` instead of the site filters.
 - The `windows_netframework_clrmemory_*` metrics have a `process_id` label.
 - In the `windows_hyperv_dynamic_memory_vm_*` metrics, unnamed VM instances have `vm="(unknown)"` (or `(unknown)#N`) instead of `vm="------"`.
+- VMs with the same name are published apart in the `windows_hyperv_dynamic_memory_vm_*`, `windows_hyperv_vid_*` and `windows_hyperv_hypervisor_virtual_processor_*` metrics: the first keeps its name, later ones have `vm="<name>#1"`, `vm="<name>#2"` and so on. In 0.31 they overwrote each other. The 0.32 betas put the suffix of a duplicate virtual processor into the `core` label (`core="0#1"`); `core` is now always the processor number.
 - `windows_terminal_services_connection_broker_performance_total` no longer has a `connection="Pending"` series. It was the current number of pending connections, published as a counter. Use the gauge `windows_terminal_services_connection_broker_pending_connections`.
 - `windows_terminal_services_cpu_time_seconds_total` has the CPU mode in `mode` and the session name in `session_name`. In 0.31 the two label values were swapped, so queries that filter on either label need updating.
 
@@ -363,7 +364,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - In the `performancecounter` collector, counters without an explicit `type` now always get the type of the underlying Windows counter. In 0.31 a mixed object could report counters as gauges, or the other way around, and the type could change between scrapes.
 - Instances without a valid sample are left out. In 0.31 they were reported as `0`, which looked like a counter reset.
 - An explicit instance list such as `instances: ["C:", "D:"]` now returns one series per instance. In 0.31 all listed instances were merged into one series.
-- When Windows reports the same instance name more than once, each occurrence is a separate series. In 0.31 they overwrote each other.
+- When Windows reports the same instance name more than once, for example every `svchost` process of the `Process` object, the `performancecounter`, `netframework` and `hyperv` collectors publish each occurrence as a separate series. The first keeps the name, later ones get the suffix `#1`, `#2` and so on, which depends on the order of the sample and does not identify the instance across scrapes. The other PDH-based collectors publish the first occurrence, as their instance names are unique. In 0.31 the occurrences overwrote each other.
 - Instances whose name ends in `_Total`, such as a process `worker_Total` or a database `Orders_Total`, are exported. In 0.31 every name ending in `_Total` was dropped as an aggregate.
 
 ### service start mode

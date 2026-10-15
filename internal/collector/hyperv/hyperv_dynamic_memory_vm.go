@@ -19,7 +19,6 @@ package hyperv
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
@@ -47,7 +46,8 @@ type collectorDynamicMemoryVM struct {
 }
 
 type perfDataCounterValuesDynamicMemoryVM struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	// Hyper-V Dynamic Memory VM metrics
 	VmMemoryAddedMemory                float64 `perfdata:"Added Memory"`
@@ -140,8 +140,10 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric, scrape *
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory VM metrics: %w", err)
 	}
 
+	nameDynamicMemoryVMs(c.perfDataObjectDynamicMemoryVM)
+
 	for _, data := range c.perfDataObjectDynamicMemoryVM {
-		vmName := dynamicMemoryVMName(data.Name)
+		vmName := data.Name
 
 		ch <- scrape.MustNewConstMetric(
 			c.vmMemoryAddedMemory,
@@ -223,19 +225,29 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric, scrape *
 // without a name.
 const vmUnknown = "(unknown)"
 
-// dynamicMemoryVMName returns the vm label value for a Hyper-V Dynamic Memory VM
-// instance. Windows reports an empty instance name for VMs managed by the Host
-// Compute Service, e.g. WSL 2, which pdh exposes as
-// pdh.InstanceEmpty. The occurrence suffix of duplicates is kept, so the
-// series stay unique.
-func dynamicMemoryVMName(name string) string {
-	if name == pdh.InstanceEmpty {
-		return vmUnknown
+// nameDynamicMemoryVMs replaces the instance names of rows with their vm label
+// values. Windows reports an empty instance name for VMs managed by the Host
+// Compute Service, e.g. WSL 2, which pdh exposes as pdh.InstanceEmpty. Those
+// VMs are named vmUnknown before suffixDuplicateVMs keeps several of them, or
+// VMs with the same name, apart.
+func nameDynamicMemoryVMs(rows []perfDataCounterValuesDynamicMemoryVM) {
+	for i := range rows {
+		if rows[i].Name == pdh.InstanceEmpty {
+			rows[i].Name = vmUnknown
+		}
 	}
 
-	if suffix, ok := strings.CutPrefix(name, pdh.InstanceEmpty+"#"); ok {
-		return vmUnknown + "#" + suffix
-	}
+	suffixDuplicateVMs(rows,
+		func(row *perfDataCounterValuesDynamicMemoryVM) *string { return &row.Name },
+		func(row *perfDataCounterValuesDynamicMemoryVM) int { return row.Occurrence },
+	)
+}
 
-	return name
+// suffixDuplicateVMs keeps VMs with the same name apart. Hyper-V allows several
+// VMs with the same name, and their counter instances then have the same name
+// too. The first keeps the name, later ones get the suffix "#1", "#2" and so on.
+// The suffix depends on the order of the sample and does not identify a VM
+// across scrapes or across counter objects.
+func suffixDuplicateVMs[T any](rows []T, name func(*T) *string, occurrence func(*T) int) {
+	pdh.SuffixDuplicates(rows, name, occurrence)
 }

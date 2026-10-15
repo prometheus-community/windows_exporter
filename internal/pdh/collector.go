@@ -67,18 +67,23 @@ type Collector[T any] struct {
 
 // Row holds the values of one instance collected by a collector from [NewDynamicCollector].
 type Row struct {
+	// Name is the instance name as reported by Windows.
 	Name string
+	// Occurrence counts earlier instances with the same Name in the sample, see [NewCollector].
+	Occurrence int
 	// Values holds one value per counter, in the order the counters were passed to [NewDynamicCollector].
 	// A value is NaN if the counter has no valid value for the instance in this sample.
 	Values []float64
 }
 
-// rowAccessor creates rows of type T and sets their names and counter values.
+// rowAccessor creates rows of type T and sets their counter values.
 // field is the index the counterField of the counter was created with.
 type rowAccessor[T any] struct {
-	newRow   func(instance string) T
-	setName  func(row *T, instance string)
-	setValue func(row *T, field int, value float64)
+	newRow func(instance string, occurrence int) T
+	// keepsOccurrences is true if rows record their occurrence. Otherwise, only
+	// the first instance of each name is collected.
+	keepsOccurrences bool
+	setValue         func(row *T, field int, value float64)
 }
 
 // counterField maps a counter to the field index passed to rowAccessor.setValue.
@@ -105,9 +110,15 @@ type Counter struct {
 
 // NewCollector creates a collector for the counters declared by the perfdata tags of the struct T.
 //
-// The optional field Name (string) of T receives the instance name. Occurrence
-// suffixes distinguish duplicate names without colliding with literal names.
-// These suffixes are not stable identities across samples.
+// The optional field Name (string) of T receives the instance name exactly as
+// Windows reports it. Some objects report the same name for several instances
+// in one sample, e.g. Hyper-V VMs with the same name. The optional field
+// Occurrence (int) of T receives the number of earlier instances with the same
+// name in the sample: 0 for the first, 1 for the second, and so on. It follows
+// the order of the counter arrays, so it is not a stable identity across
+// samples. A suffix such as "#2" in Name was reported by Windows, never added
+// by this package. If T has no Occurrence field, only the first instance of
+// each name is collected, so that the rows have unique names.
 //
 // An instance is only collected if every counter has a valid value for it in that
 // sample. Use [Collector.MetricType] for the metric type of a counter.
@@ -143,6 +154,12 @@ func newStructCollector[T any](logger *slog.Logger, query *Query, resultType Cou
 		nameIndex = f.Index[0]
 	}
 
+	occurrenceIndex := -1
+
+	if f, ok := valueType.FieldByName("Occurrence"); ok && f.Type.Kind() == reflect.Int {
+		occurrenceIndex = f.Index[0]
+	}
+
 	var errs []error
 
 	fields := make([]counterField, 0, valueType.NumField())
@@ -167,20 +184,20 @@ func newStructCollector[T any](logger *slog.Logger, query *Query, resultType Cou
 	}
 
 	rows := rowAccessor[T]{
-		newRow: func(instance string) T {
+		newRow: func(instance string, occurrence int) T {
 			var row T
 
 			if nameIndex != -1 {
 				reflect.ValueOf(&row).Elem().Field(nameIndex).SetString(instance)
 			}
 
+			if occurrenceIndex != -1 {
+				reflect.ValueOf(&row).Elem().Field(occurrenceIndex).SetInt(int64(occurrence))
+			}
+
 			return row
 		},
-		setName: func(row *T, instance string) {
-			if nameIndex != -1 {
-				reflect.ValueOf(row).Elem().Field(nameIndex).SetString(instance)
-			}
-		},
+		keepsOccurrences: occurrenceIndex != -1,
 		setValue: func(row *T, field int, value float64) {
 			reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
 		},
@@ -200,12 +217,10 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 	}
 
 	rows := rowAccessor[Row]{
-		newRow: func(instance string) Row {
-			return Row{Name: instance, Values: make([]float64, len(counters))}
+		newRow: func(instance string, occurrence int) Row {
+			return Row{Name: instance, Occurrence: occurrence, Values: make([]float64, len(counters))}
 		},
-		setName: func(row *Row, instance string) {
-			row.Name = instance
-		},
+		keepsOccurrences: true,
 		setValue: func(row *Row, field int, value float64) {
 			row.Values[field] = value
 		},
@@ -508,11 +523,10 @@ type collectState struct {
 
 	names instanceNameCache
 
-	// index, occurrences and seen back the maps of rowSet. They are cleared
-	// for every sample, so their buckets are not allocated again.
-	index       map[instanceKey]int
-	occurrences map[string]int
-	seen        map[string]int
+	// index and seen back the maps of rowSet. They are cleared for every
+	// sample, so their buckets are not allocated again.
+	index map[instanceKey]int
+	seen  map[string]int
 }
 
 // collect replaces the content of dst with one sample.
@@ -686,8 +700,6 @@ type rowSet[T any] struct {
 	dst       *[]T
 	index     map[instanceKey]int
 	nameCache *instanceNameCache
-	// occurrences includes invalid items to reserve all literal names and keep occurrence positions.
-	occurrences map[string]int
 	// seen counts names in the current counter array and is cleared between arrays.
 	seen map[string]int
 	// valid has len(c.counters) entries per row.
@@ -699,23 +711,20 @@ func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] 
 
 	if state.index == nil {
 		state.index = map[instanceKey]int{}
-		state.occurrences = map[string]int{}
 		state.seen = map[string]int{}
 	} else {
 		// A failed sample can leave entries behind.
 		clear(state.index)
-		clear(state.occurrences)
 		clear(state.seen)
 	}
 
 	return rowSet[T]{
-		c:           c,
-		dst:         dst,
-		index:       state.index,
-		nameCache:   &state.names,
-		occurrences: state.occurrences,
-		seen:        state.seen,
-		valid:       state.valid[:0],
+		c:         c,
+		dst:       dst,
+		index:     state.index,
+		nameCache: &state.names,
+		seen:      state.seen,
+		valid:     state.valid[:0],
 	}
 }
 
@@ -731,7 +740,16 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	// Count before checking status so invalid items do not shift subsequent duplicates.
 	occurrence := r.seen[instanceName]
 	r.seen[instanceName]++
-	r.occurrences[instanceName] = max(r.occurrences[instanceName], occurrence+1)
+
+	if occurrence > 0 && !r.c.rows.keepsOccurrences {
+		r.c.logger.Debug("skipping duplicate instance name",
+			slog.String("counter", counter.Name),
+			slog.String("instance", instanceName),
+			slog.Int("occurrence", occurrence),
+		)
+
+		return 0, false
+	}
 
 	if status != CstatusValidData && status != CstatusNewData {
 		r.c.logger.Debug("skipping counter item with invalid data status",
@@ -755,7 +773,7 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	index := len(*r.dst)
 	r.index[key] = index
 
-	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName))
+	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName, occurrence))
 
 	n := len(r.c.counters)
 	r.valid = slices.Grow(r.valid, n)[:len(r.valid)+n]
@@ -804,37 +822,11 @@ func (r *rowSet[T]) addFormattedItems(counterIndex int, buf []byte, itemCount ui
 	}
 }
 
-// nameDuplicates assigns suffixes after all literal names in the sample are known.
-func (r *rowSet[T]) nameDuplicates() {
-	for name, count := range r.occurrences {
-		suffix := 0
-
-		for occurrence := 1; occurrence < count; occurrence++ {
-			var instanceName string
-
-			for {
-				suffix++
-				instanceName = name + "#" + strconv.Itoa(suffix)
-
-				if _, literalName := r.occurrences[instanceName]; !literalName {
-					break
-				}
-			}
-
-			if row, ok := r.index[instanceKey{name: name, occurrence: occurrence}]; ok {
-				r.c.rows.setName(&(*r.dst)[row], instanceName)
-			}
-		}
-	}
-}
-
 // finish handles rows that lack a valid value for some counter. Counters
 // without any instance, e.g. those skipped by perfdata_min_build, are not
 // required. Without partial rows, such rows are removed. Otherwise, the
 // missing values are set to NaN.
 func (r *rowSet[T]) finish() {
-	r.nameDuplicates()
-
 	rows := *r.dst
 	n := len(r.c.counters)
 	kept := 0
