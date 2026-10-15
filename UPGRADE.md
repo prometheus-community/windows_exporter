@@ -17,7 +17,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Active Directory latency or security descriptor propagation, DFSR, Hyper-V, logical disk queue, cache, IIS output cache, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Active Directory latency or security descriptor propagation, DFSR, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, SQL Server lock counts, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
@@ -246,6 +246,12 @@ Renamed:
 | `windows_dfsr_connection_bandwidth_savings_using_dfs_replication_bytes_total` | `windows_dfsr_connection_bandwidth_savings_using_dfs_replication_ratio` | Now a gauge, 0-1 instead of percent |
 | `windows_dfsr_folder_bandwidth_savings_using_dfs_replication_bytes_total`     | `windows_dfsr_folder_bandwidth_savings_using_dfs_replication_ratio`     | Now a gauge, 0-1 instead of percent |
 | `windows_dfsr_volume_usn_journal_unread_percentage`  | `windows_dfsr_volume_usn_journal_unread_ratio`                 | 0-1 instead of percent             |
+| `windows_iis_current_application_pool_start_time`    | `windows_iis_current_application_pool_uptime_seconds`          | Same value: it always was the uptime in seconds, not a timestamp |
+| `windows_iis_total_application_pool_start_time`      | `windows_iis_total_application_pool_uptime_seconds`            | Same value, now a gauge            |
+| `windows_iis_time_since_last_worker_process_failure` | `windows_iis_time_since_last_worker_process_failure_seconds`   | Unit suffix added, same value      |
+| `windows_iis_http_request_total_rejected_request`    | `windows_iis_http_requests_rejected_total`                     | Now a counter, use `rate()`; label `app` |
+| `windows_iis_http_requests_arrival_rate`             | `windows_iis_http_requests_arrived_total`                      | Was a running count, now a counter, use `rate()`; label `app` |
+| `windows_iis_http_requests_max_queue_item_age`       | `windows_iis_http_requests_max_queue_item_age_seconds`         | Left out while the queue is empty; label `app` |
 
 The RemoteFX loss, FEC and retransmission gauges were not percentages. They exported the raw numerator of a Windows sample fraction, a running count that only grows.
 The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])`, and likewise with `windows_remote_fx_net_fec_packets_total` / `windows_remote_fx_net_fec_sampled_packets_total` and `windows_remote_fx_net_retransmitted_packets_total` / `windows_remote_fx_net_retransmission_sampled_packets_total`.
@@ -285,17 +291,20 @@ Changed type, same name:
 | `windows_iis_server_output_cache_memory_bytes`, `windows_iis_worker_output_cache_memory_bytes`       | counter | gauge   |
 | `windows_iis_server_output_cache_active_flushed_items`, `windows_iis_worker_output_cache_active_flushed_items` | counter | gauge   |
 | `windows_smb_server_shares_current_open_file_count`, `windows_smb_server_shares_tree_connect_count` | counter | gauge   |
+| `windows_iis_worker_current_requests`, `windows_iis_worker_current_websocket_requests`               | counter | gauge   |
+| `windows_iis_worker_max_threads`                                                                     | counter | gauge   |
 | `windows_cache_copy_read_hits_total`                                   | gauge   | counter |
 | `windows_udp_datagram_received_total`                                  | gauge   | counter |
 | `windows_hyperv_legacy_network_adapter_bytes_dropped_total`            | gauge   | counter |
 
-The IIS and SMB values are current occupancy, so query them directly instead of with `rate()`.
+The IIS and SMB values are current occupancy or, for `worker_max_threads`, the configured thread pool limit, so query them directly instead of with `rate()`.
 If Prometheus scrapes with OpenMetrics, the IIS and SMB metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
 The cache, UDP and Hyper-V metrics already end in `_total`, so only their type metadata changes; `rate()` queries keep working.
 
 Label changes on existing metrics:
 
 - `windows_os_info` has an `installation_type` label, for example `Server` or `Client`.
+- The IIS HTTP request queue metrics (`windows_iis_http_requests_*`) have the label `app` instead of `site`. The value is unchanged: it always was the application pool that owns the HTTP.sys request queue, not a site. They are now filtered with `--collector.iis.app-include` and `--collector.iis.app-exclude` instead of the site filters.
 - The `windows_netframework_clrmemory_*` metrics have a `process_id` label.
 - In the `windows_hyperv_dynamic_memory_vm_*` metrics, unnamed VM instances have `vm="(unknown)"` (or `(unknown)#N`) instead of `vm="------"`.
 - `windows_terminal_services_connection_broker_performance_total` no longer has a `connection="Pending"` series. It was the current number of pending connections, published as a counter. Use the gauge `windows_terminal_services_connection_broker_pending_connections`.

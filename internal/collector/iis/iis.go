@@ -156,14 +156,22 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
-	c.perfDataCollectorHttpServiceRequestQueues.Close()
-	c.perfDataCollectorAppPoolWAS.Close()
+
+	if c.perfDataCollectorHttpServiceRequestQueues != nil {
+		c.perfDataCollectorHttpServiceRequestQueues.Close()
+	}
+
+	if c.perfDataCollectorAppPoolWAS != nil {
+		c.perfDataCollectorAppPoolWAS.Close()
+	}
 
 	if c.w3SVCW3WPPerfDataCollector != nil {
 		c.w3SVCW3WPPerfDataCollector.Close()
 	}
 
-	c.w3SVCW3WPPerfDataCollectorV8.Close()
+	if c.w3SVCW3WPPerfDataCollectorV8 != nil {
+		c.w3SVCW3WPPerfDataCollectorV8.Close()
+	}
 
 	if c.serviceCachePerfDataCollector != nil {
 		c.serviceCachePerfDataCollector.Close()
