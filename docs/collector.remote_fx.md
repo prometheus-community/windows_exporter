@@ -20,37 +20,56 @@ Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_remote_fx_net_base_udp_rtt_seconds` | Base UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `windows_remote_fx_net_base_tcp_rtt_seconds` | Base TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`windows_remote_fx_net_current_tcp_bandwidth` | TCP Bandwidth detected in bytes per second. | gauge | `session_name`
+`windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second` | TCP bandwidth detected in bytes per second. | gauge | `session_name`
 `windows_remote_fx_net_current_tcp_rtt_seconds` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`windows_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in bytes per second. | gauge | `session_name`
+`windows_remote_fx_net_current_udp_bandwidth_bytes_per_second` | UDP bandwidth detected in bytes per second. | gauge | `session_name`
 `windows_remote_fx_net_current_udp_rtt_seconds` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`windows_remote_fx_net_received_bytes_total` | Total bytes received over the network session. | counter | `session_name`
-`windows_remote_fx_net_sent_bytes_total` | Total bytes sent over the network session. | counter | `session_name`
-`windows_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
-`windows_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
-`windows_remote_fx_net_loss_rate` | Network packet loss rate detected over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
-`windows_remote_fx_net_fec_rate` | Forward Error Correction (FEC) rate applied to packets sent over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
-`windows_remote_fx_net_retransmission_rate` | Rate of packets retransmitted over the RemoteFX session, expressed as a percentage. | gauge | `session_name`
+`windows_remote_fx_net_received_bytes_total` | Total number of bytes received since the connection started. | counter | `session_name`
+`windows_remote_fx_net_sent_bytes_total` | Total number of bytes sent since the connection started. | counter | `session_name`
+`windows_remote_fx_net_udp_packets_received_total` | Total number of packets received over UDP. | counter | `session_name`
+`windows_remote_fx_net_udp_packets_sent_total` | Total number of packets sent over UDP. | counter | `session_name`
+`windows_remote_fx_net_lost_packets_total` | Number of lost packets. Numerator of the loss rate counter. | counter | `session_name`
+`windows_remote_fx_net_loss_sampled_packets_total` | Number of packets sampled for the loss rate. Denominator (base) of the loss rate counter. | counter | `session_name`
+`windows_remote_fx_net_fec_packets_total` | Number of Forward Error Correction (FEC) packets. Numerator of the FEC rate counter. | counter | `session_name`
+`windows_remote_fx_net_fec_sampled_packets_total` | Number of packets sampled for the FEC rate. Denominator (base) of the FEC rate counter. | counter | `session_name`
+`windows_remote_fx_net_retransmitted_packets_total` | Number of retransmitted packets. Numerator of the retransmission rate counter. | counter | `session_name`
+`windows_remote_fx_net_retransmission_sampled_packets_total` | Number of packets sampled for the retransmission rate. Denominator (base) of the retransmission rate counter. | counter | `session_name`
 
+Windows reports the loss, FEC and retransmission rates as sample fractions: two cumulative values whose
+deltas give the ratio. Divide the rate of the numerator by the rate of its base, see [Useful queries](#useful-queries).
 
+The RTT counters appear to be measured only with UDP transport; they stay `0` for sessions over TCP.
+Windows keeps `Total Sent Bytes` and `Total Received Bytes` in 32 bits, so the byte counters wrap after 4 GiB,
+which looks like a counter reset.
 
 ## Metrics (Graphics)
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_remote_fx_gfx_average_encoding_time_seconds` | Average frame encoding time. | gauge | `session_name`
-`windows_remote_fx_gfx_frame_quality` | Quality of the output frame expressed as a percentage of the quality of the source frame. | gauge | `session_name`
-`windows_remote_fx_gfx_frames_skipped_insufficient_resource_total` | Number of frames skipped per second due to insufficient resources. resources are client, server or network. | counter | `session_name`, `resource`
+`windows_remote_fx_gfx_average_encoding_time_seconds` | Average frame encoding time in seconds. | gauge | `session_name`
+`windows_remote_fx_gfx_frame_quality_ratio` | Quality of the output frame relative to the quality of the source frame (0-1). | gauge | `session_name`
+`windows_remote_fx_gfx_frames_skipped_insufficient_resource_total` | Total number of frames skipped due to insufficient resources. `resource` is `client`, `network` or `server`. | counter | `session_name`, `resource`
 `windows_remote_fx_gfx_graphics_compression_ratio` | Ratio of the number of bytes encoded to the number of bytes input. | gauge | `session_name`
-`windows_remote_fx_gfx_input_frames_total` | Number of sources frames provided as input to RemoteFX graphics per second. | counter | `session_name`
-`windows_remote_fx_gfx_output_frames_total` | Number of frames sent to the client per second. | counter | `session_name`
-`windows_remote_fx_gfx_source_frames_total` | Number of frames composed by the source (DWM) per second. | counter | `session_name`
+`windows_remote_fx_gfx_input_frames_total` | Total number of source frames provided as input to RemoteFX graphics. | counter | `session_name`
+`windows_remote_fx_gfx_output_frames_total` | Total number of frames sent to the client. | counter | `session_name`
+`windows_remote_fx_gfx_source_frames_total` | Total number of frames composed by the source (DWM). | counter | `session_name`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Packet loss ratio of each RDP session over the last 5 minutes:
+
+```
+rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])
+```
+
+Frames skipped per second, by cause:
+
+```
+sum by (session_name, resource) (rate(windows_remote_fx_gfx_frames_skipped_insufficient_resource_total[5m]))
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
