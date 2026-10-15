@@ -20,7 +20,11 @@ secondary server, so zone transfer counters stayed 0.
 - `Total Query Received` equals `UDP Query Received` + `TCP Query Received`
   (830 = 820 + 10); `Total Response Sent` likewise (825 = 815 + 10).
 - `Recursive Send TimeOuts` and `Recursive TimeOut/sec` are a twin pair with
-  different names; the collector reads the `/sec` one.
+  different names; the collector reads `Recursive Send TimeOuts`.
+- `Dynamic Update Queued` is cumulative: it matches `Queue / Queued` in
+  `dnscmd /statistics 0x00000100` (and `Queued` in
+  `Get-DnsServerStatistics`), not the current `In Queue` value. Publish it as
+  a counter.
 - Eleven counters of the object have names that belong to other objects and
   no help text: `% User Time`, `Async Fast Reads/sec`,
   `Fast Read Not Possibles/sec`, `Fast Read Resource Misses/sec`,
@@ -28,6 +32,11 @@ secondary server, so zone transfer counters stayed 0.
   `Data Flush Pages/sec`, `Level 2 TLB Fills/sec`, `Enumerations Server/sec`
   and `Virtual Bytes`. `Get-Counter -ListSet DNS` also lists a counter named
   `176`. All of them stayed 0; the collector ignores them (`_` fields).
+- Compare live values with `dnscmd /statistics` or `Get-Counter "\DNS\*"`.
+  `ipconfig /registerdns` on a domain member raises the dynamic update
+  counters.
+- `collectPerfData` publishes one sample; test value mapping with it through
+  a registry (see `dns_internal_test.go`).
 
 ## Counter reference
 

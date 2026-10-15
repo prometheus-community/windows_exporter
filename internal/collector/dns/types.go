@@ -70,8 +70,8 @@ type perfDataCounterValues struct {
 	_                              float64 `perfdata:"Recursive Queries/sec"`
 	RecursiveQueryFailure          float64 `perfdata:"Recursive Query Failure"`
 	_                              float64 `perfdata:"Recursive Query Failure/sec"`
-	_                              float64 `perfdata:"Recursive Send TimeOuts"`
-	RecursiveSendTimeOuts          float64 `perfdata:"Recursive TimeOut/sec"`
+	RecursiveSendTimeOuts          float64 `perfdata:"Recursive Send TimeOuts"`
+	_                              float64 `perfdata:"Recursive TimeOut/sec"`
 	_                              float64 `perfdata:"Responses Suppressed"`
 	_                              float64 `perfdata:"Responses Suppressed/sec"`
 	SecureUpdateFailure            float64 `perfdata:"Secure Update Failure"`
@@ -103,8 +103,8 @@ type perfDataCounterValues struct {
 	WinsReverseResponseSent        float64 `perfdata:"WINS Reverse Response Sent"`
 	_                              float64 `perfdata:"WINS Reverse Response Sent/sec"`
 	ZoneTransferFailure            float64 `perfdata:"Zone Transfer Failure"`
-	ZoneTransferSOARequestSent     float64 `perfdata:"Zone Transfer Request Received"`
-	_                              float64 `perfdata:"Zone Transfer SOA Request Sent"`
+	_                              float64 `perfdata:"Zone Transfer Request Received"`
+	ZoneTransferSOARequestSent     float64 `perfdata:"Zone Transfer SOA Request Sent"`
 	_                              float64 `perfdata:"Zone Transfer Success"`
 }
 

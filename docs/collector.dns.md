@@ -22,14 +22,14 @@ Name | Description
 Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_dns_zone_transfer_requests_received_total` | Number of zone transfer requests (AXFR/IXFR) received by the master DNS server | counter | `qtype`
-`windows_dns_zone_transfer_requests_sent_total` | Number of zone transfer requests (AXFR/IXFR) sent by the secondary DNS server | counter | `qtype`
+`windows_dns_zone_transfer_requests_sent_total` | Number of zone transfer requests (AXFR/IXFR) and zone transfer SOA requests sent by the secondary DNS server | counter | `qtype` (`full`, `incremental`, `soa`)
 `windows_dns_zone_transfer_response_received_total` | Number of zone transfer responses (AXFR/IXFR) received by the secondary DNS server | counter | `qtype`
 `windows_dns_zone_transfer_success_received_total` | Number of successful zone transfers (AXFR/IXFR) received by the secondary DNS server | counter | `qtype`, `protocol`
 `windows_dns_zone_transfer_success_sent_total` | Number of successful zone transfers (AXFR/IXFR) of the master DNS server | counter | `qtype`
 `windows_dns_zone_transfer_failures_total` | Number of failed zone transfers of the master DNS server | counter | None
 `windows_dns_memory_used_bytes` | Current memory used by DNS server | gauge | `area`
-`windows_dns_dynamic_updates_queued` | Number of dynamic updates queued by the DNS server | gauge | None
-`windows_dns_dynamic_updates_received_total` | Number of secure update requests received by the DNS server | counter | `operation`
+`windows_dns_dynamic_updates_queued_total` | Number of dynamic updates queued by the DNS server | counter | None
+`windows_dns_dynamic_updates_received_total` | Number of dynamic update requests received by the DNS server that were no-operations (noop) or written to the database (written) | counter | `operation`
 `windows_dns_dynamic_updates_failures_total` | Number of dynamic updates which timed out or were rejected by the DNS server | counter | `reason`
 `windows_dns_notify_received_total` | Number of notifies received by the secondary DNS server | counter | None
 `windows_dns_notify_sent_total` | Number of notifies sent by the master DNS server | counter | None

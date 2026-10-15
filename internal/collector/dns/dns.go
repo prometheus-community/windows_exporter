@@ -158,6 +158,19 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 }
 
 func (c *Collector) buildMetricsCollector(logger *slog.Logger) error {
+	c.buildDescriptors()
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DNS", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create DNS collector: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Collector) buildDescriptors() {
 	c.zoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
@@ -166,7 +179,7 @@ func (c *Collector) buildMetricsCollector(logger *slog.Logger) error {
 	)
 	c.zoneTransferRequestsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_sent_total"),
-		"Number of zone transfer requests (AXFR/IXFR) sent by the secondary DNS server",
+		"Number of zone transfer requests (AXFR/IXFR) and zone transfer SOA requests sent by the secondary DNS server",
 		[]string{"qtype"},
 		nil,
 	)
@@ -201,14 +214,14 @@ func (c *Collector) buildMetricsCollector(logger *slog.Logger) error {
 		nil,
 	)
 	c.dynamicUpdatesQueued = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_queued"),
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_queued_total"),
 		"Number of dynamic updates queued by the DNS server",
 		nil,
 		nil,
 	)
 	c.dynamicUpdatesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_received_total"),
-		"Number of secure update requests received by the DNS server",
+		"Number of dynamic update requests received by the DNS server that were no-operations (noop) or written to the database (written)",
 		[]string{"operation"},
 		nil,
 	)
@@ -297,15 +310,6 @@ func (c *Collector) buildMetricsCollector(logger *slog.Logger) error {
 		[]string{"name", "collection_name", "dns_server"},
 		nil,
 	)
-
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DNS", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create DNS collector: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
@@ -357,59 +361,66 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DNS metrics: %w", types.ErrNoDataUnexpected)
 	}
 
+	c.collectPerfData(ch, c.perfDataObject[0])
+
+	return nil
+}
+
+// collectPerfData publishes the metrics of one sample of the DNS object.
+func (c *Collector) collectPerfData(ch chan<- prometheus.Metric, data perfDataCounterValues) {
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AxfrRequestReceived,
+		data.AxfrRequestReceived,
 		"full",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrRequestReceived,
+		data.IxfrRequestReceived,
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AxfrRequestSent,
+		data.AxfrRequestSent,
 		"full",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrRequestSent,
+		data.IxfrRequestSent,
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ZoneTransferSOARequestSent,
+		data.ZoneTransferSOARequestSent,
 		"soa",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferResponsesReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AxfrResponseReceived,
+		data.AxfrResponseReceived,
 		"full",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferResponsesReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrResponseReceived,
+		data.IxfrResponseReceived,
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AxfrSuccessReceived,
+		data.AxfrSuccessReceived,
 		"full",
 		"tcp",
 	)
@@ -417,7 +428,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrTCPSuccessReceived,
+		data.IxfrTCPSuccessReceived,
 		"incremental",
 		"tcp",
 	)
@@ -425,7 +436,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrTCPSuccessReceived,
+		data.IxfrUDPSuccessReceived,
 		"incremental",
 		"udp",
 	)
@@ -433,204 +444,202 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessSent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].AxfrSuccessSent,
+		data.AxfrSuccessSent,
 		"full",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessSent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].IxfrSuccessSent,
+		data.IxfrSuccessSent,
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ZoneTransferFailure,
+		data.ZoneTransferFailure,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].CachingMemory,
+		data.CachingMemory,
 		"caching",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].DatabaseNodeMemory,
+		data.DatabaseNodeMemory,
 		"database_node",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].NbStatMemory,
+		data.NbStatMemory,
 		"nbstat",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].RecordFlowMemory,
+		data.RecordFlowMemory,
 		"record_flow",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].TcpMessageMemory,
+		data.TcpMessageMemory,
 		"tcp_message",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
-		c.perfDataObject[0].UdpMessageMemory,
+		data.UdpMessageMemory,
 		"udp_message",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DynamicUpdateNoOperation,
+		data.DynamicUpdateNoOperation,
 		"noop",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DynamicUpdateWrittenToDatabase,
+		data.DynamicUpdateWrittenToDatabase,
 		"written",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesQueued,
-		prometheus.GaugeValue,
-		c.perfDataObject[0].DynamicUpdateQueued,
+		prometheus.CounterValue,
+		data.DynamicUpdateQueued,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DynamicUpdateRejected,
+		data.DynamicUpdateRejected,
 		"rejected",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].DynamicUpdateTimeOuts,
+		data.DynamicUpdateTimeOuts,
 		"timeout",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.notifyReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].NotifyReceived,
+		data.NotifyReceived,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.notifySent,
 		prometheus.CounterValue,
-		c.perfDataObject[0].NotifySent,
+		data.NotifySent,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.recursiveQueries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].RecursiveQueries,
+		data.RecursiveQueries,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.recursiveQueryFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].RecursiveQueryFailure,
+		data.RecursiveQueryFailure,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.recursiveQuerySendTimeouts,
 		prometheus.CounterValue,
-		c.perfDataObject[0].RecursiveSendTimeOuts,
+		data.RecursiveSendTimeOuts,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.queries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].TcpQueryReceived,
+		data.TcpQueryReceived,
 		"tcp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.queries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].UdpQueryReceived,
+		data.UdpQueryReceived,
 		"udp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.responses,
 		prometheus.CounterValue,
-		c.perfDataObject[0].TcpResponseSent,
+		data.TcpResponseSent,
 		"tcp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.responses,
 		prometheus.CounterValue,
-		c.perfDataObject[0].UdpResponseSent,
+		data.UdpResponseSent,
 		"udp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.unmatchedResponsesReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].UnmatchedResponsesReceived,
+		data.UnmatchedResponsesReceived,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.winsQueries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WinsLookupReceived,
+		data.WinsLookupReceived,
 		"forward",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.winsQueries,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WinsReverseLookupReceived,
+		data.WinsReverseLookupReceived,
 		"reverse",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.winsResponses,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WinsResponseSent,
+		data.WinsResponseSent,
 		"forward",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.winsResponses,
 		prometheus.CounterValue,
-		c.perfDataObject[0].WinsReverseResponseSent,
+		data.WinsReverseResponseSent,
 		"reverse",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.secureUpdateFailures,
 		prometheus.CounterValue,
-		c.perfDataObject[0].SecureUpdateFailure,
+		data.SecureUpdateFailure,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.secureUpdateReceived,
 		prometheus.CounterValue,
-		c.perfDataObject[0].SecureUpdateReceived,
+		data.SecureUpdateReceived,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
