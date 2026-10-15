@@ -74,9 +74,14 @@ notes were recorded on Windows Server 2025 (build 26100) with only
   exist only while a worker process runs; send one HTTP request to start one.
   `HTTP Service Request Queues` instances are app pool names plus about 40
   `---<n>` queues, which the collector skips. Recycled instances get a `#<n>`
-  suffix that the collector strips. `internal/pdh` adds no suffix of its own,
-  and the IIS rows have no `Occurrence` field, so a name that Windows reports
-  twice in one sample yields only its first instance.
+  suffix that the collector strips. `internal/pdh` adds no suffix of its own.
+  The IIS rows have no `Occurrence` field, because no IIS object repeats an
+  instance name in one sample: IIS rejects duplicate site and application
+  pool names (`Web Service`, `APP_POOL_WAS`, `HTTP Service Request Queues`),
+  `W3SVC_W3WP` instances carry the worker process ID, and the overlapping
+  worker of a recycle has its own PID. A sample on this host had no
+  duplicates in these objects. If pdh logs dropped duplicates for an IIS
+  object, declare the field.
 
 ## Counter reference
 
