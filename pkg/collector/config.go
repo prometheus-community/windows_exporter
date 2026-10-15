@@ -99,7 +99,7 @@ type Config struct {
 	NetFramework       netframework.Config       `yaml:"netframework"`
 	Nps                nps.Config                `yaml:"nps"`
 	OS                 os.Config                 `yaml:"os"`
-	Paging             pagefile.Config           `yaml:"paging"`
+	Paging             pagefile.Config           `yaml:"pagefile"`
 	PerformanceCounter performancecounter.Config `yaml:"performancecounter"`
 	PhysicalDisk       physical_disk.Config      `yaml:"physical_disk"`
 	Printer            printer.Config            `yaml:"printer"`
@@ -109,7 +109,7 @@ type Config struct {
 	ScheduledTask      scheduled_task.Config     `yaml:"scheduled_task"`
 	Service            service.Config            `yaml:"service"`
 	SMB                smb.Config                `yaml:"smb"`
-	SMBClient          smbclient.Config          `yaml:"smb_client"`
+	SMBClient          smbclient.Config          `yaml:"smbclient"`
 	SMTP               smtp.Config               `yaml:"smtp"`
 	StorageSpaces      storage_spaces.Config     `yaml:"storage_spaces"`
 	System             system.Config             `yaml:"system"`
@@ -127,55 +127,11 @@ type Config struct {
 //
 //nolint:gochecknoglobals
 //goland:noinspection GoUnusedGlobalVariable
-var ConfigDefaults = Config{
-	AD:                 ad.ConfigDefaults,
-	ADCS:               adcs.ConfigDefaults,
-	ADFS:               adfs.ConfigDefaults,
-	Cache:              cache.ConfigDefaults,
-	Container:          container.ConfigDefaults,
-	CPU:                cpu.ConfigDefaults,
-	CPUInfo:            cpu_info.ConfigDefaults,
-	DFSR:               dfsr.ConfigDefaults,
-	Dhcp:               dhcp.ConfigDefaults,
-	DiskDrive:          diskdrive.ConfigDefaults,
-	DMI:                dmi.ConfigDefaults,
-	DNS:                dns.ConfigDefaults,
-	Exchange:           exchange.ConfigDefaults,
-	File:               file.ConfigDefaults,
-	Fsrmquota:          fsrmquota.ConfigDefaults,
-	GPU:                gpu.ConfigDefaults,
-	HyperV:             hyperv.ConfigDefaults,
-	IIS:                iis.ConfigDefaults,
-	License:            license.ConfigDefaults,
-	LogicalDisk:        logical_disk.ConfigDefaults,
-	Memory:             memory.ConfigDefaults,
-	MSCluster:          mscluster.ConfigDefaults,
-	Msmq:               msmq.ConfigDefaults,
-	Mssql:              mssql.ConfigDefaults,
-	Net:                net.ConfigDefaults,
-	NetFramework:       netframework.ConfigDefaults,
-	Nps:                nps.ConfigDefaults,
-	OS:                 os.ConfigDefaults,
-	Paging:             pagefile.ConfigDefaults,
-	PerformanceCounter: performancecounter.ConfigDefaults,
-	PhysicalDisk:       physical_disk.ConfigDefaults,
-	Printer:            printer.ConfigDefaults,
-	Process:            process.ConfigDefaults,
-	Registry:           registry.ConfigDefaults,
-	RemoteFx:           remote_fx.ConfigDefaults,
-	ScheduledTask:      scheduled_task.ConfigDefaults,
-	Service:            service.ConfigDefaults,
-	SMB:                smb.ConfigDefaults,
-	SMBClient:          smbclient.ConfigDefaults,
-	SMTP:               smtp.ConfigDefaults,
-	StorageSpaces:      storage_spaces.ConfigDefaults,
-	System:             system.ConfigDefaults,
-	TCP:                tcp.ConfigDefaults,
-	TerminalServices:   terminal_services.ConfigDefaults,
-	Textfile:           textfile.ConfigDefaults,
-	Time:               time.ConfigDefaults,
-	UDP:                udp.ConfigDefaults,
-	Update:             update.ConfigDefaults,
-	Vmware:             vmware.ConfigDefaults,
-	WMI:                wmi.ConfigDefaults,
-}
+var ConfigDefaults = func() Config {
+	var config Config
+	for _, r := range registrations {
+		r.setDefaults(&config)
+	}
+
+	return config
+}()
