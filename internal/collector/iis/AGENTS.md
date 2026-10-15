@@ -279,12 +279,12 @@ Not read by the collector:
 
 ## Published metrics
 
-- Publish the APP_POOL_WAS elapsed-time counters as uptime gauges in
-  seconds (*_uptime_seconds), not as timestamps.
-- MaxQueueItemAge of an empty queue becomes a large negative number
-  (now minus math.MaxInt64 ticks). Leave the series out then; never publish
-  it as  .
-- HTTP Service Request Queues instances are application pools: they use the
-  label pp and the app include/exclude filters.
+- Publish the `APP_POOL_WAS` elapsed-time counters as uptime gauges in
+  seconds (`*_uptime_seconds`), not as timestamps.
+- `MaxQueueItemAge` of an empty queue becomes a large negative number
+  (now minus `math.MaxInt64` ticks). Leave the series out then; never publish
+  it as `0`.
+- `HTTP Service Request Queues` instances are application pools: they use the
+  label `app` and the app include/exclude filters.
 - Check published names, types and labels through registry gathering with the
-  cacheFixture collector fake, as in metric_types_test.go.
+  `cacheFixture` collector fake, as in `metric_types_test.go`.
