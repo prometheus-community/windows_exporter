@@ -161,93 +161,102 @@ func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlIns
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), err)
 	}
 
+	c.emitWaitStatsMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+// emitWaitStatsMetrics publishes every wait statistic as a gauge. The instance
+// (label "item") names the statistic: "Average wait time (ms)",
+// "Cumulative wait time (ms) per second", "Waits in progress" and
+// "Waits started per second". SQL Server computes them over its most recent
+// sampling interval, so none of them only grows.
+func (c *Collector) emitWaitStatsMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	for _, data := range c.waitStatsPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsLockWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsLockWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsMemoryGrantQueueWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsMemoryGrantQueueWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsThreadSafeMemoryObjectsWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsThreadSafeMemoryObjectsWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsLogWriteWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsLogWriteWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsLogBufferWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsLogBufferWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsNetworkIOWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsNetworkIOWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsPageIOLatchWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsPageIOLatchWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsPageLatchWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsPageLatchWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsNonPageLatchWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsNonpageLatchWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsWaitForTheWorkerWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsWaitForTheWorkerWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsWorkspaceSynchronizationWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsWorkspaceSynchronizationWaits,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsTransactionOwnershipWaits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.WaitStatsTransactionOwnershipWaits,
 			sqlInstance.name, data.Name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) closeWaitStats() {

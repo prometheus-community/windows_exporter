@@ -32,13 +32,14 @@ type collectorTransactions struct {
 
 	transactionsTempDbFreeSpaceBytes             *prometheus.Desc
 	transactionsLongestTransactionRunningSeconds *prometheus.Desc
-	transactionsNonSnapshotVersionActiveTotal    *prometheus.Desc
-	transactionsSnapshotActiveTotal              *prometheus.Desc
+	transactionsNonSnapshotVersionActive         *prometheus.Desc
+	transactionsSnapshotActive                   *prometheus.Desc
 	transactionsActive                           *prometheus.Desc
 	transactionsUpdateConflictsTotal             *prometheus.Desc
-	transactionsUpdateSnapshotActiveTotal        *prometheus.Desc
-	transactionsVersionCleanupRateBytes          *prometheus.Desc
-	transactionsVersionGenerationRateBytes       *prometheus.Desc
+	transactionsUpdateSnapshotTotal              *prometheus.Desc
+	transactionsUpdateSnapshotActive             *prometheus.Desc
+	transactionsVersionCleanupBytes              *prometheus.Desc
+	transactionsVersionGenerationBytes           *prometheus.Desc
 	transactionsVersionStoreSizeBytes            *prometheus.Desc
 	transactionsVersionStoreUnits                *prometheus.Desc
 	transactionsVersionStoreCreationUnits        *prometheus.Desc
@@ -52,6 +53,7 @@ type perfDataCounterValuesTransactions struct {
 	TransactionsSnapshotTransactions           float64 `perfdata:"Snapshot Transactions"`
 	TransactionsTransactions                   float64 `perfdata:"Transactions"`
 	TransactionsUpdateconflictratio            float64 `perfdata:"Update conflict ratio"`
+	TransactionsUpdateconflictratioBase        float64 `perfdata:"Update conflict ratio,secondvalue"`
 	TransactionsUpdateSnapshotTransactions     float64 `perfdata:"Update Snapshot Transactions"`
 	TransactionsVersionCleanuprateKBPers       float64 `perfdata:"Version Cleanup rate (KB/s)"`
 	TransactionsVersionGenerationrateKBPers    float64 `perfdata:"Version Generation rate (KB/s)"`
@@ -86,14 +88,14 @@ func (c *Collector) buildTransactions() error {
 		[]string{"mssql_instance"},
 		nil,
 	)
-	c.transactionsNonSnapshotVersionActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_nonsnapshot_version_active_total"),
+	c.transactionsNonSnapshotVersionActive = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_nonsnapshot_version_active"),
 		"(Transactions.NonSnapshotVersionTransactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
-	c.transactionsSnapshotActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_snapshot_active_total"),
+	c.transactionsSnapshotActive = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_snapshot_active"),
 		"(Transactions.SnapshotTransactions)",
 		[]string{"mssql_instance"},
 		nil,
@@ -106,25 +108,31 @@ func (c *Collector) buildTransactions() error {
 	)
 	c.transactionsUpdateConflictsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_conflicts_total"),
-		"(Transactions.UpdateConflictRatio)",
+		"(Transactions.UpdateConflictRatio) Total number of update snapshot transactions that had an update conflict",
 		[]string{"mssql_instance"},
 		nil,
 	)
-	c.transactionsUpdateSnapshotActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_snapshot_active_total"),
+	c.transactionsUpdateSnapshotTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_snapshot_transactions_total"),
+		"(Transactions.UpdateConflictRatio_Base) Total number of update snapshot transactions",
+		[]string{"mssql_instance"},
+		nil,
+	)
+	c.transactionsUpdateSnapshotActive = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_snapshot_active"),
 		"(Transactions.UpdateSnapshotTransactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
-	c.transactionsVersionCleanupRateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_cleanup_rate_bytes"),
-		"(Transactions.VersionCleanupRateKBs)",
+	c.transactionsVersionCleanupBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_cleanup_bytes_total"),
+		"(Transactions.VersionCleanupRateKBs) Total size of row versions removed from the version store, in bytes",
 		[]string{"mssql_instance"},
 		nil,
 	)
-	c.transactionsVersionGenerationRateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_generation_rate_bytes"),
-		"(Transactions.VersionGenerationRateKBs)",
+	c.transactionsVersionGenerationBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_generation_bytes_total"),
+		"(Transactions.VersionGenerationRateKBs) Total size of row versions added to the version store, in bytes",
 		[]string{"mssql_instance"},
 		nil,
 	)
@@ -168,6 +176,12 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)
 	}
 
+	c.emitTransactionsMetrics(ch, sqlInstance)
+
+	return nil
+}
+
+func (c *Collector) emitTransactionsMetrics(ch chan<- prometheus.Metric, sqlInstance mssqlInstance) {
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsTempDbFreeSpaceBytes,
 		prometheus.GaugeValue,
@@ -183,15 +197,15 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.transactionsNonSnapshotVersionActiveTotal,
-		prometheus.CounterValue,
+		c.transactionsNonSnapshotVersionActive,
+		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsNonSnapshotVersionTransactions,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.transactionsSnapshotActiveTotal,
-		prometheus.CounterValue,
+		c.transactionsSnapshotActive,
+		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsSnapshotTransactions,
 		sqlInstance.name,
 	)
@@ -211,22 +225,29 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.transactionsUpdateSnapshotActiveTotal,
+		c.transactionsUpdateSnapshotTotal,
 		prometheus.CounterValue,
+		c.transactionsPerfDataObject[0].TransactionsUpdateconflictratioBase,
+		sqlInstance.name,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.transactionsUpdateSnapshotActive,
+		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsUpdateSnapshotTransactions,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.transactionsVersionCleanupRateBytes,
-		prometheus.GaugeValue,
+		c.transactionsVersionCleanupBytes,
+		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionCleanuprateKBPers*1024,
 		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.transactionsVersionGenerationRateBytes,
-		prometheus.GaugeValue,
+		c.transactionsVersionGenerationBytes,
+		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionGenerationrateKBPers*1024,
 		sqlInstance.name,
 	)
@@ -240,7 +261,7 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionStoreUnits,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreunitcount,
 		sqlInstance.name,
 	)
@@ -258,8 +279,6 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreunittruncation,
 		sqlInstance.name,
 	)
-
-	return nil
 }
 
 func (c *Collector) closeTransactions() {

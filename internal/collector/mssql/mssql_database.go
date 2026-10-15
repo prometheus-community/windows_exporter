@@ -77,6 +77,7 @@ type collectorDatabases struct {
 	databasesTransactions                    *prometheus.Desc
 	databasesWriteTransactions               *prometheus.Desc
 	databasesXTPControllerDLCLatencyPerFetch *prometheus.Desc
+	databasesXTPControllerDLCFetches         *prometheus.Desc
 	databasesXTPControllerDLCPeakLatency     *prometheus.Desc
 	databasesXTPControllerLogProcessed       *prometheus.Desc
 	databasesXTPMemoryUsedKB                 *prometheus.Desc
@@ -129,9 +130,11 @@ type perfDataCounterValuesDatabases struct {
 	DatabasesTransactionsPerSec               float64 `perfdata:"Transactions/sec"`
 	DatabasesWriteTransactionsPerSec          float64 `perfdata:"Write Transactions/sec"`
 	DatabasesXTPControllerDLCLatencyPerFetch  float64 `perfdata:"XTP Controller DLC Latency/Fetch"`
-	DatabasesXTPControllerDLCPeakLatency      float64 `perfdata:"XTP Controller DLC Peak Latency"`
-	DatabasesXTPControllerLogProcessedPerSec  float64 `perfdata:"XTP Controller Log Processed/sec"`
-	DatabasesXTPMemoryUsedKB                  float64 `perfdata:"XTP Memory Used (KB)"`
+	// PERF_AVERAGE_BULK: the base is the number of fetches.
+	DatabasesXTPControllerDLCLatencyPerFetchBase float64 `perfdata:"XTP Controller DLC Latency/Fetch,secondvalue"`
+	DatabasesXTPControllerDLCPeakLatency         float64 `perfdata:"XTP Controller DLC Peak Latency"`
+	DatabasesXTPControllerLogProcessedPerSec     float64 `perfdata:"XTP Controller Log Processed/sec"`
+	DatabasesXTPMemoryUsedKB                     float64 `perfdata:"XTP Memory Used (KB)"`
 }
 
 type perfDataCounterValuesDatabases2019 struct {
@@ -264,20 +267,20 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesLogFlushWaitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_wait_seconds"),
-		"(Databases.LogFlushWaitTime)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_wait_seconds_total"),
+		"(Databases.LogFlushWaitTime) Total time commits waited for log flushes, in seconds",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushWriteTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_write_seconds"),
-		"(Databases.LogFlushWriteTimems)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_write_seconds_total"),
+		"(Databases.LogFlushWriteTimems) Total time spent writing log flushes, in seconds",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogGrowths = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_growths"),
-		"(Databases.LogGrowths)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_growths_total"),
+		"(Databases.LogGrowths) Total number of log growths for this database",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
@@ -372,14 +375,14 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesLogShrinks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_shrinks"),
-		"(Databases.LogShrinks)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_shrinks_total"),
+		"(Databases.LogShrinks) Total number of log shrinks for this database",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogTruncations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_log_truncations"),
-		"(Databases.LogTruncations)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_truncations_total"),
+		"(Databases.LogTruncations) Total number of log truncations for this database",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
@@ -426,8 +429,14 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 	c.databasesXTPControllerDLCLatencyPerFetch = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_dlc_fetch_latency_seconds"),
-		"(Databases.XTPControllerDLCLatencyPerFetch)",
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_dlc_fetch_latency_seconds_total"),
+		"(Databases.XTPControllerDLCLatencyPerFetch) Total latency of fetches from the Direct Log Consumer by the XTP controller, in seconds",
+		[]string{"mssql_instance", "database"},
+		nil,
+	)
+	c.databasesXTPControllerDLCFetches = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_dlc_fetches_total"),
+		"(Databases.XTPControllerDLCLatencyBase) Total number of fetches from the Direct Log Consumer by the XTP controller",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
@@ -587,21 +596,21 @@ func (c *Collector) emitDatabasesMetrics(ch chan<- prometheus.Metric, sqlInstanc
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushWaitTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DatabasesLogFlushWaitTime/1000.0,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushWriteTimeMS,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DatabasesLogFlushWriteTimeMS/1000.0,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogGrowths,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DatabasesLogGrowths,
 			sqlInstance.name, data.Name,
 		)
@@ -713,14 +722,14 @@ func (c *Collector) emitDatabasesMetrics(ch chan<- prometheus.Metric, sqlInstanc
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogShrinks,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DatabasesLogShrinks,
 			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogTruncations,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.DatabasesLogTruncations,
 			sqlInstance.name, data.Name,
 		)
@@ -776,8 +785,15 @@ func (c *Collector) emitDatabasesMetrics(ch chan<- prometheus.Metric, sqlInstanc
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPControllerDLCLatencyPerFetch,
-			prometheus.GaugeValue,
-			data.DatabasesXTPControllerDLCLatencyPerFetch,
+			prometheus.CounterValue,
+			data.DatabasesXTPControllerDLCLatencyPerFetch/1e6, // microseconds
+			sqlInstance.name, data.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.databasesXTPControllerDLCFetches,
+			prometheus.CounterValue,
+			data.DatabasesXTPControllerDLCLatencyPerFetchBase,
 			sqlInstance.name, data.Name,
 		)
 

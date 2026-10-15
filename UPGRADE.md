@@ -17,9 +17,9 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, SQL Server, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
-| You chart SQL Server latencies, SQL Server lock counts, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times, DNS zone transfers or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
+| You chart SQL Server latencies, lock counts or replica queues, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times, DNS zone transfers or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
 | You use the sample Grafana dashboard                                                            | Use Grafana 13 or later and import the new dashboard                    | [Dashboard and alerts](#dashboard-and-alerts)                     |
@@ -253,6 +253,28 @@ Renamed:
 | `windows_iis_http_requests_arrival_rate`             | `windows_iis_http_requests_arrived_total`                      | Was a running count, now a counter, use `rate()`; label `app` |
 | `windows_iis_http_requests_max_queue_item_age`       | `windows_iis_http_requests_max_queue_item_age_seconds`         | Left out while the queue is empty; label `app` |
 | `windows_dns_dynamic_updates_queued`                 | `windows_dns_dynamic_updates_queued_total`                     | Now a counter, use `rate()`        |
+| `windows_mssql_databases_log_flush_wait_seconds`     | `windows_mssql_databases_log_flush_wait_seconds_total`         | Now a counter, use `rate()`        |
+| `windows_mssql_databases_log_flush_write_seconds`    | `windows_mssql_databases_log_flush_write_seconds_total`        | Now a counter, use `rate()`        |
+| `windows_mssql_databases_log_growths`                | `windows_mssql_databases_log_growths_total`                    | Now a counter, use `increase()`    |
+| `windows_mssql_databases_log_shrinks`                | `windows_mssql_databases_log_shrinks_total`                    | Now a counter, use `increase()`    |
+| `windows_mssql_databases_log_truncations`            | `windows_mssql_databases_log_truncations_total`                | Now a counter, use `increase()`    |
+| `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds` | `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds_total` | Now a counter in seconds; divide its `rate()` by that of the new `windows_mssql_databases_xtp_controller_dlc_fetches_total` |
+| `windows_mssql_dbreplica_database_flow_control_wait_seconds` | `windows_mssql_dbreplica_database_flow_control_wait_seconds_total` | Now a counter, use `rate()` |
+| `windows_mssql_dbreplica_group_commit_stall_seconds` | `windows_mssql_dbreplica_group_commit_stall_seconds_total`     | Now a counter, use `rate()`        |
+| `windows_mssql_dbreplica_transaction_delay_seconds`  | `windows_mssql_dbreplica_transaction_delay_seconds_total`      | Now a counter, use `rate()`        |
+| `windows_mssql_dbreplica_recovery_queue_records`     | `windows_mssql_dbreplica_recovery_queue_bytes`                 | Was kilobytes, now bytes           |
+| `windows_mssql_dbreplica_log_send_queue`             | `windows_mssql_dbreplica_log_send_queue_bytes`                 | Was kilobytes, now bytes           |
+| `windows_mssql_dbreplica_log_remaining_for_undo`     | `windows_mssql_dbreplica_log_remaining_for_undo_bytes`         | Was kilobytes, now bytes           |
+| `windows_mssql_dbreplica_total_log_requiring_undo`   | `windows_mssql_dbreplica_total_log_requiring_undo_bytes`       | Was kilobytes, now bytes           |
+| `windows_mssql_genstats_http_authenticated_requests`, `windows_mssql_genstats_mars_deadlocks`, `windows_mssql_genstats_soap_empty_requests`, `windows_mssql_genstats_soap_method_invocations`, `windows_mssql_genstats_soap_session_initiate_requests`, `windows_mssql_genstats_soap_session_terminate_requests`, `windows_mssql_genstats_soapsql_requests`, `windows_mssql_genstats_soapwsdl_requests`, `windows_mssql_genstats_sql_trace_io_provider_lock_waits`, `windows_mssql_genstats_tempdb_recovery_unit_ids_generated`, `windows_mssql_genstats_tempdb_rowset_ids_generated` | The same names with a `_total` suffix | Now counters, use `rate()` |
+| `windows_mssql_locks_wait_time_seconds`              | `windows_mssql_locks_wait_time_seconds_total`                  | Now a counter, use `rate()`        |
+| `windows_mssql_locks_count`                          | `windows_mssql_locks_count_total`                              | Now a counter, use `rate()`        |
+| `windows_mssql_locks_lock_wait_seconds`              | `windows_mssql_locks_lock_wait_seconds_total`                  | Now a counter, use `rate()`        |
+| `windows_mssql_transactions_nonsnapshot_version_active_total` | `windows_mssql_transactions_nonsnapshot_version_active` | Now a gauge, query it directly     |
+| `windows_mssql_transactions_snapshot_active_total`   | `windows_mssql_transactions_snapshot_active`                   | Now a gauge, query it directly     |
+| `windows_mssql_transactions_update_snapshot_active_total` | `windows_mssql_transactions_update_snapshot_active`       | Now a gauge, query it directly     |
+| `windows_mssql_transactions_version_cleanup_rate_bytes` | `windows_mssql_transactions_version_cleanup_bytes_total`    | Now a counter, use `rate()`        |
+| `windows_mssql_transactions_version_generation_rate_bytes` | `windows_mssql_transactions_version_generation_bytes_total` | Now a counter, use `rate()`     |
 
 The RemoteFX loss, FEC and retransmission gauges were not percentages. They exported the raw numerator of a Windows sample fraction, a running count that only grows.
 The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_lost_packets_total[5m]) / rate(windows_remote_fx_net_loss_sampled_packets_total[5m])`, and likewise with `windows_remote_fx_net_fec_packets_total` / `windows_remote_fx_net_fec_sampled_packets_total` and `windows_remote_fx_net_retransmitted_packets_total` / `windows_remote_fx_net_retransmission_sampled_packets_total`.
@@ -297,10 +319,14 @@ Changed type, same name:
 | `windows_cache_copy_read_hits_total`                                   | gauge   | counter |
 | `windows_udp_datagram_received_total`                                  | gauge   | counter |
 | `windows_hyperv_legacy_network_adapter_bytes_dropped_total`            | gauge   | counter |
+| `windows_mssql_waitstats_*` (all 12 wait types)                        | counter | gauge   |
+| `windows_mssql_transactions_version_store_units`                       | counter | gauge   |
 
 The IIS and SMB values are current occupancy or, for `worker_max_threads`, the configured thread pool limit, so query them directly instead of with `rate()`.
-If Prometheus scrapes with OpenMetrics, the IIS and SMB metrics were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
+If Prometheus scrapes with OpenMetrics, the IIS, SMB and SQL Server metrics above were stored with a `_total` suffix, which counters get in that format. They now arrive without it.
 The cache, UDP and Hyper-V metrics already end in `_total`, so only their type metadata changes; `rate()` queries keep working.
+The SQL Server wait statistics hold values that SQL Server computes over its last sampling interval (the `item` label names the statistic), and the version store unit count is a current value. Query them directly instead of with `rate()`.
+The SQL Server metrics that gained a `_total` suffix hold running totals since the instance started, which 0.31 published as gauges.
 
 Label changes on existing metrics:
 
@@ -317,11 +343,12 @@ Retired: `windows_net_route_info` was documented but never exported. It was remo
 
 These metrics keep their names, but 0.31 reported wrong values. Graphs show a step at the upgrade.
 
-- `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_dbreplica_database_flow_control_wait_seconds` and `windows_mssql_dbreplica_group_commit_stall_seconds` are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly.
-- `windows_mssql_locks_count` is no longer divided by 1000.
 - `windows_ad_directory_operations_total{operation="write",origin="local_security_authority"}` now counts directory writes from the LSA. In 0.31 it repeated the LSA search count.
 - `windows_ad_sam_computer_creation_requests_total` and `windows_ad_sam_computer_creation_successful_requests_total` were swapped in 0.31. Requests now count all attempts, successful requests only the successful ones.
 - `windows_adfs_db_artifact_query_time_seconds_total` and `windows_adfs_db_config_query_time_seconds_total` are now in seconds. 0.31 scaled the raw ticks by a fixed `1e-8`, so on a typical 10 MHz time base the values were 10 times too small. The new `windows_adfs_db_artifact_queries_total` and `windows_adfs_db_config_queries_total` count the queries, so you can compute the average query time.
+- `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_bufman_read_ahead_issuing_seconds`, `windows_mssql_dbreplica_database_flow_control_wait_seconds_total` and `windows_mssql_dbreplica_group_commit_stall_seconds_total` (renamed, see above) are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly. `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds_total` is converted from microseconds as well.
+- `windows_mssql_locks_count_total` (renamed from `windows_mssql_locks_count`) is no longer divided by 1000.
+- `windows_mssql_dbreplica_redo_remaining_bytes` is now in bytes. 0.31 exported kilobytes. The other renamed `windows_mssql_dbreplica_*_bytes` metrics are converted from kilobytes too.
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
 - `windows_remote_fx_gfx_frames_skipped_insufficient_resource_total` with `resource="client"` and `resource="server"` now count the matching frames. In 0.31 the two label values were swapped.
 - `windows_dns_zone_transfer_requests_sent_total{qtype="soa"}` now counts zone transfer SOA requests sent. In 0.31 it reported zone transfer requests received.
