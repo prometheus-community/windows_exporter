@@ -55,7 +55,7 @@ type Collector struct {
 	perfDataObjectVolume        []perfDataCounterValuesVolume
 
 	// connection source
-	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
+	connectionBandwidthSavingsUsingDFSReplicationRatio *prometheus.Desc
 	connectionBytesReceivedTotal                       *prometheus.Desc
 	connectionCompressedSizeOfFilesReceivedTotal       *prometheus.Desc
 	connectionFilesReceivedTotal                       *prometheus.Desc
@@ -66,7 +66,7 @@ type Collector struct {
 	connectionSizeOfFilesReceivedTotal                 *prometheus.Desc
 
 	// folder source
-	folderBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
+	folderBandwidthSavingsUsingDFSReplicationRatio *prometheus.Desc
 	folderCompressedSizeOfFilesReceivedTotal       *prometheus.Desc
 	folderConflictBytesCleanedUpTotal              *prometheus.Desc
 	folderConflictBytesGeneratedTotal              *prometheus.Desc
@@ -97,7 +97,7 @@ type Collector struct {
 	// volume source
 	volumeDatabaseLookupsTotal           *prometheus.Desc
 	volumeDatabaseCommitsTotal           *prometheus.Desc
-	volumeUSNJournalUnreadPercentage     *prometheus.Desc
+	volumeUSNJournalUnreadRatio          *prometheus.Desc
 	volumeUSNJournalRecordsAcceptedTotal *prometheus.Desc
 	volumeUSNJournalRecordsReadTotal     *prometheus.Desc
 }
@@ -173,10 +173,39 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	c.buildDescriptors()
+
+	var err error
+
+	if slices.Contains(c.config.CollectorsEnabled, "connection") {
+		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replication Connections", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "folder") {
+		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replicated Folders", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "volume") {
+		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replication Service Volumes", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) buildDescriptors() {
 	// connection
-	c.connectionBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "connection_bandwidth_savings_using_dfs_replication_bytes_total"),
-		"Total bytes of bandwidth saved using DFS Replication for this connection",
+	c.connectionBandwidthSavingsUsingDFSReplicationRatio = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "connection_bandwidth_savings_using_dfs_replication_ratio"),
+		"Share of bandwidth saved by DFS Replication for this connection using RDC and other compression, compared to transferring the files uncompressed (0-1)",
 		[]string{"name"},
 		nil,
 	)
@@ -211,7 +240,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.connectionRDCCompressedSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_rdc_compressed_size_of_received_files_bytes_total"),
-		"Total uncompressed size of files received with Remote Differential Compression for connection",
+		"Total compressed size of files received with Remote Differential Compression on the connection, in bytes. This is the number of bytes that would have been received had RDC not been used",
 		[]string{"name"},
 		nil,
 	)
@@ -238,9 +267,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 
 	// folder
-	c.folderBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "folder_bandwidth_savings_using_dfs_replication_bytes_total"),
-		"Total bytes of bandwidth saved using DFS Replication for this folder",
+	c.folderBandwidthSavingsUsingDFSReplicationRatio = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "folder_bandwidth_savings_using_dfs_replication_ratio"),
+		"Share of bandwidth saved by DFS Replication for this replicated folder using RDC and other compression, compared to transferring the files uncompressed (0-1)",
 		[]string{"name"},
 		nil,
 	)
@@ -442,9 +471,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.volumeUSNJournalUnreadPercentage = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "volume_usn_journal_unread_percentage"),
-		"Percentage of DFSR volume USN journal records that are unread",
+	c.volumeUSNJournalUnreadRatio = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "volume_usn_journal_unread_ratio"),
+		"Share of the volume USN journal that DFS Replication has not read and processed yet (0-1). A journal wrap occurs at 1",
 		[]string{"name"},
 		nil,
 	)
@@ -462,31 +491,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"name"},
 		nil,
 	)
-
-	var err error
-
-	if slices.Contains(c.config.CollectorsEnabled, "connection") {
-		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replication Connections", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "folder") {
-		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replicated Folders", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "volume") {
-		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DFS Replication Service Volumes", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // Collect implements the Collector interface.
@@ -515,13 +519,19 @@ func (c *Collector) collectPDHConnection(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DFS Replication Connections metrics: %w", err)
 	}
 
-	for _, connection := range c.perfDataObjectConnection {
+	c.collectConnectionMetrics(ch, c.perfDataObjectConnection)
+
+	return nil
+}
+
+func (c *Collector) collectConnectionMetrics(ch chan<- prometheus.Metric, rows []perfDataCounterValuesConnection) {
+	for _, connection := range rows {
 		name := connection.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.connectionBandwidthSavingsUsingDFSReplicationTotal,
-			prometheus.CounterValue,
-			connection.BandwidthSavingsUsingDFSReplicationTotal,
+			c.connectionBandwidthSavingsUsingDFSReplicationRatio,
+			prometheus.GaugeValue,
+			connection.BandwidthSavingsUsingDFSReplicationPercent/100,
 			name,
 		)
 
@@ -581,8 +591,6 @@ func (c *Collector) collectPDHConnection(ch chan<- prometheus.Metric) error {
 			name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
@@ -591,13 +599,19 @@ func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DFS Replicated Folders metrics: %w", err)
 	}
 
-	for _, folder := range c.perfDataObjectFolder {
+	c.collectFolderMetrics(ch, c.perfDataObjectFolder)
+
+	return nil
+}
+
+func (c *Collector) collectFolderMetrics(ch chan<- prometheus.Metric, rows []perfDataCounterValuesFolder) {
+	for _, folder := range rows {
 		name := folder.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.folderBandwidthSavingsUsingDFSReplicationTotal,
-			prometheus.CounterValue,
-			folder.BandwidthSavingsUsingDFSReplicationTotal,
+			c.folderBandwidthSavingsUsingDFSReplicationRatio,
+			prometheus.GaugeValue,
+			folder.BandwidthSavingsUsingDFSReplicationPercent/100,
 			name,
 		)
 
@@ -783,8 +797,6 @@ func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
 			name,
 		)
 	}
-
-	return nil
 }
 
 func (c *Collector) collectPDHVolume(ch chan<- prometheus.Metric) error {
@@ -793,7 +805,13 @@ func (c *Collector) collectPDHVolume(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DFS Replication Volumes metrics: %w", err)
 	}
 
-	for _, volume := range c.perfDataObjectVolume {
+	c.collectVolumeMetrics(ch, c.perfDataObjectVolume)
+
+	return nil
+}
+
+func (c *Collector) collectVolumeMetrics(ch chan<- prometheus.Metric, rows []perfDataCounterValuesVolume) {
+	for _, volume := range rows {
 		name := volume.Name
 		ch <- prometheus.MustNewConstMetric(
 			c.volumeDatabaseLookupsTotal,
@@ -824,12 +842,10 @@ func (c *Collector) collectPDHVolume(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.volumeUSNJournalUnreadPercentage,
+			c.volumeUSNJournalUnreadRatio,
 			prometheus.GaugeValue,
-			volume.UsnJournalUnreadPercentage,
+			volume.UsnJournalUnreadPercentage/100,
 			name,
 		)
 	}
-
-	return nil
 }

@@ -21,7 +21,7 @@ All sources are enabled by default
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_dfsr_connection_bandwidth_savings_using_dfs_replication_bytes_total` | Total bandwidth (in bytes) saved by the DFS Replication service for this connection, using a combination of remote differential compression (RDC) and other compression technologies that minimize network bandwidth use. | counter | name
+`windows_dfsr_connection_bandwidth_savings_using_dfs_replication_ratio` | Share of bandwidth (0-1) saved by the DFS Replication service for this connection, using a combination of remote differential compression (RDC) and other compression technologies, compared to transferring the files uncompressed. For example, `0.2` means DFS Replication used 20% less bandwidth. | gauge | name
 `windows_dfsr_connection_bytes_received_total` | Total bytes received for connection | counter | name
 `windows_dfsr_connection_compressed_size_of_files_received_bytes_total` | Total compressed size of files received on the connection, in bytes | counter | name
 `windows_dfsr_connection_received_files_total` | Total number of files received for connection | counter | name
@@ -30,7 +30,7 @@ Name | Description | Type | Labels
 `windows_dfsr_connection_rdc_received_files_total` | Total number of files received using remote differential compression | counter | name
 `windows_dfsr_connection_rdc_size_of_received_files_bytes_total` | Total uncompressed size of files received with remote differential compression, in bytes. This is the number of bytes that would have been received had neither compression nor RDC been used. This is not the actual number of bytes received over the network. | counter | name
 `windows_dfsr_connection_files_received_bytes_total` | Total uncompressed size of files received on the connection, in bytes. This is the number of bytes that would have been received had DFS Replication compression not been used. | counter | name
-`windows_dfsr_folder_bandwidth_savings_using_dfs_replication_bytes_total` | Total bandwidth (in bytes) saved by the DFS Replication service for this folder, using a combination of remote differential compression (RDC) and other compression technologies that minimize network bandwidth use. | counter | name
+`windows_dfsr_folder_bandwidth_savings_using_dfs_replication_ratio` | Share of bandwidth (0-1) saved by the DFS Replication service for this replicated folder, using a combination of remote differential compression (RDC) and other compression technologies, compared to transferring the files uncompressed. For example, `0.2` means DFS Replication used 20% less bandwidth. | gauge | name
 `windows_dfsr_folder_compressed_size_of_received_files_bytes_total` | Total compressed size of files received for this folder, in bytes | counter | name
 `windows_dfsr_folder_conflict_cleaned_up_bytes_total` | Total size of conflict loser files and folders deleted from the Conflict and Deleted folder, in bytes. | counter | name
 `windows_dfsr_folder_conflict_generated_bytes_total` | Total size of conflict loser files and folders moved to the Conflict and Deleted folder, in bytes. | counter | name
@@ -59,7 +59,7 @@ Name | Description | Type | Labels
 `windows_dfsr_folder_dropped_updates_total` | Total number of redundant file replication update records that have been ignored by the DFS Replication service because they did not change the replicated file or folder. | counter | name
 `windows_dfsr_volume_database_commits_total` | Total number of DFSR Volume database commits. | counter | name
 `windows_dfsr_volume_database_lookups_total` | Total number of DFSR Volume database lookups. | counter | name
-`windows_dfsr_volume_usn_journal_unread_percentage` | Percentage of DFSR Volume USN journal records that are unread. | gauge | name
+`windows_dfsr_volume_usn_journal_unread_ratio` | Share (0-1) of the volume USN journal that the DFS Replication service has not read and processed yet. A journal wrap occurs when it reaches `1`. | gauge | name
 `windows_dfsr_volume_usn_journal_accepted_records_total` | Total number of USN journal records accepted. | counter | name
 `windows_dfsr_volume_usn_journal_read_records_total` | Total number of DFSR Volume USN journal records read. | counter | name
 

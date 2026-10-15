@@ -21,48 +21,48 @@ package dfsr
 type perfDataCounterValuesConnection struct {
 	Name string
 
-	BandwidthSavingsUsingDFSReplicationTotal float64 `perfdata:"Bandwidth Savings Using DFS Replication"`
-	BytesReceivedTotal                       float64 `perfdata:"Total Bytes Received"`
-	CompressedSizeOfFilesReceivedTotal       float64 `perfdata:"Compressed Size of Files Received"`
-	FilesReceivedTotal                       float64 `perfdata:"Total Files Received"`
-	RdcBytesReceivedTotal                    float64 `perfdata:"RDC Bytes Received"`
-	RdcCompressedSizeOfFilesReceivedTotal    float64 `perfdata:"RDC Compressed Size of Files Received"`
-	RdcNumberOfFilesReceivedTotal            float64 `perfdata:"RDC Number of Files Received"`
-	RdcSizeOfFilesReceivedTotal              float64 `perfdata:"RDC Size of Files Received"`
-	SizeOfFilesReceivedTotal                 float64 `perfdata:"Size of Files Received"`
+	BandwidthSavingsUsingDFSReplicationPercent float64 `perfdata:"Bandwidth Savings Using DFS Replication"`
+	BytesReceivedTotal                         float64 `perfdata:"Total Bytes Received"`
+	CompressedSizeOfFilesReceivedTotal         float64 `perfdata:"Compressed Size of Files Received"`
+	FilesReceivedTotal                         float64 `perfdata:"Total Files Received"`
+	RdcBytesReceivedTotal                      float64 `perfdata:"RDC Bytes Received"`
+	RdcCompressedSizeOfFilesReceivedTotal      float64 `perfdata:"RDC Compressed Size of Files Received"`
+	RdcNumberOfFilesReceivedTotal              float64 `perfdata:"RDC Number of Files Received"`
+	RdcSizeOfFilesReceivedTotal                float64 `perfdata:"RDC Size of Files Received"`
+	SizeOfFilesReceivedTotal                   float64 `perfdata:"Size of Files Received"`
 }
 
 // Folder Perflib: "DFS Replicated Folder".
 type perfDataCounterValuesFolder struct {
 	Name string
 
-	BandwidthSavingsUsingDFSReplicationTotal float64 `perfdata:"Bandwidth Savings Using DFS Replication"`
-	CompressedSizeOfFilesReceivedTotal       float64 `perfdata:"Compressed Size of Files Received"`
-	ConflictBytesCleanedUpTotal              float64 `perfdata:"Conflict Bytes Cleaned Up"`
-	ConflictBytesGeneratedTotal              float64 `perfdata:"Conflict Bytes Generated"`
-	ConflictFilesCleanedUpTotal              float64 `perfdata:"Conflict Files Cleaned Up"`
-	ConflictFilesGeneratedTotal              float64 `perfdata:"Conflict Files Generated"`
-	ConflictFolderCleanupsCompletedTotal     float64 `perfdata:"Conflict folder Cleanups Completed"`
-	ConflictSpaceInUse                       float64 `perfdata:"Conflict Space In Use"`
-	DeletedSpaceInUse                        float64 `perfdata:"Deleted Space In Use"`
-	DeletedBytesCleanedUpTotal               float64 `perfdata:"Deleted Bytes Cleaned Up"`
-	DeletedBytesGeneratedTotal               float64 `perfdata:"Deleted Bytes Generated"`
-	DeletedFilesCleanedUpTotal               float64 `perfdata:"Deleted Files Cleaned Up"`
-	DeletedFilesGeneratedTotal               float64 `perfdata:"Deleted Files Generated"`
-	FileInstallsRetriedTotal                 float64 `perfdata:"File Installs Retried"`
-	FileInstallsSucceededTotal               float64 `perfdata:"File Installs Succeeded"`
-	FilesReceivedTotal                       float64 `perfdata:"Total Files Received"`
-	RdcBytesReceivedTotal                    float64 `perfdata:"RDC Bytes Received"`
-	RdcCompressedSizeOfFilesReceivedTotal    float64 `perfdata:"RDC Compressed Size of Files Received"`
-	RdcNumberOfFilesReceivedTotal            float64 `perfdata:"RDC Number of Files Received"`
-	RdcSizeOfFilesReceivedTotal              float64 `perfdata:"RDC Size of Files Received"`
-	SizeOfFilesReceivedTotal                 float64 `perfdata:"Size of Files Received"`
-	StagingSpaceInUse                        float64 `perfdata:"Staging Space In Use"`
-	StagingBytesCleanedUpTotal               float64 `perfdata:"Staging Bytes Cleaned Up"`
-	StagingBytesGeneratedTotal               float64 `perfdata:"Staging Bytes Generated"`
-	StagingFilesCleanedUpTotal               float64 `perfdata:"Staging Files Cleaned Up"`
-	StagingFilesGeneratedTotal               float64 `perfdata:"Staging Files Generated"`
-	UpdatesDroppedTotal                      float64 `perfdata:"Updates Dropped"`
+	BandwidthSavingsUsingDFSReplicationPercent float64 `perfdata:"Bandwidth Savings Using DFS Replication"`
+	CompressedSizeOfFilesReceivedTotal         float64 `perfdata:"Compressed Size of Files Received"`
+	ConflictBytesCleanedUpTotal                float64 `perfdata:"Conflict Bytes Cleaned Up"`
+	ConflictBytesGeneratedTotal                float64 `perfdata:"Conflict Bytes Generated"`
+	ConflictFilesCleanedUpTotal                float64 `perfdata:"Conflict Files Cleaned Up"`
+	ConflictFilesGeneratedTotal                float64 `perfdata:"Conflict Files Generated"`
+	ConflictFolderCleanupsCompletedTotal       float64 `perfdata:"Conflict folder Cleanups Completed"`
+	ConflictSpaceInUse                         float64 `perfdata:"Conflict Space In Use"`
+	DeletedSpaceInUse                          float64 `perfdata:"Deleted Space In Use"`
+	DeletedBytesCleanedUpTotal                 float64 `perfdata:"Deleted Bytes Cleaned Up"`
+	DeletedBytesGeneratedTotal                 float64 `perfdata:"Deleted Bytes Generated"`
+	DeletedFilesCleanedUpTotal                 float64 `perfdata:"Deleted Files Cleaned Up"`
+	DeletedFilesGeneratedTotal                 float64 `perfdata:"Deleted Files Generated"`
+	FileInstallsRetriedTotal                   float64 `perfdata:"File Installs Retried"`
+	FileInstallsSucceededTotal                 float64 `perfdata:"File Installs Succeeded"`
+	FilesReceivedTotal                         float64 `perfdata:"Total Files Received"`
+	RdcBytesReceivedTotal                      float64 `perfdata:"RDC Bytes Received"`
+	RdcCompressedSizeOfFilesReceivedTotal      float64 `perfdata:"RDC Compressed Size of Files Received"`
+	RdcNumberOfFilesReceivedTotal              float64 `perfdata:"RDC Number of Files Received"`
+	RdcSizeOfFilesReceivedTotal                float64 `perfdata:"RDC Size of Files Received"`
+	SizeOfFilesReceivedTotal                   float64 `perfdata:"Size of Files Received"`
+	StagingSpaceInUse                          float64 `perfdata:"Staging Space In Use"`
+	StagingBytesCleanedUpTotal                 float64 `perfdata:"Staging Bytes Cleaned Up"`
+	StagingBytesGeneratedTotal                 float64 `perfdata:"Staging Bytes Generated"`
+	StagingFilesCleanedUpTotal                 float64 `perfdata:"Staging Files Cleaned Up"`
+	StagingFilesGeneratedTotal                 float64 `perfdata:"Staging Files Generated"`
+	UpdatesDroppedTotal                        float64 `perfdata:"Updates Dropped"`
 }
 
 // Volume Perflib: "DFS Replication Service Volumes".
