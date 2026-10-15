@@ -147,6 +147,14 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	// A Build without a Close in between stops the worker of the earlier
+	// Build, which would otherwise keep searching until the process exits.
+	if c.ctxCancelFn != nil {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+
 	c.logger = logger.With(slog.String("collector", Name))
 
 	c.logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")

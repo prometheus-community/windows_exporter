@@ -81,6 +81,40 @@ func TestCloseWaitsForWorker(t *testing.T) {
 	}
 }
 
+// TestBuildStopsPreviousWorker checks that a second Build stops the worker of
+// the first one instead of leaking it.
+func TestBuildStopsPreviousWorker(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		<-ctx.Done()
+	}()
+
+	c := New(nil)
+	c.logger = slog.New(slog.DiscardHandler)
+	c.ctxCancelFn = cancel
+	c.workerDone = done
+
+	err := c.Build(slog.New(slog.DiscardHandler), nil)
+
+	t.Cleanup(func() { _ = c.Close() })
+
+	select {
+	case <-done:
+	default:
+		t.Fatal("Build did not stop the worker of the previous Build")
+	}
+
+	if err != nil {
+		// The Windows Update API may be unavailable on this host; the old
+		// worker must be stopped either way.
+		t.Logf("Build: %v", err)
+	}
+}
+
 func TestFetchUpdatesPartialCollection(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
