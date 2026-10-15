@@ -324,6 +324,17 @@ jobs:
       - name: Generate checksums
         run: |
           $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          # Checksum only a complete set of artifacts.
+          foreach($Arch in "amd64", "arm64") {
+            foreach($Extension in "exe", "msi") {
+              $Artifact = "output\windows_exporter-$Version-$Arch.$Extension"
+              if (-not (Test-Path -PathType Leaf $Artifact)) {
+                throw "Missing release artifact $Artifact"
+              }
+            }
+          }
 
           $checksums = Get-ChildItem -Path output -File |
             Where-Object { $_.Name -match '^windows_exporter-.*\.(exe|msi)$' } |
