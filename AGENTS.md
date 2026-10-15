@@ -225,10 +225,15 @@ collector selections.
 
 From `contrib/mixin`, install the tools pinned in `mise.toml` with
 `mise install`, then run `mise run fmt`, `mise run generate`,
-`mise run check-dashboards` and `mise run test`. The tasks need a POSIX shell
-(Git Bash or WSL on Windows). Keep generated artifacts in sync. The tests cover
-Jsonnet format, dashboard parity, promtool rules/tests, offline pint lint,
-dashboard lint and runbook coverage.
+`mise run check-dashboards` and `mise run test`. Keep generated artifacts in
+sync. The tests cover Jsonnet format, dashboard parity, promtool rules/tests,
+offline pint lint, dashboard lint and runbook coverage.
+
+The tasks are POSIX shell scripts (`set -eu`, `trap`, `mktemp`, `$(...)`) that
+also call `rm`, `cp`, `diff`, `git` and, for `check-runbooks`, `python3`. On
+Windows, mise runs inline tasks with `cmd /c` by default, so run them in WSL, or
+from Git Bash with `MISE_WINDOWS_DEFAULT_INLINE_SHELL_ARGS="bash -c"` and Git's
+`bash` (not `C:\Windows\System32\bash.exe`, which starts WSL) first on `PATH`.
 
 Without mise, run the Jsonnet tools with `go run` at the versions pinned in
 `mise.toml`, for example
@@ -239,6 +244,7 @@ covers formatting, generation and the Jsonnet tests; promtool, pint and
 dashboard-linter still need their release binaries, so report those checks as
 skipped. A Windows checkout with `core.autocrlf` has CRLF sources, so compare
 generated output with `diff --strip-trailing-cr`.
+
 Preserve target/device labels, apply counter rates before aggregation, and
 handle zero denominators. Keep optional-role alerts configurable and provide a
 runbook for each alert. Check required collector availability and the Grafana
