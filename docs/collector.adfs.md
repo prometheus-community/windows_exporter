@@ -57,9 +57,11 @@ Name | Description | Type | Labels
 `windows_adfs_external_authentications_failure_total` | Total number of failed authentications from external MFA providers | counter | None
 `windows_adfs_external_authentications_success_total` | Total number of successful authentications from external MFA providers | counter | None
 `windows_adfs_db_artifact_failure_total` | Total number of failures connecting to the artifact database | counter | None
-`windows_adfs_db_artifact_query_time_seconds_total` | Accumulator of time taken for an artifact database query | counter | None
+`windows_adfs_db_artifact_queries_total` | Total number of artifact database queries | counter | None
+`windows_adfs_db_artifact_query_time_seconds_total` | Total time spent on artifact database queries, in seconds | counter | None
 `windows_adfs_db_config_failure_total` | Total number of failures connecting to the configuration database | counter | None
-`windows_adfs_db_config_query_time_seconds_total` | Accumulator of time taken for a configuration database query | counter | None
+`windows_adfs_db_config_queries_total` | Total number of configuration database queries | counter | None
+`windows_adfs_db_config_query_time_seconds_total` | Total time spent on configuration database queries, in seconds | counter | None
 `windows_adfs_federation_metadata_requests_total` | Total number of Federation Metadata requests | counter | None
 
 ### Example metric
@@ -74,6 +76,7 @@ rate(windows_adfs_device_authentications_total[2m])
 |---|----|
 |`rate(windows_adfs_oauth_password_grant_requests_failure_total[5m])`| Rate of OAuth requests failing due to bad client/resource values|
 |`rate(windows_adfs_userpassword_authentications_failure_total[5m])`| Rate of `/adfs/oauth2/token/` requests failing due to bad username/password values (possible credential spraying)|
+|`rate(windows_adfs_db_config_query_time_seconds_total[5m]) / rate(windows_adfs_db_config_queries_total[5m])`| Average configuration database query time in seconds|
 
 ## Alerting examples
 **prometheus.rules**

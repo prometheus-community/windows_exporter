@@ -397,6 +397,53 @@ func TestCollectLoadsMissingTimeBase(t *testing.T) {
 	require.Positive(t, dst[0].SystemUpTime)
 }
 
+// TestFrequencyOfAverageTimer checks that the time base of a raw average timer
+// is available, also when it was missing at startup, and that other counters
+// have none.
+func TestFrequencyOfAverageTimer(t *testing.T) {
+	t.Parallel()
+
+	type physicalDisk struct {
+		AvgDiskSecPerRead      float64 `perfdata:"Avg. Disk sec/Read"`
+		AvgDiskSecPerReadBase  float64 `perfdata:"Avg. Disk sec/Read,secondvalue"`
+		DiskReadsPerSec        float64 `perfdata:"Disk Reads/sec"`
+		CurrentDiskQueueLength float64 `perfdata:"Current Disk Queue Length"`
+	}
+
+	collector, err := NewCollector[physicalDisk](slog.New(slog.DiscardHandler), CounterTypeRaw, "PhysicalDisk", []string{"_Total"})
+	require.NoError(t, err)
+
+	t.Cleanup(collector.Close)
+
+	frequency, ok := collector.Frequency("Avg. Disk sec/Read")
+	require.True(t, ok)
+	require.Positive(t, frequency)
+
+	for _, name := range []string{"Disk Reads/sec", "Current Disk Queue Length", "unknown"} {
+		_, ok = collector.Frequency(name)
+		require.False(t, ok, name)
+	}
+
+	// As if GetCounterTimeBase failed at startup.
+	collector.counters[0].Frequency = 0
+
+	_, ok = collector.Frequency("Avg. Disk sec/Read")
+	require.False(t, ok)
+
+	var dst []physicalDisk
+
+	require.NoError(t, collector.Collect(&dst))
+
+	reloaded, ok := collector.Frequency("Avg. Disk sec/Read")
+	require.True(t, ok)
+	require.Equal(t, frequency, reloaded)
+
+	var nilCollector *Collector[physicalDisk]
+
+	_, ok = nilCollector.Frequency("Avg. Disk sec/Read")
+	require.False(t, ok)
+}
+
 func TestMetricTypeForCounterType(t *testing.T) {
 	t.Parallel()
 
