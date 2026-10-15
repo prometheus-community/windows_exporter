@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -141,13 +142,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels, &c.sessionCache}
+}
+
 func (c *Collector) Close() error {
 	c.perfDataCollectorTerminalServicesSession.Close()
 	c.perfDataCollectorBroker.Close()
 	c.perfDataQuery.Close()
-
-	c.sessionCache.Reset()
-	c.labels.Reset()
 
 	// hServer is 0 if Build failed before opening the server.
 	if c.hServer == 0 || c.hServer == windows.InvalidHandle {
@@ -162,9 +165,6 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	c.sessionCache.Reset()
-	c.labels.Reset()
 
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
@@ -356,8 +356,7 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 		return fmt.Errorf("failed to collect Terminal Services Session metrics: %w", err)
 	}
 
-	scrape := c.labels.Begin()
-	defer scrape.Commit()
+	scrape := c.labels.Scrape()
 
 	names := make(map[string]bool)
 
@@ -521,9 +520,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)
 	}
 
-	scrape := c.sessionCache.Begin()
-	// Sessions that were not collected in this scrape are dropped from the cache.
-	defer scrape.Commit()
+	scrape := c.sessionCache.Scrape()
 
 	for _, session := range sessions {
 		// only connect metrics for remote named sessions

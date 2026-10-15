@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 )
 
 var (
@@ -238,6 +239,9 @@ func (s *collectorState) build(ctx context.Context, logger *slog.Logger, miSessi
 		}
 	}()
 
+	// Cached metrics refer to the descriptors of an earlier Build.
+	scrapecache.Reset(collector)
+
 	return collector.Build(logger, miSession)
 }
 
@@ -271,6 +275,9 @@ func (s *collectorState) close(ctx context.Context, collector Collector) (err er
 			err = fmt.Errorf("panic: %v. stack: %s", r, string(debug.Stack()))
 		}
 	}()
+
+	// Release the cached metrics, also if Close panics.
+	defer scrapecache.Reset(collector)
 
 	return collector.Close()
 }

@@ -27,6 +27,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/clusapi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -370,7 +371,11 @@ func BenchmarkResourceGroupPublication(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		if err := c.publishResourceGroups(ch, groups, []string{"nodeA", "nodeB"}, osversion.LTSC2022, nil); err != nil {
+		cacheScrape := scrapecache.Begin(c)
+		err := c.publishResourceGroups(ch, groups, []string{"nodeA", "nodeB"}, osversion.LTSC2022, nil)
+		cacheScrape.End(err)
+
+		if err != nil {
 			b.Fatal(err)
 		}
 

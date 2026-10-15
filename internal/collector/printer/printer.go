@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/winspool"
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -129,8 +130,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 }
 
 func (c *Collector) Close() error {
-	c.metricCache.Reset()
-
 	return nil
 }
 
@@ -154,13 +153,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
-
 	return nil
 }
 
 func (c *Collector) GetName() string { return Name }
+
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.metricCache}
+}
 
 // Collect reads printers and jobs from the print spooler.
 // Win32_Printer is not used because the CIMWin32 provider calls DeviceCapabilities
@@ -172,7 +173,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to enumerate printers: %w", err)
 	}
 
-	scrape := c.metricCache.Begin()
+	scrape := c.metricCache.Scrape()
 
 	var errs []error
 
@@ -217,9 +218,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			)
 		}
 	}
-
-	// Printers that were not collected in this scrape are dropped from the cache.
-	scrape.Commit()
 
 	return errors.Join(errs...)
 }
