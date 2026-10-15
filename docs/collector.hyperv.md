@@ -495,7 +495,7 @@ _This collector does not yet have explained examples, we would appreciate your h
 ## Useful queries
 Percent of physical CPU resources used per VM (on instance "localhost")
 ```
-(sum (rate(windows_hyperv_hypervisor_virtual_processor_mode_time_total{state="hypervisor",instance="localhost"}[1m]))) / ignoring(state,vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) * 100
+sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{instance="localhost"}[1m])) / ignoring(vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) * 100
 ```
 Percent of physical CPU resources used by all VMs (on all monitored hosts)
 ```
@@ -507,7 +507,7 @@ Percent of physical CPU resources by the hosts themselves (on all monitored host
 ```
 Percent of physical CPU resources by the hypervisor (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_time_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
+(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_time_total{state="hypervisor"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
 ```
 
 ## Alerting examples
