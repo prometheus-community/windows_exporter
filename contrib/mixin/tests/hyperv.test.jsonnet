@@ -31,7 +31,7 @@ std.all([
   eq(
     'vnicVm',
     h.vnicVm('rate(y[1m])', 'vm="a"'),
-    'label_replace(rate(y[1m]), "vm_id", "$1", "adapter", ".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processor_count{vm="a"}) + 1)'
+    'label_replace(rate(y[1m]), "vm_id", "$1", "adapter", ".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processors{vm="a"}) + 1)'
   ),
   eq('threshold', std.toString(config.hypervDiskLatencyThresholdSeconds), '0.01'),
 ])

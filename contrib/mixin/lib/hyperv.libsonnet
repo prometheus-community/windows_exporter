@@ -28,8 +28,8 @@
     'label_replace(%s, "disk", "$1", "path", ".*[\\\\\\\\/]([^\\\\\\\\/]+)$")' % expr,
 
   // Hyper-V names the vNIC of a VM <vm>_<adapter>_<vm_id>--<adapter GUID>. Adds
-  // vm_id from the name and vm from windows_hyperv_vm_processor_count, so vNICs
+  // vm_id from the name and vm from windows_hyperv_vm_processors, so vNICs
   // match their VM by GUID and not by a name prefix.
   vnicVm(expr, vmSelector):
-    'label_replace(%s, "vm_id", "$1", "adapter", ".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processor_count{%s}) + 1)' % [expr, vmSelector],
+    'label_replace(%s, "vm_id", "$1", "adapter", ".*_([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})--.*") * on (instance, vm_id) group_left (vm) (0 * max by (instance, vm_id, vm) (windows_hyperv_vm_processors{%s}) + 1)' % [expr, vmSelector],
 }

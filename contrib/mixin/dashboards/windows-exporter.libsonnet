@@ -75,7 +75,7 @@ function(config)
       (import 'scheduled_tasks.libsonnet')(on),
       (import 'updates.libsonnet')(on),
       (import 'gpu.libsonnet')(on),
-      (import 'hyper_v.libsonnet')(on),
+      (import 'hyper_v.libsonnet')(on, config),
       (import 'time.libsonnet')(on),
       (import 'mssql.libsonnet')(on),
       (import 'exporter.libsonnet')(on),

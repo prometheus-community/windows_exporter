@@ -35,6 +35,7 @@ local results = {
   diskWithoutDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true }))).Disk,
   diskWithDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true, diskdrive: true }))).Disk,
   storageSpacesOnly: summary(render(only({ storage_spaces: true }))).Disk,
+  hypervOnly: summary(render(only({ hyperv: true }))),
   // A collectors object given without +: enables only the listed collectors.
   replaced: summary(render(function(_) { os: true, cpu: true })),
   // Only collector tabs, for a compact dashboard.
@@ -144,5 +145,17 @@ assert expect('collectorTabsOnly', {
   CPU: ['Summary', 'Utilization', 'System calls and frequency'],
   Exporter: exporter,
 });
+
+assert expect('hypervOnly', {
+  Exporter: exporter,
+  Fleet: ['Summary', 'Hosts'],
+  'Hyper-V': ['Summary', 'Virtual machines', 'CPU', 'Memory', 'Storage', 'Network'],
+  Overview: ['Summary'],
+});
+
+local hypervFull = render(only({ hyperv: true }));
+local hypervMemory = render(only({ hyperv: true, memory: true }));
+assert !std.objectHas(hypervFull.spec.elements, 'panel-290') : 'hyperv without memory: VM memory / host RAM stat rendered';
+assert std.objectHas(hypervMemory.spec.elements, 'panel-290') : 'hyperv with memory: VM memory / host RAM stat missing';
 
 results

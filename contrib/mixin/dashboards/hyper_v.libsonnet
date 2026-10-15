@@ -1,10 +1,18 @@
+local h = import '../lib/hyperv.libsonnet';
 local b = import 'builders.libsonnet';
 
-function(on)
+function(on, config)
+  local host = 'job=~"$job", instance="$instance"';
+  local metric(name) = '%s{%s}' % [name, host];
+  local threshold = std.toString(config.hypervDiskLatencyThresholdSeconds);
+  // Latency per I/O of each virtual disk with at least one I/O per second.
+  local deviceLatency = '%s / (%s > 1)' % [h.deviceRate('io_latency_seconds_total', host), h.deviceRate('throughput_total', host)];
+  local byVm(expr) = 'sum by (vm) (%s)' % h.withVm(expr, host);
   b.tab(
     'Hyper-V',
     b.rows([
-      if on('hyperv') then b.summary([63, 64, 65, 66, 67, 68]),
+      if on('hyperv') then b.summary([63, 64, 65, 66, 67, 68, if on('memory') then 290, 291]),
+      if on('hyperv') then b.row('Virtual machines', b.flow([[292, 24, 10]])),
       if on('hyperv') then b.row('CPU', b.flow([[69, 12, 8], [70, 12, 8]])),
       if on('hyperv') then b.row('Memory', b.flow([[72, 8, 8], [73, 8, 8], [74, 8, 8]])),
       if on('hyperv') then b.row('Storage', b.flow([[76, 8, 8], [77, 8, 8], [78, 8, 8]])),
@@ -318,6 +326,35 @@ function(on)
             },
           ],
         },
+      ]),
+
+      b.stat(290, 'VM memory / host RAM', "Memory assigned to all VMs as a share of the host's physical memory. Needs the memory collector.", 'sum(%s) / max(%s)' % [metric('windows_hyperv_dynamic_memory_vm_physical_bytes'), metric('windows_memory_physical_total_bytes')], 'percentunit', b.levels(0.85, 0.95)),
+
+      b.stat(291, 'Slow virtual disks', 'Virtual disks with an average latency per I/O above %s s and at least one I/O per second.' % threshold, 'count((%s) > %s) or vector(0)' % [deviceLatency, threshold], 'short', b.levels(1, 5)),
+
+      b.joinedTable(292, 'Virtual machines', "VMs running on this host. CPU usage is relative to the VM's own virtual processors; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory. Click a VM for its details.", 'vm', [
+        'max by (vm) (%s)' % metric('windows_hyperv_vm_processors'),
+        'max by (vm) (%s)' % metric('windows_hyperv_dynamic_memory_vm_physical_bytes'),
+        '1 - max by (vm) (%s) / max by (vm) (%s)' % [metric('windows_hyperv_dynamic_memory_vm_guest_available_bytes'), metric('windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes')],
+        'max by (vm) (%s)' % metric('windows_hyperv_dynamic_memory_vm_pressure_current_ratio'),
+        'sum by (vm) (rate(%s[$__rate_interval])) / max by (vm) (%s)' % [metric('windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total'), metric('windows_hyperv_vm_processors')],
+        byVm('(%s + %s)' % [h.deviceRate('operations_read_total', host), h.deviceRate('operations_written_total', host)]),
+        h.latency(byVm(h.deviceRate('io_latency_seconds_total', host)), byVm(h.deviceRate('throughput_total', host))),
+      ], [
+        ['vm', 'VM'],
+        ['Value #A', 'vCPUs'],
+        ['Value #B', 'Assigned memory'],
+        ['Value #C', 'RAM in use'],
+        ['Value #D', 'Committed vs. RAM'],
+        ['Value #E', 'CPU'],
+        ['Value #F', 'Disk IOPS'],
+        ['Value #G', 'Disk latency'],
+      ], [
+        { matcher: { id: 'byName', options: 'Assigned memory' }, properties: [{ id: 'unit', value: 'bytes' }] },
+        { matcher: { id: 'byRegexp', options: '^(RAM in use|CPU)$' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(0.85, 0.95) } }] },
+        { matcher: { id: 'byName', options: 'Committed vs. RAM' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(1, 1.5) } }] },
+        { matcher: { id: 'byName', options: 'Disk IOPS' }, properties: [{ id: 'unit', value: 'iops' }] },
+        { matcher: { id: 'byName', options: 'Disk latency' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: [{ color: 'green', value: null }, { color: 'orange', value: config.hypervDiskLatencyThresholdSeconds }] } }] },
       ]),
     ]
   )
