@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,12 @@ func (c serviceMetricCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c serviceMetricCollector) Collect(ch chan<- prometheus.Metric) {
-	assert.NoError(c.t, c.collector.Collect(ch, 0))
+	// Collect within a scrape of the caches, as the collection does.
+	cacheScrape := scrapecache.Begin(c.collector)
+	err := c.collector.Collect(ch, 0)
+	cacheScrape.End(err)
+
+	assert.NoError(c.t, err)
 }
 
 // serviceMetrics scrapes the collector and returns the value of each series of

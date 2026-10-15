@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,6 +50,6 @@ func BenchmarkCollector(b *testing.B) {
 	})
 
 	for b.Loop() {
-		require.NoError(b, c.Collect(metrics, 0))
+		require.NoError(b, testutils.Collect(c, metrics, 0))
 	}
 }

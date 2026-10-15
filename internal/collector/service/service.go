@@ -34,7 +34,9 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/metriccache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -143,17 +145,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.ServiceStartModeInclude = make([]string, 0)
 
-	var serviceExclude, serviceInclude, serviceStartModeInclude string
+	var serviceStartModeInclude string
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.service.exclude",
 		"Regexp of service to exclude. Service name (not the display name!) must both match include and not match exclude to be included.",
-	).Default("").StringVar(&serviceExclude)
+		"", &c.config.ServiceExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.service.include",
-		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&serviceInclude)
+		"Regexp of service to include. Service name (not the display name!) must both match include and not match exclude to be included.",
+		".+", &c.config.ServiceInclude,
+	)
 
 	app.Flag(
 		"collector.service.start-mode-include",
@@ -161,18 +165,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(strings.Join(ConfigDefaults.ServiceStartModeInclude, ",")).StringVar(&serviceStartModeInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
-		var err error
-
-		c.config.ServiceExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceExclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.exclude: %w", err)
-		}
-
-		c.config.ServiceInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceInclude))
-		if err != nil {
-			return fmt.Errorf("collector.process.include: %w", err)
-		}
-
 		c.config.ServiceStartModeInclude = strings.Split(serviceStartModeInclude, ",")
 
 		return nil
@@ -183,6 +175,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 func (c *Collector) GetName() string {
 	return Name
+}
+
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.metricCache}
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
@@ -220,9 +217,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"name", "process_id"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier Build.
-	c.metricCache.Reset()
 
 	c.apiStateValues = map[uint32]string{
 		windows.SERVICE_CONTINUE_PENDING: "continue pending",
@@ -278,8 +272,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 }
 
 func (c *Collector) Close() error {
-	c.metricCache.Reset()
-
 	if err := c.configCache.close(); err != nil {
 		c.logger.Warn("Failed to close the service configuration cache",
 			slog.Any("err", err),
@@ -324,7 +316,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
-	scrape := c.metricCache.Begin()
+	scrape := c.metricCache.Scrape()
 
 	servicesCh := make(chan serviceEntry, len(services))
 
@@ -348,9 +340,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	}
 
 	err = g.Wait()
-
-	// Services that were not collected in this scrape are dropped from the cache.
-	scrape.Commit()
 
 	return err
 }

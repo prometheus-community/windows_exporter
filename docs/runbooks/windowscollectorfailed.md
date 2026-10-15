@@ -27,8 +27,14 @@ metrics may stop evaluating even though the exporter remains reachable.
    privileges, and performance counters. Confirm the required service or role
    exists and is running on the host.
 4. Compare `windows_exporter_collector_duration_seconds` with the scrape timeout.
-   Test the relevant performance counters locally with Windows Performance
+   `windows_exporter_collector_timeout == 1` means the collector ran out of
+   time, or its call from an earlier scrape is still running. Test the relevant performance counters locally with Windows Performance
    Monitor.
+5. If every collector of the host fails at the same time, check
+   `windows_exporter_scrape_queue_timeout`. A value of `1` means the scrape
+   ended while it waited for an earlier scrape, so no collector ran. Several
+   Prometheus servers or jobs that scrape the same exporter, or a scrape that
+   uses most of its timeout, cause this.
 
 ## Mitigation
 

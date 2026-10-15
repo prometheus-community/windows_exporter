@@ -32,6 +32,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -143,17 +144,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.CollectorsEnabled = make([]string, 0)
 
-	var collectorsEnabled, volumeExclude, volumeInclude string
+	var collectorsEnabled string
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.logical_disk.volume-exclude",
 		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
-	).Default("").StringVar(&volumeExclude)
+		"", &c.config.VolumeExclude,
+	)
 
-	app.Flag(
+	utils.RegexpFlag(app,
 		"collector.logical_disk.volume-include",
 		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
-	).Default(".+").StringVar(&volumeInclude)
+		".+", &c.config.VolumeInclude,
+	)
 
 	app.Flag(
 		"collector.logical_disk.enabled",
@@ -165,18 +168,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
-
-		var err error
-
-		c.config.VolumeExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", volumeExclude))
-		if err != nil {
-			return fmt.Errorf("collector.logical_disk.volume-exclude: %w", err)
-		}
-
-		c.config.VolumeInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", volumeInclude))
-		if err != nil {
-			return fmt.Errorf("collector.logical_disk.volume-include: %w", err)
-		}
 
 		return nil
 	})

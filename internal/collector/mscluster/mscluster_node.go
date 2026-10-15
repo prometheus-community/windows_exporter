@@ -175,9 +175,6 @@ func (c *Collector) buildNodeDescriptors() {
 		[]string{"name"},
 		nil,
 	)
-
-	// Cached metrics refer to the descriptors of an earlier build.
-	c.nodeMetricCache.Reset()
 }
 
 // Collect sends the metric values for each metric
@@ -214,7 +211,7 @@ func (c *Collector) publishNodes(ch chan<- prometheus.Metric, nodes []clusapi.Ob
 	}
 
 	nodeNames := make([]string, 0, len(nodes))
-	scrape := c.nodeMetricCache.Begin()
+	scrape := c.nodeMetricCache.Scrape()
 
 	var key []byte
 
@@ -226,8 +223,6 @@ func (c *Collector) publishNodes(ch chan<- prometheus.Metric, nodes []clusapi.Ob
 		key, resultErr = publishCachedObjectFields(ch, scrape, key, "node", node, fields, build, resultErr)
 		nodeNames = append(nodeNames, node.Name)
 	}
-
-	commitScrape(scrape, len(nodes), resultErr)
 
 	return nodeNames, resultErr
 }
