@@ -55,7 +55,7 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 	// https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
 	c.perfDataCollectorDynamicMemoryBalancer, err = pdh.NewCollector[perfDataCounterValuesDynamicMemoryBalancer](c.logger, pdh.CounterTypeRaw, "Hyper-V Dynamic Memory Balancer", pdh.InstancesAll)
 	if err != nil {
-		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
+		return fmt.Errorf("failed to create Hyper-V Dynamic Memory Balancer collector: %w", err)
 	}
 
 	c.vmDynamicMemoryBalancerAvailableMemory = prometheus.NewDesc(

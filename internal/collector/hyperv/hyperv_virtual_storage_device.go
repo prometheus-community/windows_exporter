@@ -72,6 +72,12 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
 	}
 
+	c.buildVirtualStorageDeviceDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildVirtualStorageDeviceDescriptors() {
 	c.virtualStorageDeviceErrorCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_error_count_total"),
 		"Represents the total number of errors that have occurred on this virtual device.",
@@ -118,13 +124,13 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceThroughput = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_throughput_total"),
-		"Represents the total number of 8KB IO transfers completed by this virtual device.",
+		"Represents the total number of IO transfers completed by this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceNormalizedThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_normalized_throughput"),
-		"Represents the average number of IO transfers completed by this virtual device.",
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_normalized_throughput_total"),
+		"Represents the total number of IO transfers completed by this virtual device, normalized to 8KB transfers.",
 		[]string{"device"},
 		nil,
 	)
@@ -157,13 +163,11 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		nil,
 	)
 	c.virtualStorageDeviceIOQuotaReplenishmentRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "io_quota_replenishment_rate"),
-		"Represents the IO quota replenishment rate for this virtual device.",
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_io_quota_replenishment_total"),
+		"Represents the IO quota replenishment counter for this virtual device. Use rate() for the replenishment rate.",
 		[]string{"device"},
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
@@ -172,6 +176,12 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 		return fmt.Errorf("failed to collect Hyper-V Virtual Storage Device metrics: %w", err)
 	}
 
+	c.publishVirtualStorageDevice(ch, scrape)
+
+	return nil
+}
+
+func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) {
 	for _, data := range c.perfDataObjectVirtualStorageDevice {
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceErrorCount,
@@ -231,7 +241,7 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceNormalizedThroughput,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.VirtualStorageDeviceNormalizedThroughput,
 			data.Name,
 		)
@@ -252,7 +262,7 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceIOQuotaReplenishmentRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.VirtualStorageDeviceIOQuotaReplenishmentRate,
 			data.Name,
 		)
@@ -273,6 +283,4 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 			data.Name,
 		)
 	}
-
-	return nil
 }

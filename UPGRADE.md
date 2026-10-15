@@ -213,6 +213,17 @@ Renamed:
 | 0.31                                                 | 0.32                                                           | Note                               |
 |------------------------------------------------------|----------------------------------------------------------------|------------------------------------|
 | `windows_hyperv_virtual_storage_device_throughput`   | `windows_hyperv_virtual_storage_device_throughput_total`       | Now a counter, use `rate()`        |
+| `windows_hyperv_virtual_storage_device_normalized_throughput` | `windows_hyperv_virtual_storage_device_normalized_throughput_total` | Now a counter, use `rate()` |
+| `windows_hyperv_io_quota_replenishment_rate`         | `windows_hyperv_virtual_storage_device_io_quota_replenishment_total` | Now a counter, use `rate()` |
+| `windows_hyperv_root_partition_preferred_numa_node_index` | `windows_hyperv_root_partition_gpa_pages`                 | Same value; the old name was wrong |
+| `windows_hyperv_root_partition_physical_pages_allocated` | `windows_hyperv_root_partition_skipped_timer_ticks_total`  | Same value; the old name was wrong, now a counter |
+| `windows_hyperv_root_partition_device_interrupt_throttle_events` | `windows_hyperv_root_partition_device_interrupt_throttle_events_total` | Now a counter |
+| `windows_hyperv_root_partition_io_tlb_flush_cost`    | `windows_hyperv_root_partition_io_tlb_flush_seconds_total`     | Same value, cumulative seconds, now a counter. Divide by `rate(windows_hyperv_root_partition_io_tlb_flushes_total)` for the average |
+| `windows_hyperv_root_partition_io_tlb_flush`         | `windows_hyperv_root_partition_io_tlb_flushes_total`           | Same value                         |
+| `windows_hyperv_root_partition_gpa_space_modifications` | `windows_hyperv_root_partition_gpa_space_modifications_total` | Same value                       |
+| `windows_hyperv_root_partition_virtual_tlb_flush_entries` | `windows_hyperv_root_partition_virtual_tlb_flush_entries_total` | Same value                   |
+| `windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total` | `windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total` | Same value, cumulative seconds. Divide its rate by `rate(windows_hyperv_hypervisor_virtual_processor_dispatches_total)` for the average wait per dispatch |
+| `windows_hyperv_hypervisor_root_virtual_cpu_wait_time_per_dispatch_total` | `windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total` | Same value, cumulative seconds. Divide its rate by `rate(windows_hyperv_hypervisor_root_virtual_processor_dispatches_total)` for the average wait per dispatch |
 | `windows_filetime_mtime_timestamp_seconds`           | `windows_file_mtime_timestamp_seconds`                         | See [filetime](#filetime-collector-removed) |
 | `windows_memory_commit_limit`                        | `windows_memory_commit_limit_bytes`                            | Unit suffix added, same value      |
 | `windows_smb_server_shares_read_requests_count_total` | `windows_smb_server_shares_read_requests_total` | Same value |

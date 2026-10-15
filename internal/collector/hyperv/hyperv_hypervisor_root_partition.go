@@ -65,18 +65,20 @@ type perfDataCounterValuesHypervisorRootPartition struct {
 	HypervisorRootPartitionDeviceInterruptThrottleEvents float64 `perfdata:"Device Interrupt Throttle Events"`
 	HypervisorRootPartitionGPAPages                      float64 `perfdata:"GPA Pages"`
 	HypervisorRootPartitionGPASpaceModifications         float64 `perfdata:"GPA Space Modifications/sec"`
-	HypervisorRootPartitionIOTLBFlushCost                float64 `perfdata:"I/O TLB Flush Cost"`
-	HypervisorRootPartitionIOTLBFlushes                  float64 `perfdata:"I/O TLB Flushes/sec"`
-	HypervisorRootPartitionRecommendedVirtualTLBSize     float64 `perfdata:"Recommended Virtual TLB Size"`
-	HypervisorRootPartitionSkippedTimerTicks             float64 `perfdata:"Skipped Timer Ticks"`
-	HypervisorRootPartition1GDevicePages                 float64 `perfdata:"1G device pages"`
-	HypervisorRootPartition1GGPAPages                    float64 `perfdata:"1G GPA pages"`
-	HypervisorRootPartition2MDevicePages                 float64 `perfdata:"2M device pages"`
-	HypervisorRootPartition2MGPAPages                    float64 `perfdata:"2M GPA pages"`
-	HypervisorRootPartition4KDevicePages                 float64 `perfdata:"4K device pages"`
-	HypervisorRootPartition4KGPAPages                    float64 `perfdata:"4K GPA pages"`
-	HypervisorRootPartitionVirtualTLBFlushEntries        float64 `perfdata:"Virtual TLB Flush Entires/sec"`
-	HypervisorRootPartitionVirtualTLBPages               float64 `perfdata:"Virtual TLB Pages"`
+	// PERF_PRECISION_100NS_TIMER: the raw value is the cumulative flush time, which pdh
+	// scales to seconds. The Windows help text calls it an average in nanoseconds.
+	HypervisorRootPartitionIOTLBFlushCost            float64 `perfdata:"I/O TLB Flush Cost"`
+	HypervisorRootPartitionIOTLBFlushes              float64 `perfdata:"I/O TLB Flushes/sec"`
+	HypervisorRootPartitionRecommendedVirtualTLBSize float64 `perfdata:"Recommended Virtual TLB Size"`
+	HypervisorRootPartitionSkippedTimerTicks         float64 `perfdata:"Skipped Timer Ticks"`
+	HypervisorRootPartition1GDevicePages             float64 `perfdata:"1G device pages"`
+	HypervisorRootPartition1GGPAPages                float64 `perfdata:"1G GPA pages"`
+	HypervisorRootPartition2MDevicePages             float64 `perfdata:"2M device pages"`
+	HypervisorRootPartition2MGPAPages                float64 `perfdata:"2M GPA pages"`
+	HypervisorRootPartition4KDevicePages             float64 `perfdata:"4K device pages"`
+	HypervisorRootPartition4KGPAPages                float64 `perfdata:"4K GPA pages"`
+	HypervisorRootPartitionVirtualTLBFlushEntries    float64 `perfdata:"Virtual TLB Flush Entires/sec"`
+	HypervisorRootPartitionVirtualTLBPages           float64 `perfdata:"Virtual TLB Pages"`
 }
 
 func (c *Collector) buildHypervisorRootPartition() error {
@@ -130,32 +132,32 @@ func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 		nil,
 	)
 	c.hypervisorRootPartitionDeviceInterruptThrottleEvents = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_interrupt_throttle_events"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_interrupt_throttle_events_total"),
 		"The number of times an interrupt from a device assigned to the partition was temporarily throttled because the device was generating too many interrupts",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartitionGPAPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_preferred_numa_node_index"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_gpa_pages"),
 		"The number of pages present in the GPA space of the partition (zero for root partition)",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartitionGPASpaceModifications = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_gpa_space_modifications"),
-		"The rate of modifications to the GPA space of the partition",
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_gpa_space_modifications_total"),
+		"The number of modifications to the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartitionIOTLBFlushCost = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flush_cost"),
-		"The average time (in nanoseconds) spent processing an I/O TLB flush",
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flush_seconds_total"),
+		"The time spent processing I/O TLB flushes. Divide its rate by the rate of windows_hyperv_root_partition_io_tlb_flushes_total for the average time per flush",
 		nil,
 		nil,
 	)
 	c.hypervisorRootPartitionIOTLBFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flush"),
-		"The rate of flushes of I/O TLBs of the partition",
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flushes_total"),
+		"The number of flushes of I/O TLBs of the partition",
 		nil,
 		nil,
 	)
@@ -166,7 +168,7 @@ func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 		nil,
 	)
 	c.hypervisorRootPartitionSkippedTimerTicks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_physical_pages_allocated"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_skipped_timer_ticks_total"),
 		"The number of timer interrupts skipped for the partition",
 		nil,
 		nil,
@@ -208,8 +210,8 @@ func (c *Collector) buildHypervisorRootPartitionDescriptors() {
 		nil,
 	)
 	c.hypervisorRootPartitionVirtualTLBFlushEntries = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_flush_entries"),
-		"The rate of flushes of the entire virtual TLB",
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_flush_entries_total"),
+		"The number of flushes of the entire virtual TLB",
 		nil,
 		nil,
 	)
@@ -265,7 +267,7 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric, 
 
 	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptThrottleEvents,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptThrottleEvents,
 	)
 
@@ -283,7 +285,7 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric, 
 
 	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionIOTLBFlushCost,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionIOTLBFlushCost,
 	)
 
@@ -301,7 +303,7 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric, 
 
 	ch <- scrape.MustNewConstMetric(
 		c.hypervisorRootPartitionSkippedTimerTicks,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionSkippedTimerTicks,
 	)
 
