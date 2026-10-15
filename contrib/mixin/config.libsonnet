@@ -30,6 +30,10 @@
     // for a compact dashboard with only the collector tabs.
     enableFleetTab: true,
     enableOverviewTab: true,
+    // Tabs, by the slug in their UID, that render only as dashboards of their
+    // own, even with enableTabDashboards: false, and not in the full
+    // dashboard. Set it to [] to add them to the full dashboard.
+    separateDashboardTabs: ['mssql'],
 
     // Collectors enabled on the windows_exporter targets, by collector name.
     // The dashboard only renders the tabs, rows and panels of enabled
@@ -41,6 +45,7 @@
       hyperv: false,
       logical_disk: true,
       memory: true,
+      mssql: false,
       net: true,
       os: true,
       physical_disk: true,
