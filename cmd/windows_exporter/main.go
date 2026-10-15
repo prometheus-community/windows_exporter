@@ -292,7 +292,7 @@ func run(ctx context.Context, args []string) int {
 
 	mux, err := newServeMux(*metricsPath, *debugEnabled, httphandler.New(logger, collectors, handlerOpts))
 	if err != nil {
-		logger.LogAttrs(ctx, slog.LevelError, "Invalid telemetry path",
+		logger.LogAttrs(ctx, slog.LevelError, "failed to build router",
 			slog.Any("err", err),
 		)
 
@@ -466,8 +466,8 @@ func unknownCollectors(names []string) []string {
 	return unknown
 }
 
-// validateTimeoutMargin rejects a margin that would extend the scrape timeout
-// beyond the timeout of the client.
+// validateTimeoutMargin rejects a negative, NaN or infinite margin. A negative
+// margin would extend the scrape timeout beyond the timeout of the client.
 func validateTimeoutMargin(margin float64) error {
 	if math.IsNaN(margin) || math.IsInf(margin, 0) || margin < 0 {
 		return fmt.Errorf("--scrape.timeout-margin must be a non-negative number of seconds, got %v", margin)

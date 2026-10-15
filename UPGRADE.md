@@ -12,7 +12,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You enable the `filetime` collector                                                             | Switch to the `file` collector                                          | [filetime collector removed](#filetime-collector-removed)         |
 | You enable the `thermalzone` collector                                                          | Switch to a `performancecounter` object                                 | [thermalzone collector removed](#thermalzone-collector-removed)   |
 | You call the `/version` endpoint                                                                | Use `windows_exporter_build_info` instead                               | [/version endpoint removed](#version-endpoint-removed)            |
-| You use a configuration file, or set `--process.priority` or `--process.memory-limit`           | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
+| You use a configuration file, or set `--process.priority`, `--process.memory-limit`, `--scrape.timeout-margin`, `--telemetry.path` or `--collectors.disabled` | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
 | You use the `process` collector                                                                 | Remove `counter-version`, check the `owner` label                       | [process collector](#process-collector)                           |
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
@@ -106,6 +106,9 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
 - **Sub-collector names.** `--collector.dfsr.sources-enabled`, `--collector.dhcp.enabled`, `--collector.mscluster.enabled` and `--collector.tcp.enabled` reject unknown sub-collector names. Typos used to be ignored, which disabled that sub-collector without a warning.
 - **Process priority.** An unknown `--process.priority` value stops the exporter. It used to fall back to `normal`.
 - **Memory limit.** `--process.memory-limit=0` now disables the limit, as documented. In 0.31 it set a soft limit of zero bytes, which made the Go runtime collect garbage continuously. Negative values stop the exporter.
+- **Scrape timeout margin.** A negative `--scrape.timeout-margin` stops the exporter. 0.31 treated it as `0`.
+- **Telemetry path.** `--telemetry.path` must start with `/`, must not be `/health` and, with `--debug.enabled`, must not be one of the `/debug/pprof/` routes. 0.31 accepted such a path and then crashed while starting the HTTP server.
+- **Disabled collectors.** Unknown names in `--collectors.disabled` are logged as a warning and otherwise ignored, so a configuration that still disables a removed collector keeps working. Names are not trimmed: with `cpu, net`, the exporter warns about ` net` and doesn't disable `net`.
 - **update collector.** In a configuration file, the key for `--collector.update.scrape-interval` is `scrape-interval`:
 
   ```yaml
