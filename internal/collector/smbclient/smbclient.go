@@ -46,6 +46,9 @@ type Collector struct {
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
+	// unexpectedInstances holds instance names already logged as unparsable.
+	unexpectedInstances map[string]struct{}
+
 	readBytesTotal                            *prometheus.Desc
 	readBytesTransmittedViaSMBDirectTotal     *prometheus.Desc
 	readRequestQueueSecsTotal                 *prometheus.Desc
@@ -98,6 +101,7 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
+	c.unexpectedInstances = make(map[string]struct{})
 
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
@@ -214,9 +218,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	for _, data := range c.perfDataObject {
 		serverValue, shareValue, ok := parseInstanceName(data.Name)
 		if !ok {
-			c.logger.Warn("skipping SMB Client Shares instance with unexpected name",
-				slog.String("instance", data.Name),
-			)
+			if _, logged := c.unexpectedInstances[data.Name]; !logged {
+				c.unexpectedInstances[data.Name] = struct{}{}
+
+				c.logger.Warn("skipping SMB Client Shares instance with unexpected name",
+					slog.String("instance", data.Name),
+				)
+			}
 
 			continue
 		}
