@@ -82,25 +82,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.bytesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
 		"Size of queue journal in bytes",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.bytesInQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_queue"),
 		"Size of queue in bytes",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_in_journal_queue"),
 		"Count messages in queue journal",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesInQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_in_queue"),
 		"Count messages in queue",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 

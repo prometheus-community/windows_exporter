@@ -125,7 +125,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.keySuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "key_success"),
 		"Whether the registry key could be read successfully.",
-		[]string{"name"},
+		[]string{"key"},
 		nil,
 	)
 

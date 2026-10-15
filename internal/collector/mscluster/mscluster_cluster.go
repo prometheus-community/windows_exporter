@@ -220,463 +220,463 @@ func (c *Collector) buildClusterDescriptors() {
 	c.clusterAddEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay_seconds"),
 		"Provides access to the cluster's AddEvictDelay property, which is the number of seconds that a new node is delayed after an eviction of another node.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterAdminAccessPoint = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "admin_access_point"),
 		"The type of the cluster administrative access point.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterAutoAssignNodeSite = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "auto_assign_node_site"),
 		"Determines whether or not the cluster will attempt to automatically assign nodes to sites based on networks and Active Directory Site information.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterAutoBalancerLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "auto_balancer_level"),
 		"Determines the level of aggressiveness of AutoBalancer.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterAutoBalancerMode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "auto_balancer_mode"),
 		"Determines whether or not the auto balancer is enabled.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterBackupInProgress = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "backup_in_progress"),
 		"Indicates whether a backup is in progress.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterBlockCacheSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "block_cache_size_bytes"),
 		"CSV BlockCache size in bytes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusSvcHangTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_hang_timeout_seconds"),
 		"Controls how long, in seconds, the cluster network driver waits between Failover Cluster Service heartbeats before it determines that the Failover Cluster Service has stopped responding.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusSvcRegroupOpeningTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_opening_timeout_seconds"),
 		"Controls how long, in seconds, a node will wait on other nodes in the opening stage before deciding that they failed.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusSvcRegroupPruningTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_pruning_timeout_seconds"),
 		"Controls how long, in seconds, the membership leader will wait to reach full connectivity between cluster nodes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusSvcRegroupStageTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_stage_timeout_seconds"),
 		"Controls how long, in seconds, a node will wait on other nodes in a membership stage before deciding that they failed.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusSvcRegroupTickInMilliseconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "clus_svc_regroup_tick_seconds"),
 		"Controls how frequently, in seconds, the membership algorithm is sending periodic membership messages.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterEnforcedAntiAffinity = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_enforced_anti_affinity"),
 		"Enables or disables hard enforcement of group anti-affinity classes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterFunctionalLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_functional_level"),
 		"The functional level the cluster is currently running in.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterGroupWaitDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_group_wait_delay_seconds"),
 		"Maximum time in seconds that a group waits for its preferred node to come online during cluster startup before coming online on a different node.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterLogLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_log_level"),
 		"Controls the level of cluster logging.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterLogSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_log_size_bytes"),
 		"Controls the maximum size, in bytes, of the cluster log files on each of the nodes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterClusterUpgradeVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cluster_upgrade_version"),
 		"Specifies the upgrade version the cluster is currently running in.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterCrossSiteDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_site_delay_seconds"),
 		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats across sites.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterCrossSiteThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_site_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed across sites before it determines that Cluster Service has stopped responding.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterCrossSubnetDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_subnet_delay_seconds"),
 		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats across subnets.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterCrossSubnetThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "cross_subnet_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed across subnets before it determines that Cluster Service has stopped responding.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterCsvBalancer = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "csv_balancer"),
 		"Whether automatic balancing for CSV is enabled.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDatabaseReadWriteMode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "database_read_write_mode"),
 		"Sets the database read and write mode.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDefaultNetworkRole = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "default_network_role"),
 		"Provides access to the cluster's DefaultNetworkRole property.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDetectedCloudPlatform = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "detected_cloud_platform"),
 		"(DetectedCloudPlatform)",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDetectManagedEvents = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "detect_managed_events"),
 		"(DetectManagedEvents)",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDetectManagedEventsThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "detect_managed_events_threshold"),
 		"(DetectManagedEventsThreshold)",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDisableGroupPreferredOwnerRandomization = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "disable_group_preferred_owner_randomization"),
 		"(DisableGroupPreferredOwnerRandomization)",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDrainOnShutdown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "drain_on_shutdown"),
 		"Whether to drain the node when cluster service is being stopped.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterDynamicQuorumEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "dynamic_quorum_enabled"),
 		"Allows cluster service to adjust node weights as needed to increase availability.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterEnableSharedVolumes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "enable_shared_volumes"),
 		"Enables or disables cluster shared volumes on this cluster.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterFixQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "fix_quorum"),
 		"Provides access to the cluster's FixQuorum property, which specifies if the cluster is in a fix quorum state.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterGracePeriodEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "grace_period_enabled"),
 		"Whether the node grace period feature of this cluster is enabled.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterGracePeriodTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "grace_period_timeout_seconds"),
 		"The grace period timeout in seconds.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterGroupDependencyTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "group_dependency_timeout_seconds"),
 		"The timeout in seconds after which a group will be brought online despite unsatisfied dependencies",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterHangRecoveryAction = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "hang_recovery_action"),
 		"Controls the action to take if the user-mode processes have stopped responding.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterIgnorePersistentStateOnStartup = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "ignore_persistent_state_on_startup"),
 		"Provides access to the cluster's IgnorePersistentStateOnStartup property, which specifies whether the cluster will bring online groups that were online when the cluster was shut down.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterLogResourceControls = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "log_resource_controls"),
 		"Controls the logging of resource controls.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterLowerQuorumPriorityNodeId = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "lower_quorum_priority_node_id"),
 		"Specifies the Node ID that has a lower priority when voting for quorum is performed. If the quorum vote is split 50/50%, the specified node's vote would be ignored to break the tie. If this is not set then the cluster will pick a node at random to break the tie.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterMaxNumberOfNodes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "max_number_of_nodes"),
 		"Indicates the maximum number of nodes that may participate in the Cluster.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterMessageBufferLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "message_buffer_length"),
 		"The maximum unacknowledged message count for GEM.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterMinimumNeverPreemptPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "minimum_never_preempt_priority"),
 		"Groups with this priority or higher cannot be preempted.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterMinimumPreemptorPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "minimum_preemptor_priority"),
 		"Minimum priority a cluster group must have to be able to preempt another group.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterNetftIPSecEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "netft_ip_sec_enabled"),
 		"Whether IPSec is enabled for cluster internal traffic.cluster",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterPlacementOptions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "placement_options"),
 		"Various option flags to modify default placement behavior.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterPlumbAllCrossSubnetRoutes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "plumb_all_cross_subnet_routes"),
 		"Plumbs all possible cross subnet routes to all nodes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterPreventQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "prevent_quorum"),
 		"Whether the cluster will ignore group persistent state on startup.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuarantineDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quarantine_duration_seconds"),
 		"The quarantine period timeout in seconds.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuarantineThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quarantine_threshold"),
 		"Number of node failures before it will be quarantined.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuorumArbitrationTimeMax = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_max_seconds"),
 		"Controls the maximum time, in seconds, necessary to decide the Quorum owner node.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuorumArbitrationTimeMin = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_arbitration_time_min_seconds"),
 		"Controls the minimum time, in seconds, necessary to decide the Quorum owner node.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuorumLogFileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_log_file_size"),
 		"This property is obsolete.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterQuorumTypeValue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "quorum_type_value"),
 		"Get the current quorum type value. -1: Unknown; 1: Node; 2: FileShareWitness; 3: Storage; 4: None",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterRequestReplyTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "request_reply_timeout_seconds"),
 		"Controls the request reply time-out period in seconds.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterResiliencyDefaultPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "resiliency_default_period_seconds"),
 		"The default resiliency period, in seconds, for the cluster.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterResiliencyLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "resiliency_level"),
 		"The resiliency level for the cluster.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterResourceDllDeadlockPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "resource_dll_deadlock_period"),
 		"This property is obsolete.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterRootMemoryReserved = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "root_memory_reserved_bytes"),
 		"Controls the amount of memory, in bytes, reserved for the parent partition on all cluster nodes.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterRouteHistoryLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "route_history_length"),
 		"The history length for routes to help finding network issues.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DBusTypes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_bus_types"),
 		"Bus types for storage spaces direct.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DCacheDesiredState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_desired_state"),
 		"Desired state of the storage spaces direct cache.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DCacheFlashReservePercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_flash_reserve_ratio"),
 		"Ratio (0-1) of allocated flash space to utilize when caching.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DCachePageSizeKBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_cache_page_size_bytes"),
 		"Page size in bytes used by S2D cache.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_enabled"),
 		"Whether direct attached storage (DAS) is enabled.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DIOLatencyThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2dio_latency_threshold_seconds"),
 		"The I/O latency threshold in seconds for storage spaces direct.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterS2DOptimizations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "s2d_optimizations"),
 		"Optimization flags for storage spaces direct.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterSameSubnetDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "same_subnet_delay_seconds"),
 		"Controls how long the cluster network driver waits in seconds between sending Cluster Service heartbeats on the same subnet.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterSameSubnetThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "same_subnet_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed on the same subnet before it determines that Cluster Service has stopped responding.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterSecurityLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "security_level"),
 		"Controls the level of security that should apply to intracluster messages. 0: Clear Text; 1: Sign; 2: Encrypt ",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterSecurityLevelForStorage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "security_level_for_storage"),
 		"(SecurityLevelForStorage)",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterSharedVolumeVssWriterOperationTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "shared_volume_vss_writer_operation_timeout_seconds"),
 		"CSV VSS Writer operation timeout in seconds.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterShutdownTimeoutInMinutes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "shutdown_timeout_seconds"),
 		"The maximum time in seconds allowed for cluster resources to come offline during cluster service shutdown.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterUseClientAccessNetworksForSharedVolumes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "use_client_access_networks_for_shared_volumes"),
 		"Whether the use of client access networks for cluster shared volumes feature of this cluster is enabled. 0: Disabled; 1: Enabled; 2: Auto",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterWitnessDatabaseWriteTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_database_write_timeout_seconds"),
 		"Controls the maximum time in seconds that a cluster database write to a witness can take before the write is abandoned.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterWitnessDynamicWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_dynamic_weight"),
 		"The weight of the configured witness.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 	c.clusterWitnessRestartInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "witness_restart_interval_seconds"),
 		"Controls the witness restart interval in seconds.",
-		[]string{"name"},
+		[]string{"cluster"},
 		nil,
 	)
 

@@ -199,25 +199,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with service information",
-		[]string{"name", "display_name", "run_as", "path_name"},
+		[]string{"service", "display_name", "run_as", "path_name"},
 		nil,
 	)
 	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The state of the service (State)",
-		[]string{"name", "state"},
+		[]string{"service", "state"},
 		nil,
 	)
 	c.startMode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_mode"),
 		"The start mode of the service (StartMode)",
-		[]string{"name", "start_mode"},
+		[]string{"service", "start_mode"},
 		nil,
 	)
 	c.processID = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process"),
 		"Process of started service. The value is the creation time of the process as a unix timestamp.",
-		[]string{"name", "process_id"},
+		[]string{"service", "process_id"},
 		nil,
 	)
 

@@ -86,32 +86,32 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			"device_id",
 			"model",
 			"caption",
-			"name",
+			"disk",
 		},
 		nil,
 	)
 	c.status = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of the drive",
-		[]string{"name", "status"},
+		[]string{"disk", "status"},
 		nil,
 	)
 	c.size = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size"),
 		"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
-		[]string{"name"},
+		[]string{"disk"},
 		nil,
 	)
 	c.partitions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "partitions"),
 		"Number of partitions",
-		[]string{"name"},
+		[]string{"disk"},
 		nil,
 	)
 	c.availability = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "availability"),
 		"Availability Status",
-		[]string{"name", "availability"},
+		[]string{"disk", "availability"},
 		nil,
 	)
 

@@ -94,85 +94,85 @@ func (c *Collector) buildResourceGroupDescriptors() {
 	c.resourceGroupAutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "characteristics"),
 		"Provides the characteristics of the group.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupColdStartSetting = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "cold_start_setting"),
 		"Indicates whether a group can start after a cluster cold start.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupDefaultOwner = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "default_owner"),
 		"Number of the last node the resource group was activated on or explicitly moved to.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupFailbackWindowEnd = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failback_window_end"),
 		"The FailbackWindowEnd property provides the latest time that the group can be moved back to the node identified as its preferred node.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupFailbackWindowStart = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failback_window_start"),
 		"The FailbackWindowStart property provides the earliest time (that is, local time as kept by the cluster) that the group can be moved back to the node identified as its preferred node.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupFailOverPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failover_period_seconds"),
 		"The FailoverPeriod property specifies a number of seconds during which a maximum number of failover attempts, specified by the FailoverThreshold property, can occur. Windows stores it in hours.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupFailOverThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "failover_threshold"),
 		"The FailoverThreshold property specifies the maximum number of failover attempts.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupFlags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "flags"),
 		"Provides access to the flags set for the group. ",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupGroupType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "group_type"),
 		"The Type of the resource group.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupOwnerNode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "owner_node"),
 		"The node hosting the resource group. 0: Not hosted; 1: Hosted",
-		[]string{"node_name", "name"},
+		[]string{"node", "resource_group"},
 		nil,
 	)
 	c.resourceGroupPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "priority"),
 		"Priority value of the resource group",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupResiliencyPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "resiliency_period_seconds"),
 		"The resiliency period for this group, in seconds.",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 	c.resourceGroupState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "state"),
 		"The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending",
-		[]string{"name"},
+		[]string{"resource_group"},
 		nil,
 	)
 

@@ -307,7 +307,7 @@ func (c *Collector) buildDescriptors() {
 	c.dnsWMIStats = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "wmi_stats_total"),
 		"DNS WMI statistics from MicrosoftDNS_Statistic",
-		[]string{"name", "collection_name", "dns_server"},
+		[]string{"statistic", "collection_name", "dns_server"},
 		nil,
 	)
 }

@@ -83,103 +83,103 @@ func (c *Collector) buildVirtualSMB() error {
 	c.virtualSMBDirectMappedSections = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_direct_mapped_sections"),
 		"Represents the number of direct-mapped sections in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBDirectMappedPages = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_direct_mapped_pages"),
 		"Represents the number of direct-mapped pages in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBWriteBytesRDMA = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_rdma_write_bytes_total"),
 		"Represents the total number of bytes written using RDMA in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBWriteBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_write_bytes_total"),
 		"Represents the total number of bytes written in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBReadBytesRDMA = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_rdma_read_bytes_total"),
 		"Represents the total number of bytes read using RDMA in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBReadBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_read_bytes_total"),
 		"Represents the total number of bytes read in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBFlushRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_flush_requests_total"),
 		"Represents the total number of flush requests in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBWriteRequestsRDMA = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_rdma_write_requests_total"),
 		"Represents the total number of write requests using RDMA in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBWriteRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_write_requests_total"),
 		"Represents the total number of write requests in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBReadRequestsRDMA = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_rdma_read_requests_total"),
 		"Represents the total number of read requests using RDMA in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBReadRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_read_requests_total"),
 		"Represents the total number of read requests in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBCurrentPendingRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_current_pending_requests"),
 		"Represents the current number of pending requests in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBCurrentOpenFileCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_current_open_file_count"),
 		"Represents the current number of open files in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBTreeConnectCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_tree_connects_total"),
 		"Represents the total number of tree connects in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_requests_total"),
 		"Represents the total number of requests in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBSentBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_sent_bytes_total"),
 		"Represents the total number of bytes sent in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 	c.virtualSMBReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_smb_received_bytes_total"),
 		"Represents the total number of bytes received in the virtual SMB",
-		[]string{"instance"},
+		[]string{"vm"},
 		nil,
 	)
 

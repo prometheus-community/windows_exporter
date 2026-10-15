@@ -12,7 +12,7 @@ installed. It is multi-instance. These notes were recorded on Windows Server
   `<computer>\private$\<queue>` in lower case. A fresh install already has the
   internal queues `server2025\private$\admin_queue$` and
   `server2025\private$\order_queue$`. The collector uses the instance name
-  unchanged as the `name` label.
+  unchanged as the `queue` label.
 - For `Computer Queues`, `Messages/Bytes in Queue` is the dead-letter queue
   and `Messages/Bytes in Journal Queue` is the computer journal.
 - All values were 0 on the recording host.

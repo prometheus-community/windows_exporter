@@ -110,7 +110,7 @@ func TestClusterNativeMetricContract(t *testing.T) {
 			t.Fatalf("invalid family %s", name)
 		}
 
-		if !maps.Equal(metricLabels(family.GetMetric()[0]), map[string]string{"name": "CICluster"}) {
+		if !maps.Equal(metricLabels(family.GetMetric()[0]), map[string]string{"cluster": "CICluster"}) {
 			t.Fatalf("%s labels = %v", name, metricLabels(family.GetMetric()[0]))
 		}
 	}

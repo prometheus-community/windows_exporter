@@ -105,6 +105,14 @@ exercised a live Windows role.
   `_milliseconds`, `_microseconds`, `_kb` or an `_in_<unit>` infix. Convert
   Windows values explicitly (MHz, percent, KiB, ms). Counters end in `_total`;
   gauges never do. List renamed metrics in `UPGRADE.md`.
+- Name the label that identifies a PDH or WMI instance after the entity it
+  identifies: `service`, `process`, `queue`, `disk`, `volume`, `nic`, `core`,
+  `vm`, `site`, `app`, `database`, `node`, `resource`, `resource_group`,
+  `cluster`, `network`, `pool`, `virtual_disk`, `connection`, `folder` and so
+  on. Never use the generic `name`, and never `instance`: it collides with the
+  target label that Prometheus adds. Reuse the key that other collectors use for
+  the same concept. Descriptive attributes of an info metric (for example the
+  processor model in `windows_cpu_info{name}`) are not instance keys.
 - Determine metric types per counter, using `pdh.Collector.MetricType` where
   appropriate. Raw PDH values can be cumulative numerators, ticks or counts,
   even when the Windows counter name says average, percentage or seconds.

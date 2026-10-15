@@ -170,7 +170,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.scopeInfo = prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, Name, "scope_info"),
 			"DHCP Scope information",
-			[]string{"name", "superscope_name", "superscope_id", "scope"},
+			[]string{"scope_name", "superscope_name", "superscope_id", "scope"},
 			nil,
 		)
 

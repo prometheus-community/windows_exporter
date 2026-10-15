@@ -152,7 +152,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
-		if !maps.Equal(metricLabels(metric), map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "name": "Disk"}) {
+		if !maps.Equal(metricLabels(metric), map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "resource": "Disk"}) {
 			t.Fatalf("labels = %v", metricLabels(metric))
 		}
 	}
@@ -166,7 +166,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 		labels := metricLabels(metric)
 
 		value := 0.0
-		if labels["node_name"] == "nodeB" {
+		if labels["node"] == "nodeB" {
 			value = 1
 		}
 
@@ -174,7 +174,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 			t.Fatal("invalid owner value")
 		}
 
-		if !maps.Equal(labels, map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "name": "Disk", "node_name": labels["node_name"]}) {
+		if !maps.Equal(labels, map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "resource": "Disk", "node": labels["node"]}) {
 			t.Fatal("invalid owner labels")
 		}
 	}
@@ -200,7 +200,7 @@ func TestResourcePartialResultsAndJoinedErrors(t *testing.T) {
 
 	for _, family := range families {
 		for _, metric := range family.GetMetric() {
-			if metricLabels(metric)["name"] != "Disk" {
+			if metricLabels(metric)["resource"] != "Disk" {
 				t.Fatal("published invalid identity")
 			}
 		}
@@ -360,7 +360,7 @@ func TestResourceMetricCache(t *testing.T) {
 	}
 
 	for _, metric := range families["windows_mscluster_resource_owner_node"].GetMetric() {
-		if hosted := metricLabels(metric)["node_name"] == "nodeC"; (metric.GetGauge().GetValue() == 1) != hosted {
+		if hosted := metricLabels(metric)["node"] == "nodeC"; (metric.GetGauge().GetValue() == 1) != hosted {
 			t.Fatal("reused the owner node of a changed resource")
 		}
 	}

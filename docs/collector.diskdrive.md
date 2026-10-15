@@ -16,11 +16,11 @@ None
 
 | Name                      | Description                                                                                                                                                      | Type    | Labels |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
-| `windows_diskdrive_info`         | General identifiable information about the disk drive                                                                                                            | gauge   | device_id,model,caption,name |
-| `windows_diskdrive_availability` | The disk drive's current availability                                                                                                                            | gauge   | name,availability            |
-| `windows_diskdrive_partitions`   | Number of partitions on the drive                                                                                                                                | gauge   | name                         |
-| `windows_diskdrive_size`         | Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector. | gauge   | name                         |
-| `windows_diskdrive_status`       | Operational status of the drive                                                                                                                                  | gauge   | name,status                  |
+| `windows_diskdrive_info`         | General identifiable information about the disk drive                                                                                                            | gauge   | device_id,model,caption,disk |
+| `windows_diskdrive_availability` | The disk drive's current availability                                                                                                                            | gauge   | disk,availability            |
+| `windows_diskdrive_partitions`   | Number of partitions on the drive                                                                                                                                | gauge   | disk                         |
+| `windows_diskdrive_size`         | Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector. | gauge   | disk                         |
+| `windows_diskdrive_status`       | Operational status of the drive                                                                                                                                  | gauge   | disk,status                  |
 
 ## Alerting examples
 **prometheus.rules**
@@ -35,6 +35,6 @@ groups:
     labels:
       severity: high
     annotations:
-      summary: "Instance: {{ $labels.instance }} has drive status: {{ $labels.status }} on disk {{ $labels.name }}"
+      summary: "Instance: {{ $labels.instance }} has drive status: {{ $labels.status }} on disk {{ $labels.disk }}"
       description: "Drive Status Unhealthy"
 ```

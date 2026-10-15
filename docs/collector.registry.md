@@ -173,7 +173,7 @@ according to the configuration, plus a per-key success metric.
 | Name | Description | Type | Labels |
 | --- | --- | --- | --- |
 | *user defined* | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |
-| `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge | `name` |
+| `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge | `key` |
 
 A `windows_registry_key_success` value of `0` means the key could not be opened
 *or* at least one configured value was missing or not a `REG_DWORD`/`REG_QWORD`;
@@ -244,8 +244,8 @@ windows_registry_windows_major_version{product="windows"} 10
 windows_registry_memory_management_clearpagefileatshutdown 0
 # HELP windows_registry_key_success Whether the registry key could be read successfully.
 # TYPE windows_registry_key_success gauge
-windows_registry_key_success{name="windows_nt"} 1
-windows_registry_key_success{name="memory_management"} 1
+windows_registry_key_success{key="windows_nt"} 1
+windows_registry_key_success{key="memory_management"} 1
 ```
 
 ### Notes
@@ -275,5 +275,5 @@ windows_registry_memory_management_clearpagefileatshutdown != 0
       severity: warning
     annotations:
       summary: "Registry key could not be read (instance {{ $labels.instance }})"
-      description: "The registry key {{ $labels.name }} could not be read for 15 minutes."
+      description: "The registry key {{ $labels.key }} could not be read for 15 minutes."
 ```

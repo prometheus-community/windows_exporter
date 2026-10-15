@@ -159,13 +159,13 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.querySuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "query_success"),
 		"Whether the WMI query and all of its configured properties could be read successfully.",
-		[]string{"name"},
+		[]string{"query"},
 		nil,
 	)
 	c.queryDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "query_duration_seconds"),
 		"Duration of the WMI query.",
-		[]string{"name"},
+		[]string{"query"},
 		nil,
 	)
 

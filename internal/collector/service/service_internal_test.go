@@ -74,7 +74,7 @@ func serviceMetrics(t assert.TestingT, c *Collector, name string) map[string]flo
 			)
 
 			for _, label := range metric.GetLabel() {
-				if label.GetName() == "name" {
+				if label.GetName() == "service" {
 					matches = label.GetValue() == name
 
 					continue

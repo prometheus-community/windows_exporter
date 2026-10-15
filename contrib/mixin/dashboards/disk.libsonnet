@@ -4,7 +4,7 @@ local sumRate(name) = 'sum(rate(' + metric(name) + '[$__rate_interval]))';
 local physical(name) = 'windows_physical_disk_' + name + '{job=~"$job", instance="$instance"}';
 local physicalRate(name) = 'rate(' + physical(name) + '[$__rate_interval])';
 // diskdrive names drives PHYSICALDRIVE<n>; physical_disk and logical_disk use <n> as disk.
-local drive(name, labels='') = 'label_replace(windows_diskdrive_' + name + '{job=~"$job", instance="$instance"' + labels + '}, "disk", "$1", "name", "PHYSICALDRIVE(\\\\d+)")';
+local drive(name, labels='') = 'label_replace(windows_diskdrive_' + name + '{job=~"$job", instance="$instance"' + labels + '}, "disk", "$1", "disk", "PHYSICALDRIVE(\\\\d+)")';
 // Labels physical disk series with the drive model when diskdrive is enabled.
 local physicalByDisk(on, expr) =
   if on('diskdrive')
@@ -418,12 +418,12 @@ function(on)
       b.stat(240, 'Pools not OK', 'Storage pools whose health status is not Healthy, excluding the primordial pool. Requires the storage_spaces collector.', 'count(' + pool('health_status') + ' != 0) or (0 * count(' + concretePools + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
       b.stat(241, 'Virtual disks not OK', 'Virtual disks whose health status is not Healthy. Requires the storage_spaces collector with its virtual_disk subcollector.', 'count(' + spaces('virtual_disk_health_status') + ' != 0) or (0 * count(' + spaces('virtual_disk_info') + '))', steps=[{ color: 'green', value: null }, { color: 'red', value: 1 }]),
 
-      b.joinedTable(242, 'Storage pools', 'Health, size, allocated capacity and used share of each storage pool, excluding the primordial pool of unpooled disks. Requires the storage_spaces collector.', 'name', [
-        'max by (name) (' + pool('health_status') + ')',
-        'max by (name) (' + pool('size_bytes') + ')',
-        'max by (name) (' + pool('allocated_size_bytes') + ')',
-        'max by (name) (100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes') + ')',
-      ], [['name', 'Pool'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Used']], [
+      b.joinedTable(242, 'Storage pools', 'Health, size, allocated capacity and used share of each storage pool, excluding the primordial pool of unpooled disks. Requires the storage_spaces collector.', 'pool', [
+        'max by (pool) (' + pool('health_status') + ')',
+        'max by (pool) (' + pool('size_bytes') + ')',
+        'max by (pool) (' + pool('allocated_size_bytes') + ')',
+        'max by (pool) (100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes') + ')',
+      ], [['pool', 'Pool'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Used']], [
         health,
         {
           matcher: { id: 'byName', options: 'Used' },
@@ -439,19 +439,19 @@ function(on)
         },
       ] + bytes(['Size', 'Allocated'])),
 
-      b.joinedTable(243, 'Virtual disks', 'Health, size, allocated capacity, pool footprint and storage efficiency (allocated size per pool footprint) of each virtual disk. Mirrors and parity lower the efficiency. Requires the storage_spaces collector with its virtual_disk subcollector.', 'name', [
-        'max by (name) (' + spaces('virtual_disk_health_status') + ')',
-        'max by (name) (' + spaces('virtual_disk_size_bytes') + ')',
-        'max by (name) (' + spaces('virtual_disk_allocated_size_bytes') + ')',
-        'max by (name) (' + spaces('virtual_disk_footprint_on_pool_bytes') + ')',
-        'max by (name) (' + spaces('virtual_disk_storage_efficiency_ratio') + ')',
-      ], [['name', 'Virtual disk'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Footprint'], ['Value #E', 'Efficiency']], [
+      b.joinedTable(243, 'Virtual disks', 'Health, size, allocated capacity, pool footprint and storage efficiency (allocated size per pool footprint) of each virtual disk. Mirrors and parity lower the efficiency. Requires the storage_spaces collector with its virtual_disk subcollector.', 'virtual_disk', [
+        'max by (virtual_disk) (' + spaces('virtual_disk_health_status') + ')',
+        'max by (virtual_disk) (' + spaces('virtual_disk_size_bytes') + ')',
+        'max by (virtual_disk) (' + spaces('virtual_disk_allocated_size_bytes') + ')',
+        'max by (virtual_disk) (' + spaces('virtual_disk_footprint_on_pool_bytes') + ')',
+        'max by (virtual_disk) (' + spaces('virtual_disk_storage_efficiency_ratio') + ')',
+      ], [['virtual_disk', 'Virtual disk'], ['Value #A', 'Health'], ['Value #B', 'Size'], ['Value #C', 'Allocated'], ['Value #D', 'Footprint'], ['Value #E', 'Efficiency']], [
         health,
         { matcher: { id: 'byName', options: 'Efficiency' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'decimals', value: 1 }] },
       ] + bytes(['Size', 'Allocated', 'Footprint'])),
 
-      b.graph(244, 'Pool usage', 'Allocated share of each storage pool, excluding the primordial pool. A full pool cannot extend thin-provisioned virtual disks, which then fail writes.', 'percent', [['100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes'), '{{name}}']])
+      b.graph(244, 'Pool usage', 'Allocated share of each storage pool, excluding the primordial pool. A full pool cannot extend thin-provisioned virtual disks, which then fail writes.', 'percent', [['100 * ' + pool('allocated_size_bytes') + ' / ' + pool('size_bytes'), '{{pool}}']])
       + b.panel.withDefaults({ max: 100, custom: { thresholdsStyle: { mode: 'dashed' } }, thresholds: { steps: b.levels(80, 90) } }),
-      b.graph(245, 'Virtual disk footprint', 'Pool capacity consumed by each virtual disk, including resiliency copies.', 'bytes', [[spaces('virtual_disk_footprint_on_pool_bytes'), '{{name}}']]),
+      b.graph(245, 'Virtual disk footprint', 'Pool capacity consumed by each virtual disk, including resiliency copies.', 'bytes', [[spaces('virtual_disk_footprint_on_pool_bytes'), '{{virtual_disk}}']]),
     ]
   )

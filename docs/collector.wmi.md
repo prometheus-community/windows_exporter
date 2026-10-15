@@ -235,8 +235,8 @@ duration metric per query.
 | Name | Description | Type | Labels |
 | --- | --- | --- | --- |
 | *user defined* | Numeric value of a configured WMI property | gauge / counter | *label properties*, *user defined* |
-| `windows_wmi_query_success` | Whether the query ran and all of its configured properties could be read (0, 1) | gauge | `name` |
-| `windows_wmi_query_duration_seconds` | Duration of the query | gauge | `name` |
+| `windows_wmi_query_success` | Whether the query ran and all of its configured properties could be read (0, 1) | gauge | `query` |
+| `windows_wmi_query_duration_seconds` | Duration of the query | gauge | `query` |
 
 A `windows_wmi_query_success` value of `0` means one of:
 
@@ -310,12 +310,12 @@ windows_wmi_os_last_boot_timestamp_seconds 1.791272732355078e+09
 windows_wmi_os_numberofprocesses 478
 # HELP windows_wmi_query_duration_seconds Duration of the WMI query.
 # TYPE windows_wmi_query_duration_seconds gauge
-windows_wmi_query_duration_seconds{name="logical_disk"} 0.0375302
-windows_wmi_query_duration_seconds{name="os"} 0.1690887
+windows_wmi_query_duration_seconds{query="logical_disk"} 0.0375302
+windows_wmi_query_duration_seconds{query="os"} 0.1690887
 # HELP windows_wmi_query_success Whether the WMI query and all of its configured properties could be read successfully.
 # TYPE windows_wmi_query_success gauge
-windows_wmi_query_success{name="logical_disk"} 1
-windows_wmi_query_success{name="os"} 1
+windows_wmi_query_success{query="logical_disk"} 1
+windows_wmi_query_success{query="os"} 1
 ```
 
 ### Notes
@@ -349,5 +349,5 @@ windows_wmi_logical_disk_free_bytes / windows_wmi_logical_disk_size_bytes
       severity: warning
     annotations:
       summary: "WMI query failed (instance {{ $labels.instance }})"
-      description: "The WMI query {{ $labels.name }} failed for 15 minutes."
+      description: "The WMI query {{ $labels.query }} failed for 15 minutes."
 ```

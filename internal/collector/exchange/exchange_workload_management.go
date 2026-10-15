@@ -57,31 +57,31 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 	c.activeTasks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "workload_active_tasks"),
 		"Number of active tasks currently running in the background for workload management",
-		[]string{"name"},
+		[]string{"workload"},
 		nil,
 	)
 	c.completedTasks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "workload_completed_tasks_total"),
 		"Number of workload management tasks that have been completed",
-		[]string{"name"},
+		[]string{"workload"},
 		nil,
 	)
 	c.queuedTasks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "workload_queued_tasks"),
 		"Number of workload management tasks that are currently queued up waiting to be processed",
-		[]string{"name"},
+		[]string{"workload"},
 		nil,
 	)
 	c.yieldedTasks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "workload_yielded_tasks_total"),
 		"The total number of tasks that have been yielded by a workload",
-		[]string{"name"},
+		[]string{"workload"},
 		nil,
 	)
 	c.isActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "workload_is_active"),
 		"Active indicates whether the workload is in an active (1) or paused (0) state",
-		[]string{"name"},
+		[]string{"workload"},
 		nil,
 	)
 

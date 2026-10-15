@@ -86,7 +86,7 @@ func TestNodeNativeMetricContract(t *testing.T) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
-		if !maps.Equal(metricLabels(metric), map[string]string{"name": "nodeA"}) {
+		if !maps.Equal(metricLabels(metric), map[string]string{"node": "nodeA"}) {
 			t.Fatalf("labels = %v", metricLabels(metric))
 		}
 	}
@@ -177,7 +177,7 @@ func TestNodeNamesFeedOwnerMetrics(t *testing.T) {
 
 	for _, metric := range owners.GetMetric() {
 		want := 0.0
-		if metricLabels(metric)["node_name"] == "nodeB" {
+		if metricLabels(metric)["node"] == "nodeB" {
 			want = 1
 		}
 

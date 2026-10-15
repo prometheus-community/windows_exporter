@@ -50,7 +50,7 @@ Comma-separated list of collectors to use. Supported values are `server_metrics`
 | `windows_dhcp_scope_addresses_in_use_on_this_server`                     | DHCP Scope addresses in use on this server                                     | gauge   | `scope`                                             |
 | `windows_dhcp_scope_addresses_in_use_on_partner_server`                  | DHCP Scope addresses in use on partner server                                  | gauge   | `scope`                                             |
 | `windows_dhcp_scope_addresses_in_use`                                    | DHCP Scope addresses in use                                                    | gauge   | `scope`                                             |
-| `windows_dhcp_scope_info`                                                | DHCP Scope information                                                         | gauge   | `name`, `superscope_name`, `superscope_id`, `scope` |
+| `windows_dhcp_scope_info`                                                | DHCP Scope information                                                         | gauge   | `scope_name`, `superscope_name`, `superscope_id`, `scope` |
 | `windows_dhcp_scope_pending_offers`                                      | DHCP Scope pending offers                                                      | gauge   | `scope`                                             |
 | `windows_dhcp_scope_reserved_address`                                    | DHCP Scope reserved addresses                                                  | gauge   | `scope`                                             |
 | `windows_dhcp_scope_state`                                               | DHCP Scope state                                                               | gauge   | `scope`, `state`                                    |
@@ -145,9 +145,9 @@ windows_dhcp_scope_addresses_in_use{scope="172.16.0.0/24"} 0
 windows_dhcp_scope_addresses_in_use{scope="192.168.0.0/24"} 0
 # HELP windows_dhcp_scope_info DHCP Scope information
 # TYPE windows_dhcp_scope_info gauge
-windows_dhcp_scope_info{name="SUBSUPERSCOPE",scope="172.16.0.0/24",superscope_id="2",superscope_name="SUPERSCOPE"} 1
-windows_dhcp_scope_info{name="TEST",scope="192.168.0.0/24",superscope_id="0",superscope_name=""} 1
-windows_dhcp_scope_info{name="TEST2",scope="10.11.12.0/25",superscope_id="2",superscope_name="SUPERSCOPE"} 1
+windows_dhcp_scope_info{scope_name="SUBSUPERSCOPE",scope="172.16.0.0/24",superscope_id="2",superscope_name="SUPERSCOPE"} 1
+windows_dhcp_scope_info{scope_name="TEST",scope="192.168.0.0/24",superscope_id="0",superscope_name=""} 1
+windows_dhcp_scope_info{scope_name="TEST2",scope="10.11.12.0/25",superscope_id="2",superscope_name="SUPERSCOPE"} 1
 # HELP windows_dhcp_scope_pending_offers DHCP Scope pending offers
 # TYPE windows_dhcp_scope_pending_offers gauge
 windows_dhcp_scope_pending_offers{scope="10.11.12.0/25"} 0

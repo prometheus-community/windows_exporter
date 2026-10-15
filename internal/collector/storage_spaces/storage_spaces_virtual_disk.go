@@ -63,42 +63,42 @@ func (c *Collector) buildVirtualDisk() error {
 	c.virtualDiskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "info"),
 		"Virtual disk information (value is always 1)",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 
 	c.virtualDiskHealthStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "health_status"),
 		"Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 
 	c.virtualDiskSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "size_bytes"),
 		"Total size of the virtual disk in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 
 	c.virtualDiskAllocatedSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "allocated_size_bytes"),
 		"Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity)",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 
 	c.virtualDiskFootprintOnPool = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "footprint_on_pool_bytes"),
 		"Physical storage consumed by the virtual disk on the storage pool in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 
 	c.virtualDiskStorageEfficiency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "storage_efficiency_ratio"),
 		"Storage efficiency ratio (AllocatedSize / FootprintOnPool), omitted while FootprintOnPool is 0",
-		[]string{"name", "unique_id"},
+		[]string{"virtual_disk", "unique_id"},
 		nil,
 	)
 

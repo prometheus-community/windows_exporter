@@ -94,85 +94,85 @@ func (c *Collector) buildNodeDescriptors() {
 	c.nodeBuildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "build_number"),
 		"Provides access to the node's BuildNumber property.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "characteristics"),
 		"Provides access to the characteristics set for the node.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeDetectedCloudPlatform = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "detected_cloud_platform"),
 		"(DetectedCloudPlatform)",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeDynamicWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "dynamic_weight"),
 		"The dynamic vote weight of the node adjusted by dynamic quorum feature.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeFlags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "flags"),
 		"Provides access to the flags set for the node.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeMajorVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "major_version"),
 		"Provides access to the node's MajorVersion property, which specifies the major portion of the Windows version installed.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeMinorVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "minor_version"),
 		"Provides access to the node's MinorVersion property, which specifies the minor portion of the Windows version installed.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeNeedsPreventQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "needs_prevent_quorum"),
 		"Whether the cluster service on that node should be started with prevent quorum flag.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeNodeDrainStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "node_drain_status"),
 		"The current node drain status of a node. 0: Not Initiated; 1: In Progress; 2: Completed; 3: Failed",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeNodeHighestVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "node_highest_version"),
 		"Provides access to the node's NodeHighestVersion property, which specifies the highest possible version of the cluster service with which the node can join or communicate.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeNodeLowestVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "node_lowest_version"),
 		"Provides access to the node's NodeLowestVersion property, which specifies the lowest possible version of the cluster service with which the node can join or communicate.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeNodeWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "node_weight"),
 		"The vote weight of the node.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "state"),
 		"Returns the current state of a node. -1: Unknown; 0: Up; 1: Down; 2: Paused; 3: Joining",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 	c.nodeStatusInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "status_information"),
 		"The isolation or quarantine status of the node.",
-		[]string{"name"},
+		[]string{"node"},
 		nil,
 	)
 

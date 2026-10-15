@@ -163,7 +163,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0 and on (name) windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1) or vector(0)",
+                                                "expr": "count(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0 and on (service) windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1) or vector(0)",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -424,7 +424,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (name, state) (windows_service_state{job=~\"$job\", instance=\"$instance\"} == 1) and on (name) (windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0) and on (name) (windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1)",
+                                                "expr": "max by (service, state) (windows_service_state{job=~\"$job\", instance=\"$instance\"} == 1) and on (service) (windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0) and on (service) (windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1)",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -450,11 +450,11 @@
                                             },
                                             "includeByName": {},
                                             "indexByName": {
-                                                "name": 0,
+                                                "service": 0,
                                                 "state": 1
                                             },
                                             "renameByName": {
-                                                "name": "Service",
+                                                "service": "Service",
                                                 "state": "State"
                                             }
                                         }
@@ -540,9 +540,9 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} and on (name) (changes(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"}[$__range] @ end()) > 0)",
+                                                "expr": "windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} and on (service) (changes(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"}[$__range] @ end()) > 0)",
                                                 "instant": false,
-                                                "legendFormat": "{{name}}",
+                                                "legendFormat": "{{service}}",
                                                 "range": true
                                             },
                                             "version": "v0"

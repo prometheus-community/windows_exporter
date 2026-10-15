@@ -85,115 +85,115 @@ func (c *Collector) buildTransportQueues() error {
 	c.externalActiveRemoteDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_external_active_remote_delivery"),
 		"External Active Remote Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.internalActiveRemoteDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_internal_active_remote_delivery"),
 		"Internal Active Remote Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.activeMailboxDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_active_mailbox_delivery"),
 		"Active Mailbox Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.retryMailboxDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_retry_mailbox_delivery"),
 		"Retry Mailbox Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.unreachableQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_unreachable"),
 		"Unreachable Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.externalLargestDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_external_largest_delivery"),
 		"External Largest Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.internalLargestDeliveryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_internal_largest_delivery"),
 		"Internal Largest Delivery Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.poisonQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_poison"),
 		"Poison Queue length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesQueuedForDeliveryTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_messages_queued_for_delivery_total"),
 		"Messages Queued For Delivery Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesSubmittedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_messages_submitted_total"),
 		"Messages Submitted Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesDelayedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_messages_delayed_total"),
 		"Messages Delayed Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.messagesCompletedDeliveryTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_messages_completed_delivery_total"),
 		"Messages Completed Delivery Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.aggregateShadowQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_aggregate_shadow_queue_length"),
 		"The current number of messages in shadow queues.",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.submissionQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_submission_queue_length"),
 		"Submission Queue Length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.delayQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_delay_queue_length"),
 		"Delay Queue Length",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.itemsCompletedDeliveryTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_items_completed_delivery_total"),
 		"Items Completed Delivery Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.itemsQueuedForDeliveryExpiredTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_items_queued_for_delivery_expired_total"),
 		"Items Queued For Delivery Expired Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.itemsQueuedForDeliveryTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_items_queued_for_delivery_total"),
 		"Items Queued For Delivery Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 	c.itemsResubmittedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_items_resubmitted_total"),
 		"Items Resubmitted Total",
-		[]string{"name"},
+		[]string{"queue"},
 		nil,
 	)
 

@@ -75,31 +75,31 @@ func (c *Collector) buildNetworkDescriptors() {
 	c.networkCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "characteristics"),
 		"Provides the characteristics of the network.",
-		[]string{"name"},
+		[]string{"network"},
 		nil,
 	)
 	c.networkFlags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "flags"),
 		"Provides access to the flags set for the node. ",
-		[]string{"name"},
+		[]string{"network"},
 		nil,
 	)
 	c.networkMetric = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "metric"),
 		"The metric of a cluster network (networks with lower values are used first). If this value is set, then the AutoMetric property is set to false.",
-		[]string{"name"},
+		[]string{"network"},
 		nil,
 	)
 	c.networkRole = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "role"),
 		"Provides access to the network's Role property. The Role property describes the role of the network in the cluster. 0: None; 1: Cluster; 2: Client; 3: Both ",
-		[]string{"name"},
+		[]string{"network"},
 		nil,
 	)
 	c.networkState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "state"),
 		"Provides the current state of the network. 1-1: Unknown; 0: Unavailable; 1: Down; 2: Partitioned; 3: Up",
-		[]string{"name"},
+		[]string{"network"},
 		nil,
 	)
 
