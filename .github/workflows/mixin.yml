@@ -1,10 +1,13 @@
 name: Mixin
 
+# The runbook check in "mise run test" reads docs/runbooks, so runbook
+# changes run this workflow too.
 on:
   pull_request:
     paths:
       - contrib/mixin/**
       - dashboard/*.json
+      - docs/runbooks/**
       - .github/workflows/mixin.yml
   push:
     branches:
@@ -14,6 +17,7 @@ on:
     paths:
       - contrib/mixin/**
       - dashboard/*.json
+      - docs/runbooks/**
       - .github/workflows/mixin.yml
   workflow_dispatch:
 
