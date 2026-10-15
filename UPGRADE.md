@@ -17,9 +17,9 @@ Most installations need no changes. Go through the checklist below and read the 
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
-| You query Hyper-V, logical disk queue, cache, IIS output cache, memory, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
+| You query Hyper-V, logical disk queue, cache, IIS output cache, memory, RemoteFX, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
-| You chart SQL Server latencies, SQL Server lock counts or DHCP denials                         | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
+| You chart SQL Server latencies, SQL Server lock counts, DHCP denials or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
 | You use the sample Grafana dashboard                                                            | Use Grafana 13 or later and import the new dashboard                    | [Dashboard and alerts](#dashboard-and-alerts)                     |
@@ -219,6 +219,15 @@ Renamed:
 | `windows_smb_server_shares_write_requests_count_total` | `windows_smb_server_shares_write_requests_total` | Same value |
 | `windows_smb_server_shares_metadata_requests_count_total` | `windows_smb_server_shares_metadata_requests_total` | Same value |
 | `windows_smb_server_shares_files_opened_count_total` | `windows_smb_server_shares_files_opened_total` | Same value |
+| `windows_remote_fx_net_current_tcp_bandwidth`        | `windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
+| `windows_remote_fx_net_current_udp_bandwidth`        | `windows_remote_fx_net_current_udp_bandwidth_bytes_per_second` | Unit suffix added, same value      |
+| `windows_remote_fx_gfx_frame_quality`                | `windows_remote_fx_gfx_frame_quality_ratio`                    | Ratio from 0 to 1 instead of percent |
+| `windows_remote_fx_net_loss_rate`                    | `windows_remote_fx_net_loss_total` and `windows_remote_fx_net_loss_base_total` | Counters, see below |
+| `windows_remote_fx_net_fec_rate`                     | `windows_remote_fx_net_fec_total` and `windows_remote_fx_net_fec_base_total` | Counters, see below |
+| `windows_remote_fx_net_retransmission_rate`          | `windows_remote_fx_net_retransmission_total` and `windows_remote_fx_net_retransmission_base_total` | Counters, see below |
+
+The RemoteFX loss, FEC and retransmission gauges were not percentages. They exported the raw numerator of a Windows sample fraction, a running count that only grows.
+The numerator and its base are now two counters. Get the ratio with `rate(windows_remote_fx_net_loss_total[5m]) / rate(windows_remote_fx_net_loss_base_total[5m])`, and likewise for `fec` and `retransmission`.
 
 Removed:
 
@@ -277,6 +286,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_dbreplica_database_flow_control_wait_seconds` and `windows_mssql_dbreplica_group_commit_stall_seconds` are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly.
 - `windows_mssql_locks_count` is no longer divided by 1000.
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
+- `windows_remote_fx_gfx_frames_skipped_insufficient_resource_total` with `resource="client"` and `resource="server"` now count the matching frames. In 0.31 the two label values were swapped.
 - `windows_netframework_clrmemory_gc_time_percent` no longer overflows, and it is left out when Windows reports no base value. The `netframework` collector now reads the CLR counters through PDH instead of WMI; names, labels and types are unchanged.
 - The IIS URI cache flush and kernel cache item metrics read the right Windows counters, and the metadata cache hit metrics are no longer always `0`.
 - `windows_logical_disk_readonly`, the FSRM quota template information, the SMTP general failure totals and the Hyper-V root partition interrupt mappings were documented but never exported. They are exported now.

@@ -124,7 +124,7 @@ windows_terminal_services_working_set_bytes_peak{session_name="RDP-Tcp 0"} 6.748
 Use metrics can be combined with other metrics to create useful queries. For example, with remote_fx metrics:
 
 ```
-windows_remote_fx_net_loss_rate * on(session_name) group_left(user) (windows_terminal_services_session_info == 1)
+(rate(windows_remote_fx_net_loss_total[5m]) / rate(windows_remote_fx_net_loss_base_total[5m])) * on(session_name) group_left(user) (windows_terminal_services_session_info == 1)
 ```
 
 ## Alerting examples
