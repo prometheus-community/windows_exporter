@@ -363,6 +363,40 @@ func TestSetRawValueElapsedTime(t *testing.T) {
 	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 2}))
 }
 
+// TestCollectLoadsMissingTimeBase checks that an elapsed time counter whose time
+// base was not available when the collector was created gets it on a later
+// sample, instead of omitting every instance until a restart (#2313).
+func TestCollectLoadsMissingTimeBase(t *testing.T) {
+	t.Parallel()
+
+	type systemUpTime struct {
+		SystemUpTime float64 `perfdata:"System Up Time"`
+	}
+
+	collector, err := NewCollector[systemUpTime](slog.New(slog.DiscardHandler), CounterTypeRaw, "System", nil)
+	require.NoError(t, err)
+
+	t.Cleanup(collector.Close)
+
+	require.Len(t, collector.counters, 1)
+
+	counter := &collector.counters[0]
+	require.Equal(t, uint32(PERF_ELAPSED_TIME), counter.Type)
+
+	frequency := counter.Frequency
+	require.Positive(t, frequency)
+
+	// As if GetCounterTimeBase reported no data at startup.
+	counter.Frequency = 0
+
+	var dst []systemUpTime
+
+	require.NoError(t, collector.Collect(&dst))
+	require.Equal(t, frequency, counter.Frequency)
+	require.Len(t, dst, 1)
+	require.Positive(t, dst[0].SystemUpTime)
+}
+
 func TestMetricTypeForCounterType(t *testing.T) {
 	t.Parallel()
 
