@@ -70,13 +70,20 @@ type Session struct {
 	// nil operation options and non-positive query timeouts.
 	defaultOperationOptions *OperationOptions
 
-	// optionsMu guards cachedOperationOptions and closed. The cached options
-	// carry fixed timeouts, see operationOptions. Like the default options,
-	// they are shared by concurrent operations and deleted by Close after
+	// lifecycle orders starting queries against Close. startQuery holds a
+	// read lock from checking closed until MI_Session_QueryInstances has
+	// returned, so Close, which holds the write lock, never deletes options
+	// that a query is about to start with. closed is guarded by it.
+	lifecycle sync.RWMutex
+	closed    bool
+
+	// optionsMu guards cachedOperationOptions, which concurrent queries fill
+	// under the read lock of lifecycle. The cached options carry fixed
+	// timeouts, see operationOptions. Like the default options, they are
+	// shared by concurrent operations and deleted by Close after
 	// MI_Session_Close has closed every operation.
 	optionsMu              sync.Mutex
 	cachedOperationOptions map[time.Duration]*OperationOptions
-	closed                 bool
 }
 
 // SessionFT represents the function table for Session.
@@ -108,15 +115,22 @@ func (s *Session) Close() error {
 		return ErrNotInitialized
 	}
 
-	// Query and QueryFunc calls from now on fail instead of using options
-	// that are about to be deleted.
-	s.optionsMu.Lock()
+	// The write lock waits for queries that are being started, see
+	// startQuery, and makes queries started afterwards fail instead of using
+	// options that are about to be deleted.
+	s.lifecycle.Lock()
+	defer s.lifecycle.Unlock()
+
+	if s.closed {
+		return ErrNotInitialized
+	}
+
 	s.closed = true
-	s.optionsMu.Unlock()
 
 	// MI_Session_Close cancels running operations and blocks until their
 	// handles are closed. The default and cached options are deleted
 	// afterwards, so an operation that is still open never uses freed options.
+	// The goroutines that close the operations do not take lifecycle.
 	r0, _, _ := syscall.SyscallN(s.ft.Close,
 		uintptr(unsafe.Pointer(s)),
 		0,
@@ -483,18 +497,11 @@ func (s *Session) QueryContext[T any](ctx context.Context, dst *[]T, namespaceNa
 		return context.Cause(ctx)
 	}
 
-	operationOptions, release, err := s.operationOptions(queryTimeout)
-	if err != nil {
-		return err
-	}
+	query := newAsyncQuery(func(instance *Instance) error {
+		return appendInstance(dst, instance, fields, true)
+	})
 
-	// Deferred first so the options outlive the operation that uses them.
-	defer release()
-
-	return s.queryContext(ctx, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression,
-		func(instance *Instance) error {
-			return appendInstance(dst, instance, fields, true)
-		})
+	return s.runQuery(ctx, query, OperationFlagsStandardRTTI, nil, queryTimeout, namespaceName, QueryDialectWQL, queryExpression)
 }
 
 // QueryFunc runs a WQL query and calls fn for every returned instance. It is
@@ -533,22 +540,42 @@ func (s *Session) QueryFuncContext(ctx context.Context, namespaceName Namespace,
 		return context.Cause(ctx)
 	}
 
-	operationOptions, release, err := s.operationOptions(queryTimeout)
-	if err != nil {
-		return err
+	return s.runQuery(ctx, newCopyQuery(fn), OperationFlagsStandardRTTI, nil, queryTimeout, namespaceName, QueryDialectWQL, queryExpression)
+}
+
+// startQuery starts query with operationOptions or, if they are nil, with
+// the options for queryTimeout, see operationOptions. It returns a function
+// that releases the options once the operation is closed.
+//
+// The read lock of lifecycle is held from checking closed until
+// MI_Session_QueryInstances has returned and the operation exists. Close
+// takes the write lock, so it either fails this query first or waits until
+// the operation exists, which MI_Session_Close then cancels and waits for,
+// before it deletes the options.
+func (s *Session) startQuery(query *asyncQuery, flags OperationFlags, operationOptions *OperationOptions, queryTimeout time.Duration,
+	namespaceName Namespace, queryDialect QueryDialect, queryExpression Query,
+) (func(), error) {
+	s.lifecycle.RLock()
+	defer s.lifecycle.RUnlock()
+
+	if s.closed {
+		return nil, ErrNotInitialized
 	}
 
-	// Deferred first so the options outlive the operation that uses them.
-	defer release()
+	release := func() {}
 
-	query := newCopyQuery(fn)
+	if operationOptions == nil {
+		var err error
 
-	query.start(s, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+		operationOptions, release, err = s.operationOptions(queryTimeout)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	// close cancels the operation if fn aborted it early or panicked.
-	defer query.close()
+	query.start(s, flags, operationOptions, namespaceName, queryDialect, queryExpression)
 
-	return query.wait(ctx)
+	return release, nil
 }
 
 // operationOptions returns the operation options for queryTimeout and a
@@ -563,12 +590,13 @@ func (s *Session) QueryFuncContext(ctx context.Context, namespaceName Namespace,
 //   - Any other timeout, typically the remaining scrape budget, gets options
 //     of its own, which release deletes.
 //
-// Every path fails with ErrNotInitialized once Close has started.
+// The caller holds the read lock of lifecycle and has checked closed, see
+// startQuery. After Close it fails with ErrNotInitialized.
 func (s *Session) operationOptions(queryTimeout time.Duration) (*OperationOptions, func(), error) {
 	s.optionsMu.Lock()
 	defer s.optionsMu.Unlock()
 
-	if s.closed || s.defaultOperationOptions == nil {
+	if s.defaultOperationOptions == nil {
 		return nil, nil, ErrNotInitialized
 	}
 

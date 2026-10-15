@@ -469,16 +469,24 @@ func (q *asyncQuery) close() {
 func (s *Session) query(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
 	queryDialect QueryDialect, queryExpression Query, onInstance func(*Instance) error,
 ) error {
-	return s.queryContext(context.Background(), flags, operationOptions, namespaceName, queryDialect, queryExpression, onInstance)
+	return s.runQuery(context.Background(), newAsyncQuery(onInstance), flags, operationOptions, 0,
+		namespaceName, queryDialect, queryExpression)
 }
 
-// queryContext is query with cancellation, see [asyncQuery.wait].
-func (s *Session) queryContext(ctx context.Context, flags OperationFlags, operationOptions *OperationOptions,
-	namespaceName Namespace, queryDialect QueryDialect, queryExpression Query, onInstance func(*Instance) error,
+// runQuery starts query, see [Session.startQuery], waits for it with
+// cancellation, see [asyncQuery.wait], and closes it.
+func (s *Session) runQuery(ctx context.Context, query *asyncQuery, flags OperationFlags, operationOptions *OperationOptions,
+	queryTimeout time.Duration, namespaceName Namespace, queryDialect QueryDialect, queryExpression Query,
 ) error {
-	query := newAsyncQuery(onInstance)
+	release, err := s.startQuery(query, flags, operationOptions, queryTimeout, namespaceName, queryDialect, queryExpression)
+	if err != nil {
+		return err
+	}
 
-	query.start(s, flags, operationOptions, namespaceName, queryDialect, queryExpression)
+	// Deferred first so the options outlive the operation that uses them.
+	defer release()
+
+	// close cancels the operation if a handler aborted it early or panicked.
 	defer query.close()
 
 	return query.wait(ctx)

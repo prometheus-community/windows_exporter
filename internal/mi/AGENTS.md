@@ -47,6 +47,11 @@ Query timeouts and options:
   operations; `Session.Close` deletes them after `MI_Session_Close` has
   closed every operation. Other timeouts, e.g. the remaining scrape budget,
   get per-query options that are deleted after the operation is closed.
+- `startQuery` holds the read lock of `Session.lifecycle` from the `closed`
+  check until `MI_Session_QueryInstances` has returned; `Close` holds the
+  write lock across `MI_Session_Close` and the option deletion. Start every
+  callback query through `runQuery`/`startQuery`, never by calling
+  `asyncQuery.start` with session options directly.
 
 Cancellation: `QueryContext` and `QueryFuncContext` do not start a query
 for a done context. When it is done during the query, `wait` fails the query

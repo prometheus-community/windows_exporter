@@ -19,6 +19,8 @@ package mi
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -98,6 +100,90 @@ func TestSession_OperationOptions(t *testing.T) {
 		_, _, err := session.operationOptions(timeout)
 		require.ErrorIs(t, err, ErrNotInitialized, timeout)
 	}
+}
+
+// TestSession_CloseWaitsForStartingQuery checks that Close does not delete
+// operation options while a query is being started, and that queries fail
+// after Close instead of starting with deleted options.
+func TestSession_CloseWaitsForStartingQuery(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	// A query between checking closed and MI_Session_QueryInstances holds
+	// this read lock.
+	session.lifecycle.RLock()
+
+	closed := make(chan error, 1)
+
+	go func() { closed <- session.Close() }()
+
+	select {
+	case err := <-closed:
+		session.lifecycle.RUnlock()
+		require.Failf(t, "Close returned while a query was being started", "err: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	require.NotNil(t, session.defaultOperationOptions, "options deleted while a query was being started")
+
+	session.lifecycle.RUnlock()
+
+	select {
+	case err := <-closed:
+		require.NoError(t, err)
+	case <-time.After(time.Minute):
+		require.FailNow(t, "Close did not return")
+	}
+
+	require.ErrorIs(t, session.QueryFunc(NamespaceRootCIMv2, queryExpression, BuildQueryTimeout, func(*Instance) error { return nil }),
+		ErrNotInitialized)
+	require.ErrorIs(t, session.QueryUnmarshal(&[]struct {
+		Name string `mi:"Name"`
+	}{}, OperationFlagsStandardRTTI, nil, NamespaceRootCIMv2, QueryDialectWQL, queryExpression), ErrNotInitialized)
+	require.ErrorIs(t, session.Close(), ErrNotInitialized)
+}
+
+// TestSession_CloseDuringQueries closes a session while queries with
+// default, cached and per-query options start and run on other goroutines.
+// Every query either runs, is cancelled by MI_Session_Close, or fails with
+// ErrNotInitialized; none may start with deleted options.
+func TestSession_CloseDuringQueries(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	var (
+		wg      sync.WaitGroup
+		started = make(chan struct{})
+		once    sync.Once
+	)
+
+	for _, timeout := range []time.Duration{0, BuildQueryTimeout, 1500 * time.Millisecond} {
+		for range 2 {
+			wg.Go(func() {
+				for {
+					err := session.QueryFunc(NamespaceRootCIMv2, queryExpression, timeout, func(*Instance) error {
+						once.Do(func() { close(started) })
+
+						return nil
+					})
+					if errors.Is(err, ErrNotInitialized) {
+						return
+					}
+				}
+			})
+		}
+	}
+
+	<-started
+	time.Sleep(50 * time.Millisecond)
+
+	require.NoError(t, session.Close())
+
+	wg.Wait()
 }
 
 // Test_asyncQuery_ContextDoneAfterFinalResult checks a context that is done

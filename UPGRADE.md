@@ -24,7 +24,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
 | You use the sample Grafana dashboard                                                            | Use Grafana 13 or later and import the new dashboard                    | [Dashboard and alerts](#dashboard-and-alerts)                     |
 | You install with the MSI                                                                        | Note the one-time process stop during the upgrade                       | [Installer](#installer)                                           |
-| You embed `pkg/collector` as a Go library                                                       | Rename `Config.Filetime` to `Config.File`                               | [Library users](#library-users)                                   |
+| You embed `pkg/collector` as a Go library                                                       | Rename `Config.Filetime`; pass a non-zero `Collect` timeout             | [Library users](#library-users)                                   |
 | You build from source                                                                           | Use Go 1.27.2                                                           | [Building from source](#building-from-source)                     |
 
 ## filetime collector removed
@@ -429,6 +429,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - Views created by `Collection.WithCollectors` no longer own the collectors. Their `Close` does nothing; close the original `Collection`.
 - `Collector.Collect` is never called concurrently on one collector instance, and not at all after its `Build` failed.
 - A collector can return an error wrapping `errors.ErrUnsupported` from `Build` to mark itself unavailable on the host. `Collection.Build` logs a warning and continues.
+- WMI (MI) queries always have a timeout. Calling `Collector.Collect` with a `maxScrapeDuration` of 0 or less used to run the queries of MI-based collectors, such as `wmi`, `cpu_info` or `diskdrive`, without a timeout; they now time out after 5 seconds. Pass the scrape budget you want instead of 0.
 
 ## Building from source
 
