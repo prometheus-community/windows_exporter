@@ -93,7 +93,7 @@ windows_performancecounter_collector_duration_seconds\{collector="process"} [0-9
 windows_performancecounter_collector_success\{collector="process"} 1
 # HELP windows_performancecounter_process_thread_count windows_exporter: custom Performance Counter metric
 # TYPE windows_performancecounter_process_thread_count counter
-windows_performancecounter_process_thread_count\{instance=".+"} [0-9.e+-]+
+windows_performancecounter_process_thread_count\{object_instance=".+"} [0-9.e+-]+
 .*`),
 		},
 		{

@@ -207,7 +207,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		if object.InstanceLabel == "" {
-			object.InstanceLabel = "instance"
+			object.InstanceLabel = "object_instance"
 		}
 
 		object.collector = collector

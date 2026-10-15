@@ -86,32 +86,31 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			"device_id",
 			"model",
 			"caption",
-			"disk",
 		},
 		nil,
 	)
 	c.status = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of the drive",
-		[]string{"disk", "status"},
+		[]string{"device_id", "status"},
 		nil,
 	)
 	c.size = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size"),
 		"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
-		[]string{"disk"},
+		[]string{"device_id"},
 		nil,
 	)
 	c.partitions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "partitions"),
 		"Number of partitions",
-		[]string{"disk"},
+		[]string{"device_id"},
 		nil,
 	)
 	c.availability = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "availability"),
 		"Availability Status",
-		[]string{"disk", "availability"},
+		[]string{"device_id", "availability"},
 		nil,
 	)
 
@@ -119,7 +118,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		return errors.New("miSession is nil")
 	}
 
-	miQuery, err := mi.NewQuery("SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive")
+	miQuery, err := mi.NewQuery("SELECT DeviceID, Model, Caption, Partitions, Size, Status, Availability FROM WIN32_DiskDrive")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -137,7 +136,6 @@ type diskDrive struct {
 	DeviceID     string `mi:"DeviceID"`
 	Model        string `mi:"Model"`
 	Size         uint64 `mi:"Size"`
-	Name         string `mi:"Name"`
 	Caption      string `mi:"Caption"`
 	Partitions   uint32 `mi:"Partitions"`
 	Status       string `mi:"Status"`
@@ -198,16 +196,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	}
 
 	for _, disk := range dst {
-		distName := strings.Trim(disk.Name, `\.`)
+		deviceID := strings.Trim(disk.DeviceID, `\.`)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(disk.DeviceID, `\.`),
+			deviceID,
 			strings.TrimRight(disk.Model, " "),
 			strings.TrimRight(disk.Caption, " "),
-			distName,
 		)
 
 		for _, status := range allDiskStatus {
@@ -220,7 +217,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 				c.status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				distName,
+				deviceID,
 				status,
 			)
 		}
@@ -229,14 +226,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 			c.size,
 			prometheus.GaugeValue,
 			float64(disk.Size),
-			distName,
+			deviceID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.partitions,
 			prometheus.GaugeValue,
 			float64(disk.Partitions),
-			distName,
+			deviceID,
 		)
 
 		for availNum, val := range availMap {
@@ -249,7 +246,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 				c.availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				distName,
+				deviceID,
 				val,
 			)
 		}

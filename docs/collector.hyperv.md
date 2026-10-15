@@ -298,6 +298,8 @@ Example alert:
 
 ### Hyper-V Virtual SMB
 
+The `vm` label holds the instance name of the `Hyper-V Virtual SMB` performance counter object unchanged. Microsoft does not document its format (virtual machine name or ID), and the test hosts have no Virtual SMB instances, so it was not verified.
+
 | Name                                                  | Description                                                                       | Type    | Labels     |
 |-------------------------------------------------------|-----------------------------------------------------------------------------------|---------|------------|
 | `windows_hyperv_virtual_smb_direct_mapped_sections`   | Represents the number of direct-mapped sections in the virtual SMB`               | gauge   | `vm` |

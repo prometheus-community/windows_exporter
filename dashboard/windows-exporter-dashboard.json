@@ -11431,7 +11431,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\", status!=\"OK\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\") == 1) or (0 * count(label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")))",
+                                                "expr": "count(label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\", status!=\"OK\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\") == 1) or (0 * count(label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -11519,7 +11519,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\"))",
+                                                "expr": "max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -11542,7 +11542,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (disk) (label_replace(windows_diskdrive_size{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\"))",
+                                                "expr": "max by (disk) (label_replace(windows_diskdrive_size{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -11565,7 +11565,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (disk) (label_replace(windows_diskdrive_partitions{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\"))",
+                                                "expr": "max by (disk) (label_replace(windows_diskdrive_partitions{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -11588,7 +11588,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (disk, status) (label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\") == 1)",
+                                                "expr": "max by (disk, status) (label_replace(windows_diskdrive_status{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\") == 1)",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -11773,7 +11773,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(1 - clamp_max(rate(windows_physical_disk_idle_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), 1)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (1 - clamp_max(rate(windows_physical_disk_idle_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), 1))",
+                                                "expr": "(1 - clamp_max(rate(windows_physical_disk_idle_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), 1)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (1 - clamp_max(rate(windows_physical_disk_idle_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]), 1))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}}",
                                                 "range": true
@@ -11889,7 +11889,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_write_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_write_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "(rate(windows_physical_disk_write_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_write_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} write",
                                                 "range": true
@@ -11911,7 +11911,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_read_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_read_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "(rate(windows_physical_disk_read_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_read_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} read",
                                                 "range": true
@@ -12038,7 +12038,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "(rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} write",
                                                 "range": true
@@ -12060,7 +12060,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "(rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} read",
                                                 "range": true
@@ -12187,7 +12187,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_write_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_write_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0))",
+                                                "expr": "(rate(windows_physical_disk_write_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_write_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_writes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} write",
                                                 "range": true
@@ -12209,7 +12209,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_read_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_read_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0))",
+                                                "expr": "(rate(windows_physical_disk_read_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0)) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_read_latency_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / (rate(windows_physical_disk_reads_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}} read",
                                                 "range": true
@@ -12336,7 +12336,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(windows_physical_disk_requests_queued{job=~\"$job\", instance=\"$instance\"}) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (windows_physical_disk_requests_queued{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "(windows_physical_disk_requests_queued{job=~\"$job\", instance=\"$instance\"}) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (windows_physical_disk_requests_queued{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}}",
                                                 "range": true
@@ -12451,7 +12451,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(rate(windows_physical_disk_split_ios_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"disk\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_split_ios_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "(rate(windows_physical_disk_split_ios_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) * on (disk) group_left (model) max by (disk, model) (label_replace(windows_diskdrive_info{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"device_id\", \"PHYSICALDRIVE(\\\\d+)\")) or on (disk) (rate(windows_physical_disk_split_ios_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "{{disk}} {{model}}",
                                                 "range": true

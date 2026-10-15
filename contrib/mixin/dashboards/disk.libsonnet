@@ -4,7 +4,7 @@ local sumRate(name) = 'sum(rate(' + metric(name) + '[$__rate_interval]))';
 local physical(name) = 'windows_physical_disk_' + name + '{job=~"$job", instance="$instance"}';
 local physicalRate(name) = 'rate(' + physical(name) + '[$__rate_interval])';
 // diskdrive names drives PHYSICALDRIVE<n>; physical_disk and logical_disk use <n> as disk.
-local drive(name, labels='') = 'label_replace(windows_diskdrive_' + name + '{job=~"$job", instance="$instance"' + labels + '}, "disk", "$1", "disk", "PHYSICALDRIVE(\\\\d+)")';
+local drive(name, labels='') = 'label_replace(windows_diskdrive_' + name + '{job=~"$job", instance="$instance"' + labels + '}, "disk", "$1", "device_id", "PHYSICALDRIVE(\\\\d+)")';
 // Labels physical disk series with the drive model when diskdrive is enabled.
 local physicalByDisk(on, expr) =
   if on('diskdrive')

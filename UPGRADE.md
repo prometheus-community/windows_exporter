@@ -19,7 +19,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
 | You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, SQL Server, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, deprecated and retyped metrics](#renamed-deprecated-and-retyped-metrics) |
 | You query metrics in MHz, percent, minutes, milliseconds, microseconds, kilobytes, megabytes or parts per billion, counters without a `_total` suffix, or Exchange, Hyper-V DataStore and Virtual SMB, IIS application pool, mscluster, NPS or SQL Server counters | Update queries | [Base units and counter names](#base-units-and-counter-names) |
-| You query `dfsr`, `dhcp` scope, `diskdrive`, `dns` WMI, `exchange`, Hyper-V Virtual SMB, `mscluster`, `msmq`, `registry`, `service`, `storage_spaces` or `wmi` metrics by their `name` or `instance` label | Rename the label in queries and alerts | [Instance label names](#instance-label-names) |
+| You query `dfsr`, `dhcp` scope, `diskdrive`, `dns` WMI, `exchange`, Hyper-V Virtual SMB, `mscluster`, `msmq`, `registry`, `service`, `storage_spaces` or `wmi` metrics by their `name` or `instance` label, or `performancecounter` objects without `instance_label` | Rename the label in queries and alerts | [Instance label names](#instance-label-names) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, lock counts or replica queues, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times, DNS zone transfers or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
@@ -87,7 +87,7 @@ collector:
             metric: windows_thermalzone_throttle_reasons
 ```
 
-`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `instance`, which collides with the target label that Prometheus adds.
+`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `object_instance`.
 
 `windows_thermalzone_percent_passive_limit` and `windows_thermalzone_throttle_reasons` keep their names.
 The temperature is exported in Kelvin, because `performancecounter` doesn't convert units. Replace `windows_thermalzone_temperature_celsius` in queries with:
@@ -661,7 +661,7 @@ Label values are unchanged. **The old keys are no longer exported, there are no 
 | `dfsr`           | `windows_dfsr_folder_*`                                    | `name`                | `folder`         |
 | `dfsr`           | `windows_dfsr_volume_*`                                    | `name`                | `volume`         |
 | `dhcp`           | `windows_dhcp_scope_info`                                  | `name`                | `scope_name`     |
-| `diskdrive`      | `windows_diskdrive_*`                                      | `name`                | `disk`           |
+| `diskdrive`      | `windows_diskdrive_*`                                      | `name`                | `device_id` (the `name` label of `windows_diskdrive_info` is removed; it repeated `device_id`) |
 | `dns`            | `windows_dns_wmi_stats_total`                              | `name`                | `statistic`      |
 | `exchange`       | `windows_exchange_ldap_*`                                  | `name`                | `process`        |
 | `exchange`       | `windows_exchange_http_proxy_*`                            | `name`                | `protocol`       |
@@ -671,7 +671,7 @@ Label values are unchanged. **The old keys are no longer exported, there are no 
 | `mscluster`      | `windows_mscluster_cluster_*`                              | `name`                | `cluster`        |
 | `mscluster`      | `windows_mscluster_network_*`                              | `name`                | `network`        |
 | `mscluster`      | `windows_mscluster_node_*`                                 | `name`                | `node`           |
-| `mscluster`      | `windows_mscluster_resource_*`                             | `name`, `node_name`   | `resource`, `node` |
+| `mscluster`      | `windows_mscluster_resource_*`                             | `name`, `node_name`, `owner_group` | `resource`, `node`, `resource_group` |
 | `mscluster`      | `windows_mscluster_resourcegroup_*`                        | `name`, `node_name`   | `resource_group`, `node` |
 | `mscluster`      | `windows_mscluster_shared_volumes_*`                       | `name`                | `shared_volume`  |
 | `msmq`           | `windows_msmq_*`                                           | `name`                | `queue`          |
@@ -680,8 +680,9 @@ Label values are unchanged. **The old keys are no longer exported, there are no 
 | `storage_spaces` | `windows_storage_spaces_pool_*`                            | `name`                | `pool`           |
 | `storage_spaces` | `windows_storage_spaces_virtual_disk_*`                    | `name`                | `virtual_disk`   |
 | `wmi`            | `windows_wmi_query_success`, `windows_wmi_query_duration_seconds` | `name`         | `query`          |
+| `performancecounter` | objects without `instance_label` | `instance` | `object_instance` |
 
-The `node_name` label of `windows_mscluster_resource_owner_node` and `windows_mscluster_resourcegroup_owner_node` is now `node`, like the label of the node metrics, so the owner can be joined with `on (node)`.
+The `node_name` label of `windows_mscluster_resource_owner_node` and `windows_mscluster_resourcegroup_owner_node` is now `node`, like the label of the node metrics, so the owner can be joined with `on (node)`. The `owner_group` label of the resource metrics is now `resource_group`, like the label of the resource group metrics.
 Info attributes that are not the instance key keep their names, for example the `name` label of `windows_cpu_info` (the processor model) and of `windows_gpu_info` (the adapter name).
 
 For example, the stopped automatic services query becomes:

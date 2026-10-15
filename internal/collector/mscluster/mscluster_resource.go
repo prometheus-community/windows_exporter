@@ -105,109 +105,109 @@ func (c *Collector) buildResourceDescriptors() {
 	c.resourceCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "characteristics"),
 		"Provides the characteristics of the object.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceDeadlockTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "deadlock_timeout_seconds"),
 		"Indicates the length of time to wait, in seconds, before declaring a deadlock in any call into a resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceEmbeddedFailureAction = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "embedded_failure_action"),
 		"The time, in milliseconds, that a resource should remain in a failed state before the Cluster service attempts to restart it.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceFlags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "flags"),
 		"Provides access to the flags set for the object.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceIsAlivePollInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "is_alive_poll_interval_seconds"),
 		"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it is operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the IsAlivePollInterval property for the resource type associated with the resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceLooksAlivePollInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "looks_alive_poll_interval_seconds"),
 		"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in seconds at which the Cluster Service should poll the resource to determine whether it appears operational. If the property is set to 0xFFFFFFFF milliseconds (4294967.295 seconds), the Cluster Service uses the LooksAlivePollInterval property for the resource type associated with the resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceMonitorProcessId = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "monitor_process_id"),
 		"Provides the process ID of the resource host service that is currently hosting the resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceOwnerNode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "owner_node"),
 		"The node hosting the resource. 0: Not hosted; 1: Hosted",
-		[]string{"type", "owner_group", "node", "resource"},
+		[]string{"type", "resource_group", "node", "resource"},
 		nil,
 	)
 	c.resourceOwnerNode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "owner_node"),
 		"The node hosting the resource. 0: Not hosted; 1: Hosted",
-		[]string{"type", "owner_group", "node", "resource"},
+		[]string{"type", "resource_group", "node", "resource"},
 		nil,
 	)
 	c.resourcePendingTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "pending_timeout_seconds"),
 		"Provides access to the resource's PendingTimeout property. If a resource cannot be brought online or taken offline in the number of seconds specified by the PendingTimeout property, the resource is forcibly terminated.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceResourceClass = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "resource_class"),
 		"Gets or sets the resource class of a resource. 0: Unknown; 1: Storage; 2: Network; 32768: Unknown ",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceRestartAction = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "restart_action"),
 		"Provides access to the resource's RestartAction property, which is the action to be taken by the Cluster Service if the resource fails.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceRestartDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "restart_delay_seconds"),
 		"Indicates the time delay in seconds before a failed resource is restarted.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceRestartPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "restart_period_seconds"),
 		"Provides access to the resource's RestartPeriod property, which is interval of time, in seconds, during which a specified number of restart attempts can be made on a nonresponsive resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceRestartThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "restart_threshold"),
 		"Provides access to the resource's RestartThreshold property which is the maximum number of restart attempts that can be made on a resource within an interval defined by the RestartPeriod property before the Cluster Service initiates the action specified by the RestartAction property.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceRetryPeriodOnFailure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "retry_period_on_failure_seconds"),
 		"Provides access to the resource's RetryPeriodOnFailure property, which is the interval of time (in seconds) that a resource should remain in a failed state before the Cluster service attempts to restart it.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "state"),
 		"The current state of the resource. -1: Unknown; 0: Inherited; 1: Initializing; 2: Online; 3: Offline; 4: Failed; 128: Pending; 129: Online Pending; 130: Offline Pending ",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 	c.resourceSubClass = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "subclass"),
 		"Provides the list of references to nodes that can be the owner of this resource.",
-		[]string{"type", "owner_group", "resource"},
+		[]string{"type", "resource_group", "resource"},
 		nil,
 	)
 

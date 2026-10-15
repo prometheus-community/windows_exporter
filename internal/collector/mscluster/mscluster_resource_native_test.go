@@ -152,7 +152,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
-		if !maps.Equal(metricLabels(metric), map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "resource": "Disk"}) {
+		if !maps.Equal(metricLabels(metric), map[string]string{"type": "Physical Disk", "resource_group": "Cluster Group", "resource": "Disk"}) {
 			t.Fatalf("labels = %v", metricLabels(metric))
 		}
 	}
@@ -174,7 +174,7 @@ func TestResourceNativeMetricContract(t *testing.T) {
 			t.Fatal("invalid owner value")
 		}
 
-		if !maps.Equal(labels, map[string]string{"type": "Physical Disk", "owner_group": "Cluster Group", "resource": "Disk", "node": labels["node"]}) {
+		if !maps.Equal(labels, map[string]string{"type": "Physical Disk", "resource_group": "Cluster Group", "resource": "Disk", "node": labels["node"]}) {
 			t.Fatal("invalid owner labels")
 		}
 	}

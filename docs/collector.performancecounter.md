@@ -161,7 +161,7 @@ Some Objects like `Memory` do not have instances to select from at all. In this 
 
 #### instance_label
 
-The name of the label that holds the instance name. Optional and defaults to `instance`.
+The name of the label that holds the instance name. Optional and defaults to `object_instance`. Do not use `instance`: it collides with the target label that Prometheus adds.
 
 The label is only added if `instances` is set.
 
