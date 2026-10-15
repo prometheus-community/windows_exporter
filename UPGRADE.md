@@ -218,7 +218,7 @@ Renamed:
 | `windows_hyperv_root_partition_preferred_numa_node_index` | `windows_hyperv_root_partition_gpa_pages`                 | Same value; the old name was wrong |
 | `windows_hyperv_root_partition_physical_pages_allocated` | `windows_hyperv_root_partition_skipped_timer_ticks_total`  | Same value; the old name was wrong, now a counter |
 | `windows_hyperv_root_partition_device_interrupt_throttle_events` | `windows_hyperv_root_partition_device_interrupt_throttle_events_total` | Now a counter |
-| `windows_hyperv_root_partition_io_tlb_flush_cost`    | `windows_hyperv_root_partition_io_tlb_flush_seconds_total`     | Same value, cumulative seconds, now a counter. Divide by `rate(windows_hyperv_root_partition_io_tlb_flushes_total)` for the average |
+| `windows_hyperv_root_partition_io_tlb_flush_cost`    | `windows_hyperv_root_partition_io_tlb_flush_seconds_total`     | Same value, cumulative seconds, now a counter. Divide its rate by `rate(windows_hyperv_root_partition_io_tlb_flushes_total)` for the average time per flush |
 | `windows_hyperv_root_partition_io_tlb_flush`         | `windows_hyperv_root_partition_io_tlb_flushes_total`           | Same value                         |
 | `windows_hyperv_root_partition_gpa_space_modifications` | `windows_hyperv_root_partition_gpa_space_modifications_total` | Same value                       |
 | `windows_hyperv_root_partition_virtual_tlb_flush_entries` | `windows_hyperv_root_partition_virtual_tlb_flush_entries_total` | Same value                   |
