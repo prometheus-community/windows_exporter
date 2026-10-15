@@ -64,9 +64,9 @@ type Collector struct {
 	swapPagesWrittenTotal           *prometheus.Desc
 	swapPageOperationsTotal         *prometheus.Desc
 	swapPageWritesTotal             *prometheus.Desc
-	poolNonPagedAllocationsTotal    *prometheus.Desc
+	poolNonPagedAllocations         *prometheus.Desc
 	poolNonPagedBytes               *prometheus.Desc
-	poolPagedAllocationsTotal       *prometheus.Desc
+	poolPagedAllocations            *prometheus.Desc
 	poolPagedBytes                  *prometheus.Desc
 	poolPagedResidentBytes          *prometheus.Desc
 	standbyCacheCoreBytes           *prometheus.Desc
@@ -210,9 +210,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.poolNonPagedAllocationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "pool_nonpaged_allocs_total"),
-		"The number of calls to allocate space in the nonpaged pool. The nonpaged pool is an area of system memory area for objects that cannot be written"+
+	c.poolNonPagedAllocations = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "pool_nonpaged_allocs"),
+		"Number of allocations in the nonpaged pool, regardless of their size. The nonpaged pool is an area of system memory for objects that cannot be written"+
 			" to disk, and must remain in physical memory as long as they are allocated (PoolNonpagedAllocs)",
 		nil,
 		nil,
@@ -224,9 +224,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.poolPagedAllocationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "pool_paged_allocs_total"),
-		"Number of calls to allocate space in the paged pool, regardless of the amount of space allocated in each call (PoolPagedAllocs)",
+	c.poolPagedAllocations = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "pool_paged_allocs"),
+		"Number of allocations in the paged pool, regardless of their size (PoolPagedAllocs)",
 		nil,
 		nil,
 	)
@@ -491,7 +491,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.poolNonPagedAllocationsTotal,
+		c.poolNonPagedAllocations,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].PoolNonpagedAllocs,
 	)
@@ -503,8 +503,8 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.poolPagedAllocationsTotal,
-		prometheus.CounterValue,
+		c.poolPagedAllocations,
+		prometheus.GaugeValue,
 		c.perfDataObject[0].PoolPagedAllocs,
 	)
 
