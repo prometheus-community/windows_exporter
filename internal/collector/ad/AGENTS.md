@@ -66,10 +66,11 @@ The explain texts of `ATQ Estimated Queue Delay`, `ATQ Request Latency`,
 `DS Security Descriptor Propagator Average Exclusion Time` state no unit, and
 Microsoft Learn does not document one. The collector treats them as
 milliseconds like the other latencies of the object and divides each one it
-reads by 1000 for the `_seconds` metrics. On the lab DC the SAM latencies stayed 0 while
-thousands of group evaluations ran (S4U logons), so their unit is not finer
-than milliseconds. The exclusion time stayed 0 during propagations over a few
-hundred objects without lock contention, which says nothing about its unit.
+reads by 1000 for the `_seconds` metrics. On the lab DC the SAM latencies
+stayed 0 while about 700 group evaluations ran (S4U logons), so their unit is
+not finer than milliseconds. The exclusion time stayed 0 during about 2400 SD
+propagation sub-operations without lock contention, which says nothing about
+its unit.
 If a DC under contention shows implausible values, revisit the scaling.
 
 Most `X` / `X/sec` pairs report the same raw value (for example
