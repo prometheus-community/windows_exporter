@@ -19,6 +19,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -251,4 +252,88 @@ func TestRotatingFileWriteAfterClose(t *testing.T) {
 	_, err := file.Write([]byte("late\n"))
 	require.ErrorIs(t, err, os.ErrClosed)
 	require.NoError(t, file.Close(), "a second Close is a no-op")
+}
+
+func TestRotatingFileRecreatesMovedFileOnRotation(t *testing.T) {
+	t.Parallel()
+
+	file, path, _ := testRotatingFile(t, 100, 0, false)
+
+	write(t, file, strings.Repeat("a", 59)+"\n")
+
+	moved := filepath.Join(filepath.Dir(path), "moved.log")
+	require.NoError(t, os.Rename(path, moved))
+
+	// The rotation finds no file to rename and starts a new one at the path.
+	write(t, file, strings.Repeat("b", 59)+"\n")
+	require.NoError(t, file.Close())
+
+	require.Equal(t, strings.Repeat("a", 59)+"\n", readFile(t, moved))
+	require.Equal(t, strings.Repeat("b", 59)+"\n", readFile(t, path))
+}
+
+func TestRotatingFileRecreatesMovedOrDeletedFile(t *testing.T) {
+	t.Parallel()
+
+	for name, remove := range map[string]func(path string) error{
+		"moved":   func(path string) error { return os.Rename(path, path+".moved") },
+		"deleted": os.Remove,
+		"replaced": func(path string) error {
+			return errors.Join(os.Rename(path, path+".old"), os.WriteFile(path, []byte("other\n"), 0o600))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Far below max-size: no rotation is involved.
+			file, path, now := testRotatingFile(t, 1<<20, 0, false)
+
+			write(t, file, "before\n")
+			require.NoError(t, remove(path))
+
+			// Until the next check, lines go to the old file.
+			write(t, file, "until the check\n")
+
+			*now = now.Add(file.retryInterval)
+
+			write(t, file, "after\n")
+			require.NoError(t, file.Close())
+
+			require.True(t, strings.HasSuffix(readFile(t, path), "after\n"), "the path has a new log file")
+			require.NotContains(t, readFile(t, path), "before", "the new file doesn't continue the old one")
+		})
+	}
+}
+
+func TestRotatingFileKeepsFileAtPath(t *testing.T) {
+	t.Parallel()
+
+	file, path, now := testRotatingFile(t, 1<<20, 0, false)
+
+	write(t, file, "one\n")
+
+	*now = now.Add(file.retryInterval)
+
+	// The check finds the same file: nothing is reopened.
+	write(t, file, "two\n")
+	require.NoError(t, file.Close())
+
+	require.Equal(t, "one\ntwo\n", readFile(t, path))
+	require.Equal(t, []string{"windows_exporter.log"}, dirEntries(t, filepath.Dir(path)))
+}
+
+func TestRotatingFileWithoutSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	// A plain log file: no size limit, never rotated.
+	file, path, now := testRotatingFile(t, math.MaxInt64, 0, false)
+
+	write(t, file, strings.Repeat("a", 1000))
+	*now = now.Add(file.retryInterval)
+
+	write(t, file, strings.Repeat("b", 1000))
+	require.NoError(t, file.Close())
+
+	require.Equal(t, []string{"windows_exporter.log"}, dirEntries(t, filepath.Dir(path)))
+	require.Len(t, readFile(t, path), 2000)
 }

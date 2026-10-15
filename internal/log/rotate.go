@@ -56,6 +56,9 @@ type rotatingFile struct {
 	file       *os.File
 	size       int64
 	retryAfter time.Time
+	// checkAfter is when the next write checks that the path still points
+	// to the open file; an admin may have moved or deleted it.
+	checkAfter time.Time
 
 	// cleanup compresses and prunes rotated files in the background; Close
 	// waits for it. cleanupMu runs one cleanup at a time.
@@ -91,6 +94,7 @@ func newRotatingFileWithRename(
 	}
 
 	r.file, r.size = file, size
+	r.checkAfter = now().Add(r.retryInterval)
 
 	// A file that is already too large is rotated right away. If that fails,
 	// the logger still starts and the rotation is retried on a later write.
@@ -128,7 +132,17 @@ func (r *rotatingFile) Write(p []byte) (int, error) {
 		return 0, os.ErrClosed
 	}
 
-	if r.size > 0 && r.size+int64(len(p)) > r.maxSize && !r.now().Before(r.retryAfter) {
+	if now := r.now(); !now.Before(r.checkAfter) {
+		r.checkAfter = now.Add(r.retryInterval)
+
+		// The file was moved, deleted or replaced: start a new one at the
+		// path. If that fails, keep writing to the current file.
+		if same, err := sameFile(r.file, r.path); err != nil || !same {
+			_ = r.reopen()
+		}
+	}
+
+	if r.size > 0 && int64(len(p)) > r.maxSize-r.size && !r.now().Before(r.retryAfter) {
 		// On failure, keep appending to the current file.
 		_ = r.rotate()
 	}
@@ -162,6 +176,15 @@ func (r *rotatingFile) rotate() error {
 	backup := r.backupName()
 
 	if err := r.rename(r.path, backup); err != nil {
+		// The file was moved or deleted: there is nothing to rename, so
+		// start a new file at the path.
+		if errors.Is(err, os.ErrNotExist) {
+			err = r.reopen()
+			if err == nil {
+				return nil
+			}
+		}
+
 		r.retryAfter = r.now().Add(r.retryInterval)
 
 		return fmt.Errorf("failed to rename log file: %w", err)
@@ -186,6 +209,20 @@ func (r *rotatingFile) rotate() error {
 
 		r.cleanupBackups(backup)
 	})
+
+	return nil
+}
+
+// reopen opens the file at the path and writes to it from now on. r.mu must be held.
+func (r *rotatingFile) reopen() error {
+	file, size, err := openLogFileWithSize(r.path)
+	if err != nil {
+		return err
+	}
+
+	_ = r.file.Close()
+	r.file, r.size = file, size
+	r.retryAfter = time.Time{}
 
 	return nil
 }
@@ -352,5 +389,5 @@ func compressFile(path string) (err error) {
 		return err
 	}
 
-	return errors.Join(os.Remove(path))
+	return os.Remove(path)
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"os"
 	"time"
 
@@ -141,7 +142,9 @@ func New(config *Config) (*slog.Logger, io.Closer, error) {
 	case config.Rotation.configured():
 		return nil, nil, errors.New("log rotation requires log.rotation.max-size")
 	default:
-		file, err := openLogFile(config.File.s)
+		// Without a size limit the file is never rotated, but a moved or
+		// deleted file is still replaced by a new one at the path.
+		file, err := newRotatingFile(config.File.s, math.MaxInt64, 0, false, time.Now)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to open log file: %w", err)
 		}

@@ -48,3 +48,43 @@ func openLogFile(path string) (*os.File, error) {
 
 	return os.NewFile(uintptr(handle), path), nil
 }
+
+// sameFile reports whether path still refers to file, by volume serial number
+// and file index.
+func sameFile(file *os.File, path string) (bool, error) {
+	var fileInfo windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(windows.Handle(file.Fd()), &fileInfo); err != nil {
+		return false, err
+	}
+
+	pathPtr, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return false, err
+	}
+
+	// No access rights are needed to read the file index; backup semantics
+	// would also open a directory, which then doesn't match.
+	handle, err := windows.CreateFile(
+		pathPtr,
+		0,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
+		nil,
+		windows.OPEN_EXISTING,
+		windows.FILE_FLAG_BACKUP_SEMANTICS,
+		0,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	defer func() { _ = windows.CloseHandle(handle) }()
+
+	var pathInfo windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(handle, &pathInfo); err != nil {
+		return false, err
+	}
+
+	return fileInfo.VolumeSerialNumber == pathInfo.VolumeSerialNumber &&
+		fileInfo.FileIndexHigh == pathInfo.FileIndexHigh &&
+		fileInfo.FileIndexLow == pathInfo.FileIndexLow, nil
+}

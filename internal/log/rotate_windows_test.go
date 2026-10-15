@@ -111,3 +111,59 @@ func TestOpenLogFileAppends(t *testing.T) {
 
 	require.Equal(t, "existing\nappended\n", readFile(t, path))
 }
+
+func TestRotatingFileRecoversWhenMovedOrDeleted(t *testing.T) {
+	t.Parallel()
+
+	for name, remove := range map[string]func(path string) error{
+		"moved":   func(path string) error { return os.Rename(path, path+".moved") },
+		"deleted": os.Remove,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), "windows_exporter.log")
+			now := time.Date(2026, 10, 15, 14, 3, 5, 0, time.UTC)
+
+			file, err := newRotatingFile(path, 1<<20, 0, false, func() time.Time { return now })
+			require.NoError(t, err)
+
+			t.Cleanup(func() { _ = file.Close() })
+
+			write(t, file, "before\n")
+
+			// Share-delete lets an admin move or delete the file while it is open.
+			require.NoError(t, remove(path))
+
+			now = now.Add(file.retryInterval)
+
+			write(t, file, "after\n")
+			require.NoError(t, file.Close())
+
+			require.Equal(t, "after\n", readFile(t, path))
+		})
+	}
+}
+
+func TestSameFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "windows_exporter.log")
+
+	file, err := openLogFile(path)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = file.Close() })
+
+	same, err := sameFile(file, path)
+	require.NoError(t, err)
+	require.True(t, same)
+
+	require.NoError(t, os.Rename(path, filepath.Join(dir, "moved.log")))
+	require.NoError(t, os.WriteFile(path, []byte("other"), 0o600))
+
+	same, err = sameFile(file, path)
+	require.NoError(t, err)
+	require.False(t, same, "a new file at the path is not the open file")
+}

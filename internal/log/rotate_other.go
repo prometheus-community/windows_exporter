@@ -24,3 +24,18 @@ import "os"
 func openLogFile(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o640)
 }
+
+// sameFile reports whether path still refers to file.
+func sameFile(file *os.File, path string) (bool, error) {
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return false, err
+	}
+
+	pathInfo, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+
+	return os.SameFile(fileInfo, pathInfo), nil
+}
