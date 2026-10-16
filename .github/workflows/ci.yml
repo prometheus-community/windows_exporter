@@ -376,7 +376,7 @@ jobs:
     name: Build docker images
     runs-on: ubuntu-26.04
     if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.package.result == 'success' && (needs.windows-test.result == 'success' || needs.windows-test.result == 'skipped') }}
-    # Images are pushed on branch and tag events, so gate them on the same
+    # Images are pushed on branch and release events, so gate them on the same
     # validation as the release binaries in the publish job.
     needs:
       - detect-changes
@@ -1835,7 +1835,8 @@ jobs:
   super-linter:
     name: Super Linter
     # Super Linter cannot derive the commit range VALIDATE_ALL_CODEBASE=false
-    # needs from release events; the branch push run already linted the commit.
+    # needs from release events; the push run for the branch the release is cut
+    # from already linted it.
     if: github.event_name != 'release'
     runs-on: ubuntu-26.04
     permissions:
