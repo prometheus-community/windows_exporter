@@ -4,6 +4,8 @@
   local known = std.objectFields((import '../config.libsonnet')._config.alerts),
   local unknown = std.setDiff(std.set(std.objectFields(c.alerts)), std.set(known)),
   assert std.length(unknown) == 0 : 'Unknown alerts in _config.alerts: ' + std.join(', ', unknown),
+  assert !std.objectHas(c, 'networkErrorRateThreshold') && !std.objectHas(c, 'networkDiscardRateThreshold') :
+         'networkErrorRateThreshold and networkDiscardRateThreshold (packets per second) were replaced by networkErrorRatioThreshold and networkDiscardRatioThreshold (percent of all packets)',
   // A collector missing from a replaced collectors object counts as disabled;
   // an alert missing from a replaced alerts object counts as enabled.
   local collectorEnabled(collector) = std.get(c.collectors, collector, false),
@@ -23,7 +25,6 @@
       } + (if duration != '0m' then { 'for': duration } else {}) + (if threshold then keepFiring else {}),
     ] else [],
   local group(name, rules) = if std.length(rules) > 0 then [{ name: name, rules: rules }] else [],
-  local onService = 'on (job, instance, service)',
   prometheusAlerts+:: {
     groups:
       group('windows-exporter', std.flattenArrays([
@@ -208,10 +209,12 @@
       + group('windows-service', std.flattenArrays([
         alert(
           'WindowsServiceNotRunning',
+          // The matches ignore only the labels of the right-hand metric, so
+          // every target label, including ones a selector adds, takes part.
           std.join(' ', [
             'max without (state) (%s == 0)' % q.metric('windows_service_state', [c.serviceSelector, 'state="running"']),
-            'and %s (%s == 1)' % [onService, q.metric('windows_service_start_mode', [c.serviceSelector, 'start_mode="auto"'])],
-            'unless %s (%s == 1)' % [onService, q.metric('windows_service_info', [c.serviceSelector, 'trigger_start="true"'])],
+            'and ignoring (start_mode) (%s == 1)' % q.metric('windows_service_start_mode', [c.serviceSelector, 'start_mode="auto"']),
+            'unless ignoring (display_name, run_as, path_name, delayed_start, trigger_start) (%s == 1)' % q.metric('windows_service_info', [c.serviceSelector, 'trigger_start="true"']),
           ]),
           '15m',
           'warning',
@@ -239,8 +242,10 @@
         alert(
           'WindowsHostRebooted',
           // Fires once per reboot: for the first ten minutes after the boot,
-          // while the boot time known ten minutes ago was an older one.
-          '(time() - %s) < 600 and (time() - %s offset 10m) > 600' % [
+          // and only on a host that was monitored before it. The exporter is
+          // down while the host reboots, so the second operand takes the last
+          // boot time of the hour before, not the sample of ten minutes ago.
+          '(time() - %s) < 600 and (time() - last_over_time(%s[1h] offset 10m)) > 600' % [
             q.metric('windows_system_boot_time_timestamp'),
             q.metric('windows_system_boot_time_timestamp'),
           ],

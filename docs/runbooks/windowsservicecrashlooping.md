@@ -9,6 +9,13 @@ the configured number of restarts allows. The default is two restarts. Every
 service process has its own `windows_service_process` series, identified by
 `process_id`, so the series seen within 15 minutes count the restarts.
 
+Three limits apply. Windows reuses process IDs, so a restart that lands on the
+same ID is not counted. Services that share a process, such as `svchost.exe`
+groups, share a `process_id`: one crash of the shared process alerts for every
+service in it. Services without a `windows_service_process` series, for example
+stopped services or services the exporter cannot read the process of, are
+invisible to this alert.
+
 ## Impact
 
 The service crashes or is stopped and started repeatedly. It is unavailable
@@ -24,7 +31,9 @@ give up after a configurable number of failures, after which
    count_over_time(windows_service_process{job="windows_exporter", service="<service>"}[15m])
    ```
 
-   The value of each series is the start time of the process.
+   The value of each series is the start time of the process. If several
+   services report the same `process_id`, the shared host process crashed and
+   the faulty service is one of that group.
 2. Check the Application log for crashes of the service executable (events
    1000 and 1026, .NET Runtime errors) and the System log for Service Control
    Manager events 7031 and 7034, which also show the recovery action.

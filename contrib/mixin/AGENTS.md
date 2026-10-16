@@ -35,7 +35,12 @@ A new alert touches five places, and CI checks all of them:
 Metrics with a state label (`windows_service_state{state="running"} == 0`)
 keep that label in the alert; drop it with `max without (state) (...)` so the
 alert does not say `state="running"` for a stopped service. Join a state metric
-with its info metric `on (job, instance, <key>)`.
+with its info metric with `ignoring (<labels of the info metric>)`, never
+`on (job, instance, <key>)`: `on` drops the other target labels, so two
+targets with the same `instance` in different clusters match each other.
+A target can be scraped again after a gap (a reboot, a restart of the
+exporter), so an `offset` lookup needs a range (`last_over_time(m[1h] offset
+10m)`); a plain `m offset 10m` has no sample while the gap covers that point.
 
 ## Recording rules
 
