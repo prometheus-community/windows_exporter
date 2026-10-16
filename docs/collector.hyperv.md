@@ -219,7 +219,8 @@ The `health` and `state` metrics come from the `Msvm_ReplicationRelationship` WM
 | `windows_hyperv_replica_vm_state`                               | The replication state of the virtual machine, see below             | gauge   | `vm`, `vm_id`, `relationship` |
 
 The `relationship` label is `primary` for the primary replication relationship and `extended` for
-[extended replication](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-replicationrelationship). The `vm_id` label is the ID of the virtual machine, which keeps virtual machines with the same name apart.
+[extended replication](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-replicationrelationship).
+The `vm_id` label is the ID of the virtual machine, which keeps virtual machines with the same name apart.
 
 Values of `windows_hyperv_replica_vm_health`:
 
