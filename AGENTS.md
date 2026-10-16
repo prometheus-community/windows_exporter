@@ -254,36 +254,63 @@ measure before changing code:
 - `process_virtual_memory_bytes` is the private (committed) bytes on Windows;
   `process_resident_memory_bytes` is the working set, which Windows trims, so
   it drops and recovers without any change in the process. Compare the daily
-  minimum of the private bytes over several days, and split it into Go
-  (`go_memstats_sys_bytes`) and native memory (the difference).
-- Go memory levels off within a few hours. On Windows the Go runtime never
-  destroys an OS thread (M); threads it adds for blocking calls and MI
-  callbacks stay, each with about six handles, so `go_threads` and
-  `process_open_fds` rise in steps and then stay flat. Investigate handles only
-  if they grow while threads stay flat. The `not_in_go` counter in the Go
-  runtime metrics grows on Windows by itself (golang/go#82136).
+  minimum of the private bytes over several days. Go holds about
+  `go_memstats_sys_bytes - go_memstats_heap_released_bytes` of it; the rest is
+  native memory plus the executable's data and BSS sections, which include a
+  32 MiB buffer in builds without the release overlay (golang/go#81956).
+- Go memory levels off within a few hours. The Go runtime keeps idle OS
+  threads (Ms) parked instead of destroying them; threads it adds for blocking
+  calls and MI callbacks stay, each with about six handles, so `go_threads`
+  and `process_open_fds` rise in steps and then stay flat. A thread only exits
+  when its goroutine ends while locked with `runtime.LockOSThread`, for example
+  a closed `ole.Worker`. Investigate handles only if they grow while threads
+  stay flat. `go_sched_goroutines_not_in_go_goroutines` rises on Windows on its
+  own (golang/go#82136); it does not indicate a goroutine leak.
 - `--debug.enabled` exposes `/debug/pprof/`. Diff two `heap` profiles taken
   hours apart for live Go memory and `allocs` profiles for allocation churn.
 - Handle counts by object type need no admin rights:
   `NtQuerySystemInformation(SystemExtendedHandleInformation)` plus
   `NtQueryObject(ObjectTypesInformation)`, for example from a PowerShell
   `Add-Type` script. `handle.exe` needs admin rights.
-- For native heap growth, use UMDH from the Debugging Tools for Windows (in an
-  elevated shell): `gflags /i windows_exporter.exe +ust`, restart the service,
-  then take `umdh -p:<pid> -f:a.txt` after warm-up and again hours later, and
-  compare with `umdh a.txt b.txt`. Snapshots from different processes can't be
-  compared. Stack recording costs about 24 MB for its database plus heap
-  overhead; remove it with `-ust` afterwards. Expected entries that are not
-  leaks: single 1 MB data buffers of the `perfos` and `perfts` counter
-  providers inside `PdhCollectQueryData`, and PDH counter path strings whose
-  count grows until every instance has been seen. A leak adds allocations under
-  the same stack in every snapshot.
-- UMDH doesn't see memory a library reserves with `VirtualAlloc` directly. A
-  full dump shows it: `cdb -pv -p <pid> -c ".dump /ma <file>; q"` pauses the
-  process only while it writes; open it with `cdb -z <file>` and run
-  `!address -summary` and `!heap -s`. If the debugger can't download a PDB,
-  fetch it from `https://msdl.microsoft.com/download/symbols/<name>.pdb/<GUID+age>/<name>.pdb`
-  with curl into a local symbol store.
+
+For native heap growth, use UMDH from the Debugging Tools for Windows in an
+elevated shell. It records an allocation stack for every heap allocation of
+processes started after the flag is set:
+
+```powershell
+$env:_NT_SYMBOL_PATH = 'srv*C:\symbols*https://msdl.microsoft.com/download/symbols'
+gflags /i windows_exporter.exe +ust
+Restart-Service windows_exporter
+# After warm-up, and again hours later:
+umdh -p:<pid> -f:a.txt
+umdh -p:<pid> -f:b.txt
+umdh a.txt b.txt > diff.txt
+# Afterwards:
+gflags /i windows_exporter.exe -ust
+Restart-Service windows_exporter
+```
+
+Snapshots from different processes cannot be compared. Stack recording cost
+about 24 MB for its database plus heap overhead on a development machine.
+Expected entries that are not leaks: single 1 MB data buffers of the `perfos`
+and `perfts` counter providers inside `PdhCollectQueryData`, and PDH counter
+path strings whose count grows until every instance has been seen. A leak adds
+allocations under the same stack in every snapshot.
+
+UMDH does not see memory a library reserves with `VirtualAlloc` directly. A
+full dump shows it. `cdb -pv` attaches without changing the process and pauses
+it only while it writes the dump:
+
+```powershell
+cdb -pv -p <pid> -c ".dump /ma C:\dumps\exporter.dmp; q"
+cdb -z C:\dumps\exporter.dmp -c "!address -summary; !heap -s; q"
+```
+
+If the debugger cannot download a PDB, fetch it with curl from
+`https://msdl.microsoft.com/download/symbols/<name>.pdb/<id>/<name>.pdb` into
+`<store>\<name>.pdb\<id>\<name>.pdb` and add `<store>` to the symbol path.
+`<id>` is the RSDS GUID of the module as 32 uppercase hex digits without
+dashes, followed by its age in hex.
 
 ## Dashboards, rules and runbooks
 
