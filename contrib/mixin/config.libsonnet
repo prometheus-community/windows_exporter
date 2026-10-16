@@ -5,6 +5,9 @@
     volumeSelector: 'volume!=""',
     nicSelector: 'nic!=""',
     serviceSelector: 'service!=""',
+    taskSelector: 'task!=""',
+    // ClusterPerformanceHistory is the volume of the cluster's own health history.
+    sharedVolumeSelector: 'shared_volume!="ClusterPerformanceHistory"',
     rateInterval: '5m',
 
     // Opt in only for targets with the ad collector enabled. Sets collectors.ad.
@@ -43,15 +46,19 @@
     collectors: {
       ad: $._config.enableActiveDirectory,
       cpu: true,
+      dhcp: false,
       diskdrive: false,
+      dns: false,
       gpu: false,
       hyperv: false,
+      license: false,
       logical_disk: true,
       memory: true,
       mscluster: false,
       mssql: false,
       net: true,
       os: true,
+      pagefile: false,
       physical_disk: true,
       process: false,
       scheduled_task: false,
@@ -95,6 +102,23 @@
       WindowsADReplicationFailures: true,
       WindowsClockNotSynchronising: true,
       WindowsClockSkewDetected: true,
+      WindowsClockSourceLocal: true,
+      WindowsDiskDriveNotOK: true,
+      WindowsPagefileAlmostFull: true,
+      WindowsLicenseNotGenuine: true,
+      WindowsScheduledTaskFailed: true,
+      WindowsUpdatesPending: true,
+      WindowsHyperVWMIUnhealthy: true,
+      WindowsHyperVReplicationCritical: true,
+      WindowsHyperVReplicationWarning: true,
+      WindowsClusterNodeDown: true,
+      WindowsClusterResourceFailed: true,
+      WindowsClusterResourceGroupFailed: true,
+      WindowsClusterSharedVolumeAlmostFull: true,
+      WindowsStoragePoolUnhealthy: true,
+      WindowsStorageVirtualDiskUnhealthy: true,
+      WindowsDHCPScopeAlmostExhausted: true,
+      WindowsDNSZoneTransferFailures: true,
     },
 
     runbookURLPattern: 'https://prometheus-community.github.io/windows_exporter/runbooks/%s/',
@@ -130,5 +154,14 @@
     infoSeverity: 'info',
     adPendingReplicationThreshold: 50,
     adReplicationFailureRateThreshold: 0,
+    // Percent of the page file in use.
+    pagefileUsageThreshold: 80,
+    // Percent of free addresses in an active DHCP scope.
+    dhcpScopeFreeWarningThreshold: 10,
+    dhcpScopeFreeCriticalThreshold: 2,
+    // How long updates may wait for installation before WindowsUpdatesPending fires.
+    updatePendingDuration: '7d',
+    // Failed zone transfers per second.
+    dnsZoneTransferFailureRateThreshold: 0,
   },
 }

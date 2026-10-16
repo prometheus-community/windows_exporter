@@ -2,7 +2,8 @@
 // keep_firing_for and the group layout.
 local mixin = import '../mixin.libsonnet';
 local config = (import '../config.libsonnet')._config;
-local everything = mixin { _config+:: { enableActiveDirectory: true, enableTime: true } };
+local everything = mixin { _config+:: { enableActiveDirectory: true, enableTime: true, collectors: { [name]: true for name in std.objectFields(config.collectors) } } };
+local optionalGroups = ['windows-active-directory', 'windows-time', 'windows-scheduled-task', 'windows-update', 'windows-hyperv', 'windows-cluster', 'windows-storage-spaces', 'windows-dhcp', 'windows-dns'];
 local names(alerts) = std.sort([rule.alert for group in alerts.groups for rule in group.rules]);
 local groupNames(alerts) = [group.name for group in alerts.groups];
 
@@ -12,7 +13,13 @@ assert all == std.set(std.objectFields(config.alerts)) : 'alerts map differs fro
 
 // Groups follow the collector areas; opt-in groups appear only when enabled.
 assert groupNames(mixin.prometheusAlerts) == ['windows-exporter', 'windows-cpu', 'windows-memory', 'windows-disk', 'windows-network', 'windows-service', 'windows-system'] : std.manifestJson(groupNames(mixin.prometheusAlerts));
-assert groupNames(everything.prometheusAlerts) == groupNames(mixin.prometheusAlerts) + ['windows-active-directory', 'windows-time'];
+assert groupNames(everything.prometheusAlerts) == groupNames(mixin.prometheusAlerts) + optionalGroups : std.manifestJson(groupNames(everything.prometheusAlerts));
+// Opt-in collectors add their alerts to the default groups of their area too.
+local adOnly = mixin { _config+:: { enableActiveDirectory: true } };
+assert groupNames(adOnly.prometheusAlerts) == groupNames(mixin.prometheusAlerts) + ['windows-active-directory'];
+local pagefile = mixin { _config+:: { collectors+: { pagefile: true, diskdrive: true, license: true } } };
+assert groupNames(pagefile.prometheusAlerts) == groupNames(mixin.prometheusAlerts);
+assert std.setDiff(names(pagefile.prometheusAlerts), names(mixin.prometheusAlerts)) == ['WindowsDiskDriveNotOK', 'WindowsLicenseNotGenuine', 'WindowsPagefileAlmostFull'];
 
 // Disabling a collector removes its alerts and an empty group; the alerts of a
 // rule that needs two collectors go with either.
@@ -34,7 +41,28 @@ assert names(replaced.prometheusAlerts) == std.setDiff(names(mixin.prometheusAle
 
 // keep_firing_for applies to threshold alerts only and can be turned off.
 local rules(alerts) = [rule for group in alerts.groups for rule in group.rules];
-local stateAlerts = ['WindowsExporterDown', 'WindowsCollectorFailed', 'WindowsCollectorTimeout', 'WindowsScrapeQueueTimeout', 'WindowsServiceNotRunning', 'WindowsHostRebooted', 'WindowsClockNotSynchronising'];
+local stateAlerts = [
+  'WindowsExporterDown',
+  'WindowsCollectorFailed',
+  'WindowsCollectorTimeout',
+  'WindowsScrapeQueueTimeout',
+  'WindowsServiceNotRunning',
+  'WindowsHostRebooted',
+  'WindowsClockNotSynchronising',
+  'WindowsClockSourceLocal',
+  'WindowsDiskDriveNotOK',
+  'WindowsLicenseNotGenuine',
+  'WindowsScheduledTaskFailed',
+  'WindowsUpdatesPending',
+  'WindowsHyperVWMIUnhealthy',
+  'WindowsHyperVReplicationCritical',
+  'WindowsHyperVReplicationWarning',
+  'WindowsClusterNodeDown',
+  'WindowsClusterResourceFailed',
+  'WindowsClusterResourceGroupFailed',
+  'WindowsStoragePoolUnhealthy',
+  'WindowsStorageVirtualDiskUnhealthy',
+];
 assert std.all([
   std.objectHas(rule, 'keep_firing_for') == !std.member(stateAlerts, rule.alert)
   for rule in rules(everything.prometheusAlerts)
@@ -46,5 +74,7 @@ assert std.length([rule for rule in rules(noKeep.prometheusAlerts) if std.object
 // The info severity label is configurable.
 local ticket = mixin { _config+:: { infoSeverity: 'ticket' } };
 assert [rule.labels.severity for rule in rules(ticket.prometheusAlerts) if rule.alert == 'WindowsHostRebooted'] == ['ticket'];
+local updates = everything { _config+:: { infoSeverity: 'ticket', updatePendingDuration: '3d' } };
+assert [[rule.labels.severity, rule['for']] for rule in rules(updates.prometheusAlerts) if rule.alert == 'WindowsUpdatesPending'] == [['ticket', '3d']];
 
 { result: 'Alert configuration checks passed for %d alerts' % std.length(all) }
