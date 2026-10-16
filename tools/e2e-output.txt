@@ -347,7 +347,7 @@ windows_scheduled_task_state{state="running",task="/Microsoft/Windows/PLA/GAEven
 windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/PLA/GAEvents"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
 # TYPE windows_service_info gauge
-windows_service_info{display_name="Themes",path_name="C:\\Windows\\System32\\svchost.exe -k netsvcs -p",run_as="LocalSystem",service="Themes"} 1
+windows_service_info{delayed_start="false",display_name="Themes",path_name="C:\\Windows\\System32\\svchost.exe -k netsvcs -p",run_as="LocalSystem",service="Themes",trigger_start="false"} 1
 # HELP windows_service_process Process of started service. The value is the creation time of the process as a unix timestamp.
 # TYPE windows_service_process gauge
 # HELP windows_service_start_mode The start mode of the service (StartMode)

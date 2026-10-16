@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
@@ -98,6 +99,40 @@ func serviceMetrics(t assert.TestingT, c *Collector, name string) map[string]flo
 	return metrics
 }
 
+// setStartTrigger gives a service a trigger that starts it once the first IP
+// address becomes available. golang.org/x/sys/windows/svc/mgr can't set triggers.
+func setStartTrigger(t *testing.T, service *mgr.Service) {
+	t.Helper()
+
+	// NETWORK_MANAGER_FIRST_IP_ADDRESS_ARRIVAL_GUID.
+	subtype := windows.GUID{Data1: 0x4f27f2de, Data2: 0x14e2, Data3: 0x430b, Data4: [8]byte{0xa5, 0x49, 0x7c, 0xd4, 0x8c, 0xbc, 0x82, 0x45}}
+
+	// SERVICE_TRIGGER.
+	trigger := struct {
+		triggerType uint32
+		action      uint32
+		subtype     *windows.GUID
+		dataItems   uint32
+		data        uintptr
+	}{
+		triggerType: 3, // SERVICE_TRIGGER_TYPE_IP_ADDRESS_AVAILABILITY
+		action:      1, // SERVICE_TRIGGER_ACTION_SERVICE_START
+		subtype:     &subtype,
+	}
+
+	// SERVICE_TRIGGER_INFO.
+	info := struct {
+		triggers uint32
+		trigger  unsafe.Pointer
+		reserved uintptr
+	}{
+		triggers: 1,
+		trigger:  unsafe.Pointer(&trigger),
+	}
+
+	require.NoError(t, windows.ChangeServiceConfig2(service.Handle, windows.SERVICE_CONFIG_TRIGGER_INFO, (*byte)(unsafe.Pointer(&info))))
+}
+
 // TestCollectorPicksUpConfigChanges creates a service, changes its configuration
 // through the service control manager and checks that the cached configuration
 // is replaced. It needs an elevated process, which the Windows CI runners are.
@@ -148,7 +183,7 @@ func TestCollectorPicksUpConfigChanges(t *testing.T) {
 
 	metrics := serviceMetrics(t, c, name)
 	assert.InDelta(t, 1.0, metrics["windows_service_start_mode{start_mode=manual}"], 0)
-	assert.Contains(t, metrics, `windows_service_info{display_name=before,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem}`)
+	assert.Contains(t, metrics, `windows_service_info{delayed_start=false,display_name=before,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem,trigger_start=false}`)
 
 	_, _, ok := c.configCache.get(name)
 	require.True(t, ok, "the configuration must be cached after a scrape")
@@ -156,16 +191,45 @@ func TestCollectorPicksUpConfigChanges(t *testing.T) {
 	config, err := service.Config()
 	require.NoError(t, err)
 
-	config.StartType = mgr.StartDisabled
+	// The service is never started. It is switched back to manual start below,
+	// so that a killed test doesn't leave an auto-start service behind.
+	config.StartType = mgr.StartAutomatic
+	config.DelayedAutoStart = true
 	config.DisplayName = "after"
 	require.NoError(t, service.UpdateConfig(config))
 
 	// The change notification is delivered asynchronously.
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
 		metrics := serviceMetrics(collect, c, name)
-		assert.InDelta(collect, 1.0, metrics["windows_service_start_mode{start_mode=disabled}"], 0)
+		assert.InDelta(collect, 1.0, metrics["windows_service_start_mode{start_mode=auto}"], 0)
 		assert.InDelta(collect, 0.0, metrics["windows_service_start_mode{start_mode=manual}"], 0)
-		assert.Contains(collect, metrics, `windows_service_info{display_name=after,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem}`)
+		assert.Contains(collect, metrics, `windows_service_info{delayed_start=true,display_name=after,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem,trigger_start=false}`)
+	}, 5*time.Second, 50*time.Millisecond)
+
+	// Windows ignores the delayed auto-start flag of a manual service, and so does the label.
+	config.StartType = mgr.StartManual
+	require.NoError(t, service.UpdateConfig(config))
+
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		metrics := serviceMetrics(collect, c, name)
+		assert.InDelta(collect, 1.0, metrics["windows_service_start_mode{start_mode=manual}"], 0)
+		assert.Contains(collect, metrics, `windows_service_info{delayed_start=false,display_name=after,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem,trigger_start=false}`)
+	}, 5*time.Second, 50*time.Millisecond)
+
+	// Cache the changed configuration, so that the trigger must invalidate it.
+	time.Sleep(configCacheMinKeyAge + 100*time.Millisecond)
+	serviceMetrics(t, c, name)
+
+	_, _, ok = c.configCache.get(name)
+	require.True(t, ok, "the changed configuration must be cached after a scrape")
+
+	// Triggers are stored in the TriggerInfo subkey of the service key. Creating
+	// it changes the last write time of the service key.
+	setStartTrigger(t, service)
+
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		metrics := serviceMetrics(collect, c, name)
+		assert.Contains(collect, metrics, `windows_service_info{delayed_start=false,display_name=after,path_name=C:\Windows\System32\cmd.exe,run_as=LocalSystem,trigger_start=true}`)
 	}, 5*time.Second, 50*time.Millisecond)
 
 	// The service control manager removes the service once the last handle is closed.
@@ -181,4 +245,19 @@ func TestCollectorPicksUpConfigChanges(t *testing.T) {
 		_, _, ok := c.configCache.get(name)
 		assert.False(collect, ok, "the configuration of a deleted service must be dropped")
 	}, 5*time.Second, 50*time.Millisecond)
+}
+
+// TestServiceTriggerInfoLayout checks the mirror of SERVICE_TRIGGER_INFO
+// (winsvc.h): DWORD cTriggers, PSERVICE_TRIGGER pTriggers and PBYTE pReserved.
+// The pointers are pointer-aligned, so cTriggers is padded to a pointer word.
+func TestServiceTriggerInfoLayout(t *testing.T) {
+	t.Parallel()
+
+	var info serviceTriggerInfo
+
+	pointerSize := unsafe.Sizeof(uintptr(0))
+
+	assert.Equal(t, uintptr(0), unsafe.Offsetof(info.triggers))
+	assert.Equal(t, pointerSize, unsafe.Offsetof(info.trigger))
+	assert.Equal(t, 3*pointerSize, unsafe.Sizeof(info))
 }
