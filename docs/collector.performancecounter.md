@@ -256,6 +256,9 @@ windows_performancecounter_processor_information_processor_time_total{core="0,2"
 windows_performancecounter_processor_information_processor_time_total{core="0,2",state="privileged"} 27029.34375
 windows_performancecounter_processor_information_processor_time_total{core="0,2",state="user"} 15722.203125
 ```
+
+The memory gauge reads `0` here because the output comes from a single scrape: a formatted rate such as
+`Cache Faults/sec` needs two samples, so it reports a value from the second scrape on.
 > [!NOTE]
 > If you are using a configuration file, the value must be keep as string.
 
