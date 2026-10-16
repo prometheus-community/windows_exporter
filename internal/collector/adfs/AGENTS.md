@@ -21,10 +21,9 @@ one.
   `PERF_AVERAGE_TIMER` (`AverageTimer32`). The raw value is the summed
   duration in ticks of the counter's time base (`PdhGetCounterTimeBase`,
   10 MHz on the test host, same as `QueryPerformanceFrequency`); the base
-  (`,secondvalue`) is the number of operations. `pdh.CounterTypeRaw` does not
-  convert this type; `internal/pdh` reads its time base, and the collector
-  divides the raw value by `pdh.Collector.Frequency` to get seconds. Do not
-  hardcode a scale factor.
+  (`,secondvalue`) is the number of operations. `internal/pdh` divides the
+  raw value by the time base, so the collector gets seconds. Do not scale it
+  again.
 - Sample after about one hour: `Average Config Database Query Time` raw
   11521176, base 306, which is 1.152 s in total, 3.8 ms per query.
   `Federation Metadata Requests` was 1, all authentication counters 0.

@@ -17,8 +17,8 @@ multi-instance. These notes were recorded on a Windows Server 2025
   value is the cumulative busy time in 100 ns ticks.
 - `internal/pdh` converts the `PERF_PRECISION_100NS_TIMER` counters
   (`% Disk Read Time`, `% Disk Write Time`, `% Idle Time`) to seconds.
-  `PERF_AVERAGE_TIMER` values arrive in ticks of the 10 MHz counter time base
-  and need dividing by 1e7 (`pdh.TicksPerSecond`).
+  It also converts the `PERF_AVERAGE_TIMER` values (`Avg. Disk sec/*`) to
+  seconds with the counter time base, which was 10 MHz on JOK-PC.
 - The second raw value of `% Idle Time` is the sample time as a UTC FILETIME;
   PDH divides by its delta. Even with that divisor the idle delta of a busy
   disk exceeded the elapsed time by up to 43% between 1 s samples on a

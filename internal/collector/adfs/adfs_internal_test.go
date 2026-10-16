@@ -25,100 +25,51 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCollectDatabaseQueryTimes checks that the raw ticks of the database
-// query time counters are converted to seconds with the counter's time base,
-// and that the query counts are exported.
+// TestCollectDatabaseQueryTimes checks that the database query times, which
+// internal/pdh converts to seconds, and the query counts are exported.
 func TestCollectDatabaseQueryTimes(t *testing.T) {
 	t.Parallel()
 
 	data := perfDataCounterValues{
-		ArtifactDBQueryTimeTicks: 2_500_000,
-		ArtifactDBQueries:        5,
-		ConfigDBQueryTimeTicks:   11_521_176,
-		ConfigDBQueries:          306,
+		ArtifactDBQueryTimeSeconds: 0.25,
+		ArtifactDBQueries:          5,
+		ConfigDBQueryTimeSeconds:   1.1521176,
+		ConfigDBQueries:            306,
 	}
 
-	for _, tc := range []struct {
-		name                string
-		artifactDBFrequency int64
-		configDBFrequency   int64
-		expected            map[string]float64
-		absent              []string
-	}{
-		{
-			name:                "10 MHz",
-			artifactDBFrequency: 10_000_000,
-			configDBFrequency:   10_000_000,
-			expected: map[string]float64{
-				"windows_adfs_db_artifact_query_time_seconds_total": 0.25,
-				"windows_adfs_db_artifact_queries_total":            5,
-				"windows_adfs_db_config_query_time_seconds_total":   1.1521176,
-				"windows_adfs_db_config_queries_total":              306,
-			},
-		},
-		{
-			name:                "other frequency",
-			artifactDBFrequency: 2_500_000,
-			configDBFrequency:   3_000_000,
-			expected: map[string]float64{
-				"windows_adfs_db_artifact_query_time_seconds_total": 1,
-				"windows_adfs_db_config_query_time_seconds_total":   3.840392,
-			},
-		},
-		{
-			name: "unknown frequency",
-			expected: map[string]float64{
-				"windows_adfs_db_artifact_queries_total": 5,
-				"windows_adfs_db_config_queries_total":   306,
-			},
-			absent: []string{
-				"windows_adfs_db_artifact_query_time_seconds_total",
-				"windows_adfs_db_config_query_time_seconds_total",
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	expected := map[string]float64{
+		"windows_adfs_db_artifact_query_time_seconds_total": 0.25,
+		"windows_adfs_db_artifact_queries_total":            5,
+		"windows_adfs_db_config_query_time_seconds_total":   1.1521176,
+		"windows_adfs_db_config_queries_total":              306,
+	}
 
-			c := New(nil)
-			c.buildDescriptors()
+	c := New(nil)
+	c.buildDescriptors()
 
-			registry := prometheus.NewPedanticRegistry()
-			require.NoError(t, registry.Register(metricCollector{
-				collector:           c,
-				data:                data,
-				artifactDBFrequency: tc.artifactDBFrequency,
-				configDBFrequency:   tc.configDBFrequency,
-			}))
+	registry := prometheus.NewPedanticRegistry()
+	require.NoError(t, registry.Register(metricCollector{collector: c, data: data}))
 
-			families, err := registry.Gather()
-			require.NoError(t, err)
+	families, err := registry.Gather()
+	require.NoError(t, err)
 
-			byName := make(map[string]*dto.MetricFamily, len(families))
-			for _, family := range families {
-				byName[family.GetName()] = family
-			}
+	byName := make(map[string]*dto.MetricFamily, len(families))
+	for _, family := range families {
+		byName[family.GetName()] = family
+	}
 
-			for name, value := range tc.expected {
-				family, ok := byName[name]
-				require.True(t, ok, "missing metric %s", name)
-				require.Equal(t, dto.MetricType_COUNTER, family.GetType(), name)
-				require.Len(t, family.GetMetric(), 1, name)
-				require.InDelta(t, value, family.GetMetric()[0].GetCounter().GetValue(), 1e-9, name)
-			}
-
-			for _, name := range tc.absent {
-				require.NotContains(t, byName, name)
-			}
-		})
+	for name, value := range expected {
+		family, ok := byName[name]
+		require.True(t, ok, "missing metric %s", name)
+		require.Equal(t, dto.MetricType_COUNTER, family.GetType(), name)
+		require.Len(t, family.GetMetric(), 1, name)
+		require.InDelta(t, value, family.GetMetric()[0].GetCounter().GetValue(), 0, name)
 	}
 }
 
 type metricCollector struct {
-	collector           *Collector
-	data                perfDataCounterValues
-	artifactDBFrequency int64
-	configDBFrequency   int64
+	collector *Collector
+	data      perfDataCounterValues
 }
 
 func (c metricCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -126,5 +77,5 @@ func (c metricCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c metricCollector) Collect(ch chan<- prometheus.Metric) {
-	c.collector.collectMetrics(ch, c.data, c.artifactDBFrequency, c.configDBFrequency)
+	c.collector.collectMetrics(ch, c.data)
 }

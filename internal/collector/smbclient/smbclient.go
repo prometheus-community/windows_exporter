@@ -291,48 +291,48 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 		c.extendCounters32(&data)
 
-		// Request time spent on queue. Convert from ticks to seconds.
+		// Request time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgDataQueueLength/pdh.TicksPerSecond,
+			data.AvgDataQueueLength,
 			serverValue, shareValue,
 		)
 
-		// Read time spent on queue. Convert from ticks to seconds.
+		// Read time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgReadQueueLength/pdh.TicksPerSecond,
+			data.AvgReadQueueLength,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerRead/pdh.TicksPerSecond,
+			data.AvgSecPerRead,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerWrite/pdh.TicksPerSecond,
+			data.AvgSecPerWrite,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			data.AvgSecPerDataRequest/pdh.TicksPerSecond,
+			data.AvgSecPerDataRequest,
 			serverValue, shareValue,
 		)
 
-		// Write time spent on queue. Convert from  ticks to seconds.
+		// Write time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgWriteQueueLength/pdh.TicksPerSecond,
+			data.AvgWriteQueueLength,
 			serverValue, shareValue,
 		)
 

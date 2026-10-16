@@ -385,9 +385,10 @@ func TestSetRawValueElapsedTime(t *testing.T) {
 	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 2}))
 }
 
-// TestSetRawValue100nsTimers checks that every 100 ns timer type is exported in
-// seconds. 115960642 * (1 / 1e7) is 11.596064199999999, so the test also
-// catches a multiplication by the reciprocal.
+// TestSetRawValue100nsTimers checks that every 100 ns timer type, and the
+// 100 ns queue length type, is exported in seconds. 115960642 * (1 / 1e7) is
+// 11.596064199999999, so the test also catches a multiplication by the
+// reciprocal.
 func TestSetRawValue100nsTimers(t *testing.T) {
 	t.Parallel()
 
@@ -399,6 +400,7 @@ func TestSetRawValue100nsTimers(t *testing.T) {
 		PERF_100NSEC_MULTI_TIMER,
 		PERF_100NSEC_MULTI_TIMER_INV,
 		PERF_PRECISION_100NS_TIMER,
+		PERF_COUNTER_100NS_QUEUELEN_TYPE,
 	} {
 		var values rowSetValues
 
@@ -443,17 +445,15 @@ func TestCollectLoadsMissingTimeBase(t *testing.T) {
 	require.Positive(t, dst[0].SystemUpTime)
 }
 
-// TestFrequencyOfAverageTimer checks that the time base of a raw average timer
-// is available, also when it was missing at startup, and that other counters
-// have none.
-func TestFrequencyOfAverageTimer(t *testing.T) {
+// TestAverageTimerInSeconds checks that the raw value of an average timer is
+// converted to seconds with the counter's time base, also when the time base
+// was missing at startup, and that the second value keeps the operation count.
+func TestAverageTimerInSeconds(t *testing.T) {
 	t.Parallel()
 
 	type physicalDisk struct {
-		AvgDiskSecPerRead      float64 `perfdata:"Avg. Disk sec/Read"`
-		AvgDiskSecPerReadBase  float64 `perfdata:"Avg. Disk sec/Read,secondvalue"`
-		DiskReadsPerSec        float64 `perfdata:"Disk Reads/sec"`
-		CurrentDiskQueueLength float64 `perfdata:"Current Disk Queue Length"`
+		AvgDiskSecPerRead     float64 `perfdata:"Avg. Disk sec/Read"`
+		AvgDiskSecPerReadBase float64 `perfdata:"Avg. Disk sec/Read,secondvalue"`
 	}
 
 	collector, err := NewCollector[physicalDisk](slog.New(slog.DiscardHandler), CounterTypeRaw, "PhysicalDisk", []string{"_Total"})
@@ -461,36 +461,45 @@ func TestFrequencyOfAverageTimer(t *testing.T) {
 
 	t.Cleanup(collector.Close)
 
-	frequency, ok := collector.Frequency("Avg. Disk sec/Read")
-	require.True(t, ok)
-	require.Positive(t, frequency)
-
-	for _, name := range []string{"Disk Reads/sec", "Current Disk Queue Length", "unknown"} {
-		_, ok = collector.Frequency(name)
-		require.False(t, ok, name)
-	}
-
-	// As if GetCounterTimeBase failed at startup.
 	idx := slices.IndexFunc(collector.counters, func(counter Counter) bool { return counter.Name == "Avg. Disk sec/Read" })
 	require.NotEqual(t, -1, idx)
 
-	collector.counters[idx].Frequency = 0
+	frequency := collector.counters[idx].Frequency
+	require.Positive(t, frequency)
 
-	_, ok = collector.Frequency("Avg. Disk sec/Read")
-	require.False(t, ok)
+	// As if GetCounterTimeBase failed at startup.
+	collector.counters[idx].Frequency = 0
 
 	var dst []physicalDisk
 
 	require.NoError(t, collector.Collect(&dst))
+	require.Equal(t, frequency, collector.counters[idx].Frequency)
+	require.Len(t, dst, 1)
+	require.GreaterOrEqual(t, dst[0].AvgDiskSecPerRead, 0.0)
+}
 
-	reloaded, ok := collector.Frequency("Avg. Disk sec/Read")
-	require.True(t, ok)
-	require.Equal(t, frequency, reloaded)
+// TestSetRawValueAverageTimer checks the conversion of an average timer and
+// that a counter without a time base has no valid value.
+func TestSetRawValueAverageTimer(t *testing.T) {
+	t.Parallel()
 
-	var nilCollector *Collector[physicalDisk]
+	c := newRowSetTestCollector(false)
 
-	_, ok = nilCollector.Frequency("Avg. Disk sec/Read")
-	require.False(t, ok)
+	var values rowSetValues
+
+	counter := &Counter{
+		Type:                  PERF_AVERAGE_TIMER,
+		Frequency:             2_500_000,
+		FieldIndexValue:       int(unsafe.Offsetof(values.B)),
+		FieldIndexSecondValue: int(unsafe.Offsetof(values.BSecond)),
+	}
+
+	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 5_000_000, SecondValue: 7}))
+	require.InDelta(t, 2.0, values.B, 0)
+	require.InDelta(t, 7.0, values.BSecond, 0)
+
+	counter.Frequency = 0
+	require.False(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 1}))
 }
 
 func TestMetricTypeForCounterType(t *testing.T) {
@@ -500,6 +509,8 @@ func TestMetricTypeForCounterType(t *testing.T) {
 	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_COUNTER_BULK_COUNT))
 	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_100NSEC_MULTI_TIMER))
 	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_100NSEC_MULTI_TIMER_INV))
+	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_AVERAGE_TIMER))
+	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_COUNTER_100NS_QUEUELEN_TYPE))
 	require.Equal(t, prometheus.GaugeValue, metricType(CounterTypeRaw, 0xFFFFFFFF))
 	require.Equal(t, prometheus.GaugeValue, metricType(CounterTypeFormatted, PERF_COUNTER_BULK_COUNT))
 }
