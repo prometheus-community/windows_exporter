@@ -47,7 +47,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Pushes to main and the release branches, releases and manual
+          # Pushes to main, the release branches and tags, and manual
           # runs always test, so a gap in the filter below cannot let a
           # regression reach a branch that ships.
           if [[ "$EVENT_NAME" != "pull_request" || -z "$BASE_SHA" ]]; then
@@ -88,6 +88,18 @@ jobs:
         with:
           persist-credentials: 'false'
           fetch-depth: '0'
+
+      # A published release is immutable. Rebuilding its tag would push images
+      # whose executable differs from the release assets, so stop before that.
+      - name: Check that the release is not published
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null)" && [[ "$is_draft" == "false" ]]; then
+            echo "::error::Release $GITHUB_REF_NAME is already published"
+            exit 1
+          fi
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -146,6 +158,10 @@ jobs:
           # renovate: github=goreleaser/goreleaser
           version: v2.18.3
           args: build --clean
+        env:
+          # Several tags can point at one commit, such as an rc on the last
+          # beta. Build the version of the tag this run is for.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
       - name: Verify Go overlay
         run: go run ./tools/go-overlay verify dist/windows_exporter-amd64.exe dist/windows_exporter-arm64.exe
@@ -154,7 +170,11 @@ jobs:
         run: |
           mkdir -p output
 
-          version="$(git describe --tags --always)"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            version="$(git describe --tags --always)"
+          fi
           version="${version#v}"
           version="${version//+/_}"
           printf '%s\n' "$version" | tee output/VERSION
@@ -479,13 +499,16 @@ jobs:
 
           # A re-run replaces the assets of its own draft. A published release
           # is immutable and must not be touched.
-          if is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null)"; then
+          if is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>&1)"; then
             if [[ "$is_draft" != "true" ]]; then
               echo "::error::Release $GITHUB_REF_NAME is already published"
               exit 1
             fi
             gh release upload "$GITHUB_REF_NAME" --clobber "${assets[@]}"
             exit 0
+          elif [[ "$is_draft" != *"release not found"* ]]; then
+            echo "::error::Cannot look up release $GITHUB_REF_NAME: $is_draft"
+            exit 1
           fi
 
           args=(--draft --verify-tag --generate-notes --title "$GITHUB_REF_NAME")
@@ -1900,6 +1923,7 @@ jobs:
       - build
       - package
       - docker
+      - publish
       - windows-test
       - lint
       - super-linter

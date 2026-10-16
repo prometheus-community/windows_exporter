@@ -49,7 +49,8 @@ their runtime behavior.
   container images and creates a draft release with the same signed
   executables; a maintainer publishes it. Releases are immutable once
   published, so never upload assets after publishing, and never let a second
-  run build the same tag.
+  run build the same tag. Start releases only with that workflow or a tag push,
+  never by creating a release with a new tag in the GitHub UI.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
