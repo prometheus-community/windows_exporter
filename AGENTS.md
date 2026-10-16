@@ -140,9 +140,11 @@ exercised a live Windows role.
   `Commit` or `Reset` in collectors. A direct `Collect` call, as in most tests,
   runs without the caches; use `testutils.Collect` or `scrapecache.Begin` to
   test the cached path.
-- Release resources after partial initialization and on error paths. A non-nil
-  PDH collector returned with an error still belongs to the caller and must be
-  closed. Sub-collector cleanup closures must read the initialized field when
+- Release resources after partial initialization and on error paths. PDH
+  constructors release what they opened and return a nil collector or query
+  with an error, so close only what was returned without one; `Close` is
+  nil-safe (see [`internal/pdh/AGENTS.md`](internal/pdh/AGENTS.md)).
+  Sub-collector cleanup closures must read the initialized field when
   called; method values captured before initialization can retain nil receivers.
   Stop background workers before releasing the resources they use, and recover
   panics inside the goroutine that can panic.
