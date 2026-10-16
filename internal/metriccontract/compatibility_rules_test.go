@@ -27,17 +27,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// compatibilityRulesFile holds recording rules that publish the metrics of
-// 0.32 under their 0.31 names and labels. It is generated from the rename
-// tables of UPGRADE.md; set UPDATE_COMPATIBILITY_RULES=1 to regenerate it.
-const compatibilityRulesFile = "docs/example-0.32-compatibility-rules-new-to-old.yml"
+const (
+	// upgradeGuideFile is the upgrade guide of 0.32. Its rename and instance
+	// label tables are the source of the compatibility rules.
+	upgradeGuideFile = "docs/upgrade/0.32.md"
+	// compatibilityRulesFile holds recording rules that publish the metrics
+	// of 0.32 under their 0.31 names and labels. Set
+	// UPDATE_COMPATIBILITY_RULES=1 to regenerate it.
+	compatibilityRulesFile = "docs/upgrade/0.32.prom"
+)
 
-// renameRow matches a row of a rename table in UPGRADE.md: the 0.31 name, the
-// 0.32 name and a note.
+// renameRow matches a row of a rename table in the upgrade guide: the 0.31
+// name, the 0.32 name and a note.
 var renameRow = regexp.MustCompile("^\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*(.*?)\\s*\\|\\s*$")
 
-// labelRow matches a row of the instance label table in UPGRADE.md.
+// labelRow matches a row of the instance label table in the upgrade guide.
 var labelRow = regexp.MustCompile("^\\|\\s*`([a-z_]+)`\\s*\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|\\s*$")
+
+// changedTypeRow matches a row of the table of metrics that changed from
+// counter to gauge and kept their name.
+var changedTypeRow = regexp.MustCompile(`^\|.*\|\s*counter\s*\|\s*gauge\s*\|\s*$`)
 
 var backticked = regexp.MustCompile("`([^`]+)`")
 
@@ -118,12 +127,12 @@ type compatibilityRule struct {
 }
 
 // TestCompatibilityRules checks that the compatibility recording rules are
-// generated from the current UPGRADE.md, read only metrics the exporter
+// generated from the current upgrade guide, read only metrics the exporter
 // emits and record no name it emits itself.
 func TestCompatibilityRules(t *testing.T) {
 	t.Parallel()
 
-	upgrade, err := os.ReadFile(filepath.Join(repoRoot, "UPGRADE.md"))
+	upgrade, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(upgradeGuideFile)))
 	require.NoError(t, err)
 
 	rules := compatibilityRules(t, strings.Split(strings.ReplaceAll(string(upgrade), "\r\n", "\n"), "\n"))
@@ -139,7 +148,7 @@ func TestCompatibilityRules(t *testing.T) {
 	committed, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, generated, strings.ReplaceAll(string(committed), "\r\n", "\n"),
-		"%s is out of date with UPGRADE.md. Run: UPDATE_COMPATIBILITY_RULES=1 go test ./internal/metriccontract/", compatibilityRulesFile)
+		"%s is out of date with %s. Run: UPDATE_COMPATIBILITY_RULES=1 go test ./internal/metriccontract/", compatibilityRulesFile, upgradeGuideFile)
 
 	emitted := emittedMetricPatterns(t)
 	matcher := regexp.MustCompile("^(?:" + strings.Join(emitted, "|") + ")$")
@@ -161,14 +170,33 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 	labels := labelRenames(t, upgrade)
 	rules := map[string][]compatibilityRule{}
 	seen := map[string]bool{}
+	// stored holds the _total names that OpenMetrics added to 0.31 counters.
+	// No 0.31 metric may have such a name, or its rule would be ambiguous.
+	stored := map[string]bool{}
 
 	for _, line := range upgrade {
+		if changedTypeRow.MatchString(line) {
+			// A counter that became a gauge keeps its name, but loses the
+			// _total suffix that OpenMetrics added to it.
+			for _, name := range metricNames(t, line) {
+				if storedName := name + "_total"; !strings.HasSuffix(name, "_total") && !stored[storedName] {
+					require.False(t, seen[storedName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", storedName)
+					stored[storedName] = true
+					collector := collectorOf(t, name)
+					rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: restoreLabels(labels, name, name)})
+				}
+			}
+
+			continue
+		}
+
 		m := renameRow.FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}
 
 		oldName, newName, note := m[1], m[2], strings.ToLower(m[3])
+		require.False(t, stored[oldName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", oldName)
 
 		if seen[oldName] || slices.ContainsFunc(unconvertible, func(s string) bool { return strings.Contains(note, s) }) {
 			continue
@@ -183,29 +211,92 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 
 		seen[oldName] = true
 
-		expr := fmt.Sprintf(conversions[i].expr, newName)
-
-		var dropped []string
-
-		if rename, ok := labelRenameOf(labels, newName); ok {
-			for j, oldLabel := range rename.old {
-				expr = fmt.Sprintf(`label_replace(%s, "%s", "$1", "%s", "(.+)")`, expr, oldLabel, rename.new[j])
-				dropped = append(dropped, rename.new[j])
-			}
-		}
-
-		if len(dropped) > 0 {
-			expr = fmt.Sprintf("max without (%s) (%s)", strings.Join(dropped, ", "), expr)
-		}
-
+		expr := restoreLabels(labels, newName, fmt.Sprintf(conversions[i].expr, newName))
 		collector := collectorOf(t, newName)
 		rules[collector] = append(rules[collector], compatibilityRule{record: oldName, expr: expr})
+
+		// Prometheus scrapes OpenMetrics by default, which adds _total to
+		// counters, so 0.31 counters are stored under that name as well.
+		if storedName := oldName + "_total"; wasCounter(oldName, newName, note) && storedName != newName && !stored[storedName] {
+			require.False(t, seen[storedName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", storedName)
+			stored[storedName] = true
+			rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: expr})
+		}
 	}
 
 	return rules
 }
 
-// labelRenames returns the instance label renames of UPGRADE.md. A label
+// restoreLabels wraps the expression of the metric name in label_replace
+// calls that copy its instance labels to their 0.31 names and drops the 0.32
+// labels.
+func restoreLabels(renames []labelRename, name, expr string) string {
+	rename, ok := labelRenameOf(renames, name)
+	if !ok || len(rename.old) == 0 {
+		return expr
+	}
+
+	for j, oldLabel := range rename.old {
+		expr = fmt.Sprintf(`label_replace(%s, "%s", "$1", "%s", "(.+)")`, expr, oldLabel, rename.new[j])
+	}
+
+	return fmt.Sprintf("max without (%s) (%s)", strings.Join(rename.new, ", "), expr)
+}
+
+// metricNames returns the metric names in the first column of a table row.
+// A name ending in * stands for the metrics with that prefix in the collector
+// documentation.
+func metricNames(t *testing.T, line string) []string {
+	t.Helper()
+
+	first, _, _ := strings.Cut(strings.TrimPrefix(line, "|"), "|")
+
+	var names []string
+
+	for _, m := range backticked.FindAllStringSubmatch(first, -1) {
+		prefix, wildcard := strings.CutSuffix(m[1], "*")
+		if !wildcard {
+			names = append(names, m[1])
+
+			continue
+		}
+
+		doc, err := os.ReadFile(filepath.Join(repoRoot, "docs", "collector."+collectorOf(t, prefix)+".md"))
+		require.NoError(t, err)
+
+		// Only the first column of the metric tables names metrics.
+		rows := regexp.MustCompile("(?m)^\\|\\s*`("+regexp.QuoteMeta(prefix)+"[a-z0-9_]+)`").FindAllStringSubmatch(string(doc), -1)
+		require.NotEmpty(t, rows, "no metrics match %s", m[1])
+
+		for _, row := range rows {
+			names = append(names, row[1])
+		}
+
+		slices.Sort(names)
+		names = slices.Compact(names)
+	}
+
+	return names
+}
+
+// wasCounter reports whether the 0.31 metric was a counter without a _total
+// suffix, whose name OpenMetrics extends with _total. The note says when a
+// rename changed the type; otherwise the 0.32 name tells it, as 0.32 counters
+// end in _total and gauges never do.
+func wasCounter(oldName, newName, note string) bool {
+	switch {
+	case strings.HasSuffix(oldName, "_total"):
+		return false
+	case strings.Contains(note, "now a gauge"):
+		return true
+	case strings.Contains(note, "now a counter"), strings.Contains(note, "was a running count"):
+		return false
+	default:
+		return strings.HasSuffix(newName, "_total")
+	}
+}
+
+// labelRenames returns the instance label renames of the upgrade guide. A label
 // named instance in 0.31 is restored as exported_instance, the name under
 // which Prometheus stored it next to the target label.
 func labelRenames(t *testing.T, upgrade []string) []labelRename {
@@ -260,7 +351,7 @@ func labelRenames(t *testing.T, upgrade []string) []labelRename {
 		})
 	}
 
-	require.NotEmpty(t, renames, "the instance label table of UPGRADE.md was not found")
+	require.NotEmpty(t, renames, "the instance label table of %s was not found", upgradeGuideFile)
 
 	return renames
 }
@@ -268,12 +359,14 @@ func labelRenames(t *testing.T, upgrade []string) []labelRename {
 func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 	var b strings.Builder
 
-	b.WriteString(`# Recording rules that publish the metrics of windows_exporter 0.32 under
+	fmt.Fprintf(&b, `# Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
-# have not been migrated yet. Load them into Prometheus next to the scrape of
-# the new exporter and remove them once the queries use the new names.
+# have not been migrated yet. 0.31 counters are also recorded with the _total
+# suffix that Prometheus adds when it scrapes OpenMetrics. Load the rules into
+# Prometheus next to the scrape of the new exporter and remove them once the
+# queries use the new names.
 #
-# Generated from UPGRADE.md by internal/metriccontract; do not edit.
+# Generated from %s by internal/metriccontract; do not edit.
 #
 # Not covered:
 # - Metrics that only renamed their instance label, e.g. windows_service_*.
@@ -282,7 +375,7 @@ func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 #   metrics, split metrics and ratios that 0.31 computed wrongly.
 # - Series that 0.32 leaves out, e.g. mscluster settings that are zero.
 groups:
-`)
+`, upgradeGuideFile)
 
 	collectors := make([]string, 0, len(rules))
 	for collector := range rules {
