@@ -1,8 +1,15 @@
 name: CI
 
 # Pull requests run the Windows tests only when Go sources, modules, test data,
-# tools/, the configuration examples or this workflow change. Pushes, tags and
-# releases always run them.
+# tools/, the configuration examples or this workflow change. Pushes always run
+# them.
+#
+# A release is built by exactly one run: the push of its tag, or the dispatch
+# on its tag from the Create tag workflow. That run builds and signs the
+# binaries once, pushes the container images and creates a draft release with
+# the same executables, so the images and the release assets match. The draft
+# is published by hand; with immutable releases, its assets and tag are locked
+# from then on.
 on:
   push:
     branches:
@@ -15,9 +22,6 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
-  release:
-    types:
-      - published
 
 permissions: {}
 
@@ -43,7 +47,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Pushes to main and the release branches, tags, releases and manual
+          # Pushes to main, the release branches and tags, and manual
           # runs always test, so a gap in the filter below cannot let a
           # regression reach a branch that ships.
           if [[ "$EVENT_NAME" != "pull_request" || -z "$BASE_SHA" ]]; then
@@ -84,6 +88,18 @@ jobs:
         with:
           persist-credentials: 'false'
           fetch-depth: '0'
+
+      # A published release is immutable. Rebuilding its tag would push images
+      # whose executable differs from the release assets, so stop before that.
+      - name: Check that the release is not published
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null)" && [[ "$is_draft" == "false" ]]; then
+            echo "::error::Release $GITHUB_REF_NAME is already published"
+            exit 1
+          fi
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -142,6 +158,10 @@ jobs:
           # renovate: github=goreleaser/goreleaser
           version: v2.18.3
           args: build --clean
+        env:
+          # Several tags can point at one commit, such as an rc on the last
+          # beta. Build the version of the tag this run is for.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
       - name: Verify Go overlay
         run: go run ./tools/go-overlay verify dist/windows_exporter-amd64.exe dist/windows_exporter-arm64.exe
@@ -150,7 +170,11 @@ jobs:
         run: |
           mkdir -p output
 
-          version="$(git describe --tags --always)"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            version="$(git describe --tags --always)"
+          fi
           version="${version#v}"
           version="${version//+/_}"
           printf '%s\n' "$version" | tee output/VERSION
@@ -449,15 +473,14 @@ jobs:
           annotations: ${{ steps.meta.outputs.labels }}
 
   publish:
-    # Publishing a release fires both a tag push and a release:published run for
-    # the same tag. Upload only from the release run: it is the only one where
-    # the release is guaranteed to exist, and uploading from both runs would
-    # race on the same asset names.
-    if: github.repository == 'prometheus-community/windows_exporter' && github.event_name == 'release'
+    # Draft the release only once the images are pushed, so a published release
+    # always has them.
+    if: github.repository == 'prometheus-community/windows_exporter' && startsWith(github.ref, 'refs/tags/') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-26.04
     needs:
       - package
       - windows-test
+      - docker
     permissions:
       contents: write
     steps:
@@ -466,16 +489,33 @@ jobs:
         with:
           name: windows_exporter_binaries
 
-      - name: Publish Artifacts
+      - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # The job runs without a checkout, so gh cannot infer the repository.
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release upload "$GITHUB_REF_NAME" \
-            windows_exporter-*.exe \
-            windows_exporter-*.msi \
-            sha256sums.txt
+          assets=(windows_exporter-*.exe windows_exporter-*.msi sha256sums.txt)
+
+          # A re-run replaces the assets of its own draft. A published release
+          # is immutable and must not be touched.
+          if is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>&1)"; then
+            if [[ "$is_draft" != "true" ]]; then
+              echo "::error::Release $GITHUB_REF_NAME is already published"
+              exit 1
+            fi
+            gh release upload "$GITHUB_REF_NAME" --clobber "${assets[@]}"
+            exit 0
+          elif [[ "$is_draft" != *"release not found"* ]]; then
+            echo "::error::Cannot look up release $GITHUB_REF_NAME: $is_draft"
+            exit 1
+          fi
+
+          args=(--draft --verify-tag --generate-notes --title "$GITHUB_REF_NAME")
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" "${args[@]}" "${assets[@]}"
 
   windows-test:
     name: Windows tests (${{ matrix.os }})
@@ -1831,9 +1871,8 @@ jobs:
 
   super-linter:
     name: Super Linter
-    # Super Linter cannot derive the commit range VALIDATE_ALL_CODEBASE=false
-    # needs from release events; the tag push run already lints the same commit.
-    if: github.event_name != 'release'
+    # The push run for the branch a tag is cut from already linted the commit.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -1884,6 +1923,7 @@ jobs:
       - build
       - package
       - docker
+      - publish
       - windows-test
       - lint
       - super-linter

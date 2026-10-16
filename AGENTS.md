@@ -42,6 +42,15 @@ their runtime behavior.
   for `alpha.N`/`beta.N`, 100+N for `rc.N` and 1000 for the release, so MDM
   tools that compare file versions update from one beta to the next and to the
   final release. Windows Installer itself ignores the fourth field.
+- A release is built once, by the CI run for its tag: a tag push, or the
+  dispatch that the Create tag workflow
+  ([`tag.yml`](.github/workflows/tag.yml)) starts after creating the tag with
+  `GITHUB_TOKEN`, which cannot trigger the push run itself. That run pushes the
+  container images and creates a draft release with the same signed
+  executables; a maintainer publishes it. Releases are immutable once
+  published, so never upload assets after publishing, and never let a second
+  run build the same tag. Start releases only with that workflow or a tag push,
+  never by creating a release with a new tag in the GitHub UI.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
