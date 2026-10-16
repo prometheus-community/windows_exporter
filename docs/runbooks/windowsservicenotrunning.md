@@ -13,7 +13,7 @@ included; the 15 minute duration covers their later start after a reboot.
 ## Impact
 
 A service that should always run is stopped, so the function it provides is
-unavailable, for example printing, time synchronization, a web site or a
+unavailable, for example printing, time synchronization, a site or a
 database instance. Windows restarts a crashed service only when its recovery
 options say so.
 
