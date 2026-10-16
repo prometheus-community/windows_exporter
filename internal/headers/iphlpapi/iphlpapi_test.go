@@ -54,3 +54,11 @@ func TestGetOwnerPIDOfTCPPort(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, os.Getpid(), pid)
 }
+
+func BenchmarkGetTCPConnectionStates(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		_, _ = iphlpapi.GetTCPConnectionStates(windows.AF_INET)
+	}
+}

@@ -141,3 +141,11 @@ func TestEnumJobs(t *testing.T) {
 	require.NotEqual(t, -1, idx)
 	require.NotZero(t, printers[idx].Jobs)
 }
+
+func BenchmarkEnumPrinters(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		_, _ = EnumPrinters(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS)
+	}
+}
