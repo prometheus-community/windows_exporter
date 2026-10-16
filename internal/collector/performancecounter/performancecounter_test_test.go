@@ -440,3 +440,57 @@ func TestCollectorMetricTypePerCounter(t *testing.T) {
 		require.Equal(t, dto.MetricType_COUNTER, types["windows_performancecounter_process_io_read_bytes_sec"])
 	}
 }
+
+// TestCollectorMultiplier checks that the multiplier scales the exported value.
+// Commit Limit only changes when a page file is resized, so both objects read
+// the same value.
+func TestCollectorMultiplier(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{
+			{
+				Name:     "bytes",
+				Object:   "Memory",
+				Counters: []performancecounter.Counter{{Name: "Commit Limit", Metric: "windows_test_commit_limit_bytes"}},
+			},
+			{
+				Name:     "kibibytes",
+				Object:   "Memory",
+				Counters: []performancecounter.Counter{{Name: "Commit Limit", Metric: "windows_test_commit_limit_kibibytes", Multiplier: new(1.0 / 1024)}},
+			},
+		},
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectorAdapter{*c})
+
+	families, err := registry.Gather()
+	require.NoError(t, err)
+
+	values := make(map[string]float64, len(families))
+	for _, family := range families {
+		values[family.GetName()] = family.GetMetric()[0].GetGauge().GetValue()
+	}
+
+	require.Positive(t, values["windows_test_commit_limit_bytes"])
+	require.Equal(t, values["windows_test_commit_limit_bytes"]/1024, values["windows_test_commit_limit_kibibytes"]) //nolint:testifylint // The result must be exact.
+}
+
+func TestBuildInvalidMultiplier(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{{
+			Name:     "memory",
+			Object:   "Memory",
+			Counters: []performancecounter.Counter{{Name: "Commit Limit", Multiplier: new(-1.0)}},
+		}},
+	})
+
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	require.ErrorContains(t, c.Build(slog.New(slog.DiscardHandler), nil), "object memory: counter Commit Limit: multiplier must be a positive finite number, got -1")
+}
