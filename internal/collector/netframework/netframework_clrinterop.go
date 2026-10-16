@@ -30,19 +30,19 @@ func (c *Collector) describeClrInterop() {
 	c.numberOfCCWs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_com_callable_wrappers_total"),
 		"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfMarshalling = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_interop_marshalling_total"),
 		"Displays the total number of times arguments and return values have been marshaled from managed to unmanaged code, and vice versa, since the application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfStubs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_interop_stubs_created_total"),
 		"Displays the current number of stubs created by the common language runtime. Stubs are responsible for marshaling arguments and return values from managed to unmanaged code, and vice versa, during a COM interop call or a platform invoke call.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -73,18 +73,15 @@ func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, scrape *label
 		return fmt.Errorf("failed to collect .NET CLR Interop: %w", err)
 	}
 
-	suffixDuplicateProcesses(dst)
+	dst, processIDs := prepareProcesses(c, dst)
 
-	for _, process := range dst {
-		if process.Name == "_Global_" {
-			continue
-		}
-
+	for i, process := range dst {
 		ch <- scrape.MustNewConstMetric(
 			c.numberOfCCWs,
 			prometheus.CounterValue,
 			float64(process.NumberofCCWs),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -92,6 +89,7 @@ func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.Numberofmarshalling),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -99,6 +97,7 @@ func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.NumberofStubs),
 			process.Name,
+			processIDs[i],
 		)
 	}
 

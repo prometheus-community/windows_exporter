@@ -30,25 +30,25 @@ func (c *Collector) describeClrExceptions() {
 	c.numberOfExceptionsThrown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_thrown_total"),
 		"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfFilters = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_filters_total"),
 		"Displays the total number of .NET exception filters executed. An exception filter evaluates regardless of whether an exception is handled.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfFinally = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_finallys_total"),
 		"Displays the total number of finally blocks executed. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.throwToCatchDepth = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_throw_to_catch_depth_total"),
 		"Displays the total number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -80,18 +80,15 @@ func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *la
 		return fmt.Errorf("failed to collect .NET CLR Exceptions: %w", err)
 	}
 
-	suffixDuplicateProcesses(dst)
+	dst, processIDs := prepareProcesses(c, dst)
 
-	for _, process := range dst {
-		if process.Name == "_Global_" {
-			continue
-		}
-
+	for i, process := range dst {
 		ch <- scrape.MustNewConstMetric(
 			c.numberOfExceptionsThrown,
 			prometheus.CounterValue,
 			float64(process.NumberofExcepsThrown),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -99,6 +96,7 @@ func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *la
 			prometheus.CounterValue,
 			float64(process.NumberofFiltersPersec),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -106,6 +104,7 @@ func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *la
 			prometheus.CounterValue,
 			float64(process.NumberofFinallysPersec),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -113,6 +112,7 @@ func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *la
 			prometheus.CounterValue,
 			float64(process.ThrowToCatchDepthPersec),
 			process.Name,
+			processIDs[i],
 		)
 	}
 

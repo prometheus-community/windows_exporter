@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +33,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
+	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -43,7 +47,9 @@ type perfCollector[T any] interface {
 const Name = "netframework"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"enabled"`
+	CollectorsEnabled []string       `yaml:"enabled"`
+	ProcessInclude    *regexp.Regexp `yaml:"process-include"`
+	ProcessExclude    *regexp.Regexp `yaml:"process-exclude"`
 }
 
 //nolint:gochecknoglobals
@@ -58,6 +64,8 @@ var ConfigDefaults = Config{
 		collectorClrRemoting,
 		collectorClrSecurity,
 	},
+	ProcessInclude: types.RegExpAny,
+	ProcessExclude: types.RegExpEmpty,
 }
 
 const (
@@ -92,6 +100,14 @@ type Collector struct {
 	perfClrMemory          perfCollector[perfDataClrMemory]
 	perfClrRemoting        perfCollector[perfDataClrRemoting]
 	perfClrSecurity        perfCollector[perfDataClrSecurity]
+	// perfClrProcessID reads the Process ID counter of the .NET CLR Memory
+	// object for the sub-collectors of the other objects, see processIDs.
+	perfClrProcessID perfCollector[perfDataClrProcessID]
+	processIDRows    []perfDataClrProcessID
+	// processIDs maps the instances of the current sample to their process
+	// ID. Collect fills it before it starts the sub-collectors, which only
+	// read it.
+	processIDs map[processKey]string
 
 	collectorFns []func(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, maxScrapeDuration time.Duration) error
 
@@ -170,6 +186,14 @@ func New(config *Config) *Collector {
 		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
+	if config.ProcessInclude == nil {
+		config.ProcessInclude = ConfigDefaults.ProcessInclude
+	}
+
+	if config.ProcessExclude == nil {
+		config.ProcessExclude = ConfigDefaults.ProcessExclude
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -189,6 +213,18 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.netframework.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	utils.RegexpFlag(app,
+		"collector.netframework.process-exclude",
+		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
+		"", &c.config.ProcessExclude,
+	)
+
+	utils.RegexpFlag(app,
+		"collector.netframework.process-include",
+		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
+		".+", &c.config.ProcessInclude,
+	)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
@@ -215,6 +251,14 @@ func (c *Collector) Close() error {
 
 	c.closeFns = nil
 	c.collectorFns = nil
+
+	if c.perfClrProcessID != nil {
+		c.perfClrProcessID.Close()
+		c.perfClrProcessID = nil
+	}
+
+	c.processIDRows = nil
+	c.processIDs = nil
 
 	c.perfQuery.Close()
 	c.perfQuery = nil
@@ -340,6 +384,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
 	}
 
+	// Only the .NET CLR Memory object has a Process ID counter. The
+	// clrmemory rows carry their own, the other sub-collectors look it up.
+	// With clrmemory enabled, Process ID is read twice on purpose: the
+	// sub-collectors run concurrently, so they cannot share the clrmemory rows.
+	if slices.ContainsFunc(collectorsEnabled, func(name string) bool { return name != collectorClrMemory }) {
+		c.perfClrProcessID, err = newPerfCollector[perfDataClrProcessID](c.logger, c.perfQuery, ".NET CLR Memory")
+		if err != nil {
+			_ = c.Close()
+
+			return fmt.Errorf("failed to build the process ID lookup: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -354,6 +411,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		}
 	}
 
+	// The sub-collectors publish their metrics even if the process IDs are
+	// unknown, with an empty process_id label.
+	processIDErr := c.collectProcessIDs()
+
 	scrape := c.labels.Scrape()
 
 	var g recovery.Group
@@ -364,12 +425,115 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		})
 	}
 
-	return g.Wait()
+	return errors.Join(processIDErr, g.Wait())
+}
+
+// processKey identifies an instance of a sample by the name Windows reported
+// and its occurrence, before suffixDuplicateProcesses changes the name.
+type processKey struct {
+	name       string
+	occurrence int
+}
+
+type perfDataClrProcessID struct {
+	Name       string
+	Occurrence int
+	ProcessID  float64 `perfdata:"Process ID"`
+}
+
+// collectProcessIDs maps the instances of the .NET CLR Memory object of the
+// current sample to their process IDs. The join assumes, without
+// documentation to back it, that the n-th instance with a name is the same
+// process in every .NET CLR object of a sample: PdhCollectQueryData does one
+// RegQueryValueEx(HKEY_PERFORMANCE_DATA) per collect for the whole query,
+// and the CLR provider writes every object from the same instance list.
+// Sampling the objects in separate queries would break the join for
+// duplicate names. An instance without a valid Process ID has no
+// entry. Without any .NET process, the map is empty and the sub-collectors
+// report that there is no data.
+func (c *Collector) collectProcessIDs() error {
+	if c.processIDs == nil {
+		c.processIDs = make(map[processKey]string)
+	} else {
+		clear(c.processIDs)
+	}
+
+	if c.perfClrProcessID == nil {
+		return nil
+	}
+
+	if err := c.perfClrProcessID.Collect(&c.processIDRows); err != nil {
+		if errors.Is(err, pdh.ErrNoData) {
+			return nil
+		}
+
+		return fmt.Errorf("failed to collect the process IDs of .NET CLR Memory: %w", err)
+	}
+
+	for _, row := range c.processIDRows {
+		if row.Name == "_Global_" {
+			continue
+		}
+
+		c.processIDs[processKey{name: row.Name, occurrence: row.Occurrence}] = strconv.FormatUint(uint64(row.ProcessID), 10)
+	}
+
+	return nil
+}
+
+// isProcessIncluded reports whether name, the process name as Windows reports
+// it without an occurrence suffix, passes the process filters.
+func (c *Collector) isProcessIncluded(name string) bool {
+	if c.config.ProcessInclude != nil && !c.config.ProcessInclude.MatchString(name) {
+		return false
+	}
+
+	return c.config.ProcessExclude == nil || !c.config.ProcessExclude.MatchString(name)
 }
 
 // clrInstance is implemented by the rows of the .NET CLR objects.
 type clrInstance interface {
 	instance() (name *string, occurrence int)
+}
+
+// filterProcesses removes the _Global_ instance and the processes that do not
+// pass the process filters from rows. The filters match the name that Windows
+// reports, so they apply to every process with that name, like the filters
+// of the process collector. Filtering before suffixDuplicateProcesses keeps
+// the suffixes the same in every object of a sample.
+func filterProcesses[T any, P interface {
+	*T
+	clrInstance
+}](c *Collector, rows []T) []T {
+	filter := !utils.IsMatchAll(c.config.ProcessInclude) || !utils.IsMatchNone(c.config.ProcessExclude)
+
+	return slices.DeleteFunc(rows, func(row T) bool {
+		name, _ := P(&row).instance()
+
+		return *name == "_Global_" || (filter && !c.isProcessIncluded(*name))
+	})
+}
+
+// prepareProcesses filters rows, looks up the process ID of every row and
+// then adds occurrence suffixes to duplicate process names. The process ID
+// of rows[i] is processIDs[i]; it is empty if the .NET CLR Memory object has
+// no valid Process ID for the instance, e.g. if clrmemory is disabled and
+// the object is unavailable. The process label still keeps the series apart.
+func prepareProcesses[T any, P interface {
+	*T
+	clrInstance
+}](c *Collector, rows []T) ([]T, []string) {
+	rows = filterProcesses[T, P](c, rows)
+	processIDs := make([]string, len(rows))
+
+	for i := range rows {
+		name, occurrence := P(&rows[i]).instance()
+		processIDs[i] = c.processIDs[processKey{name: *name, occurrence: occurrence}]
+	}
+
+	suffixDuplicateProcesses[T, P](rows)
+
+	return rows, processIDs
 }
 
 // suffixDuplicateProcesses keeps processes with the same name apart. The .NET
