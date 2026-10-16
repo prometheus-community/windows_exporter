@@ -18,6 +18,7 @@
 package psapi
 
 import (
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -61,7 +62,7 @@ func GetPerformanceInfo() (PerformanceInformation, error) {
 
 	size := uint32(unsafe.Sizeof(lppi))
 	lppi.cb = size
-	r1, _, err := procGetPerformanceInfo.Call(uintptr(unsafe.Pointer(&lppi)), uintptr(size))
+	r1, _, err := syscall.SyscallN(procGetPerformanceInfo.Addr(), uintptr(unsafe.Pointer(&lppi)), uintptr(size))
 
 	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return PerformanceInformation{}, err

@@ -20,6 +20,7 @@ package iphlpapi
 import (
 	"encoding/binary"
 	"fmt"
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -105,7 +106,8 @@ func GetOwnerPIDOfTCPPort(family uint32, tcpPort uint16) (uint32, error) {
 func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	var size uint32
 
-	ret, _, _ := procGetExtendedTcpTable.Call(
+	ret, _, _ := syscall.SyscallN(
+		procGetExtendedTcpTable.Addr(),
 		0,
 		uintptr(unsafe.Pointer(&size)),
 		0,
@@ -120,7 +122,8 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 
 	buf := make([]byte, size)
 
-	ret, _, _ = procGetExtendedTcpTable.Call(
+	ret, _, _ = syscall.SyscallN(
+		procGetExtendedTcpTable.Addr(),
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(unsafe.Pointer(&size)),
 		0,

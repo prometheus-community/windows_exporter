@@ -20,6 +20,7 @@ package wtsapi32
 import (
 	"fmt"
 	"log/slog"
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -141,7 +142,7 @@ func WTSOpenServer(server string) (windows.Handle, error) {
 		}
 	}
 
-	r1, _, err := procWTSOpenServerEx.Call(uintptr(unsafe.Pointer(serverName)))
+	r1, _, err := syscall.SyscallN(procWTSOpenServerEx.Addr(), uintptr(unsafe.Pointer(serverName)))
 	serverHandle := windows.Handle(r1)
 
 	if serverHandle == windows.InvalidHandle {
@@ -154,11 +155,12 @@ func WTSOpenServer(server string) (windows.Handle, error) {
 // WTSCloseServer closes a handle opened by WTSOpenServer. The function returns
 // void, so neither r1 nor the last error say whether it failed.
 func WTSCloseServer(server windows.Handle) {
-	_, _, _ = procWTSCloseServer.Call(uintptr(server))
+	_, _, _ = syscall.SyscallN(procWTSCloseServer.Addr(), uintptr(server))
 }
 
 func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, numberOfEntries uint32) error {
-	r1, _, err := procWTSFreeMemoryEx.Call(
+	r1, _, err := syscall.SyscallN(
+		procWTSFreeMemoryEx.Addr(),
 		uintptr(class),
 		pMemory,
 		uintptr(numberOfEntries),
@@ -177,7 +179,8 @@ func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSe
 	var count uint32
 
 	pLevel := uint32(1)
-	r1, _, err := procWTSEnumerateSessionsEx.Call(
+	r1, _, err := syscall.SyscallN(
+		procWTSEnumerateSessionsEx.Addr(),
 		uintptr(server),
 		uintptr(unsafe.Pointer(&pLevel)),
 		uintptr(0),
