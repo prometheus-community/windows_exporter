@@ -96,8 +96,8 @@ func (c *Collector) buildVirtualDisk() error {
 	)
 
 	c.virtualDiskStorageEfficiency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "storage_efficiency_percent"),
-		"Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100), omitted while FootprintOnPool is 0",
+		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "storage_efficiency_ratio"),
+		"Storage efficiency ratio (AllocatedSize / FootprintOnPool), omitted while FootprintOnPool is 0",
 		[]string{"name", "unique_id"},
 		nil,
 	)
@@ -169,7 +169,7 @@ func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric, maxScrapeDur
 			ch <- prometheus.MustNewConstMetric(
 				c.virtualDiskStorageEfficiency,
 				prometheus.GaugeValue,
-				float64(vdisk.AllocatedSize)/float64(vdisk.FootprintOnPool)*100,
+				float64(vdisk.AllocatedSize)/float64(vdisk.FootprintOnPool),
 				vdisk.FriendlyName,
 				vdisk.UniqueId,
 			)

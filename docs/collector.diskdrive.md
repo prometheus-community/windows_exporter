@@ -19,7 +19,7 @@ None
 | `windows_diskdrive_info`         | General identifiable information about the disk drive                                                                                                            | gauge   | device_id,model,caption,name |
 | `windows_diskdrive_availability` | The disk drive's current availability                                                                                                                            | gauge   | name,availability            |
 | `windows_diskdrive_partitions`   | Number of partitions on the drive                                                                                                                                | gauge   | name                         |
-| `windows_diskdrive_size`         | Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector. | gauge   | name                         |
+| `windows_diskdrive_size_bytes`         | Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector. | gauge   | name                         |
 | `windows_diskdrive_status`       | Operational status of the drive                                                                                                                                  | gauge   | name,status                  |
 
 ## Alerting examples

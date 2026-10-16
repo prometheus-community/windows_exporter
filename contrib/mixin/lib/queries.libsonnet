@@ -6,7 +6,7 @@ function(c)
     // Drop undefined ratios instead of recording NaN or +Inf for idle devices.
     ratio(numerator, denominator): '(%s / (%s > 0))' % [numerator, denominator],
     cpuUsage:
-      '1 - avg without (core, mode) (%s)' % self.rate('windows_cpu_time_total', ['mode="idle"']),
+      '1 - avg without (core, mode) (%s)' % self.rate('windows_cpu_time_seconds_total', ['mode="idle"']),
     memoryUsage:
       '1 - %s' % self.ratio(
         self.metric('windows_memory_available_bytes'),

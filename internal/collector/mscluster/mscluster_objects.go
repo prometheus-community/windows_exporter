@@ -50,6 +50,9 @@ type objectField struct {
 	desc *prometheus.Desc
 	// Signed fields are sint32 in WMI, so 0xFFFFFFFF is published as -1.
 	signed bool
+	// Scale, if set, converts the raw value to the base unit of the metric,
+	// for example 1e-3 for milliseconds to seconds.
+	scale float64
 	// MinBuild is the first Windows build that has the property.
 	minBuild uint16
 	older    beforeMinBuild
@@ -89,6 +92,10 @@ func (field objectField) metric(raw uint32, name string) prometheus.Metric {
 	value := float64(raw)
 	if field.signed {
 		value = float64(int32(raw))
+	}
+
+	if field.scale != 0 {
+		value *= field.scale
 	}
 
 	return prometheus.MustNewConstMetric(field.desc, prometheus.GaugeValue, value, name)

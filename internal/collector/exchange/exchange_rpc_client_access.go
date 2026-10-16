@@ -56,8 +56,8 @@ func (c *Collector) buildRpcClientAccess() error {
 	}
 
 	c.rpcAveragedLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rpc_avg_latency_sec"),
-		"The latency (sec) averaged for the past 1024 packets",
+		prometheus.BuildFQName(types.Namespace, Name, "rpc_avg_latency_seconds"),
+		"The latency in seconds averaged for the past 1024 packets",
 		nil,
 		nil,
 	)
@@ -68,13 +68,13 @@ func (c *Collector) buildRpcClientAccess() error {
 		nil,
 	)
 	c.activeUserCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rpc_active_user_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "rpc_active_users"),
 		"Number of unique users that have shown some kind of activity in the last 2 minutes",
 		nil,
 		nil,
 	)
 	c.connectionCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rpc_connection_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "rpc_connections"),
 		"Total number of client connections maintained",
 		nil,
 		nil,
@@ -86,7 +86,7 @@ func (c *Collector) buildRpcClientAccess() error {
 		nil,
 	)
 	c.userCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rpc_user_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "rpc_users"),
 		"Number of users",
 		nil,
 		nil,

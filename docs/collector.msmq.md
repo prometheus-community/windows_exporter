@@ -14,8 +14,8 @@ The msmq collector exposes metrics about the queues on a MSMQ server
 
 | Name                                     | Description                     | Type  | Labels |
 |------------------------------------------|---------------------------------|-------|--------|
-| `windows_msmq_bytes_in_journal_queue`    | Size of queue journal in bytes  | gauge | `name` |
-| `windows_msmq_bytes_in_queue`            | Size of queue in bytes          | gauge | `name` |
+| `windows_msmq_journal_queue_bytes`    | Size of queue journal in bytes  | gauge | `name` |
+| `windows_msmq_queue_bytes`            | Size of queue in bytes          | gauge | `name` |
 | `windows_msmq_messages_in_journal_queue` | Count messages in queue journal | gauge | `name` |
 | `windows_msmq_messages_in_queue`         | Count messages in queue         | gauge | `name` |
 

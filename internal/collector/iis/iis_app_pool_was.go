@@ -130,7 +130,7 @@ func (c *Collector) buildAppPoolWASDescriptors() {
 		nil,
 	)
 	c.totalApplicationPoolRecycles = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_application_pool_recycles"),
+		prometheus.BuildFQName(types.Namespace, Name, "application_pool_recycles_total"),
 		"The number of times that the application pool has been recycled since Windows Process Activation Service (WAS) started (TotalApplicationPoolRecycles)",
 		[]string{"app"},
 		nil,
@@ -142,31 +142,31 @@ func (c *Collector) buildAppPoolWASDescriptors() {
 		nil,
 	)
 	c.totalWorkerProcessesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_worker_processes_created"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_processes_created_total"),
 		"The number of worker processes created for the application pool since Windows Process Activation Service (WAS) started (TotalWorkerProcessesCreated)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_process_failures_total"),
 		"The number of times that worker processes have crashed since the application pool was started (TotalWorkerProcessFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessPingFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_ping_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_process_ping_failures_total"),
 		"The number of times that Windows Process Activation Service (WAS) did not receive a response to ping messages sent to a worker process (TotalWorkerProcessPingFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessShutdownFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_shutdown_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_process_shutdown_failures_total"),
 		"The number of times that Windows Process Activation Service (WAS) failed to shut down a worker process (TotalWorkerProcessShutdownFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessStartupFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_startup_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_process_startup_failures_total"),
 		"The number of times that Windows Process Activation Service (WAS) failed to start a worker process (TotalWorkerProcessStartupFailures)",
 		[]string{"app"},
 		nil,

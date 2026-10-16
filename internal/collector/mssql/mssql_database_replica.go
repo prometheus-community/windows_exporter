@@ -106,19 +106,19 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaDatabaseFlowControls = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_initiated_flow_controls"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_initiated_flow_controls_total"),
 		"(DatabaseReplica.DatabaseFlowControls)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaFileBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_received_file_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_received_file_bytes_total"),
 		"(DatabaseReplica.FileBytesReceived)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaGroupCommits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commits"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commits_total"),
 		"(DatabaseReplica.GroupCommits)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -142,43 +142,43 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaLogBytesCompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressed_bytes_total"),
 		"(DatabaseReplica.LogBytesCompressed)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogBytesDecompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressed_bytes_total"),
 		"(DatabaseReplica.LogBytesDecompressed)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_received_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_received_bytes_total"),
 		"(DatabaseReplica.LogBytesReceived)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressionCachehits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachehits"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachehits_total"),
 		"(DatabaseReplica.LogCompressionCachehits)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressionCachemisses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachemisses"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachemisses_total"),
 		"(DatabaseReplica.LogCompressionCachemisses)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressions_total"),
 		"(DatabaseReplica.LogCompressions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogDecompressions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressions_total"),
 		"(DatabaseReplica.LogDecompressions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -196,7 +196,7 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaMirroredWritetransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_mirrored_write_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_mirrored_write_transactions_total"),
 		"(DatabaseReplica.MirroredWriteTransactions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -208,7 +208,7 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaRedoblocked = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redo_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redo_blocks_total"),
 		"(DatabaseReplica.Redoblocked)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -220,13 +220,13 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 	c.dbReplicaRedoneBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redone_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redone_bytes_total"),
 		"(DatabaseReplica.RedoneBytes)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRedones = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redones"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redones_total"),
 		"(DatabaseReplica.Redones)",
 		[]string{"mssql_instance", "replica"},
 		nil,

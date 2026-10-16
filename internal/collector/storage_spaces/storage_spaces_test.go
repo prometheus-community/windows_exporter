@@ -61,10 +61,10 @@ func TestCollector(t *testing.T) {
 		require.GreaterOrEqual(t, metric.GetGauge().GetValue(), float64(1<<30))
 	}
 
-	if metric := testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_virtual_disk_storage_efficiency_percent", virtualDisk); metric != nil {
+	if metric := testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_virtual_disk_storage_efficiency_ratio", virtualDisk); metric != nil {
 		value := metric.GetGauge().GetValue()
 		require.Greater(t, value, 0.0)
-		require.LessOrEqual(t, value, 100.0)
+		require.LessOrEqual(t, value, 1.0)
 	}
 
 	// Every pool, including the built-in primordial pool, must carry a boolean primordial label.

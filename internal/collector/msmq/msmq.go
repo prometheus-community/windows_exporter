@@ -80,13 +80,13 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.bytesInJournalQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "journal_queue_bytes"),
 		"Size of queue journal in bytes",
 		[]string{"name"},
 		nil,
 	)
 	c.bytesInQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "queue_bytes"),
 		"Size of queue in bytes",
 		[]string{"name"},
 		nil,

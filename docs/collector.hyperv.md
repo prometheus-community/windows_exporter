@@ -54,37 +54,37 @@ prefixed with `windows_hyperv_datastore`.
 | `windows_hyperv_datastore_table_data_size_bytes`                       | Represents the table data size in bytes of the DataStore.                       | gauge   | datastore |
 | `windows_hyperv_datastore_names_size_bytes`                            | Represents the names size in bytes of the DataStore.                            | gauge   | datastore |
 | `windows_hyperv_datastore_number_of_keys`                              | Represents the number of keys in the DataStore.                                 | gauge   | datastore |
-| `windows_hyperv_datastore_reconnect_latency_microseconds`              | Represents the reconnect latency in microseconds of the DataStore.              | gauge   | datastore |
-| `windows_hyperv_datastore_disconnect_count`                            | Represents the disconnect count of the DataStore.                               | counter | datastore |
-| `windows_hyperv_datastore_write_to_file_byte_latency_microseconds`     | Represents the write-to-file byte latency in microseconds of the DataStore.     | gauge   | datastore |
-| `windows_hyperv_datastore_write_to_file_byte_count`                    | Represents the write-to-file byte count of the DataStore.                       | counter | datastore |
-| `windows_hyperv_datastore_write_to_file_count`                         | Represents the write-to-file count of the DataStore.                            | counter | datastore |
-| `windows_hyperv_datastore_read_from_file_byte_latency_microseconds`    | Represents the read-from-file byte latency in microseconds of the DataStore.    | gauge   | datastore |
-| `windows_hyperv_datastore_read_from_file_byte_count`                   | Represents the read-from-file byte count of the DataStore.                      | counter | datastore |
-| `windows_hyperv_datastore_read_from_file_count`                        | Represents the read-from-file count of the DataStore.                           | counter | datastore |
-| `windows_hyperv_datastore_write_to_storage_byte_latency_microseconds`  | Represents the write-to-storage byte latency in microseconds of the DataStore.  | gauge   | datastore |
-| `windows_hyperv_datastore_write_to_storage_byte_count`                 | Represents the write-to-storage byte count of the DataStore.                    | counter | datastore |
-| `windows_hyperv_datastore_write_to_storage_count`                      | Represents the write-to-storage count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_read_from_storage_byte_latency_microseconds` | Represents the read-from-storage byte latency in microseconds of the DataStore. | gauge   | datastore |
-| `windows_hyperv_datastore_read_from_storage_byte_count`                | Represents the read-from-storage byte count of the DataStore.                   | counter | datastore |
-| `windows_hyperv_datastore_read_from_storage_count`                     | Represents the read-from-storage count of the DataStore.                        | counter | datastore |
-| `windows_hyperv_datastore_commit_byte_latency_microseconds`            | Represents the commit byte latency in microseconds of the DataStore.            | gauge   | datastore |
-| `windows_hyperv_datastore_commit_byte_count`                           | Represents the commit byte count of the DataStore.                              | counter | datastore |
-| `windows_hyperv_datastore_commit_count`                                | Represents the commit count of the DataStore.                                   | counter | datastore |
-| `windows_hyperv_datastore_cache_update_operation_latency_microseconds` | Represents the cache update operation latency in microseconds of the DataStore. | gauge   | datastore |
-| `windows_hyperv_datastore_cache_update_operation_count`                | Represents the cache update operation count of the DataStore.                   | counter | datastore |
-| `windows_hyperv_datastore_commit_operation_latency_microseconds`       | Represents the commit operation latency in microseconds of the DataStore.       | gauge   | datastore |
-| `windows_hyperv_datastore_commit_operation_count`                      | Represents the commit operation count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_compact_operation_latency_microseconds`      | Represents the compact operation latency in microseconds of the DataStore.      | gauge   | datastore |
-| `windows_hyperv_datastore_compact_operation_count`                     | Represents the compact operation count of the DataStore.                        | counter | datastore |
-| `windows_hyperv_datastore_load_file_operation_latency_microseconds`    | Represents the load file operation latency in microseconds of the DataStore.    | gauge   | datastore |
-| `windows_hyperv_datastore_load_file_operation_count`                   | Represents the load file operation count of the DataStore.                      | counter | datastore |
-| `windows_hyperv_datastore_remove_operation_latency_microseconds`       | Represents the remove operation latency in microseconds of the DataStore.       | gauge   | datastore |
-| `windows_hyperv_datastore_remove_operation_count`                      | Represents the remove operation count of the DataStore.                         | counter | datastore |
-| `windows_hyperv_datastore_query_size_operation_latency_microseconds`   | Represents the query size operation latency in microseconds of the DataStore.   | gauge   | datastore |
-| `windows_hyperv_datastore_query_size_operation_count`                  | Represents the query size operation count of the DataStore.                     | counter | datastore |
-| `windows_hyperv_datastore_set_operation_latency_microseconds`          | Represents the set operation latency in microseconds of the DataStore.          | gauge   | datastore |
-| `windows_hyperv_datastore_set_operation_count`                         | Represents the set operation count of the DataStore.                            | counter | datastore |
+| `windows_hyperv_datastore_reconnect_latency_seconds`              | Represents the reconnect latency in seconds of the DataStore.              | gauge   | datastore |
+| `windows_hyperv_datastore_disconnects_total`                            | Represents the disconnect count of the DataStore.                               | counter | datastore |
+| `windows_hyperv_datastore_write_to_file_byte_latency_seconds`     | Represents the write-to-file byte latency in seconds of the DataStore.     | gauge   | datastore |
+| `windows_hyperv_datastore_write_to_file_bytes_total`                    | Represents the write-to-file byte count of the DataStore.                       | counter | datastore |
+| `windows_hyperv_datastore_write_to_file_operations_total`                         | Represents the write-to-file count of the DataStore.                            | counter | datastore |
+| `windows_hyperv_datastore_read_from_file_byte_latency_seconds`    | Represents the read-from-file byte latency in seconds of the DataStore.    | gauge   | datastore |
+| `windows_hyperv_datastore_read_from_file_bytes_total`                   | Represents the read-from-file byte count of the DataStore.                      | counter | datastore |
+| `windows_hyperv_datastore_read_from_file_operations_total`                        | Represents the read-from-file count of the DataStore.                           | counter | datastore |
+| `windows_hyperv_datastore_write_to_storage_byte_latency_seconds`  | Represents the write-to-storage byte latency in seconds of the DataStore.  | gauge   | datastore |
+| `windows_hyperv_datastore_write_to_storage_bytes_total`                 | Represents the write-to-storage byte count of the DataStore.                    | counter | datastore |
+| `windows_hyperv_datastore_write_to_storage_operations_total`                      | Represents the write-to-storage count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_read_from_storage_byte_latency_seconds` | Represents the read-from-storage byte latency in seconds of the DataStore. | gauge   | datastore |
+| `windows_hyperv_datastore_read_from_storage_bytes_total`                | Represents the read-from-storage byte count of the DataStore.                   | counter | datastore |
+| `windows_hyperv_datastore_read_from_storage_operations_total`                     | Represents the read-from-storage count of the DataStore.                        | counter | datastore |
+| `windows_hyperv_datastore_commit_byte_latency_seconds`            | Represents the commit byte latency in seconds of the DataStore.            | gauge   | datastore |
+| `windows_hyperv_datastore_commit_bytes_total`                           | Represents the commit byte count of the DataStore.                              | counter | datastore |
+| `windows_hyperv_datastore_commits_total`                                | Represents the commit count of the DataStore.                                   | counter | datastore |
+| `windows_hyperv_datastore_cache_update_operation_latency_seconds` | Represents the cache update operation latency in seconds of the DataStore. | gauge   | datastore |
+| `windows_hyperv_datastore_cache_update_operations_total`                | Represents the cache update operation count of the DataStore.                   | counter | datastore |
+| `windows_hyperv_datastore_commit_operation_latency_seconds`       | Represents the commit operation latency in seconds of the DataStore.       | gauge   | datastore |
+| `windows_hyperv_datastore_commit_operations_total`                      | Represents the commit operation count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_compact_operation_latency_seconds`      | Represents the compact operation latency in seconds of the DataStore.      | gauge   | datastore |
+| `windows_hyperv_datastore_compact_operations_total`                     | Represents the compact operation count of the DataStore.                        | counter | datastore |
+| `windows_hyperv_datastore_load_file_operation_latency_seconds`    | Represents the load file operation latency in seconds of the DataStore.    | gauge   | datastore |
+| `windows_hyperv_datastore_load_file_operations_total`                   | Represents the load file operation count of the DataStore.                      | counter | datastore |
+| `windows_hyperv_datastore_remove_operation_latency_seconds`       | Represents the remove operation latency in seconds of the DataStore.       | gauge   | datastore |
+| `windows_hyperv_datastore_remove_operations_total`                      | Represents the remove operation count of the DataStore.                         | counter | datastore |
+| `windows_hyperv_datastore_query_size_operation_latency_seconds`   | Represents the query size operation latency in seconds of the DataStore.   | gauge   | datastore |
+| `windows_hyperv_datastore_query_size_operations_total`                  | Represents the query size operation count of the DataStore.                     | counter | datastore |
+| `windows_hyperv_datastore_set_operation_latency_seconds`          | Represents the set operation latency in seconds of the DataStore.          | gauge   | datastore |
+| `windows_hyperv_datastore_set_operations_total`                         | Represents the set operation count of the DataStore.                            | counter | datastore |
 
 ### Hyper-V Dynamic Memory Balancer
 
@@ -129,14 +129,14 @@ is skipped with a warning.
 
 | Metric Name                                     | Description                                                            | Type  | Labels             |
 |-------------------------------------------------|------------------------------------------------------------------------|-------|--------------------|
-| `windows_hyperv_host_logical_processor_count`   | Number of logical processors on the host                               | gauge | None               |
-| `windows_hyperv_vm_processor_count`             | Number of virtual processors assigned to the VM                        | gauge | `vm_id`, `vm`      |
-| `windows_hyperv_total_vm_processor_count`       | Total number of virtual processors assigned to all VMs                 | gauge | None               |
+| `windows_hyperv_host_logical_processors`   | Number of logical processors on the host                               | gauge | None               |
+| `windows_hyperv_vm_processors`             | Number of virtual processors assigned to the VM                        | gauge | `vm_id`, `vm`      |
+| `windows_hyperv_assigned_vm_processors`       | Total number of virtual processors assigned to all VMs                 | gauge | None               |
 
 The CPU allocation ratio can be computed in PromQL. Virtual cores per **logical** host core:
 
 ```
-windows_hyperv_total_vm_processor_count / windows_hyperv_host_logical_processor_count
+windows_hyperv_assigned_vm_processors / windows_hyperv_host_logical_processors
 ```
 
 Where hyper-threading (SMT) is enabled, the host reports two logical cores per physical core.
@@ -147,8 +147,8 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 
 | Name                                                                 | Description                                                            | Type    | Labels         |
 |----------------------------------------------------------------------|------------------------------------------------------------------------|---------|----------------|
-| `windows_hyperv_hypervisor_logical_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest, idle) | counter | `core`,`state` |
-| `windows_hyperv_hypervisor_logical_processor_total_run_time_total`   | Time that processor spent                                              | counter | `core`         |
+| `windows_hyperv_hypervisor_logical_processor_time_seconds_total`             | Time that processor spent in different modes (hypervisor, guest, idle) | counter | `core`,`state` |
+| `windows_hyperv_hypervisor_logical_processor_total_run_time_seconds_total`   | Time that processor spent                                              | counter | `core`         |
 | `windows_hyperv_hypervisor_logical_processor_context_switches_total` | The rate of virtual processor context switches on the processor.       | counter | `core`         |
 
 ### Hyper-V Hypervisor Root Partition
@@ -168,12 +168,12 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 | `windows_hyperv_root_partition_io_tlb_flushes_total`             | The number of flushes of I/O TLBs of the partition                                                                                                       | counter | None   |
 | `windows_hyperv_root_partition_recommended_virtual_tlb_size`     | The recommended number of pages to be deposited for the virtual TLB                                                                                      | gauge   | None   |
 | `windows_hyperv_root_partition_skipped_timer_ticks_total`        | The number of timer interrupts skipped for the partition                                                                                                 | counter | None   |
-| `windows_hyperv_root_partition_1G_device_pages`                  | The number of 1G pages present in the device space of the partition                                                                                      | gauge   | None   |
-| `windows_hyperv_root_partition_1G_gpa_pages`                     | The number of 1G pages present in the GPA space of the partition                                                                                         | gauge   | None   |
-| `windows_hyperv_root_partition_2M_device_pages`                  | The number of 2M pages present in the device space of the partition                                                                                      | gauge   | None   |
-| `windows_hyperv_root_partition_2M_gpa_pages`                     | The number of 2M pages present in the GPA space of the partition                                                                                         | gauge   | None   |
-| `windows_hyperv_root_partition_4K_device_pages`                  | The number of 4K pages present in the device space of the partition                                                                                      | gauge   | None   |
-| `windows_hyperv_root_partition_4K_gpa_pages`                     | The number of 4K pages present in the GPA space of the partition                                                                                         | gauge   | None   |
+| `windows_hyperv_root_partition_1g_device_pages`                  | The number of 1G pages present in the device space of the partition                                                                                      | gauge   | None   |
+| `windows_hyperv_root_partition_1g_gpa_pages`                     | The number of 1G pages present in the GPA space of the partition                                                                                         | gauge   | None   |
+| `windows_hyperv_root_partition_2m_device_pages`                  | The number of 2M pages present in the device space of the partition                                                                                      | gauge   | None   |
+| `windows_hyperv_root_partition_2m_gpa_pages`                     | The number of 2M pages present in the GPA space of the partition                                                                                         | gauge   | None   |
+| `windows_hyperv_root_partition_4k_device_pages`                  | The number of 4K pages present in the device space of the partition                                                                                      | gauge   | None   |
+| `windows_hyperv_root_partition_4k_gpa_pages`                     | The number of 4K pages present in the GPA space of the partition                                                                                         | gauge   | None   |
 | `windows_hyperv_root_partition_virtual_tlb_flush_entries_total`  | The number of flushes of the entire virtual TLB                                                                                                          | counter | None   |
 | `windows_hyperv_root_partition_virtual_tlb_pages`                | The number of pages used by the virtual TLB of the partition                                                                                             | gauge   | None   |
 
@@ -182,8 +182,8 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 
 | Name                                                                      | Description                                                                                                       | Type    | Labels         |
 |---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|---------|----------------|
-| `windows_hyperv_hypervisor_root_virtual_processor_time_total`             | Time in seconds that processor spent in different modes (`state`: `guest_run`, `hypervisor`, `remote`)            | counter | `core`,`state` |
-| `windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total`   | Time in seconds that processor spent running                                                                      | counter | `core`         |
+| `windows_hyperv_hypervisor_root_virtual_processor_time_seconds_total`             | Time in seconds that processor spent in different modes (`state`: `guest_run`, `hypervisor`, `remote`)            | counter | `core`,`state` |
+| `windows_hyperv_hypervisor_root_virtual_processor_total_run_time_seconds_total`   | Time in seconds that processor spent running                                                                      | counter | `core`         |
 | `windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total` | The time spent waiting for a virtual processor to be dispatched onto a logical processor. Divide its rate by the rate of `windows_hyperv_hypervisor_root_virtual_processor_dispatches_total` for the average wait per dispatch | counter | `core`         |
 | `windows_hyperv_hypervisor_root_virtual_processor_dispatches_total`       | The number of times the virtual processor was dispatched onto a logical processor                                 | counter | `core`         |
 
@@ -277,12 +277,10 @@ Example alert:
 
 | Name                                                                           | Description                                                                                                        | Type    | Labels                |
 |--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|-----------------------|
-| `windows_hyperv_hypervisor_virtual_processor_mode_time_total`                  | Time in seconds that processor spent in different modes (`state`: `hypervisor`, `guest`, `remote`)                 | counter | `vm`, `core`, `state` |
-| `windows_hyperv_hypervisor_virtual_processor_run_time_total`                   | Time in seconds that processor spent running                                                                       | counter | `vm`, `core`          |
+| `windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total`                  | Time in seconds that processor spent in different modes (`state`: `hypervisor`, `guest`, `remote`)                 | counter | `vm`, `core`, `state` |
+| `windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total`                   | Time in seconds that processor spent running                                                                       | counter | `vm`, `core`          |
 | `windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total`           | The time spent waiting for a virtual processor to be dispatched onto a logical processor. Divide its rate by the rate of `windows_hyperv_hypervisor_virtual_processor_dispatches_total` for the average wait per dispatch | counter | `vm`, `core`          |
 | `windows_hyperv_hypervisor_virtual_processor_dispatches_total`                 | The number of times the virtual processor was dispatched onto a logical processor                                  | counter | `vm`, `core`          |
-| `windows_hyperv_hypervisor_virtual_processor_time_total`                       | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_mode_time_total`. Time in seconds that processor spent in different modes (`state`: `hypervisor`, `guest`, `remote`) | counter | `vm`, `core`, `state` |
-| `windows_hyperv_hypervisor_virtual_processor_total_run_time_total`             | **Deprecated:** use `windows_hyperv_hypervisor_virtual_processor_run_time_total`. Time in seconds that processor spent running | counter | `vm`, `core`          |
 
 ### Hyper-V Virtual Network Adapter
 
@@ -299,7 +297,7 @@ Example alert:
 
 | Name                                                  | Description                                  | Type    | Labels                         |
 |-------------------------------------------------------|----------------------------------------------|---------|--------------------------------|
-| `windows_hyperv_virtual_network_adapter_drop_reasons` | Hyper-V Virtual Network Adapter Drop Reasons | counter | `adapter`,`reason`,`direction` |
+| `windows_hyperv_virtual_network_adapter_drop_reasons_total` | Number of packets dropped by a Hyper-V virtual network adapter, by drop reason and direction | counter | `adapter`,`reason`,`direction` |
 
 ### Hyper-V Virtual SMB
 
@@ -307,21 +305,21 @@ Example alert:
 |-------------------------------------------------------|-----------------------------------------------------------------------------------|---------|------------|
 | `windows_hyperv_virtual_smb_direct_mapped_sections`   | Represents the number of direct-mapped sections in the virtual SMB`               | gauge   | `instance` |
 | `windows_hyperv_virtual_smb_direct_mapped_pages`      | Represents the number of direct-mapped pages in the virtual SMB`                  | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_write_bytes_rdma`         | Represents the number of bytes written per second using RDMA in the virtual SMB`  | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_bytes`              | Represents the number of bytes written per second in the virtual SMB`             | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_bytes_rdma`          | Represents the number of bytes read per second using RDMA in the virtual SMB`     | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_bytes`               | Represents the number of bytes read per second in the virtual SMB`                | counter | `instance` |
-| `windows_hyperv_virtual_smb_flush_requests`           | Represents the number of flush requests per second in the virtual SMB`            | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_requests_rdma`      | Represents the number of write requests per second using RDMA in the virtual SMB` | counter | `instance` |
-| `windows_hyperv_virtual_smb_write_requests`           | Represents the number of write requests per second in the virtual SMB`            | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_requests_rdma`       | Represents the number of read requests per second using RDMA in the virtual SMB`  | counter | `instance` |
-| `windows_hyperv_virtual_smb_read_requests`            | Represents the number of read requests per second in the virtual SMB`             | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_write_bytes_total`         | Represents the total number of bytes written using RDMA in the virtual SMB`  | counter | `instance` |
+| `windows_hyperv_virtual_smb_write_bytes_total`              | Represents the total number of bytes written in the virtual SMB`             | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_read_bytes_total`          | Represents the total number of bytes read using RDMA in the virtual SMB`     | counter | `instance` |
+| `windows_hyperv_virtual_smb_read_bytes_total`               | Represents the total number of bytes read in the virtual SMB`                | counter | `instance` |
+| `windows_hyperv_virtual_smb_flush_requests_total`           | Represents the total number of flush requests in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_write_requests_total`      | Represents the total number of write requests using RDMA in the virtual SMB` | counter | `instance` |
+| `windows_hyperv_virtual_smb_write_requests_total`           | Represents the total number of write requests in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_rdma_read_requests_total`       | Represents the total number of read requests using RDMA in the virtual SMB`  | counter | `instance` |
+| `windows_hyperv_virtual_smb_read_requests_total`            | Represents the total number of read requests in the virtual SMB`             | counter | `instance` |
 | `windows_hyperv_virtual_smb_current_pending_requests` | Represents the current number of pending requests in the virtual SMB`             | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_current_open_file_count`  | Represents the current number of open files in the virtual SMB`                   | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_tree_connect_count`       | Represents the number of tree connects in the virtual SMB`                        | gauge   | `instance` |
-| `windows_hyperv_virtual_smb_requests`                 | Represents the number of requests per second in the virtual SMB`                  | counter | `instance` |
-| `windows_hyperv_virtual_smb_sent_bytes`               | Represents the number of bytes sent per second in the virtual SMB`                | counter | `instance` |
-| `windows_hyperv_virtual_smb_received_bytes`           | Represents the number of bytes received per second in the virtual SMB`            | counter | `instance` |
+| `windows_hyperv_virtual_smb_open_files`  | Represents the current number of open files in the virtual SMB`                   | gauge   | `instance` |
+| `windows_hyperv_virtual_smb_tree_connects_total`       | Represents the total number of tree connects in the virtual SMB`                        | counter | `instance` |
+| `windows_hyperv_virtual_smb_requests_total`                 | Represents the total number of requests in the virtual SMB`                  | counter | `instance` |
+| `windows_hyperv_virtual_smb_sent_bytes_total`               | Represents the total number of bytes sent in the virtual SMB`                | counter | `instance` |
+| `windows_hyperv_virtual_smb_received_bytes_total`           | Represents the total number of bytes received in the virtual SMB`            | counter | `instance` |
 
 
 ### Hyper-V Virtual Switch
@@ -354,32 +352,23 @@ Example alert:
 
 | Name                                                                   | Description                                                                                                                                           | Type    | Labels   |
 |------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|---------|----------|
-| `windows_hyperv_virtual_storage_device_error_count_total`              | Represents the total number of errors that have occurred on this virtual device.                                                                      | counter | `device` |
-| `windows_hyperv_virtual_storage_device_queue_length`                   | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.        | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_read`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
+| `windows_hyperv_virtual_storage_device_errors_total`              | Represents the total number of errors that have occurred on this virtual device.                                                                      | counter | `device` |
+| `windows_hyperv_virtual_storage_device_read_bytes_total`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_read_total`          | Represents the total number of read operations that have occurred on this virtual device.                                                             | counter | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_written`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
+| `windows_hyperv_virtual_storage_device_written_bytes_total`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_written_total`       | Represents the total number of write operations that have occurred on this virtual device.                                                            | counter | `device` |
 | `windows_hyperv_virtual_storage_device_io_latency_seconds_total`       | Represents the total IO transfer latency for this virtual device.                                                                                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_latency_seconds`                | **Deprecated:** use `windows_hyperv_virtual_storage_device_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below.       | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_throughput_total`               | Represents the total number of IO transfers completed by this virtual device.                                                                         | counter | `device` |
 | `windows_hyperv_virtual_storage_device_normalized_throughput_total`    | Represents the total number of IO transfers completed by this virtual device, normalized to 8KB transfers.                                            | counter | `device` |
 | `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total` | Represents the total IO transfer latency on the underlying storage subsystem for this virtual device.                                                 | counter | `device` |
-| `windows_hyperv_virtual_storage_device_lower_queue_length`             | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.  | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_latency_seconds`          | **Deprecated:** use `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below. | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_io_quota_replenishment_total`   | Represents the IO quota replenishment counter for this virtual device. Use `rate()` for the replenishment rate.                                       | counter | `device` |
 
-#### Deprecated latency and queue length metrics
+#### Latency and queue length
 
 The `Latency`, `Lower Latency`, `Queue Length` and `Lower Queue Length` performance counters
-are averages that Windows computes from two samples. windows_exporter reads their raw values,
-which only grow: the sum of all IO latencies in 100ns ticks. The raw queue length values are
-the same as the raw latency values.
-
-`windows_hyperv_virtual_storage_device_latency_seconds`, `windows_hyperv_virtual_storage_device_lower_latency_seconds`,
-`windows_hyperv_virtual_storage_device_queue_length` and `windows_hyperv_virtual_storage_device_lower_queue_length`
-keep exposing these raw values as gauges for compatibility. They are deprecated and will be removed in a future release.
-Use the `*_io_latency_seconds_total` counters instead:
+are averages that Windows computes from two samples. Their raw values only grow: the sum of
+all IO latencies in 100ns ticks, and the raw queue length values are the same as the raw
+latency values. windows_exporter publishes them as the `*_io_latency_seconds_total` counters:
 
 ```promql
 # Average IO latency in seconds
@@ -491,7 +480,7 @@ Disks that could not be read, and stale data:
 
 | Name                                                 | Description                                           | Type  | Labels |
 |------------------------------------------------------|-------------------------------------------------------|-------|--------|
-| `windows_hyperv_virtual_machine_health_total_count` | Represents the number of virtual machines with health | gauge | `state` |
+| `windows_hyperv_virtual_machines` | Number of virtual machines by health state | gauge | `state` |
 
 
 ### Example metric
@@ -500,19 +489,19 @@ _This collector does not yet have explained examples, we would appreciate your h
 ## Useful queries
 Percent of physical CPU resources used per VM (on instance "localhost")
 ```
-sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{instance="localhost"}[1m])) / ignoring(vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) * 100
+sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total{instance="localhost"}[1m])) / ignoring(vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) * 100
 ```
 Percent of physical CPU resources used by all VMs (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{}[1m]))) / max by (instance)(windows_cpu_logical_processor{}) * 100
+(sum by (instance)(rate(windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total{}[1m]))) / max by (instance)(windows_cpu_logical_processor{}) * 100
 ```
 Percent of physical CPU resources by the hosts themselves (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
+(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_total_run_time_seconds_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
 ```
 Percent of physical CPU resources by the hypervisor (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_time_total{state="hypervisor"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
+(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_time_seconds_total{state="hypervisor"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) * 100
 ```
 
 ## Alerting examples

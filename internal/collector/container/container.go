@@ -281,7 +281,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.containersCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "count"),
+		prometheus.BuildFQName(types.Namespace, "", "containers"),
 		"Number of containers",
 		nil,
 		nil,
@@ -329,13 +329,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.runtimeUser = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_seconds_usermode"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_usermode_seconds_total"),
 		"Run Time in User mode in Seconds",
 		[]string{"container_id", "namespace", "pod", "container"},
 		nil,
 	)
 	c.runtimeKernel = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_seconds_kernelmode"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_kernelmode_seconds_total"),
 		"Run time in Kernel mode in Seconds",
 		[]string{"container_id", "namespace", "pod", "container"},
 		nil,

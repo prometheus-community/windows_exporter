@@ -61,13 +61,13 @@ logged at debug level and never fail the scrape.
 | `windows_gpu_engine_frequency_max_hertz`   | Maximum clock frequency of the GPU engine in hertz, while not overclocked             | gauge   | `device_id`,`luid`,`phys`,`eng` |
 
 The engine frequency metrics are only exposed for engines that report a maximum frequency, typically the 3D engine. The
-`eng` label matches the `eng` label of `windows_gpu_engine_time_seconds`.
+`eng` label matches the `eng` label of `windows_gpu_engine_time_seconds_total`.
 
 ### Per-process Metrics
 
 | Name                                         | Description                                     | Type    | Labels                                                    |
 |----------------------------------------------|-------------------------------------------------|---------|-----------------------------------------------------------|
-| `windows_gpu_engine_time_seconds`            | Total running time of the GPU engine in seconds | counter | `device_id`,`luid`,`phys`, `eng`, `engtype`, `process_id` |
+| `windows_gpu_engine_time_seconds_total`            | Total running time of the GPU engine in seconds | counter | `device_id`,`luid`,`phys`, `eng`, `engtype`, `process_id` |
 | `windows_gpu_process_memory_committed_bytes` | Total committed GPU memory in bytes per process | gauge   | `device_id`,`luid`,`phys`,`process_id`                    |
 | `windows_gpu_process_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per process | gauge   | `device_id`,`luid`,`phys`,`process_id`                    |
 | `windows_gpu_process_memory_local_bytes`     | Local GPU memory usage in bytes per process     | gauge   | `device_id`,`luid`,`phys`,`process_id`                    |
@@ -118,7 +118,7 @@ windows_gpu_adapter_memory_dedicated_bytes{phys="0"}
 
 ```promql
 sum by (phys) (
-  rate(windows_gpu_engine_time_seconds{phys="0", engtype="3D"}[1m])
+  rate(windows_gpu_engine_time_seconds_total{phys="0", engtype="3D"}[1m])
 ) * 100
 ```
 
@@ -126,7 +126,7 @@ sum by (phys) (
 
 ```promql
 sum by (phys, process_id) (
-  rate(windows_gpu_engine_time_seconds{process_id="1234", engtype="3D"}[1m])
+  rate(windows_gpu_engine_time_seconds_total{process_id="1234", engtype="3D"}[1m])
 ) * 100
 ```
 
@@ -144,7 +144,7 @@ sum by (luid, process_id) (
 
 ```promql
 topk(5, sum by (process_id) (
-  rate(windows_gpu_engine_time_seconds[1m])
+  rate(windows_gpu_engine_time_seconds_total[1m])
 ) * 100)
 ```
 
@@ -159,7 +159,7 @@ sum by (phys) (
 Show GPU engine time with process owner and command line:
 
 ```promql
-windows_gpu_engine_time_seconds * on(process_id) group_left(owner, cmdline) windows_process_info
+windows_gpu_engine_time_seconds_total * on(process_id) group_left(owner, cmdline) windows_process_info
 ```
 
 **Show the engine clock as a ratio of its maximum clock:**
@@ -177,7 +177,7 @@ windows_gpu_engine_frequency_hertz / windows_gpu_engine_frequency_max_hertz
 - alert: HighGpuUtilization
   expr: |
     sum by (process_id) (
-      rate(windows_gpu_engine_time_seconds[1m])
+      rate(windows_gpu_engine_time_seconds_total[1m])
     ) * 100 > 80
   for: 10m
   labels:

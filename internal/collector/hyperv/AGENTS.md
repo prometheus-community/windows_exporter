@@ -44,7 +44,8 @@ memory) on a host with 12 logical processors.
   `... count` counters are cumulative. The `... latency microseconds`
   counters are not cumulative: `Commit operation latency microseconds` of the
   configuration file dropped from 6659 to 5213 while `Commit operation count`
-  stayed 1.
+  stayed 1. The collector converts the latencies to seconds
+  (`..._latency_seconds`) and publishes the counts as `_total` counters.
 - `Hyper-V VM Vid Partition`: pages are 4 KiB. The 2 GiB VM had 526336
   `Physical Pages Allocated`.
 - `Hyper-V Virtual Storage Device`: instances are the disk path with `\`

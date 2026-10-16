@@ -174,8 +174,8 @@ func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	}
 
 	c.virtualNetworkAdapterDropReasons = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_drop_reasons"),
-		"Hyper-V Virtual Network Adapter Drop Reasons",
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_drop_reasons_total"),
+		"Number of packets dropped by a Hyper-V virtual network adapter, by drop reason and direction",
 		[]string{"adapter", "reason", "direction"},
 		nil,
 	)

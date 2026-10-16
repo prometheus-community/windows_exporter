@@ -1784,7 +1784,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
+                                                "expr": "sum by (process, process_id) (rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
                                                 "instant": false,
                                                 "legendFormat": "{{process}} ({{process_id}})",
                                                 "range": true
@@ -4397,7 +4397,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1)))",
+                                                "expr": "100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1)))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -4490,7 +4490,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (state) (windows_tcp_connections_state_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum by (state) (windows_tcp_connections{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{state}}",
                                                 "range": true
@@ -5775,7 +5775,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_process_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -6133,7 +6133,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "1 - avg(clamp_max(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1))",
+                                                "expr": "1 - avg(clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -6228,7 +6228,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"user\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"user\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -6315,7 +6315,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"privileged\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"privileged\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -6581,7 +6581,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "avg(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -7897,7 +7897,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1)))",
+                                                "expr": "100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 1)))",
                                                 "instant": false,
                                                 "legendFormat": "CPU busy",
                                                 "range": true
@@ -8383,7 +8383,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1))",
+                                                "expr": "max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -10243,7 +10243,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "expr": "(100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -11542,7 +11542,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (disk) (label_replace(windows_diskdrive_size{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"name\", \"PHYSICALDRIVE(\\\\d+)\"))",
+                                                "expr": "max by (disk) (label_replace(windows_diskdrive_size_bytes{job=~\"$job\", instance=\"$instance\"}, \"disk\", \"$1\", \"name\", \"PHYSICALDRIVE(\\\\d+)\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -13825,7 +13825,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_smb_server_shares_current_open_file_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum(windows_smb_server_shares_open_files{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -13910,7 +13910,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_smb_server_shares_tree_connect_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum(windows_smb_server_shares_tree_connects{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -14653,7 +14653,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_smb_server_shares_current_open_file_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_smb_server_shares_open_files{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "{{share}}",
                                                 "range": true
@@ -14768,7 +14768,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_smb_server_shares_tree_connect_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_smb_server_shares_tree_connects{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "{{share}}",
                                                 "range": true
@@ -15790,7 +15790,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (mode) (rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode!=\"idle\"}[$__rate_interval])) / scalar(count(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}))",
+                                                "expr": "sum by (mode) (rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode!=\"idle\"}[$__rate_interval])) / scalar(count(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{mode}}",
                                                 "range": true
@@ -16505,7 +16505,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (name) (windows_storage_spaces_virtual_disk_storage_efficiency_percent{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (name) (windows_storage_spaces_virtual_disk_storage_efficiency_ratio{job=~\"$job\", instance=\"$instance\"})",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -16651,7 +16651,7 @@
                                         "properties": [
                                             {
                                                 "id": "unit",
-                                                "value": "percent"
+                                                "value": "percentunit"
                                             },
                                             {
                                                 "id": "decimals",
@@ -16979,7 +16979,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "label_replace(clamp(1 - rate(windows_cpu_time_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 0, 1), \"core\", \"$1,0$2\", \"core\", \"(\\\\d+),(\\\\d)\")",
+                                                "expr": "label_replace(clamp(1 - rate(windows_cpu_time_seconds_total{job=~\"$job\", instance=\"$instance\", mode=\"idle\"}[$__rate_interval]), 0, 1), \"core\", \"$1,0$2\", \"core\", \"(\\\\d+),(\\\\d)\")",
                                                 "instant": false,
                                                 "legendFormat": "{{core}}",
                                                 "range": true
@@ -17246,7 +17246,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count((100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1))) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "expr": "count((100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1))) > 90) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -18168,7 +18168,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "topk(25, (100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "expr": "topk(25, (100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_seconds_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]), 1)))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{hostname}}",
                                                 "range": true
@@ -18280,7 +18280,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "avg(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "average",
                                                 "range": true
@@ -18302,7 +18302,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max(1e4 * windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "expr": "max(1e-2 * windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"} * rate(windows_cpu_processor_performance_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / rate(windows_cpu_processor_mperf_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
                                                 "instant": false,
                                                 "legendFormat": "maximum",
                                                 "range": true
@@ -18324,7 +18324,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "avg(windows_cpu_core_frequency_mhz{job=~\"$job\", instance=\"$instance\"}) * 1e6",
+                                                "expr": "avg(windows_cpu_core_frequency_hertz{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "nominal",
                                                 "range": true
@@ -21691,7 +21691,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1)",
+                                                "expr": "clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1)",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -22024,7 +22024,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} {{engtype}}",
                                                 "range": true
@@ -22489,7 +22489,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))))",
+                                                "expr": "topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))))",
                                                 "instant": false,
                                                 "legendFormat": "{{process}} ({{process_id}})",
                                                 "range": true
@@ -22723,7 +22723,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_hyperv_virtual_machine_health_total_count{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum(windows_hyperv_virtual_machines{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -22808,7 +22808,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(windows_hyperv_virtual_machine_health_total_count{job=~\"$job\", instance=\"$instance\", state=\"critical\"})",
+                                                "expr": "sum(windows_hyperv_virtual_machines{job=~\"$job\", instance=\"$instance\", state=\"critical\"})",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -22997,7 +22997,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_hyperv_host_logical_processors{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -23082,7 +23082,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_hyperv_total_vm_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_hyperv_assigned_vm_processors{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -23167,7 +23167,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "windows_hyperv_total_vm_processor_count{job=~\"$job\", instance=\"$instance\"} / windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}",
+                                                "expr": "windows_hyperv_assigned_vm_processors{job=~\"$job\", instance=\"$instance\"} / windows_hyperv_host_logical_processors{job=~\"$job\", instance=\"$instance\"}",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -23253,7 +23253,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (state) (rate(windows_hyperv_hypervisor_logical_processor_time_total{job=~\"$job\", instance=\"$instance\", state!=\"idle\"}[$__rate_interval])) / scalar(count(windows_hyperv_hypervisor_logical_processor_time_total{job=~\"$job\", instance=\"$instance\", state=\"idle\"}))",
+                                                "expr": "sum by (state) (rate(windows_hyperv_hypervisor_logical_processor_time_seconds_total{job=~\"$job\", instance=\"$instance\", state!=\"idle\"}[$__rate_interval])) / scalar(count(windows_hyperv_hypervisor_logical_processor_time_seconds_total{job=~\"$job\", instance=\"$instance\", state=\"idle\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{state}}",
                                                 "range": true
@@ -23514,7 +23514,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / scalar(max(windows_hyperv_host_logical_processor_count{job=~\"$job\", instance=\"$instance\"}))",
+                                                "expr": "sum by (vm) (rate(windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])) / scalar(max(windows_hyperv_host_logical_processors{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{vm}}",
                                                 "range": true
@@ -23978,7 +23978,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_hyperv_virtual_storage_device_bytes_written{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_written_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{device}} write",
                                                 "range": true
@@ -24000,7 +24000,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_hyperv_virtual_storage_device_bytes_read{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_read_bytes_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval])",
                                                 "instant": false,
                                                 "legendFormat": "{{device}} read",
                                                 "range": true
@@ -24298,7 +24298,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_hyperv_virtual_storage_device_error_count_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0",
+                                                "expr": "rate(windows_hyperv_virtual_storage_device_errors_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) > 0",
                                                 "instant": false,
                                                 "legendFormat": "{{device}} errors",
                                                 "range": true

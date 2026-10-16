@@ -25,8 +25,8 @@ function(on)
       if on('smbclient') then b.row('Client shares', b.flow([[231, 12, 8], [232, 12, 8], [233, 12, 8], [234, 12, 8], [235, 12, 8], [236, 12, 8]])),
     ]),
     [
-      b.stat(220, 'Open files', 'Files open on the shares of this SMB server.' + serverRequirement, 'sum(' + server('current_open_file_count') + ')'),
-      b.stat(221, 'Connections', 'Client connections (tree connects) to the shares of this SMB server.' + serverRequirement, 'sum(' + server('tree_connect_count') + ')'),
+      b.stat(220, 'Open files', 'Files open on the shares of this SMB server.' + serverRequirement, 'sum(' + server('open_files') + ')'),
+      b.stat(221, 'Connections', 'Client connections (tree connects) to the shares of this SMB server.' + serverRequirement, 'sum(' + server('tree_connects') + ')'),
       b.stat(222, 'Server traffic', 'Bytes sent and received per second by the shares of this SMB server.' + serverRequirement, 'sum(' + serverRate('received_bytes_total') + ') + sum(' + serverRate('sent_bytes_total') + ')', 'Bps'),
       b.stat(223, 'Client traffic', 'Bytes read and written per second by this host on remote SMB shares.' + clientRequirement, 'sum(' + clientRate('data_bytes_total') + ')', 'Bps'),
       b.stat(224, 'Client latency', 'Average time per request of this host on remote SMB shares. 0 when there are no requests.' + clientRequirement, '(sum(' + clientRate('request_seconds_total') + ') / (sum(' + clientRate('requests_total') + ') > 0)) or (0 * sum(' + clientRate('requests_total') + '))', 's', steps=b.levels(0.02, 0.05)),
@@ -41,8 +41,8 @@ function(on)
         [serverRate('write_requests_total'), share + ' write'],
         [serverRate('metadata_requests_total'), share + ' metadata'],
       ]),
-      b.graph(228, 'Open files', 'Files open per share.' + serverRequirement, 'short', [[server('current_open_file_count'), share]]),
-      b.graph(229, 'Connections', 'Client connections (tree connects) per share.' + serverRequirement, 'short', [[server('tree_connect_count'), share]]),
+      b.graph(228, 'Open files', 'Files open per share.' + serverRequirement, 'short', [[server('open_files'), share]]),
+      b.graph(229, 'Connections', 'Client connections (tree connects) per share.' + serverRequirement, 'short', [[server('tree_connects'), share]]),
       b.graph(230, 'Files opened', 'Files opened per second per share.' + serverRequirement, 'ops', [[serverRate('files_opened_total'), share]]),
 
       b.graph(231, 'Client traffic', 'Bytes read and written per second per remote share. Reads are drawn below the axis.' + clientRequirement, 'Bps', [

@@ -123,7 +123,7 @@ function(on)
       b.panel.new(140, 'TCP connections by state', 'timeseries')
       + b.panel.withDescription('Needs the tcp collector, which is not enabled by default. A growing CLOSE_WAIT count means an application does not close its sockets. Many TIME_WAIT connections can use up the dynamic port range for outgoing connections.')
       + b.panel.withQueries([
-        b.query.new('sum by (state) (windows_tcp_connections_state_count{job=~"$job", instance="$instance"})', 'A')
+        b.query.new('sum by (state) (windows_tcp_connections{job=~"$job", instance="$instance"})', 'A')
         + b.query.withLegendFormat('{{state}}'),
       ])
       + b.panel.withDefaults({

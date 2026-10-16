@@ -1590,7 +1590,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1))",
+                                                "expr": "max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -2154,7 +2154,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1)",
+                                                "expr": "clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1)",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -2487,7 +2487,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} {{engtype}}",
                                                 "range": true
@@ -2807,7 +2807,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))))",
+                                                "expr": "topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~\"$job\", instance=\"$instance\"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))))",
                                                 "instant": false,
                                                 "legendFormat": "{{process}} ({{process_id}})",
                                                 "range": true

@@ -121,7 +121,7 @@ func TestAppPoolWASUptimeMetrics(t *testing.T) {
 	requireMetric(t, metrics, "windows_iis_current_application_pool_uptime_seconds", dto.MetricType_GAUGE, 298, app)
 	requireMetric(t, metrics, "windows_iis_total_application_pool_uptime_seconds", dto.MetricType_GAUGE, 600, app)
 	requireMetric(t, metrics, "windows_iis_time_since_last_worker_process_failure_seconds", dto.MetricType_GAUGE, 298, app)
-	requireMetric(t, metrics, "windows_iis_total_application_pool_recycles", dto.MetricType_COUNTER, 2, app)
+	requireMetric(t, metrics, "windows_iis_application_pool_recycles_total", dto.MetricType_COUNTER, 2, app)
 	require.NotContains(t, metrics, "windows_iis_current_application_pool_start_time")
 	require.NotContains(t, metrics, "windows_iis_total_application_pool_start_time")
 }

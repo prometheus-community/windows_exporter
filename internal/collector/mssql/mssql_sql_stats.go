@@ -71,67 +71,67 @@ func (c *Collector) buildSQLStats() error {
 	}
 
 	c.sqlStatsAutoParamAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_auto_parameterization_attempts_total"),
 		"(SQLStatistics.AutoParamAttempts)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsBatchRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_batch_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_batch_requests_total"),
 		"(SQLStatistics.BatchRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsFailedAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_failed_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_failed_auto_parameterization_attempts_total"),
 		"(SQLStatistics.FailedAutoParams)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsForcedParameterizations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_forced_parameterizations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_forced_parameterizations_total"),
 		"(SQLStatistics.ForcedParameterizations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsGuidedplanexecutions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_guided_plan_executions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_guided_plan_executions_total"),
 		"(SQLStatistics.Guidedplanexecutions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsMisguidedplanexecutions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_misguided_plan_executions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_misguided_plan_executions_total"),
 		"(SQLStatistics.Misguidedplanexecutions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSafeAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_safe_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_safe_auto_parameterization_attempts_total"),
 		"(SQLStatistics.SafeAutoParams)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLAttentionrate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_attentions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_attentions_total"),
 		"(SQLStatistics.SQLAttentions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLCompilations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_compilations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_compilations_total"),
 		"(SQLStatistics.SQLCompilations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLReCompilations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_recompilations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_recompilations_total"),
 		"(SQLStatistics.SQLReCompilations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsUnsafeAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_unsafe_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_unsafe_auto_parameterization_attempts_total"),
 		"(SQLStatistics.UnsafeAutoParams)",
 		[]string{"mssql_instance"},
 		nil,

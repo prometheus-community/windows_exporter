@@ -51,8 +51,8 @@ func (c *Collector) buildVirtualMachineHealthSummary() error {
 	}
 
 	c.health = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_machine_health_total_count"),
-		"Represents the number of virtual machines with critical health",
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_machines"),
+		"Number of virtual machines by health state",
 		[]string{"state"},
 		nil,
 	)

@@ -121,10 +121,9 @@ func TestCounterUnitConversions(t *testing.T) {
 		GenStatsTempdbRowsetID:               11,
 	}}
 	c.locksPerfDataObject = []perfDataCounterValuesLocks{{
-		Name:                       "locks",
-		LocksAverageWaitTimeMS:     499,
-		LocksAverageWaitTimeMSBase: 3,
-		LocksLockWaitTimeMS:        499,
+		Name:                   "locks",
+		LocksAverageWaitTimeMS: 499,
+		LocksLockWaitTimeMS:    499,
 	}}
 	c.transactionsPerfDataObject = []perfDataCounterValuesTransactions{{
 		TransactionsNonSnapshotVersionTransactions: 1,
@@ -156,7 +155,7 @@ func TestCounterUnitConversions(t *testing.T) {
 	gauge := dto.MetricType_GAUGE
 
 	want := map[string]wantMetric{
-		"windows_mssql_bufman_read_ahead_issuing_seconds": {counter, 882e-6},
+		"windows_mssql_bufman_read_ahead_issuing_seconds_total": {counter, 882e-6},
 
 		"windows_mssql_databases_log_flush_wait_seconds_total":                   {counter, 0.004},
 		"windows_mssql_databases_log_flush_write_seconds_total":                  {counter, 0.003},
@@ -189,7 +188,6 @@ func TestCounterUnitConversions(t *testing.T) {
 		"windows_mssql_genstats_tempdb_rowset_ids_generated_total":        {counter, 11},
 
 		"windows_mssql_locks_wait_time_seconds_total": {counter, 0.499},
-		"windows_mssql_locks_count_total":             {counter, 3},
 		"windows_mssql_locks_lock_wait_seconds_total": {counter, 0.499},
 
 		"windows_mssql_transactions_nonsnapshot_version_active":         {gauge, 1},
@@ -275,7 +273,7 @@ func TestMetricTypesMatchCounterTypes(t *testing.T) {
 	waitStats := c.waitStatsPerfDataCollectors[instance].MetricType
 
 	checks := []check{
-		{"windows_mssql_bufman_read_ahead_issuing_seconds", "Readahead time/sec", false, bufMan},
+		{"windows_mssql_bufman_read_ahead_issuing_seconds_total", "Readahead time/sec", false, bufMan},
 		{"windows_mssql_databases_log_flush_wait_seconds_total", "Log Flush Wait Time", false, databases},
 		{"windows_mssql_databases_log_flush_write_seconds_total", "Log Flush Write Time (ms)", false, databases},
 		{"windows_mssql_databases_log_growths_total", "Log Growths", true, databases},

@@ -30,11 +30,11 @@ function(on)
       stat(150, 'Processes', 'Number of distinct process IDs currently collected, excluding Idle.', 'count(count by (process_id) (' + gauge('info') + '))', 'short'),
       stat(151, 'Threads', 'Total active threads in the selected processes.', 'sum(' + gauge('threads') + ')', 'short'),
       stat(152, 'Handles', 'Total open handles in the selected processes.', 'sum(' + gauge('handles') + ')', 'short'),
-      stat(153, 'CPU busy', 'CPU time used by the selected processes as a share of all logical processors of the host, excluding Idle.', 'sum(' + rate('cpu_time_total') + ') / scalar(max(windows_cpu_logical_processor{job=~"$job", instance="$instance"}))', 'percentunit', steps=b.levels(0.8, 0.9)),
+      stat(153, 'CPU busy', 'CPU time used by the selected processes as a share of all logical processors of the host, excluding Idle.', 'sum(' + rate('cpu_time_seconds_total') + ') / scalar(max(windows_cpu_logical_processor{job=~"$job", instance="$instance"}))', 'percentunit', steps=b.levels(0.8, 0.9)),
       stat(154, 'Private working set', 'Physical memory private to the selected processes; shared pages are excluded.', 'sum(' + gauge('working_set_private_bytes') + ')', 'bytes'),
       stat(155, 'Private bytes', 'Total memory allocated by the selected processes that cannot be shared; it may include nonresident memory.', 'sum(' + gauge('private_bytes') + ')', 'bytes'),
 
-      graph(112, 'Process CPU usage', 'User and privileged CPU time per process as a share of one logical processor. Values above 100% mean the process uses more than one core.', sumRates('cpu_time_total'), sumRates('cpu_time_total', ' @ end()'), 'percentunit'),
+      graph(112, 'Process CPU usage', 'User and privileged CPU time per process as a share of one logical processor. Values above 100% mean the process uses more than one core.', sumRates('cpu_time_seconds_total'), sumRates('cpu_time_seconds_total', ' @ end()'), 'percentunit'),
       graph(113, 'Process working set', 'Physical memory in the working set of each process, including shared pages.', gauge('working_set_bytes'), gauge('working_set_bytes', ' @ end()'), 'bytes'),
       graph(114, 'Process private bytes', 'Memory allocated by each process that cannot be shared with other processes.', gauge('private_bytes'), gauge('private_bytes', ' @ end()'), 'bytes'),
       graph(115, 'Process I/O throughput', 'Total bytes issued for read, write and other I/O per process, including file, network and device operations.', sumRates('io_bytes_total'), sumRates('io_bytes_total', ' @ end()'), 'Bps'),

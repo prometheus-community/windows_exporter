@@ -12,7 +12,7 @@ function(on)
       if on('gpu') then b.row('Processes', b.flow([[60, 12, 8], [61, 12, 8], [128, 12, 8], [129, 12, 8], [130, 12, 8], [131, 12, 8]])),
     ]),
     [
-      b.stat(184, 'Utilization', 'Utilization of the busiest engine on the busiest GPU.', 'max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(' + metric('engine_time_seconds') + '[$__rate_interval]))), 1))', 'percentunit', steps=b.levels(0.8, 0.9))
+      b.stat(184, 'Utilization', 'Utilization of the busiest engine on the busiest GPU.', 'max(clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(' + metric('engine_time_seconds_total') + '[$__rate_interval]))), 1))', 'percentunit', steps=b.levels(0.8, 0.9))
       + b.panel.withDefaults({ decimals: 1, max: 1, min: 0 }),
       b.stat(185, 'VRAM used', 'Dedicated GPU memory in use, summed over all GPUs.', perGpu('adapter_memory_dedicated_bytes'), 'bytes')
       + b.panel.withDefaults({ decimals: 1 }),
@@ -30,7 +30,7 @@ function(on)
         b.query.new('max by (luid, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
         + b.query.withInstant()
         + b.query.withFormat('table'),
-        b.query.new('clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~"$job", instance="$instance"}[$__rate_interval]))), 1)', 'B')
+        b.query.new('clamp_max(max by (luid) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]))), 1)', 'B')
         + b.query.withInstant()
         + b.query.withFormat('table'),
         b.query.new('max by (luid) (windows_gpu_adapter_memory_dedicated_bytes{job=~"$job", instance="$instance"})', 'C')
@@ -208,7 +208,7 @@ function(on)
       b.panel.new(58, 'GPU utilization by engine type', 'timeseries')
       + b.panel.withDescription('Busiest engine of each engine type, as in Task Manager.')
       + b.panel.withQueries([
-        b.query.new('clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds{job=~"$job", instance="$instance"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+        b.query.new('clamp_max(max by (luid, engtype) (sum by (luid, eng, engtype) (rate(windows_gpu_engine_time_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]))), 1) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
         + b.query.withLegendFormat('{{name}} {{engtype}}'),
       ])
       + b.panel.withDefaults({
@@ -260,7 +260,7 @@ function(on)
       b.panel.new(60, 'Top 10 processes by GPU utilization', 'timeseries')
       + b.panel.withDescription('Busiest GPU engine used by each process. Process names need the process collector; otherwise only the PID is shown.')
       + b.panel.withQueries([
-        b.query.new('topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~"$job", instance="$instance"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds{job=~"$job", instance="$instance"}[$__rate_interval]))))', 'A')
+        b.query.new('topk(10, (max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]))) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) max by (process_id) (sum by (process_id, luid, eng) (rate(windows_gpu_engine_time_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]))))', 'A')
         + b.query.withLegendFormat('{{process}} ({{process_id}})'),
       ])
       + b.panel.withDefaults({

@@ -149,13 +149,13 @@ func (c *Collector) buildTransactions() error {
 		nil,
 	)
 	c.transactionsVersionStoreCreationUnits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_creation_units"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_creation_units_total"),
 		"(Transactions.VersionStoreUnitCreation)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionStoreTruncationUnits = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_truncation_units"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_truncation_units_total"),
 		"(Transactions.VersionStoreUnitTruncation)",
 		[]string{"mssql_instance"},
 		nil,

@@ -97,7 +97,7 @@ func (c *Collector) buildBufferManager() error {
 	}
 
 	c.bufManBackgroundwriterpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_background_writer_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_background_writer_pages_total"),
 		"(BufferManager.Backgroundwriterpages)",
 		[]string{"mssql_instance"},
 		nil,
@@ -115,7 +115,7 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManCheckpointpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_checkpoint_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_checkpoint_pages_total"),
 		"(BufferManager.Checkpointpages)",
 		[]string{"mssql_instance"},
 		nil,
@@ -139,8 +139,8 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManExtensioninuseaspercentage = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_in_use_as_percentage"),
-		"(BufferManager.Extensioninuseaspercentage)",
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_in_use_ratio"),
+		"(BufferManager.Extensioninuseaspercentage) Ratio (0-1) of the buffer pool extension file in use",
 		[]string{"mssql_instance"},
 		nil,
 	)
@@ -151,13 +151,13 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManExtensionpageevictions = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_evictions"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_evictions_total"),
 		"(BufferManager.Extensionpageevictions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionpagereads = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_reads_total"),
 		"(BufferManager.Extensionpagereads)",
 		[]string{"mssql_instance"},
 		nil,
@@ -169,13 +169,13 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManExtensionpagewrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_writes"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_writes_total"),
 		"(BufferManager.Extensionpagewrites)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManFreeliststalls = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_free_list_stalls"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_free_list_stalls_total"),
 		"(BufferManager.Freeliststalls)",
 		[]string{"mssql_instance"},
 		nil,
@@ -187,7 +187,7 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManLazywrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_lazywrites"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_lazywrites_total"),
 		"(BufferManager.Lazywrites)",
 		[]string{"mssql_instance"},
 		nil,
@@ -199,31 +199,31 @@ func (c *Collector) buildBufferManager() error {
 		nil,
 	)
 	c.bufManPagelookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_lookups_total"),
 		"(BufferManager.Pagelookups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagereads = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_reads_total"),
 		"(BufferManager.Pagereads)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagewrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_writes"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_writes_total"),
 		"(BufferManager.Pagewrites)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManReadaheadpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_pages_total"),
 		"(BufferManager.Readaheadpages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManReadaheadtime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_issuing_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_issuing_seconds_total"),
 		"(BufferManager.Readaheadtime) Total time spent issuing read-ahead, in seconds",
 		[]string{"mssql_instance"},
 		nil,
@@ -307,7 +307,7 @@ func (c *Collector) emitBufferManagerMetrics(ch chan<- prometheus.Metric, sqlIns
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensioninuseaspercentage,
 			prometheus.GaugeValue,
-			data.BufManExtensionInUseAsPercentage,
+			data.BufManExtensionInUseAsPercentage/100,
 			sqlInstance.name,
 		)
 
