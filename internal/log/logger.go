@@ -31,9 +31,15 @@ import (
 	wineventlog "golang.org/x/sys/windows/svc/eventlog"
 )
 
+// eventLogFile is the AllowedFile value that selects the Windows event log.
+const eventLogFile = "eventlog"
+
+// eventLogSource is the event source the event log output writes as.
+const eventLogSource = "windows_exporter"
+
 // AllowedFile is a settable identifier for the output file that the logger can have.
-// A path is only stored by Set; New opens it, since the rotation settings are
-// parsed after the file flag.
+// Set only stores the value, because a later flag or the configuration file can
+// replace it; New opens the file or the event log that was selected last.
 type AllowedFile struct {
 	s string
 	w io.Writer
@@ -56,13 +62,6 @@ func (f *AllowedFile) Set(s string) error {
 		f.w = os.Stdout
 	case "stderr":
 		f.w = os.Stderr
-	case "eventlog":
-		eventLog, err := wineventlog.Open("windows_exporter")
-		if err != nil {
-			return fmt.Errorf("failed to open event log: %w", err)
-		}
-
-		f.w = eventlog.NewEventLogWriter(eventLog)
 	default:
 		f.w = nil
 	}
@@ -72,7 +71,7 @@ func (f *AllowedFile) Set(s string) error {
 
 // isPath reports whether the output is a log file path rather than a stream.
 func (f *AllowedFile) isPath() bool {
-	return f.s != "" && f.w == nil
+	return f.s != "" && f.s != eventLogFile && f.w == nil
 }
 
 // Rotation configures the size-based rotation of a log file. Rotation is
@@ -112,8 +111,8 @@ type Config struct {
 	Rotation Rotation
 }
 
-// New creates the logger. The returned io.Closer releases the log file; it is
-// nil for stdout, stderr and the event log.
+// New creates the logger. The returned io.Closer releases the log file or the
+// event log handle; it is nil for stdout and stderr.
 func New(config *Config) (*slog.Logger, io.Closer, error) {
 	if config.File == nil {
 		return nil, nil, errors.New("log file undefined")
@@ -131,6 +130,16 @@ func New(config *Config) (*slog.Logger, io.Closer, error) {
 	case !config.File.isPath():
 		if config.Rotation.configured() {
 			return nil, nil, fmt.Errorf("log rotation requires log.file to be a file path, not %s", config.File.s)
+		}
+
+		if config.File.s == eventLogFile {
+			eventLog, err := wineventlog.Open(eventLogSource)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to open event log: %w", err)
+			}
+
+			eventLogWriter := eventlog.NewEventLogWriter(eventLog)
+			writer, closer = eventLogWriter, eventLogWriter
 		}
 	case config.Rotation.MaxSize > 0:
 		file, err := newRotatingFile(config.File.s, int64(config.Rotation.MaxSize)<<20, config.Rotation.MaxBackups, config.Rotation.Compress, time.Now)

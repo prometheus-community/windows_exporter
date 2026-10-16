@@ -303,7 +303,9 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 	defer result.Release()
 
-	logger.Debug(fmt.Sprintf("search for updates took %s", time.Since(timeStart)))
+	logger.Debug("search for updates finished",
+		slog.Duration("duration", time.Since(timeStart)),
+	)
 
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 		c.queryDurationSeconds,
