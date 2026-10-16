@@ -1,0 +1,45 @@
+name: Create tag
+run-name: ${{ inputs.tag }}
+
+# Creates a release tag on the commit the workflow runs on and starts CI for it.
+# A tag created with GITHUB_TOKEN does not trigger the tag push run, but a
+# workflow_dispatch does, so CI runs exactly once for the tag. That run builds
+# and signs the binaries, pushes the container images and creates the draft
+# release. Pushing a tag from a local clone triggers the same run directly.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to create, such as v1.2.3 or v1.2.3-beta.1
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  create:
+    name: Create tag
+    if: github.repository == 'prometheus-community/windows_exporter'
+    runs-on: ubuntu-26.04
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - name: Create tag and start CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # The CI build derives the Windows file version from the tag and
+          # accepts only these forms.
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "::error::Tag $TAG must look like v1.2.3, v1.2.3-beta.1 or v1.2.3-rc.1"
+            exit 1
+          fi
+
+          gh api --method POST "repos/$GH_REPO/git/refs" \
+            -f "ref=refs/tags/$TAG" \
+            -f "sha=$GITHUB_SHA"
+
+          gh workflow run ci.yml --ref "$TAG"
