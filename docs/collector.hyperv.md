@@ -12,7 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_hard_disk,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=datastore,dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_hard_disk,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_network_adapter_drop_reasons,virtual_smb,virtual_storage_device,virtual_switch,vm_state,wmi_health`
 
 ### `--collector.hyperv.virtual-hard-disk.refresh-interval`
 Interval at which the `virtual_hard_disk` sub-collector reads the disks in the background, for example `10m`.
@@ -388,6 +388,54 @@ rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])
 | `windows_hyperv_vid_physical_pages_allocated`  | The number of physical pages allocated                                  | gauge | `vm`   |
 | `windows_hyperv_vid_preferred_numa_node_index` | The preferred NUMA node index associated with this partition            | gauge | `vm`   |
 | `windows_hyperv_vid_remote_physical_pages`     | The number of physical pages not allocated from the preferred NUMA node | gauge | `vm`   |
+
+
+### Hyper-V VM State
+
+Sub-collector `vm_state`, enabled by default. The performance counter objects only have instances for running
+virtual machines, so a VM that is off, saved or paused is missing from all other metrics. This sub-collector lists
+every virtual machine registered on the host with one WQL query per scrape
+(`SELECT Name, ElementName, EnabledState FROM Msvm_ComputerSystem`) against the `root/virtualization/v2` namespace.
+The query times out after 5 seconds; a failed or timed-out query fails the `hyperv` collector
+(`windows_exporter_collector_success{collector="hyperv"}` is `0`), like the `replica_vm` sub-collector.
+On a failover cluster, each node reports the virtual machines it currently owns.
+
+| Name                      | Description                                                           | Type  | Labels                 |
+|---------------------------|-----------------------------------------------------------------------|-------|------------------------|
+| `windows_hyperv_vm_state` | The state of the virtual machine, 1 if the current state, 0 otherwise | gauge | `vm`, `vm_id`, `state` |
+
+Every virtual machine has one series per `state`: `running`, `off`, `starting`, `stopping`, `saving`, `saved`,
+`pausing`, `paused`, `resuming`, `reset` and `unknown`. The value is 1 for the current state and 0 for the others.
+`state` is read from `Msvm_ComputerSystem.EnabledState`. A fast-saved VM is reported as `saved`, a VM in a
+critical state (for example `RunningCritical`) as its base state, and a value without a mapping as `unknown`.
+
+Replica VMs on a Hyper-V Replica server are turned off and show as `state="off"`; use the
+`windows_hyperv_replica_vm_*` metrics to tell them apart.
+
+`vm` is the name of the virtual machine and `vm_id` its GUID, the same keys as the `windows_hyperv_replica_vm_*`
+and `windows_hyperv_virtual_hard_disk_*` metrics. VM names don't have to be unique, `vm_id` keeps the series apart.
+
+Virtual machines that are turned off:
+
+```promql
+windows_hyperv_vm_state{state="off"} == 1
+```
+
+Number of virtual machines per state and host:
+
+```promql
+sum by (instance, state) (windows_hyperv_vm_state)
+```
+
+Example alert for a virtual machine that is expected to run:
+
+```yaml
+- alert: HyperVVMNotRunning
+  expr: windows_hyperv_vm_state{vm="web01", state="running"} == 0
+  for: 10m
+  annotations:
+    summary: Hyper-V VM {{ $labels.vm }} is not running on {{ $labels.instance }}
+```
 
 
 ### Hyper-V WMI Health

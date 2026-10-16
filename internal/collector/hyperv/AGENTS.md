@@ -88,8 +88,30 @@ memory) on a host with 12 logical processors.
   "the current number of Tree Connects".
 - `Hyper-V Virtual Machine Health Summary` counts VMs: `Health Ok` was 1 for
   the one VM.
-- The `wmi_health`, `virtual_hard_disk` and host VM processor metrics do not
-  come from PDH, so the table below does not cover them.
+- The `wmi_health`, `virtual_hard_disk`, `vm_state` and host VM processor
+  metrics do not come from PDH, so the table below does not cover them.
+- PDH instances exist only for running VMs. To list every VM whatever its
+  state, query `Msvm_ComputerSystem` (as `vm_state` and `virtual_hard_disk`
+  do). The host itself is a row of that class too: its `Name` is the host's
+  NetBIOS name, while a VM's `Name` is its GUID (the `vm_id` label) and
+  `ElementName` its display name (the `vm` label). `Caption` and
+  `Description` also tell them apart but are localized, so do not filter on
+  them; `vm_state` keeps the rows whose `Name` is a GUID.
+- `vm_state` maps `EnabledState` to a state set. Learn documents only the
+  CIM values 0 to 10 for `EnabledState` (2 running, 3 off, 4 stopping,
+  6 saved, 9 paused, 10 starting). 11 (Reset) is a `RequestedState` value,
+  mapped defensively. 32768 (Paused), 32769 (Suspended), 32770 (Starting)
+  and 32774 (Stopping) are version 1 `EnabledState` values that the
+  version 2 provider still reports in some cases (32768 for a VM paused on
+  low disk space). 32773 saving, 32776 pausing, 32777 resuming, 32779 fast
+  saved and 32780 fast saving are the Hyper-V states of
+  `RequestStateChange`; 32781 to 32792 are their critical variants
+  (RunningCritical, OffCritical, StoppingCritical, SavedCritical,
+  PausedCritical, StartingCritical, ResetCritical, SavingCritical,
+  PausingCritical, ResumingCritical, FastSavedCritical, FastSavingCritical)
+  and map to the base state. Other values map to `unknown`. The CI workflow
+  creates a running VM (`GitHubActions`) and one that is never started
+  (`CIVirtualHardDisk`).
 - To test emitted metrics without Hyper-V, build the descriptors with the
   `build...Descriptors` helpers, fill the `perfDataObject...` slice (or a
   `pdhtypes.Collector` fixture) and gather through a registry, as in
