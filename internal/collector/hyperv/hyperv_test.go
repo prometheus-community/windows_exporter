@@ -47,6 +47,9 @@ func TestCollector(t *testing.T) {
 	// The fixture VM is not replicated, but every VM has a primary replication relationship.
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_replica_vm_state", prometheus.Labels{"vm": "GitHubActions", "relationship": "primary"}); metric != nil {
 		require.InDelta(t, 0, metric.GetGauge().GetValue(), 0, "expected replication to be disabled")
+
+		// vm_id keeps VMs with the same name apart; it is the VM's GUID.
+		require.Regexp(t, `^[0-9A-Fa-f-]{36}$`, labelValue(metric, "vm_id"))
 	}
 
 	// The health query reports failures as 0 instead of an error, so check the value.

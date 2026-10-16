@@ -161,7 +161,7 @@ func (c *Collector) buildReplicaVM() error {
 	c.replicaVMHealth = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replica_vm_health"),
 		"The replication health of the virtual machine. 0: Not applicable; 1: OK; 2: Warning; 3: Critical",
-		[]string{"vm", "relationship"},
+		[]string{"vm", "vm_id", "relationship"},
 		nil,
 	)
 	c.replicaVMState = prometheus.NewDesc(
@@ -172,7 +172,7 @@ func (c *Collector) buildReplicaVM() error {
 			"13: Failback in progress; 14: Failback complete; 15: Disk update in progress; 16: Disk update critical; 17: Unknown; "+
 			"18: Repurpose replication in progress; 19: Prepared for sync replication; 20: Prepared for group reverse replication; "+
 			"21: Fire drill in progress",
-		[]string{"vm", "relationship"},
+		[]string{"vm", "vm_id", "relationship"},
 		nil,
 	)
 
@@ -280,13 +280,14 @@ func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric, s
 	}
 
 	for _, relationship := range dst {
-		relationshipType := replicationRelationshipType(relationship.InstanceID)
+		vmID, relationshipType := parseReplicationRelationshipID(relationship.InstanceID)
 
 		ch <- scrape.MustNewConstMetric(
 			c.replicaVMHealth,
 			prometheus.GaugeValue,
 			float64(relationship.ReplicationHealth),
 			relationship.ElementName,
+			vmID,
 			relationshipType,
 		)
 
@@ -295,6 +296,7 @@ func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric, s
 			prometheus.GaugeValue,
 			float64(relationship.ReplicationState),
 			relationship.ElementName,
+			vmID,
 			relationshipType,
 		)
 	}
@@ -302,16 +304,23 @@ func (c *Collector) collectReplicaVMRelationships(ch chan<- prometheus.Metric, s
 	return nil
 }
 
-// replicationRelationshipType returns the relationship type encoded in the
-// InstanceID ("Microsoft:<vm id>\HVR\<0|1>"). 0 is the primary relationship,
-// 1 the extended replication.
-func replicationRelationshipType(instanceID string) string {
+// parseReplicationRelationshipID returns the ID of the virtual machine and the
+// relationship type encoded in the InstanceID of a replication relationship
+// ("Microsoft:<vm id>\HVR\<0|1>"). The VM ID keeps the series of VMs with the
+// same name apart. Relationship 0 is the primary relationship, 1 the extended
+// replication.
+func parseReplicationRelationshipID(instanceID string) (string, string) {
+	vmID := strings.TrimPrefix(instanceID, "Microsoft:")
+	if i := strings.Index(vmID, `\`); i >= 0 {
+		vmID = vmID[:i]
+	}
+
 	switch instanceID[strings.LastIndex(instanceID, `\`)+1:] {
 	case "0":
-		return "primary"
+		return vmID, "primary"
 	case "1":
-		return "extended"
+		return vmID, "extended"
 	default:
-		return "unknown"
+		return vmID, "unknown"
 	}
 }
