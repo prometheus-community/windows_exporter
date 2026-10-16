@@ -14,6 +14,10 @@ tests:
         values: '3600000000'
       - series: 'windows_cpu_time_seconds_total{job="w",instance="h:9182",core="0,0",mode="idle"}'
         values: '42'
+      - series: 'windows_container_cpu_usage_kernelmode_seconds_total{job="w",instance="h:9182",container_id="c1"}'
+        values: '7'
+      - series: 'windows_exchange_workload_queued_tasks{job="w",instance="h:9182",workload="W1"}'
+        values: '5'
     promql_expr_test:
       - expr: windows_mscluster_resource_restart_delay
         eval_time: 0
@@ -35,3 +39,18 @@ tests:
         exp_samples:
           - labels: 'windows_cpu_time_total{job="w",instance="h:9182",core="0,0",mode="idle"}'
             value: 42
+      - expr: windows_container_cpu_usage_seconds_kernelmode
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_container_cpu_usage_seconds_kernelmode{job="w",instance="h:9182",container_id="c1"}'
+            value: 7
+      - expr: windows_container_cpu_usage_seconds_kernelmode_total
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_container_cpu_usage_seconds_kernelmode_total{job="w",instance="h:9182",container_id="c1"}'
+            value: 7
+      - expr: windows_exchange_workload_queued_tasks_total
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_exchange_workload_queued_tasks_total{job="w",instance="h:9182",name="W1"}'
+            value: 5

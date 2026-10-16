@@ -44,6 +44,10 @@ var renameRow = regexp.MustCompile("^\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*
 // labelRow matches a row of the instance label table in the upgrade guide.
 var labelRow = regexp.MustCompile("^\\|\\s*`([a-z_]+)`\\s*\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|\\s*$")
 
+// changedTypeRow matches a row of the table of metrics that changed from
+// counter to gauge and kept their name.
+var changedTypeRow = regexp.MustCompile(`^\|.*\|\s*counter\s*\|\s*gauge\s*\|\s*$`)
+
 var backticked = regexp.MustCompile("`([^`]+)`")
 
 // conversion turns the value of a 0.32 metric back into its 0.31 value.
@@ -168,6 +172,20 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 	seen := map[string]bool{}
 
 	for _, line := range upgrade {
+		if changedTypeRow.MatchString(line) {
+			// A counter that became a gauge keeps its name, but loses the
+			// _total suffix that OpenMetrics added to it.
+			for _, name := range metricNames(t, line) {
+				if storedName := name + "_total"; !strings.HasSuffix(name, "_total") && !seen[storedName] {
+					seen[storedName] = true
+					collector := collectorOf(t, name)
+					rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: restoreLabels(labels, name, name)})
+				}
+			}
+
+			continue
+		}
+
 		m := renameRow.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -188,26 +206,83 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 
 		seen[oldName] = true
 
-		expr := fmt.Sprintf(conversions[i].expr, newName)
-
-		var dropped []string
-
-		if rename, ok := labelRenameOf(labels, newName); ok {
-			for j, oldLabel := range rename.old {
-				expr = fmt.Sprintf(`label_replace(%s, "%s", "$1", "%s", "(.+)")`, expr, oldLabel, rename.new[j])
-				dropped = append(dropped, rename.new[j])
-			}
-		}
-
-		if len(dropped) > 0 {
-			expr = fmt.Sprintf("max without (%s) (%s)", strings.Join(dropped, ", "), expr)
-		}
-
+		expr := restoreLabels(labels, newName, fmt.Sprintf(conversions[i].expr, newName))
 		collector := collectorOf(t, newName)
 		rules[collector] = append(rules[collector], compatibilityRule{record: oldName, expr: expr})
+
+		// Prometheus scrapes OpenMetrics by default, which adds _total to
+		// counters, so 0.31 counters are stored under that name as well.
+		if storedName := oldName + "_total"; wasCounter(oldName, newName, note) && storedName != newName && !seen[storedName] {
+			seen[storedName] = true
+			rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: expr})
+		}
 	}
 
 	return rules
+}
+
+// restoreLabels wraps the expression of the metric name in label_replace
+// calls that copy its instance labels to their 0.31 names and drops the 0.32
+// labels.
+func restoreLabels(renames []labelRename, name, expr string) string {
+	rename, ok := labelRenameOf(renames, name)
+	if !ok {
+		return expr
+	}
+
+	for j, oldLabel := range rename.old {
+		expr = fmt.Sprintf(`label_replace(%s, "%s", "$1", "%s", "(.+)")`, expr, oldLabel, rename.new[j])
+	}
+
+	return fmt.Sprintf("max without (%s) (%s)", strings.Join(rename.new, ", "), expr)
+}
+
+// metricNames returns the metric names in the first column of a table row.
+// A name ending in * stands for the metrics with that prefix in the collector
+// documentation.
+func metricNames(t *testing.T, line string) []string {
+	t.Helper()
+
+	first, _, _ := strings.Cut(strings.TrimPrefix(line, "|"), "|")
+
+	var names []string
+
+	for _, m := range backticked.FindAllStringSubmatch(first, -1) {
+		prefix, wildcard := strings.CutSuffix(m[1], "*")
+		if !wildcard {
+			names = append(names, m[1])
+
+			continue
+		}
+
+		doc, err := os.ReadFile(filepath.Join(repoRoot, "docs", "collector."+collectorOf(t, prefix)+".md"))
+		require.NoError(t, err)
+
+		expanded := regexp.MustCompile(regexp.QuoteMeta(prefix)+`[a-z0-9_]+`).FindAllString(string(doc), -1)
+		require.NotEmpty(t, expanded, "no metrics match %s", m[1])
+
+		slices.Sort(expanded)
+		names = append(names, slices.Compact(expanded)...)
+	}
+
+	return names
+}
+
+// wasCounter reports whether the 0.31 metric was a counter without a _total
+// suffix, whose name OpenMetrics extends with _total. The note says when a
+// rename changed the type; otherwise the 0.32 name tells it, as 0.32 counters
+// end in _total and gauges never do.
+func wasCounter(oldName, newName, note string) bool {
+	switch {
+	case strings.HasSuffix(oldName, "_total"):
+		return false
+	case strings.Contains(note, "now a gauge"):
+		return true
+	case strings.Contains(note, "now a counter"), strings.Contains(note, "was a running count"):
+		return false
+	default:
+		return strings.HasSuffix(newName, "_total")
+	}
 }
 
 // labelRenames returns the instance label renames of the upgrade guide. A label
@@ -275,7 +350,8 @@ func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 
 	fmt.Fprintf(&b, `# Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
-# have not been migrated yet. Load them into Prometheus next to the scrape of
+# have not been migrated yet. 0.31 counters are also recorded with the _total
+# suffix that Prometheus adds when it scrapes OpenMetrics. Load them into Prometheus next to the scrape of
 # the new exporter and remove them once the queries use the new names.
 #
 # Generated from %s by internal/metriccontract; do not edit.

@@ -1,6 +1,7 @@
 # Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
-# have not been migrated yet. Load them into Prometheus next to the scrape of
+# have not been migrated yet. 0.31 counters are also recorded with the _total
+# suffix that Prometheus adds when it scrapes OpenMetrics. Load them into Prometheus next to the scrape of
 # the new exporter and remove them once the queries use the new names.
 #
 # Generated from docs/upgrade/0.32.md by internal/metriccontract; do not edit.
@@ -30,7 +31,11 @@ groups:
         expr: windows_containers
       - record: windows_container_cpu_usage_seconds_kernelmode
         expr: windows_container_cpu_usage_kernelmode_seconds_total
+      - record: windows_container_cpu_usage_seconds_kernelmode_total
+        expr: windows_container_cpu_usage_kernelmode_seconds_total
       - record: windows_container_cpu_usage_seconds_usermode
+        expr: windows_container_cpu_usage_usermode_seconds_total
+      - record: windows_container_cpu_usage_seconds_usermode_total
         expr: windows_container_cpu_usage_usermode_seconds_total
   - name: windows_exporter-0.32-cpu
     rules:
@@ -68,7 +73,11 @@ groups:
         expr: max without (protocol) (label_replace(windows_exchange_http_proxy_mailbox_proxy_failure_ratio * 100, "name", "$1", "protocol", "(.+)"))
       - record: windows_exchange_ldap_long_running_ops_per_sec
         expr: max without (process) (label_replace(windows_exchange_ldap_long_running_operations_per_second * 3600, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_long_running_ops_per_sec_total
+        expr: max without (process) (label_replace(windows_exchange_ldap_long_running_operations_per_second * 3600, "name", "$1", "process", "(.+)"))
       - record: windows_exchange_availability_service_requests_per_sec
+        expr: windows_exchange_availability_service_requests_total
+      - record: windows_exchange_availability_service_requests_per_sec_total
         expr: windows_exchange_availability_service_requests_total
       - record: windows_exchange_http_proxy_avg_cas_processing_latency_sec
         expr: max without (protocol) (label_replace(windows_exchange_http_proxy_avg_cas_processing_latency_seconds, "name", "$1", "protocol", "(.+)"))
@@ -76,9 +85,15 @@ groups:
         expr: max without (protocol) (label_replace(windows_exchange_http_proxy_mailbox_server_locator_avg_latency_seconds, "name", "$1", "protocol", "(.+)"))
       - record: windows_exchange_ldap_read_time_sec
         expr: max without (process) (label_replace(windows_exchange_ldap_read_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_read_time_sec_total
+        expr: max without (process) (label_replace(windows_exchange_ldap_read_time_seconds_total, "name", "$1", "process", "(.+)"))
       - record: windows_exchange_ldap_search_time_sec
         expr: max without (process) (label_replace(windows_exchange_ldap_search_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_search_time_sec_total
+        expr: max without (process) (label_replace(windows_exchange_ldap_search_time_seconds_total, "name", "$1", "process", "(.+)"))
       - record: windows_exchange_ldap_write_time_sec
+        expr: max without (process) (label_replace(windows_exchange_ldap_write_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_write_time_sec_total
         expr: max without (process) (label_replace(windows_exchange_ldap_write_time_seconds_total, "name", "$1", "process", "(.+)"))
       - record: windows_exchange_mapihttp_emsmdb_active_user_count
         expr: windows_exchange_mapihttp_emsmdb_active_users
@@ -94,6 +109,8 @@ groups:
         expr: max without (workload) (label_replace(windows_exchange_workload_completed_tasks_total, "name", "$1", "workload", "(.+)"))
       - record: windows_exchange_workload_yielded_tasks
         expr: max without (workload) (label_replace(windows_exchange_workload_yielded_tasks_total, "name", "$1", "workload", "(.+)"))
+      - record: windows_exchange_workload_queued_tasks_total
+        expr: max without (workload) (label_replace(windows_exchange_workload_queued_tasks, "name", "$1", "workload", "(.+)"))
   - name: windows_exporter-0.32-fsrmquota
     rules:
       - record: windows_fsrmquota_count
@@ -146,6 +163,8 @@ groups:
         expr: windows_hyperv_root_partition_io_tlb_flush_seconds_total
       - record: windows_hyperv_root_partition_io_tlb_flush
         expr: windows_hyperv_root_partition_io_tlb_flushes_total
+      - record: windows_hyperv_root_partition_io_tlb_flush_total
+        expr: windows_hyperv_root_partition_io_tlb_flushes_total
       - record: windows_hyperv_root_partition_gpa_space_modifications
         expr: windows_hyperv_root_partition_gpa_space_modifications_total
       - record: windows_hyperv_root_partition_virtual_tlb_flush_entries
@@ -156,39 +175,75 @@ groups:
         expr: windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total
       - record: windows_hyperv_datastore_cache_update_operation_count
         expr: windows_hyperv_datastore_cache_update_operations_total
+      - record: windows_hyperv_datastore_cache_update_operation_count_total
+        expr: windows_hyperv_datastore_cache_update_operations_total
       - record: windows_hyperv_datastore_commit_byte_count
+        expr: windows_hyperv_datastore_commit_bytes_total
+      - record: windows_hyperv_datastore_commit_byte_count_total
         expr: windows_hyperv_datastore_commit_bytes_total
       - record: windows_hyperv_datastore_commit_count
         expr: windows_hyperv_datastore_commits_total
+      - record: windows_hyperv_datastore_commit_count_total
+        expr: windows_hyperv_datastore_commits_total
       - record: windows_hyperv_datastore_commit_operation_count
+        expr: windows_hyperv_datastore_commit_operations_total
+      - record: windows_hyperv_datastore_commit_operation_count_total
         expr: windows_hyperv_datastore_commit_operations_total
       - record: windows_hyperv_datastore_compact_operation_count
         expr: windows_hyperv_datastore_compact_operations_total
+      - record: windows_hyperv_datastore_compact_operation_count_total
+        expr: windows_hyperv_datastore_compact_operations_total
       - record: windows_hyperv_datastore_disconnect_count
+        expr: windows_hyperv_datastore_disconnects_total
+      - record: windows_hyperv_datastore_disconnect_count_total
         expr: windows_hyperv_datastore_disconnects_total
       - record: windows_hyperv_datastore_load_file_operation_count
         expr: windows_hyperv_datastore_load_file_operations_total
+      - record: windows_hyperv_datastore_load_file_operation_count_total
+        expr: windows_hyperv_datastore_load_file_operations_total
       - record: windows_hyperv_datastore_query_size_operation_count
+        expr: windows_hyperv_datastore_query_size_operations_total
+      - record: windows_hyperv_datastore_query_size_operation_count_total
         expr: windows_hyperv_datastore_query_size_operations_total
       - record: windows_hyperv_datastore_read_from_file_byte_count
         expr: windows_hyperv_datastore_read_from_file_bytes_total
+      - record: windows_hyperv_datastore_read_from_file_byte_count_total
+        expr: windows_hyperv_datastore_read_from_file_bytes_total
       - record: windows_hyperv_datastore_read_from_file_count
+        expr: windows_hyperv_datastore_read_from_file_operations_total
+      - record: windows_hyperv_datastore_read_from_file_count_total
         expr: windows_hyperv_datastore_read_from_file_operations_total
       - record: windows_hyperv_datastore_read_from_storage_byte_count
         expr: windows_hyperv_datastore_read_from_storage_bytes_total
+      - record: windows_hyperv_datastore_read_from_storage_byte_count_total
+        expr: windows_hyperv_datastore_read_from_storage_bytes_total
       - record: windows_hyperv_datastore_read_from_storage_count
+        expr: windows_hyperv_datastore_read_from_storage_operations_total
+      - record: windows_hyperv_datastore_read_from_storage_count_total
         expr: windows_hyperv_datastore_read_from_storage_operations_total
       - record: windows_hyperv_datastore_remove_operation_count
         expr: windows_hyperv_datastore_remove_operations_total
+      - record: windows_hyperv_datastore_remove_operation_count_total
+        expr: windows_hyperv_datastore_remove_operations_total
       - record: windows_hyperv_datastore_set_operation_count
+        expr: windows_hyperv_datastore_set_operations_total
+      - record: windows_hyperv_datastore_set_operation_count_total
         expr: windows_hyperv_datastore_set_operations_total
       - record: windows_hyperv_datastore_write_to_file_byte_count
         expr: windows_hyperv_datastore_write_to_file_bytes_total
+      - record: windows_hyperv_datastore_write_to_file_byte_count_total
+        expr: windows_hyperv_datastore_write_to_file_bytes_total
       - record: windows_hyperv_datastore_write_to_file_count
+        expr: windows_hyperv_datastore_write_to_file_operations_total
+      - record: windows_hyperv_datastore_write_to_file_count_total
         expr: windows_hyperv_datastore_write_to_file_operations_total
       - record: windows_hyperv_datastore_write_to_storage_byte_count
         expr: windows_hyperv_datastore_write_to_storage_bytes_total
+      - record: windows_hyperv_datastore_write_to_storage_byte_count_total
+        expr: windows_hyperv_datastore_write_to_storage_bytes_total
       - record: windows_hyperv_datastore_write_to_storage_count
+        expr: windows_hyperv_datastore_write_to_storage_operations_total
+      - record: windows_hyperv_datastore_write_to_storage_count_total
         expr: windows_hyperv_datastore_write_to_storage_operations_total
       - record: windows_hyperv_host_logical_processor_count
         expr: windows_hyperv_host_logical_processors
@@ -224,17 +279,29 @@ groups:
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_open_files, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_smb_read_bytes_rdma
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_bytes_rdma_total
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_smb_read_requests_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_requests_rdma_total
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_requests_total, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_smb_tree_connect_count
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_tree_connects_total, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_smb_write_bytes_rdma
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_bytes_rdma_total
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_smb_write_requests_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_requests_rdma_total
         expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_requests_total, "exported_instance", "$1", "vm", "(.+)"))
       - record: windows_hyperv_virtual_storage_device_bytes_read
         expr: windows_hyperv_virtual_storage_device_read_bytes_total
+      - record: windows_hyperv_virtual_storage_device_bytes_read_total
+        expr: windows_hyperv_virtual_storage_device_read_bytes_total
       - record: windows_hyperv_virtual_storage_device_bytes_written
+        expr: windows_hyperv_virtual_storage_device_written_bytes_total
+      - record: windows_hyperv_virtual_storage_device_bytes_written_total
         expr: windows_hyperv_virtual_storage_device_written_bytes_total
       - record: windows_hyperv_virtual_storage_device_error_count_total
         expr: windows_hyperv_virtual_storage_device_errors_total
@@ -266,22 +333,58 @@ groups:
         expr: windows_iis_current_application_pool_uptime_seconds
       - record: windows_iis_total_application_pool_start_time
         expr: windows_iis_total_application_pool_uptime_seconds
+      - record: windows_iis_total_application_pool_start_time_total
+        expr: windows_iis_total_application_pool_uptime_seconds
       - record: windows_iis_time_since_last_worker_process_failure
         expr: windows_iis_time_since_last_worker_process_failure_seconds
       - record: windows_iis_service_uptime
         expr: windows_iis_service_uptime_seconds
       - record: windows_iis_total_application_pool_recycles
         expr: windows_iis_application_pool_recycles_total
+      - record: windows_iis_total_application_pool_recycles_total
+        expr: windows_iis_application_pool_recycles_total
       - record: windows_iis_total_worker_process_failures
+        expr: windows_iis_worker_process_failures_total
+      - record: windows_iis_total_worker_process_failures_total
         expr: windows_iis_worker_process_failures_total
       - record: windows_iis_total_worker_process_ping_failures
         expr: windows_iis_worker_process_ping_failures_total
+      - record: windows_iis_total_worker_process_ping_failures_total
+        expr: windows_iis_worker_process_ping_failures_total
       - record: windows_iis_total_worker_process_shutdown_failures
+        expr: windows_iis_worker_process_shutdown_failures_total
+      - record: windows_iis_total_worker_process_shutdown_failures_total
         expr: windows_iis_worker_process_shutdown_failures_total
       - record: windows_iis_total_worker_process_startup_failures
         expr: windows_iis_worker_process_startup_failures_total
+      - record: windows_iis_total_worker_process_startup_failures_total
+        expr: windows_iis_worker_process_startup_failures_total
       - record: windows_iis_total_worker_processes_created
         expr: windows_iis_worker_processes_created_total
+      - record: windows_iis_total_worker_processes_created_total
+        expr: windows_iis_worker_processes_created_total
+      - record: windows_iis_server_output_cache_items_total
+        expr: windows_iis_server_output_cache_items
+      - record: windows_iis_worker_output_cache_items_total
+        expr: windows_iis_worker_output_cache_items
+      - record: windows_iis_server_output_cache_memory_bytes_total
+        expr: windows_iis_server_output_cache_memory_bytes
+      - record: windows_iis_worker_output_cache_memory_bytes_total
+        expr: windows_iis_worker_output_cache_memory_bytes
+      - record: windows_iis_server_output_cache_active_flushed_items_total
+        expr: windows_iis_server_output_cache_active_flushed_items
+      - record: windows_iis_worker_output_cache_active_flushed_items_total
+        expr: windows_iis_worker_output_cache_active_flushed_items
+      - record: windows_iis_worker_current_requests_total
+        expr: windows_iis_worker_current_requests
+      - record: windows_iis_worker_current_websocket_requests_total
+        expr: windows_iis_worker_current_websocket_requests
+      - record: windows_iis_worker_max_threads_total
+        expr: windows_iis_worker_max_threads
+      - record: windows_iis_server_file_cache_max_memory_bytes_total
+        expr: windows_iis_server_file_cache_max_memory_bytes
+      - record: windows_iis_worker_file_cache_max_memory_bytes_total
+        expr: windows_iis_worker_file_cache_max_memory_bytes
   - name: windows_exporter-0.32-memory
     rules:
       - record: windows_memory_commit_limit
@@ -415,6 +518,8 @@ groups:
       - record: windows_mssql_transactions_version_generation_rate_bytes
         expr: windows_mssql_transactions_version_generation_bytes_total
       - record: windows_mssql_locks_lock_timeouts_excluding_NOWAIT
+        expr: windows_mssql_locks_lock_timeouts_excluding_nowait_total
+      - record: windows_mssql_locks_lock_timeouts_excluding_NOWAIT_total
         expr: windows_mssql_locks_lock_timeouts_excluding_nowait_total
       - record: windows_mssql_accessmethods_au_batch_cleanup_failures
         expr: windows_mssql_accessmethods_au_batch_cleanup_failures_total
@@ -670,6 +775,32 @@ groups:
         expr: windows_mssql_transactions_version_store_creation_units_total
       - record: windows_mssql_transactions_version_store_truncation_units
         expr: windows_mssql_transactions_version_store_truncation_units_total
+      - record: windows_mssql_waitstats_lock_waits_total
+        expr: windows_mssql_waitstats_lock_waits
+      - record: windows_mssql_waitstats_log_buffer_waits_total
+        expr: windows_mssql_waitstats_log_buffer_waits
+      - record: windows_mssql_waitstats_log_write_waits_total
+        expr: windows_mssql_waitstats_log_write_waits
+      - record: windows_mssql_waitstats_memory_grant_queue_waits_total
+        expr: windows_mssql_waitstats_memory_grant_queue_waits
+      - record: windows_mssql_waitstats_network_io_waits_total
+        expr: windows_mssql_waitstats_network_io_waits
+      - record: windows_mssql_waitstats_nonpage_latch_waits_total
+        expr: windows_mssql_waitstats_nonpage_latch_waits
+      - record: windows_mssql_waitstats_page_io_latch_waits_total
+        expr: windows_mssql_waitstats_page_io_latch_waits
+      - record: windows_mssql_waitstats_page_latch_waits_total
+        expr: windows_mssql_waitstats_page_latch_waits
+      - record: windows_mssql_waitstats_thread_safe_memory_objects_waits_total
+        expr: windows_mssql_waitstats_thread_safe_memory_objects_waits
+      - record: windows_mssql_waitstats_transaction_ownership_waits_total
+        expr: windows_mssql_waitstats_transaction_ownership_waits
+      - record: windows_mssql_waitstats_wait_for_the_worker_waits_total
+        expr: windows_mssql_waitstats_wait_for_the_worker_waits
+      - record: windows_mssql_waitstats_workspace_synchronization_waits_total
+        expr: windows_mssql_waitstats_workspace_synchronization_waits
+      - record: windows_mssql_transactions_version_store_units_total
+        expr: windows_mssql_transactions_version_store_units
   - name: windows_exporter-0.32-netframework
     rules:
       - record: windows_netframework_clrmemory_gc_time_percent
@@ -678,11 +809,19 @@ groups:
     rules:
       - record: windows_nps_access_server_reset_time
         expr: windows_nps_access_server_reset_time_seconds
+      - record: windows_nps_access_server_reset_time_total
+        expr: windows_nps_access_server_reset_time_seconds
       - record: windows_nps_access_server_up_time
+        expr: windows_nps_access_server_up_time_seconds
+      - record: windows_nps_access_server_up_time_total
         expr: windows_nps_access_server_up_time_seconds
       - record: windows_nps_accounting_server_reset_time
         expr: windows_nps_accounting_server_reset_time_seconds
+      - record: windows_nps_accounting_server_reset_time_total
+        expr: windows_nps_accounting_server_reset_time_seconds
       - record: windows_nps_accounting_server_up_time
+        expr: windows_nps_accounting_server_up_time_seconds
+      - record: windows_nps_accounting_server_up_time_total
         expr: windows_nps_accounting_server_up_time_seconds
       - record: windows_nps_access_accepts
         expr: windows_nps_access_accepts_total
@@ -730,6 +869,8 @@ groups:
     rules:
       - record: windows_printer_job_count
         expr: windows_printer_jobs
+      - record: windows_printer_job_count_total
+        expr: windows_printer_jobs
   - name: windows_exporter-0.32-process
     rules:
       - record: windows_process_cpu_time_total
@@ -754,7 +895,11 @@ groups:
         expr: windows_smb_server_shares_files_opened_total
       - record: windows_smb_server_shares_current_open_file_count
         expr: windows_smb_server_shares_open_files
+      - record: windows_smb_server_shares_current_open_file_count_total
+        expr: windows_smb_server_shares_open_files
       - record: windows_smb_server_shares_tree_connect_count
+        expr: windows_smb_server_shares_tree_connects
+      - record: windows_smb_server_shares_tree_connect_count_total
         expr: windows_smb_server_shares_tree_connects
   - name: windows_exporter-0.32-storage_spaces
     rules:
