@@ -1,8 +1,9 @@
 # Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
 # have not been migrated yet. 0.31 counters are also recorded with the _total
-# suffix that Prometheus adds when it scrapes OpenMetrics. Load them into Prometheus next to the scrape of
-# the new exporter and remove them once the queries use the new names.
+# suffix that Prometheus adds when it scrapes OpenMetrics. Load the rules into
+# Prometheus next to the scrape of the new exporter and remove them once the
+# queries use the new names.
 #
 # Generated from docs/upgrade/0.32.md by internal/metriccontract; do not edit.
 #
@@ -503,6 +504,28 @@ groups:
         expr: windows_mssql_dbreplica_log_remaining_for_undo_bytes / 1024
       - record: windows_mssql_dbreplica_total_log_requiring_undo
         expr: windows_mssql_dbreplica_total_log_requiring_undo_bytes / 1024
+      - record: windows_mssql_genstats_http_authenticated_requests
+        expr: windows_mssql_genstats_http_authenticated_requests_total
+      - record: windows_mssql_genstats_mars_deadlocks
+        expr: windows_mssql_genstats_mars_deadlocks_total
+      - record: windows_mssql_genstats_soap_empty_requests
+        expr: windows_mssql_genstats_soap_empty_requests_total
+      - record: windows_mssql_genstats_soap_method_invocations
+        expr: windows_mssql_genstats_soap_method_invocations_total
+      - record: windows_mssql_genstats_soap_session_initiate_requests
+        expr: windows_mssql_genstats_soap_session_initiate_requests_total
+      - record: windows_mssql_genstats_soap_session_terminate_requests
+        expr: windows_mssql_genstats_soap_session_terminate_requests_total
+      - record: windows_mssql_genstats_soapsql_requests
+        expr: windows_mssql_genstats_soapsql_requests_total
+      - record: windows_mssql_genstats_soapwsdl_requests
+        expr: windows_mssql_genstats_soapwsdl_requests_total
+      - record: windows_mssql_genstats_sql_trace_io_provider_lock_waits
+        expr: windows_mssql_genstats_sql_trace_io_provider_lock_waits_total
+      - record: windows_mssql_genstats_tempdb_recovery_unit_ids_generated
+        expr: windows_mssql_genstats_tempdb_recovery_unit_ids_generated_total
+      - record: windows_mssql_genstats_tempdb_rowset_ids_generated
+        expr: windows_mssql_genstats_tempdb_rowset_ids_generated_total
       - record: windows_mssql_locks_wait_time_seconds
         expr: windows_mssql_locks_wait_time_seconds_total
       - record: windows_mssql_locks_lock_wait_seconds

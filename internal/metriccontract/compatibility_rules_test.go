@@ -170,14 +170,18 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 	labels := labelRenames(t, upgrade)
 	rules := map[string][]compatibilityRule{}
 	seen := map[string]bool{}
+	// stored holds the _total names that OpenMetrics added to 0.31 counters.
+	// No 0.31 metric may have such a name, or its rule would be ambiguous.
+	stored := map[string]bool{}
 
 	for _, line := range upgrade {
 		if changedTypeRow.MatchString(line) {
 			// A counter that became a gauge keeps its name, but loses the
 			// _total suffix that OpenMetrics added to it.
 			for _, name := range metricNames(t, line) {
-				if storedName := name + "_total"; !strings.HasSuffix(name, "_total") && !seen[storedName] {
-					seen[storedName] = true
+				if storedName := name + "_total"; !strings.HasSuffix(name, "_total") && !stored[storedName] {
+					require.False(t, seen[storedName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", storedName)
+					stored[storedName] = true
 					collector := collectorOf(t, name)
 					rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: restoreLabels(labels, name, name)})
 				}
@@ -192,6 +196,7 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 		}
 
 		oldName, newName, note := m[1], m[2], strings.ToLower(m[3])
+		require.False(t, stored[oldName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", oldName)
 
 		if seen[oldName] || slices.ContainsFunc(unconvertible, func(s string) bool { return strings.Contains(note, s) }) {
 			continue
@@ -212,8 +217,9 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 
 		// Prometheus scrapes OpenMetrics by default, which adds _total to
 		// counters, so 0.31 counters are stored under that name as well.
-		if storedName := oldName + "_total"; wasCounter(oldName, newName, note) && storedName != newName && !seen[storedName] {
-			seen[storedName] = true
+		if storedName := oldName + "_total"; wasCounter(oldName, newName, note) && storedName != newName && !stored[storedName] {
+			require.False(t, seen[storedName], "%s is a 0.31 name and the OpenMetrics name of another 0.31 counter", storedName)
+			stored[storedName] = true
 			rules[collector] = append(rules[collector], compatibilityRule{record: storedName, expr: expr})
 		}
 	}
@@ -226,7 +232,7 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 // labels.
 func restoreLabels(renames []labelRename, name, expr string) string {
 	rename, ok := labelRenameOf(renames, name)
-	if !ok {
+	if !ok || len(rename.old) == 0 {
 		return expr
 	}
 
@@ -258,11 +264,16 @@ func metricNames(t *testing.T, line string) []string {
 		doc, err := os.ReadFile(filepath.Join(repoRoot, "docs", "collector."+collectorOf(t, prefix)+".md"))
 		require.NoError(t, err)
 
-		expanded := regexp.MustCompile(regexp.QuoteMeta(prefix)+`[a-z0-9_]+`).FindAllString(string(doc), -1)
-		require.NotEmpty(t, expanded, "no metrics match %s", m[1])
+		// Only the first column of the metric tables names metrics.
+		rows := regexp.MustCompile("(?m)^\\|\\s*`("+regexp.QuoteMeta(prefix)+"[a-z0-9_]+)`").FindAllStringSubmatch(string(doc), -1)
+		require.NotEmpty(t, rows, "no metrics match %s", m[1])
 
-		slices.Sort(expanded)
-		names = append(names, slices.Compact(expanded)...)
+		for _, row := range rows {
+			names = append(names, row[1])
+		}
+
+		slices.Sort(names)
+		names = slices.Compact(names)
 	}
 
 	return names
@@ -351,8 +362,9 @@ func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 	fmt.Fprintf(&b, `# Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
 # have not been migrated yet. 0.31 counters are also recorded with the _total
-# suffix that Prometheus adds when it scrapes OpenMetrics. Load them into Prometheus next to the scrape of
-# the new exporter and remove them once the queries use the new names.
+# suffix that Prometheus adds when it scrapes OpenMetrics. Load the rules into
+# Prometheus next to the scrape of the new exporter and remove them once the
+# queries use the new names.
 #
 # Generated from %s by internal/metriccontract; do not edit.
 #
