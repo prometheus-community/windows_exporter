@@ -38,10 +38,11 @@ If given, a disk needs to *not* match the exclude regular expression in order fo
 
 
 ### Idle time
-`windows_physical_disk_idle_seconds_total` is the raw value of the `% Idle Time` counter: the cumulative idle time of the disk.
+`windows_physical_disk_idle_seconds_total` is the `% Idle Time` counter, converted to seconds: the cumulative idle time of the disk.
 Windows updates it unevenly while the disk is busy and catches up afterwards, so the rate over a short window can exceed 1
-right after a burst of I/O. Performance Monitor shows the same values above 100%.
-The errors cancel out over longer windows. Clamp the rate to 1 when you derive the busy time from it:
+right after a burst of I/O. Performance Monitor also shows values above 100%.
+The errors mostly cancel out over longer windows, but can still push a 5m rate slightly above 1.
+Clamp the rate to 1 when you derive the busy time from it:
 ```
 1 - clamp_max(rate(windows_physical_disk_idle_seconds_total[5m]), 1)
 ```

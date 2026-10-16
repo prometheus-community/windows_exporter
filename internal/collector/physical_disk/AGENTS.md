@@ -21,8 +21,8 @@ multi-instance. These notes were recorded on a Windows Server 2025
   and need the 1e-7 factor.
 - The second raw value of `% Idle Time` is the sample time as a UTC FILETIME;
   PDH divides by its delta. Even with that divisor the idle delta of a busy
-  disk exceeded the elapsed time by up to 43% on a Windows 11 NVMe disk
-  (Performance Monitor showed 150%) after a 1.6 GB write ended, while idle
+  disk exceeded the elapsed time by up to 43% between 1 s samples on a
+  Windows 11 NVMe disk (the cooked value of one sample reached 150%) after a 1.6 GB write ended, while idle
   disks stayed at 1.000 and `Processor Information` idle time never exceeded 1.
   The accumulator lags while busy and catches up later (#1249). The collector
   exports the raw counter; queries clamp the rate with `clamp_max(..., 1)`.
