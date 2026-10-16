@@ -53,29 +53,36 @@ func TestExtendCounters32(t *testing.T) {
 
 	c := &Collector{counters32: make(map[string]*shareCounters32)}
 
+	// internal/pdh delivers the timer sums in seconds of a 10 MHz time base.
+	frequencies := [numTimers32]float64{1e7, 1e7, 1e7}
+
 	sample := func(data perfDataCounterValues) perfDataCounterValues {
 		c.generation++
 
 		data.Name = `\\server\share`
-		c.extendCounters32(&data)
+		c.extendCounters32(&data, frequencies)
 		c.pruneCounters32()
 
 		return data
 	}
 
-	got := sample(perfDataCounterValues{AvgSecPerRead: 1 << 20, ReadRequestsPerSec: 7, ReadBytesPerSec: 100})
-	require.Equal(t, float64(1<<20), got.AvgSecPerRead) //nolint:testifylint
-	require.Equal(t, 7.0, got.ReadRequestsPerSec)       //nolint:testifylint
+	got := sample(perfDataCounterValues{AvgSecPerRead: (1 << 20) / 1e7, ReadRequestsPerSec: 7, ReadBytesPerSec: 100})
+	require.Equal(t, (1<<20)/1e7, got.AvgSecPerRead) //nolint:testifylint
+	require.Equal(t, 7.0, got.ReadRequestsPerSec)    //nolint:testifylint
 
 	// A timer sum can wrap from anywhere: 2^32 ticks are about 430 s of
 	// summed request time.
-	got = sample(perfDataCounterValues{AvgSecPerRead: 1 << 10, ReadRequestsPerSec: 9, ReadBytesPerSec: 200})
-	require.Equal(t, float64(math.MaxUint32)+1+(1<<10), got.AvgSecPerRead) //nolint:testifylint
-	require.Equal(t, 9.0, got.ReadRequestsPerSec)                          //nolint:testifylint
+	got = sample(perfDataCounterValues{AvgSecPerRead: (1 << 10) / 1e7, ReadRequestsPerSec: 9, ReadBytesPerSec: 200})
+	require.Equal(t, (float64(math.MaxUint32)+1+(1<<10))/1e7, got.AvgSecPerRead) //nolint:testifylint
+	require.Equal(t, 9.0, got.ReadRequestsPerSec)                                //nolint:testifylint
+
+	// Fractions of a second survive the round trip through ticks.
+	got = sample(perfDataCounterValues{AvgSecPerRead: 0.1234567, ReadRequestsPerSec: 10, ReadBytesPerSec: 300})
+	require.Equal(t, (float64(math.MaxUint32)+1+1234567)/1e7, got.AvgSecPerRead) //nolint:testifylint
 
 	// A drop of a 64-bit byte counter shows a reconnect, even if DataBytes grew.
-	got = sample(perfDataCounterValues{AvgSecPerRead: 5, ReadRequestsPerSec: 1, ReadBytesPerSec: 50, DataBytesPerSec: 1000})
-	require.Equal(t, 5.0, got.AvgSecPerRead)      //nolint:testifylint
+	got = sample(perfDataCounterValues{AvgSecPerRead: 5 / 1e7, ReadRequestsPerSec: 1, ReadBytesPerSec: 50, DataBytesPerSec: 1000})
+	require.Equal(t, 5/1e7, got.AvgSecPerRead)    //nolint:testifylint
 	require.Equal(t, 1.0, got.ReadRequestsPerSec) //nolint:testifylint
 
 	// A metadata-only share has no byte counter to show the reconnect; a

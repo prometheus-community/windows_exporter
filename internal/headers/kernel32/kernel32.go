@@ -32,6 +32,7 @@ var (
 	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
 	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
 	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
+	procQueryPerformanceFrequency        = modkernel32.NewProc("QueryPerformanceFrequency")
 
 	// GetDiskSpaceInformationW is optional and checked by GetDiskSpaceInformation.
 	load = lazyproc.Once(modkernel32,
@@ -39,6 +40,7 @@ var (
 		procKernelLocalFileTimeToFileTime,
 		procOpenJobObject,
 		procIsProcessInJob,
+		procQueryPerformanceFrequency,
 	)
 )
 
@@ -93,4 +95,18 @@ func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint3
 		uintptr(unsafe.Pointer(utcFileTime)))
 
 	return uint32(ret)
+}
+
+// QueryPerformanceFrequency returns the frequency of the performance counter
+// in counts per second.
+// 📑 https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancefrequency
+func QueryPerformanceFrequency() (int64, error) {
+	var frequency int64
+
+	ret, _, err := procQueryPerformanceFrequency.Call(uintptr(unsafe.Pointer(&frequency)))
+	if ret == 0 {
+		return 0, err
+	}
+
+	return frequency, nil
 }

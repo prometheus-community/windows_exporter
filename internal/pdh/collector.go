@@ -31,6 +31,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -487,10 +488,10 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 					continue
 				}
 			case PERF_AVERAGE_TIMER:
-				// A missing time base is not an error: Collect retries it and
-				// omits the counter's values until then.
-				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
-					counter.Frequency = 0
+				// The time base of an average timer is the performance counter
+				// frequency, so use that if PDH has none.
+				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess || counter.Frequency <= 0 {
+					counter.Frequency, _ = kernel32.QueryPerformanceFrequency()
 				}
 			}
 		}
@@ -566,6 +567,30 @@ func (c *Collector[T]) MetricType(counterName string) (prometheus.ValueType, boo
 	metricType := c.counters[i].MetricType
 
 	return metricType, metricType != 0
+}
+
+// Frequency returns the time base in ticks per second of the raw timer counter
+// named counterName. [Collector.Collect] already converts the values of these
+// counters to seconds; a collector needs the time base only to work on the
+// ticks, for example to extend a 32-bit counter past its wrap. It returns
+// false if the counter is unknown, is not such a timer or its time base is not
+// known yet.
+func (c *Collector[T]) Frequency(counterName string) (int64, bool) {
+	if c == nil {
+		return 0, false
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	i, ok := c.counterIndex[counterName]
+	if !ok {
+		return 0, false
+	}
+
+	frequency := c.counters[i].Frequency
+
+	return frequency, frequency > 0
 }
 
 // Collect replaces the content of dst with one row per collected instance.

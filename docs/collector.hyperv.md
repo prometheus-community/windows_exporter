@@ -369,7 +369,7 @@ The `vm` label holds the instance name of the `Hyper-V Virtual SMB` performance 
 
 The `Latency`, `Lower Latency`, `Queue Length` and `Lower Queue Length` performance counters
 are averages that Windows computes from two samples. Their raw values only grow: the sum of
-all IO latencies in 100ns ticks, and the raw queue length values are the same as the raw
+all IO latencies in ticks of the counter time base (10 MHz), and the raw queue length values are the same as the raw
 latency values. windows_exporter publishes them as the `*_io_latency_seconds_total` counters:
 
 ```promql
