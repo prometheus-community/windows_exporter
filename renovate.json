@@ -15,15 +15,6 @@
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml","**/workflows/govulncheck.yml"],
   "packageRules": [
     {
-      "groupName": "golangci-lint",
-      "matchPackageNames": [
-        "github.com/golangci/golangci-lint/cmd/golangci-lint",
-        "golangci/golangci-lint",
-        "golangci/golangci-lint-action"
-      ],
-      "addLabels": ["chore"]
-    },
-    {
       "matchPackageNames": ["gopkg.in/yaml"],
       "enabled": false
     },
@@ -39,7 +30,16 @@
       "matchDatasources": ["!/github-runners$/"],
       "semanticCommitScope": "github-actions",
       "separateMajorMinor": false,
-      "addLabels": ["chore"]
+      "labels": ["chore"]
+    },
+    {
+      "description": "Group '# renovate:' comments in workflows with the github-actions manager, which also detects 'with: version' (depType uses-with)",
+      "groupName": "GitHub Actions",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": [".github/workflows/**"],
+      "semanticCommitScope": "github-actions",
+      "separateMajorMinor": false,
+      "labels": ["chore"]
     },
     {
       "groupName": "GitHub Runners",
@@ -47,7 +47,16 @@
       "matchDatasources": ["github-runners"],
       "semanticCommitScope": "github-actions",
       "separateMajorMinor": false,
-      "addLabels": ["chore"]
+      "labels": ["chore"]
+    },
+    {
+      "groupName": "golangci-lint",
+      "matchPackageNames": [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint",
+        "golangci/golangci-lint",
+        "golangci/golangci-lint-action"
+      ],
+      "labels": ["chore"]
     },
     {
       "enabled": true,
@@ -84,20 +93,9 @@
       "addLabels": ["chore"]
     },
     {
-      "matchPackageNames": ["golang.org/x/net"],
-      "sourceUrl": "https://github.com/golang/net"
-    },
-    {
-      "matchPackageNames": ["golang.org/x/oauth2"],
-      "sourceUrl": "https://github.com/golang/oauth2"
-    },
-    {
-      "matchPackageNames": ["golang.org/x/sys"],
-      "sourceUrl": "https://github.com/golang/sys"
-    },
-    {
-      "matchPackageNames": ["golang.org/x/text"],
-      "sourceUrl": "https://github.com/golang/text"
+      "groupName": "golang.org/x",
+      "matchPackageNames": ["golang.org/x/**"],
+      "sourceUrl": "https://github.com/golang/{{{lookup (split packageName '/') 2}}}"
     },
     {
       "enabled": false,
