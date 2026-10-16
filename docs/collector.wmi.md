@@ -60,11 +60,14 @@ collector:
             metric: windows_wmi_os_last_boot_timestamp_seconds
             help: Time of the last boot as a Unix timestamp.
           - name: FreePhysicalMemory
-            metric: windows_wmi_os_physical_memory_free_bytes
+            metric: windows_wmi_os_physical_free_bytes
             help: Free physical memory in bytes.
             multiplier: 1024 # WMI reports kilobytes
           - name: NumberOfProcesses
 ```
+
+`FreePhysicalMemory` shows the [`multiplier`](#multiplier); the [memory](collector.memory.md) collector already
+exports this value as `windows_memory_physical_free_bytes`.
 
 #### Schema
 
@@ -230,7 +233,7 @@ This key is optional.
 A factor that the value is multiplied by before it is exported, to convert it to
 the base unit the Prometheus [naming conventions](https://prometheus.io/docs/practices/naming/#base-units)
 ask for. For example, `0.001` converts milliseconds to seconds, `0.01` percent to
-a ratio and `3600` hours to seconds. It must be a positive number, so counters
+a ratio, `3600` hours to seconds and `1024` kilobytes to bytes. It must be a positive number, so counters
 keep counting up. If the multiplier is the reciprocal of an integer, like `0.001`,
 the value is divided by that integer instead, which avoids rounding artifacts
 such as `0.009000000000000001`. If not specified, the value is exported as is.
@@ -326,9 +329,9 @@ windows_wmi_os_last_boot_timestamp_seconds 1.791272732355078e+09
 # HELP windows_wmi_os_numberofprocesses windows_exporter: custom WMI metric
 # TYPE windows_wmi_os_numberofprocesses gauge
 windows_wmi_os_numberofprocesses 478
-# HELP windows_wmi_os_physical_memory_free_bytes Free physical memory in bytes.
-# TYPE windows_wmi_os_physical_memory_free_bytes gauge
-windows_wmi_os_physical_memory_free_bytes 1.6777216e+10
+# HELP windows_wmi_os_physical_free_bytes Free physical memory in bytes.
+# TYPE windows_wmi_os_physical_free_bytes gauge
+windows_wmi_os_physical_free_bytes 1.6777216e+10
 # HELP windows_wmi_query_duration_seconds Duration of the WMI query.
 # TYPE windows_wmi_query_duration_seconds gauge
 windows_wmi_query_duration_seconds{query="logical_disk"} 0.0375302
