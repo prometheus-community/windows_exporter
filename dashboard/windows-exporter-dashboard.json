@@ -2802,7 +2802,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_temperature_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} temperature",
                                                 "range": true
@@ -2824,7 +2824,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_temperature_warning_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_warning_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} throttling threshold",
                                                 "range": true
@@ -2846,7 +2846,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_temperature_max_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_temperature_max_celsius{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} maximum",
                                                 "range": true
@@ -2961,7 +2961,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} fan",
                                                 "range": true
@@ -2983,7 +2983,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_max_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_fan_speed_max_rpm{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} maximum",
                                                 "range": true
@@ -3098,7 +3098,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_power_usage_ratio{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_power_usage_ratio{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} power",
                                                 "range": true
@@ -3213,7 +3213,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} memory clock",
                                                 "range": true
@@ -3235,7 +3235,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_memory_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} maximum",
                                                 "range": true
@@ -3350,7 +3350,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} engine {{eng}} clock",
                                                 "range": true
@@ -3372,7 +3372,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys, eng) (windows_gpu_engine_frequency_max_hertz{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} engine {{eng}} maximum",
                                                 "range": true
@@ -3487,7 +3487,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (luid, phys) (windows_gpu_adapter_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "max by (luid, phys) (windows_gpu_adapter_memory_committed_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} committed",
                                                 "range": true
@@ -3602,7 +3602,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (luid, phys) (windows_gpu_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum by (luid, phys) (windows_gpu_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} local",
                                                 "range": true
@@ -3624,7 +3624,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (luid, phys) (windows_gpu_non_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
+                                                "expr": "sum by (luid, phys) (windows_gpu_non_local_adapter_memory_bytes{job=~\"$job\", instance=\"$instance\"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~\"$job\", instance=\"$instance\"})",
                                                 "instant": false,
                                                 "legendFormat": "{{name}} GPU {{phys}} non-local",
                                                 "range": true
