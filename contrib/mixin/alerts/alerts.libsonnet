@@ -25,6 +25,12 @@
       } + (if duration != '0m' then { 'for': duration } else {}) + (if threshold then keepFiring else {}),
     ] else [],
   local group(name, rules) = if std.length(rules) > 0 then [{ name: name, rules: rules }] else [],
+  // Percent of free addresses in a scope; a scope without addresses has no sample.
+  local dhcpScopeFree = '(%s * 100)' % q.ratio(
+    q.metric('windows_dhcp_scope_addresses_free'),
+    '(%s + %s)' % [q.metric('windows_dhcp_scope_addresses_free'), q.metric('windows_dhcp_scope_addresses_in_use')]
+  ),
+  local dhcpScopeActive = q.metric('windows_dhcp_scope_state', ['state=~"Enabled|EnabledSwitched"']),
   prometheusAlerts+:: {
     groups:
       group('windows-exporter', std.flattenArrays([
@@ -113,6 +119,18 @@
           'Paging on {{ $labels.instance }} has exceeded %s pages per second for 15 minutes.' % c.memoryPagingThreshold,
           collectors=['memory']
         ),
+        alert(
+          'WindowsPagefileAlmostFull',
+          '(1 - %s) * 100 > %s' % [
+            q.ratio(q.metric('windows_pagefile_free_bytes'), q.metric('windows_pagefile_limit_bytes')),
+            c.pagefileUsageThreshold,
+          ],
+          '15m',
+          'warning',
+          'Windows page file is almost full',
+          'Page file {{ $labels.file }} on {{ $labels.instance }} has been more than %s%% in use for 15 minutes.' % c.pagefileUsageThreshold,
+          collectors=['pagefile']
+        ),
       ]))
       + group('windows-disk', std.flattenArrays([
         alert(
@@ -153,6 +171,19 @@
           'Windows disk is predicted to fill up',
           'Volume {{ $labels.volume }} on {{ $labels.instance }} is predicted to fill within %s hours.' % c.diskPredictionHours,
           collectors=['logical_disk']
+        ),
+        alert(
+          'WindowsDiskDriveNotOK',
+          // One series per status with the current status set to 1, so the
+          // alert carries the status the drive reports. Some USB and virtual
+          // drives report Unknown for good.
+          q.metric('windows_diskdrive_status', ['status!~"OK|Unknown"']) + ' == 1',
+          '5m',
+          c.criticalSeverity,
+          'Windows disk drive is not healthy',
+          'Disk drive {{ $labels.device_id }} on {{ $labels.instance }} has reported status {{ $labels.status }} for 5 minutes.',
+          collectors=['diskdrive'],
+          threshold=false
         ),
       ]))
       + group('windows-network', std.flattenArrays([
@@ -256,6 +287,16 @@
           collectors=['system'],
           threshold=false
         ),
+        alert(
+          'WindowsLicenseNotGenuine',
+          q.metric('windows_license_status', ['state!="genuine"']) + ' == 1',
+          '1h',
+          'warning',
+          'Windows license is not genuine',
+          'Windows on {{ $labels.instance }} has reported license status {{ $labels.state }} for 1 hour.',
+          collectors=['license'],
+          threshold=false
+        ),
       ]))
       + group('windows-active-directory', std.flattenArrays([
         alert(
@@ -296,6 +337,209 @@
           'Windows clock offset is high',
           'Windows Time on {{ $labels.instance }} reports a clock offset above %g seconds for 10 minutes.' % c.clockOffsetThresholdSeconds,
           collectors=['time']
+        ),
+        alert(
+          'WindowsClockSourceLocal',
+          // Covers domain members (NT5DS) too, which the NTP source count misses.
+          q.metric('windows_time_clock_sync_source', ['type=~"Local CMOS Clock|NoSync"']) + ' == 1',
+          '10m',
+          'warning',
+          'Windows clock has no external time source',
+          'Windows Time on {{ $labels.instance }} has used {{ $labels.type }} as its clock source for 10 minutes.',
+          collectors=['time'],
+          threshold=false
+        ),
+      ]))
+      + group('windows-scheduled-task', std.flattenArrays([
+        alert(
+          'WindowsScheduledTaskFailed',
+          // unknown is any result code without a named status, including the
+          // exit codes of the task's program.
+          // A disabled task keeps its last result, so disabling a broken task
+          // clears the alert.
+          '%s == 1 unless ignoring (status, state) (%s == 1)' % [
+            q.metric('windows_scheduled_task_last_result_status', [c.taskSelector, 'status=~"unknown|terminated"']),
+            q.metric('windows_scheduled_task_state', [c.taskSelector, 'state="disabled"']),
+          ],
+          '1h',
+          'warning',
+          'Windows scheduled task did not succeed',
+          'The last run of task {{ $labels.task }} on {{ $labels.instance }} ended with result {{ $labels.status }}, and the task has not succeeded in the hour since.',
+          collectors=['scheduled_task'],
+          threshold=false
+        ),
+      ]))
+      + group('windows-update', std.flattenArrays([
+        alert(
+          'WindowsUpdatesPending',
+          'count without (id, revision, category, severity, title) (%s) > 0' % q.metric('windows_update_pending_info', ['deployment_action="installation"']),
+          c.updatePendingDuration,
+          c.infoSeverity,
+          'Windows updates are waiting for installation',
+          '{{ $labels.instance }} has had {{ $value }} updates waiting for installation for %s.' % c.updatePendingDuration,
+          collectors=['update'],
+          threshold=false
+        ),
+      ]))
+      + group('windows-hyperv', std.flattenArrays([
+        alert(
+          'WindowsHyperVWMIUnhealthy',
+          q.metric('windows_hyperv_wmi_health') + ' == 0',
+          '10m',
+          'warning',
+          'Hyper-V WMI namespace is not responding',
+          'The Hyper-V WMI namespace on {{ $labels.instance }} has not responded for 10 minutes; Hyper-V metrics are missing.',
+          collectors=['hyperv'],
+          threshold=false
+        ),
+        alert(
+          'WindowsHyperVReplicationCritical',
+          q.metric('windows_hyperv_replica_vm_health') + ' == 3',
+          '5m',
+          c.criticalSeverity,
+          'Hyper-V replication is critical',
+          'Replication of virtual machine {{ $labels.vm }} ({{ $labels.relationship }}) on {{ $labels.instance }} has been in critical health for 5 minutes.',
+          collectors=['hyperv'],
+          threshold=false
+        ),
+        alert(
+          'WindowsHyperVReplicationWarning',
+          q.metric('windows_hyperv_replica_vm_health') + ' == 2',
+          '15m',
+          'warning',
+          'Hyper-V replication has a warning',
+          'Replication of virtual machine {{ $labels.vm }} ({{ $labels.relationship }}) on {{ $labels.instance }} has been in warning health for 15 minutes.',
+          collectors=['hyperv'],
+          threshold=false
+        ),
+      ]))
+      // Every cluster node reports the state of the whole cluster, so these
+      // alerts fire once per node; group them by cluster labels in Alertmanager.
+      + group('windows-cluster', std.flattenArrays([
+        alert(
+          'WindowsClusterNodeDown',
+          q.metric('windows_mscluster_node_state') + ' == 1',
+          '5m',
+          c.criticalSeverity,
+          'Failover cluster node is down',
+          'Cluster node {{ $labels.node }} has been down for 5 minutes, as reported by {{ $labels.instance }}.',
+          collectors=['mscluster'],
+          threshold=false
+        ),
+        alert(
+          'WindowsClusterResourceFailed',
+          q.metric('windows_mscluster_resource_state') + ' == 4',
+          '5m',
+          c.criticalSeverity,
+          'Failover cluster resource has failed',
+          'Cluster resource {{ $labels.resource }} ({{ $labels.type }}) in group {{ $labels.resource_group }} has been in the failed state for 5 minutes, as reported by {{ $labels.instance }}.',
+          collectors=['mscluster'],
+          threshold=false
+        ),
+        alert(
+          'WindowsClusterResourceGroupFailed',
+          q.metric('windows_mscluster_resourcegroup_state') + ' == 2',
+          '5m',
+          c.criticalSeverity,
+          'Failover cluster resource group has failed',
+          'Cluster resource group {{ $labels.resource_group }} has been in the failed state for 5 minutes, as reported by {{ $labels.instance }}.',
+          collectors=['mscluster'],
+          threshold=false
+        ),
+        alert(
+          'WindowsClusterSharedVolumeAlmostFull',
+          q.ratio(q.metric('windows_mscluster_shared_volumes_free_bytes', [c.sharedVolumeSelector]), q.metric('windows_mscluster_shared_volumes_total_bytes', [c.sharedVolumeSelector])) + ' * 100 < %s' % c.diskFreeWarningThreshold,
+          '15m',
+          'warning',
+          'Cluster shared volume is almost full',
+          'Cluster shared volume {{ $labels.shared_volume }} has had less than %s%% free space for 15 minutes, as reported by {{ $labels.instance }}.' % c.diskFreeWarningThreshold,
+          collectors=['mscluster']
+        ),
+        alert(
+          'WindowsClusterSharedVolumeAlmostFull',
+          q.ratio(q.metric('windows_mscluster_shared_volumes_free_bytes', [c.sharedVolumeSelector]), q.metric('windows_mscluster_shared_volumes_total_bytes', [c.sharedVolumeSelector])) + ' * 100 < %s' % c.diskFreeCriticalThreshold,
+          '15m',
+          c.criticalSeverity,
+          'Cluster shared volume is almost full',
+          'Cluster shared volume {{ $labels.shared_volume }} has had less than %s%% free space for 15 minutes, as reported by {{ $labels.instance }}.' % c.diskFreeCriticalThreshold,
+          collectors=['mscluster']
+        ),
+      ]))
+      // On Storage Spaces Direct every node reports the clustered pools and
+      // virtual disks, so these alerts fire once per node as well.
+      + group('windows-storage-spaces', std.flattenArrays([
+        // The primordial pool holds the disks that are not in a concrete pool
+        // yet; only the info metric tells it apart.
+        alert(
+          'WindowsStoragePoolUnhealthy',
+          '(%s == 2) and ignoring (primordial) %s' % [q.metric('windows_storage_spaces_pool_health_status'), q.metric('windows_storage_spaces_pool_info', ['primordial="false"'])],
+          '10m',
+          c.criticalSeverity,
+          'Storage pool is unhealthy',
+          'Storage pool {{ $labels.pool }} on {{ $labels.instance }} has reported unhealthy status for 10 minutes.',
+          collectors=['storage_spaces'],
+          threshold=false
+        ),
+        alert(
+          'WindowsStoragePoolUnhealthy',
+          '(%s == 1) and ignoring (primordial) %s' % [q.metric('windows_storage_spaces_pool_health_status'), q.metric('windows_storage_spaces_pool_info', ['primordial="false"'])],
+          '10m',
+          'warning',
+          'Storage pool has a health warning',
+          'Storage pool {{ $labels.pool }} on {{ $labels.instance }} has reported warning status for 10 minutes.',
+          collectors=['storage_spaces'],
+          threshold=false
+        ),
+        alert(
+          'WindowsStorageVirtualDiskUnhealthy',
+          q.metric('windows_storage_spaces_virtual_disk_health_status') + ' == 2',
+          '10m',
+          c.criticalSeverity,
+          'Storage Spaces virtual disk is unhealthy',
+          'Virtual disk {{ $labels.virtual_disk }} on {{ $labels.instance }} has reported unhealthy status for 10 minutes.',
+          collectors=['storage_spaces'],
+          threshold=false
+        ),
+        alert(
+          'WindowsStorageVirtualDiskUnhealthy',
+          q.metric('windows_storage_spaces_virtual_disk_health_status') + ' == 1',
+          '10m',
+          'warning',
+          'Storage Spaces virtual disk has a health warning',
+          'Virtual disk {{ $labels.virtual_disk }} on {{ $labels.instance }} has reported warning status for 10 minutes.',
+          collectors=['storage_spaces'],
+          threshold=false
+        ),
+      ]))
+      + group('windows-dhcp', std.flattenArrays([
+        alert(
+          'WindowsDHCPScopeAlmostExhausted',
+          dhcpScopeFree + ' < %s and ignoring (state) (%s == 1)' % [c.dhcpScopeFreeWarningThreshold, dhcpScopeActive],
+          '15m',
+          'warning',
+          'DHCP scope is almost exhausted',
+          'DHCP scope {{ $labels.scope }} on {{ $labels.instance }} has had less than %s%% free addresses for 15 minutes.' % c.dhcpScopeFreeWarningThreshold,
+          collectors=['dhcp']
+        ),
+        alert(
+          'WindowsDHCPScopeAlmostExhausted',
+          dhcpScopeFree + ' < %s and ignoring (state) (%s == 1)' % [c.dhcpScopeFreeCriticalThreshold, dhcpScopeActive],
+          '15m',
+          c.criticalSeverity,
+          'DHCP scope is almost exhausted',
+          'DHCP scope {{ $labels.scope }} on {{ $labels.instance }} has had less than %s%% free addresses for 15 minutes.' % c.dhcpScopeFreeCriticalThreshold,
+          collectors=['dhcp']
+        ),
+      ]))
+      + group('windows-dns', std.flattenArrays([
+        alert(
+          'WindowsDNSZoneTransferFailures',
+          q.rate('windows_dns_zone_transfer_failures_total') + ' > %g' % c.dnsZoneTransferFailureRateThreshold,
+          '15m',
+          'warning',
+          'DNS zone transfers are failing',
+          'Zone transfers from DNS server {{ $labels.instance }} have been failing for 15 minutes.',
+          collectors=['dns']
         ),
       ])),
   },

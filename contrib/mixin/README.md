@@ -85,7 +85,10 @@ apply to both recording rules and alerts. All target labels, including `job`,
 averages idle rates across cores and removes only `core` and `mode`. Disk,
 network and service rules also retain `volume`, `nic` and `service`
 respectively, filtered by `volumeSelector`, `nicSelector` and
-`serviceSelector`. The CPU mode recording retains `mode` and removes only
+`serviceSelector`. The scheduled task and cluster shared volume alerts
+filter their `task` and `shared_volume` labels with `taskSelector`
+(`task!=""`) and `sharedVolumeSelector`
+(`shared_volume!="ClusterPerformanceHistory"`). The CPU mode recording retains `mode` and removes only
 `core`.
 
 `rateInterval` is the fixed window for recording rules and Active Directory
@@ -179,6 +182,27 @@ percentages except where noted.
 | `windows-active-directory` | `ad` | `WindowsADReplicationFailures` | Failed synchronization requests above `adReplicationFailureRateThreshold` (0 requests/second) | 15m | Warning |
 | `windows-time` | `time` | `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
+| `windows-time` | `time` | `WindowsClockSourceLocal` | Clock source is `Local CMOS Clock` or `NoSync` | 10m | Warning |
+| `windows-memory` | `pagefile` | `WindowsPagefileAlmostFull` | Page file usage above `pagefileUsageThreshold` (80%) | 15m | Warning |
+| `windows-disk` | `diskdrive` | `WindowsDiskDriveNotOK` | Drive status other than `OK` or `Unknown` | 5m | Critical |
+| `windows-system` | `license` | `WindowsLicenseNotGenuine` | License status is not `genuine` | 1h | Warning |
+| `windows-scheduled-task` | `scheduled_task` | `WindowsScheduledTaskFailed` | Last result of an enabled task matching `taskSelector` is `unknown` or `terminated` | 1h | Warning |
+| `windows-update` | `update` | `WindowsUpdatesPending` | Updates waiting for installation | `updatePendingDuration` (7d) | Info |
+| `windows-hyperv` | `hyperv` | `WindowsHyperVWMIUnhealthy` | Hyper-V WMI namespace not responding | 10m | Warning |
+| `windows-hyperv` | `hyperv` | `WindowsHyperVReplicationCritical` | Replication health of a virtual machine is critical | 5m | Critical |
+| `windows-hyperv` | `hyperv` | `WindowsHyperVReplicationWarning` | Replication health of a virtual machine is warning | 15m | Warning |
+| `windows-cluster` | `mscluster` | `WindowsClusterNodeDown` | Node state is down | 5m | Critical |
+| `windows-cluster` | `mscluster` | `WindowsClusterResourceFailed` | Resource state is failed | 5m | Critical |
+| `windows-cluster` | `mscluster` | `WindowsClusterResourceGroupFailed` | Resource group state is failed | 5m | Critical |
+| `windows-cluster` | `mscluster` | `WindowsClusterSharedVolumeAlmostFull` | Free space of a volume matching `sharedVolumeSelector` below `diskFreeWarningThreshold` (10%) | 15m | Warning |
+| `windows-cluster` | `mscluster` | `WindowsClusterSharedVolumeAlmostFull` | Free space below `diskFreeCriticalThreshold` (5%) | 15m | Critical |
+| `windows-storage-spaces` | `storage_spaces` | `WindowsStoragePoolUnhealthy` | Health of a pool that is not primordial is unhealthy | 10m | Critical |
+| `windows-storage-spaces` | `storage_spaces` | `WindowsStoragePoolUnhealthy` | Health of a pool that is not primordial is warning | 10m | Warning |
+| `windows-storage-spaces` | `storage_spaces` | `WindowsStorageVirtualDiskUnhealthy` | Health of a virtual disk is unhealthy | 10m | Critical |
+| `windows-storage-spaces` | `storage_spaces` | `WindowsStorageVirtualDiskUnhealthy` | Health of a virtual disk is warning | 10m | Warning |
+| `windows-dhcp` | `dhcp` | `WindowsDHCPScopeAlmostExhausted` | Free addresses of an active scope below `dhcpScopeFreeWarningThreshold` (10%) | 15m | Warning |
+| `windows-dhcp` | `dhcp` | `WindowsDHCPScopeAlmostExhausted` | Free addresses of an active scope below `dhcpScopeFreeCriticalThreshold` (2%) | 15m | Critical |
+| `windows-dns` | `dns` | `WindowsDNSZoneTransferFailures` | Zone transfer failure rate above `dnsZoneTransferFailureRateThreshold` (0 per second) | 15m | Warning |
 
 `_config.alerts` lists every alert by name. Set one to `false` to leave it out,
 for example `alerts+: { WindowsHostRebooted: false }`; an unknown name fails the
@@ -188,9 +212,11 @@ alerts are all turned off is not generated.
 Threshold alerts set `keep_firing_for` to `keepFiringFor` (5 minutes), so a
 value that oscillates around a threshold does not flap. The state alerts
 `WindowsExporterDown`, `WindowsCollectorFailed`, `WindowsCollectorTimeout`,
-`WindowsScrapeQueueTimeout`, `WindowsServiceNotRunning` and
-`WindowsClockNotSynchronising`, and the one-shot `WindowsHostRebooted`, have no
-`keep_firing_for` and resolve as soon as their condition clears.
+`WindowsScrapeQueueTimeout`, `WindowsServiceNotRunning`,
+`WindowsClockNotSynchronising` and the state alerts of the opt-in collectors
+(clock source, drive status, license, task result, pending updates, Hyper-V,
+cluster and Storage Spaces health), and the one-shot `WindowsHostRebooted`,
+have no `keep_firing_for` and resolve as soon as their condition clears.
 `keep_firing_for` needs Prometheus 2.42 or later; set `keepFiringFor: ''` for
 older servers.
 
@@ -206,9 +232,33 @@ notification should be sent.
 
 Active Directory alerts need `collectors.ad`, which `enableActiveDirectory`
 sets. Clock alerts need `collectors.time`, which `enableTime` sets. A zero NTP
-source count may be expected on hosts using another time provider. The offset
-compares the host to its chosen source and does not independently verify that
-source. Disk latency, paging and network thresholds should be tuned for the
+source count may be expected on hosts using another time provider;
+`WindowsClockSourceLocal` covers domain members, whose source is `NT5DS`, and
+fires only for the local clock or no synchronization. The offset compares the
+host to its chosen source and does not independently verify that source.
+
+The other opt-in alerts follow `_config.collectors`: enable `pagefile`,
+`diskdrive`, `license`, `scheduled_task`, `update`, `hyperv`, `mscluster`,
+`storage_spaces`, `dhcp` or `dns` and the alerts of that collector are
+generated, in the group of their area or in a group of their own.
+`WindowsScheduledTaskFailed` treats `unknown`, the status of every result code
+without a name, including the exit codes of the task's program, as a failure;
+narrow the tasks with `taskSelector`. Disabling a task clears the alert.
+`WindowsDiskDriveNotOK` skips the `Unknown` status, which some USB and
+virtual drives report permanently. `WindowsLicenseNotGenuine` reports the
+`state` the host has; hosts without internet access can stay in `offline`,
+so turn the alert off there. Every failover cluster node reports the state of
+the whole cluster, and every Storage Spaces Direct node reports the clustered
+pools and virtual disks, so the cluster and storage alerts fire once per node;
+group them by their `node`, `resource`, `shared_volume`, `pool` or
+`virtual_disk` labels in Alertmanager. The storage pool alert joins
+`windows_storage_spaces_pool_info` to leave out the primordial pool. The DHCP
+scope alert only counts scopes in an enabled state, and a scope without
+addresses produces no sample. `WindowsUpdatesPending` is an info alert that
+waits `updatePendingDuration` for the normal maintenance window. Prometheus
+restores the waiting time after a restart shorter than its
+`--rules.alert.for-outage-tolerance` (one hour by default); a longer outage
+or a new server starts the wait again. Disk latency, paging and network thresholds should be tuned for the
 storage tier, traffic volume, and application requirements.
 
 `WindowsServiceNotRunning` watches services with the `auto` start mode and
