@@ -59,6 +59,10 @@ collector:
           - name: LastBootUpTime
             metric: windows_wmi_os_last_boot_timestamp_seconds
             help: Time of the last boot as a Unix timestamp.
+          - name: FreePhysicalMemory
+            metric: windows_wmi_os_physical_memory_free_bytes
+            help: Free physical memory in bytes.
+            multiplier: 1024 # WMI reports kilobytes
           - name: NumberOfProcesses
 ```
 
@@ -322,6 +326,9 @@ windows_wmi_os_last_boot_timestamp_seconds 1.791272732355078e+09
 # HELP windows_wmi_os_numberofprocesses windows_exporter: custom WMI metric
 # TYPE windows_wmi_os_numberofprocesses gauge
 windows_wmi_os_numberofprocesses 478
+# HELP windows_wmi_os_physical_memory_free_bytes Free physical memory in bytes.
+# TYPE windows_wmi_os_physical_memory_free_bytes gauge
+windows_wmi_os_physical_memory_free_bytes 1.6777216e+10
 # HELP windows_wmi_query_duration_seconds Duration of the WMI query.
 # TYPE windows_wmi_query_duration_seconds gauge
 windows_wmi_query_duration_seconds{query="logical_disk"} 0.0375302
@@ -344,6 +351,9 @@ windows_wmi_query_success{query="os"} 1
 - WQL `ASSOCIATORS OF` and `REFERENCES OF` queries are not supported.
 
 ## More examples
+
+The values in these examples are already in base units: `datetime` properties are exported as Unix timestamps in
+seconds, and the others are flags or status codes, so they need no [`multiplier`](#multiplier).
 
 ### Microsoft Defender Antivirus
 
