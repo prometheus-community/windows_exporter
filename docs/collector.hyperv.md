@@ -121,7 +121,9 @@ The suffix only keeps the series unique and does not identify the VM across scra
 
 Metrics about the host's CPU allocation. Processor counts per virtual machine are
 read from the Host Compute Service API; the logical processor count comes from the
-`Hyper-V Hypervisor Logical Processor` performance counter object.
+`Hyper-V Hypervisor Logical Processor` performance counter object. The Host Compute
+Service API requires Windows Server 2019 or later; on older versions the sub-collector
+is skipped with a warning.
 
 | Metric Name                                     | Description                                                            | Type  | Labels             |
 |-------------------------------------------------|------------------------------------------------------------------------|-------|--------------------|

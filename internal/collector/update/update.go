@@ -67,6 +67,8 @@ type Collector struct {
 
 	mu          sync.RWMutex
 	ctxCancelFn context.CancelFunc
+	// workerDone is closed when the Windows Update worker returned and released its COM objects.
+	workerDone chan struct{}
 
 	logger *slog.Logger
 
@@ -108,16 +110,51 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
+// closeTimeout bounds how long Close waits for the Windows Update worker. It
+// stays below the 5 seconds that the collection waits for its collectors to close.
+const closeTimeout = 3 * time.Second
+
+// Close stops the Windows Update worker and waits up to closeTimeout for it.
+//
+// The worker observes the cancellation between searches only: a running
+// search is a synchronous WUA call that cannot be interrupted, and an online
+// search can take minutes. If the worker does not return in time, Close logs
+// a warning and returns. The worker keeps running until the search returns.
+// It owns its COM objects and only shares metricsBuf, under mu, with Collect.
+// After the cancellation it does not store the result of the running search:
+// it releases its COM objects, uninitializes COM and exits on its own without
+// starting another search. If the process exits first, the search is abandoned.
 func (c *Collector) Close() error {
-	if c.ctxCancelFn != nil {
-		c.ctxCancelFn()
-		c.ctxCancelFn = nil
+	if c.ctxCancelFn == nil {
+		return nil
+	}
+
+	c.ctxCancelFn()
+	c.ctxCancelFn = nil
+
+	timer := time.NewTimer(closeTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-c.workerDone:
+	case <-timer.C:
+		c.logger.Warn("Windows Update search still running at close, it finishes in the background",
+			slog.Duration("waited", closeTimeout),
+		)
 	}
 
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	// A Build without a Close in between stops the worker of the earlier
+	// Build, which would otherwise keep searching until the process exits.
+	if c.ctxCancelFn != nil {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+
 	c.logger = logger.With(slog.String("collector", Name))
 
 	c.logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
@@ -154,8 +191,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	// scheduleUpdateStatus sends exactly one value to initErrCh, nil after a successful initialization.
 	initErrCh := make(chan error, 1)
+	workerDone := make(chan struct{})
 
 	go func() {
+		defer close(workerDone)
+
 		err := recovery.Run(func() error {
 			c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
 
@@ -175,6 +215,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}()
 
 	c.ctxCancelFn = cancel
+	c.workerDone = workerDone
 
 	if err := <-initErrCh; err != nil {
 		return fmt.Errorf("failed to initialize Windows Update collector: %w", err)
@@ -264,10 +305,16 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		err = recovery.Run(func() error {
 			var err error
 
-			metricsBuf, err = c.fetchUpdates(logger, searcher)
+			metricsBuf, err = c.fetchUpdates(logger, searcher, len(metricsBuf))
 
 			return err
 		})
+
+		// A search that outlived Close publishes nothing.
+		if ctx.Err() != nil {
+			return
+		}
+
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to fetch updates",
 				slog.Any("err", err),
@@ -291,8 +338,11 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	}
 }
 
-func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher) ([]prometheus.Metric, error) {
-	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf)*2+1)
+// fetchUpdates searches for pending updates. previousLen, the number of
+// metrics of the previous search, sizes the buffer. fetchUpdates reads no
+// collector state that Collect or Close change.
+func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher, previousLen int) ([]prometheus.Metric, error) {
+	metricsBuf := make([]prometheus.Metric, 0, previousLen+1)
 
 	timeStart := time.Now()
 
@@ -303,7 +353,9 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 	defer result.Release()
 
-	logger.Debug(fmt.Sprintf("search for updates took %s", time.Since(timeStart)))
+	logger.Debug("search for updates finished",
+		slog.Duration("duration", time.Since(timeStart)),
+	)
 
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 		c.queryDurationSeconds,

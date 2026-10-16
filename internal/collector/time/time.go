@@ -139,6 +139,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	if err := kernel32.Load(); err != nil {
+		return err
+	}
+
 	// https://github.com/prometheus-community/windows_exporter/issues/1891
 	c.ppbCounterPresent = osversion.Build() >= osversion.LTSC2019
 

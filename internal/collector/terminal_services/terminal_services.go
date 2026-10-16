@@ -281,12 +281,14 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 				slog.Any("err", err),
 			)
 
-			c.perfDataCollectorBroker.Close()
-			c.perfDataCollectorBroker = nil
 			c.connectionBrokerEnabled = false
 		}
 	} else {
 		c.logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	}
+
+	if err = wtsapi32.Load(); err != nil {
+		return err
 	}
 
 	c.hServer, err = wtsapi32.WTSOpenServer("")
@@ -303,9 +305,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		c.logger.Warn("failed to create Terminal Services Session collector, skipping per-session performance metrics",
 			slog.Any("err", err),
 		)
-
-		c.perfDataCollectorTerminalServicesSession.Close()
-		c.perfDataCollectorTerminalServicesSession = nil
 	}
 
 	return nil

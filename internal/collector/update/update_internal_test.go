@@ -19,9 +19,11 @@ package update
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 	"unicode/utf16"
 	"unsafe"
 
@@ -32,6 +34,86 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )
+
+func TestCloseWaitsForWorker(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		stopsIn  time.Duration
+		timedOut bool
+	}{
+		{name: "worker stops in time", stopsIn: 200 * time.Millisecond},
+		{name: "search outlives the close bound", stopsIn: closeTimeout + time.Second, timedOut: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			done := make(chan struct{})
+
+			// The fake worker models a search that returns stopsIn after the cancellation.
+			go func() {
+				defer close(done)
+
+				<-ctx.Done()
+				time.Sleep(tc.stopsIn)
+			}()
+
+			var logs bytes.Buffer
+
+			c := &Collector{
+				logger:      slog.New(slog.NewTextHandler(&logs, nil)),
+				ctxCancelFn: cancel,
+				workerDone:  done,
+			}
+			start := time.Now()
+
+			require.NoError(t, c.Close())
+
+			if tc.timedOut {
+				require.Less(t, time.Since(start), closeTimeout+time.Second/2, "Close is bounded")
+				require.Contains(t, logs.String(), "Windows Update search still running at close")
+				<-done
+			} else {
+				require.GreaterOrEqual(t, time.Since(start), tc.stopsIn, "Close waits for the worker")
+				require.Empty(t, logs.String())
+			}
+
+			require.NoError(t, c.Close(), "Close is idempotent")
+		})
+	}
+}
+
+// TestBuildStopsPreviousWorker checks that a second Build stops the worker of
+// the first one instead of leaking it.
+func TestBuildStopsPreviousWorker(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		<-ctx.Done()
+	}()
+
+	c := New(nil)
+	c.logger = slog.New(slog.DiscardHandler)
+	c.ctxCancelFn = cancel
+	c.workerDone = done
+
+	err := c.Build(slog.New(slog.DiscardHandler), nil)
+
+	t.Cleanup(func() { _ = c.Close() })
+
+	select {
+	case <-done:
+	default:
+		t.Fatal("Build did not stop the worker of the previous Build")
+	}
+
+	if err != nil {
+		// The Windows Update API may be unavailable on this host; the old
+		// worker must be stopped either way.
+		t.Logf("Build: %v", err)
+	}
+}
 
 func TestFetchUpdatesPartialCollection(t *testing.T) {
 	for _, tc := range []struct {
@@ -55,7 +137,7 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 
 			searcher, attempted, criteria := fakeUpdateSearch(tc.countError)
 
-			metrics, err := c.fetchUpdates(logger, searcher)
+			metrics, err := c.fetchUpdates(logger, searcher, 0)
 			if tc.countError {
 				require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 				require.Nil(t, metrics)

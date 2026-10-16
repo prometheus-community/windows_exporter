@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -29,7 +30,13 @@ import (
 var (
 	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
 	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
+
+	load = lazyproc.Once(modiphlpapi, procGetExtendedTcpTable)
 )
+
+// Load checks that iphlpapi.dll exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	stateCounts := make(map[MIB_TCP_STATE]uint32)

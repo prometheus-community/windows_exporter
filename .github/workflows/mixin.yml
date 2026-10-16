@@ -7,7 +7,11 @@ on:
     paths:
       - contrib/mixin/**
       - dashboard/*.json
+      - docs/collector.*.md
       - docs/runbooks/**
+      - docs/README.md
+      - README.md
+      - internal/metriccontract/**
       - .github/workflows/mixin.yml
   push:
     branches:
@@ -17,7 +21,11 @@ on:
     paths:
       - contrib/mixin/**
       - dashboard/*.json
+      - docs/collector.*.md
       - docs/runbooks/**
+      - docs/README.md
+      - README.md
+      - internal/metriccontract/**
       - .github/workflows/mixin.yml
   workflow_dispatch:
 
@@ -56,3 +64,8 @@ jobs:
 
       - name: Lint dashboard and test rules
         run: mise run test
+
+      # Runs on Linux: the test reads the Go sources and builds no collector.
+      - name: Check metric references
+        working-directory: .
+        run: go test -count=1 ./internal/metriccontract/
