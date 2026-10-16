@@ -33,6 +33,13 @@ multi-instance. These notes were recorded on a Windows Server 2025
   rate(windows_logical_disk_reads_total[5m])`.
 - `% Idle Time` is a cumulative 100 ns timer as well, not a percentage.
   On `C:` it was 115960642 ticks, about 11.6 seconds.
+- The second raw value of `% Idle Time` is the sample time as a UTC FILETIME;
+  PDH divides by its delta. Even with that divisor the idle delta of a busy
+  volume exceeded the elapsed time by up to 16% on `C:` of a Windows 11 NVMe
+  disk (43% on its `PhysicalDisk` instance) after a 1.6 GB write ended, while idle
+  disks stayed at 1.000 and `Processor Information` idle time never exceeded 1.
+  The accumulator lags while busy and catches up later (#1249). The collector
+  exports the raw counter; queries clamp the rate with `clamp_max(..., 1)`.
 - `Disk Read Bytes/sec` and `Disk Write Bytes/sec` (`PERF_COUNTER_BULK_COUNT`)
   and the `PERF_COUNTER_COUNTER` rates are cumulative counts since boot.
 - `Current Disk Queue Length` is an instantaneous snapshot (gauge) and was 0.

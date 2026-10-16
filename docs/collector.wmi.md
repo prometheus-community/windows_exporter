@@ -79,6 +79,7 @@ YAML:
       metric: windows_wmi_logical_disk_free_bytes # optional
       help: Free space on the logical disk in bytes. # optional
       type: gauge # optional
+      multiplier: 1 # optional
       labels: # optional
         source: wmi
 ```
@@ -101,6 +102,7 @@ JSON:
         "metric": "windows_wmi_logical_disk_free_bytes",
         "help": "Free space on the logical disk in bytes.",
         "type": "gauge",
+        "multiplier": 1,
         "labels": { "source": "wmi" }
       }
     ]
@@ -216,6 +218,18 @@ The metric `# HELP` text. Optional — if omitted, it defaults to
 
 The metric type. The value can be `gauge` or `counter`. If not specified, it
 defaults to `gauge`.
+
+This key is optional.
+
+##### multiplier
+
+A factor that the value is multiplied by before it is exported, to convert it to
+the base unit the Prometheus [naming conventions](https://prometheus.io/docs/practices/naming/#base-units)
+ask for. For example, `0.001` converts milliseconds to seconds, `0.01` percent to
+a ratio and `3600` hours to seconds. It must be a positive number, so counters
+keep counting up. If the multiplier is the reciprocal of an integer, like `0.001`,
+the value is divided by that integer instead, which avoids rounding artifacts
+such as `0.009000000000000001`. If not specified, the value is exported as is.
 
 This key is optional.
 

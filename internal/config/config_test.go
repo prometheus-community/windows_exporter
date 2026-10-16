@@ -570,6 +570,8 @@ func TestRegexpFlags(t *testing.T) {
 		"collector.logical_disk.volume-include",
 		"collector.net.nic-exclude",
 		"collector.net.nic-include",
+		"collector.netframework.process-exclude",
+		"collector.netframework.process-include",
 		"collector.physical_disk.disk-exclude",
 		"collector.physical_disk.disk-include",
 		"collector.printer.exclude",

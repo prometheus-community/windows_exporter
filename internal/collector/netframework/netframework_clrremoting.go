@@ -30,37 +30,37 @@ func (c *Collector) describeClrRemoting() {
 	c.channels = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_channels_total"),
 		"Displays the total number of remoting channels registered across all application domains since application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.contextBoundClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_bound_classes_loaded"),
 		"Displays the current number of context-bound classes that are loaded.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.contextBoundObjects = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_bound_objects_total"),
 		"Displays the total number of context-bound objects allocated.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.contextProxies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_proxies_total"),
 		"Displays the total number of remoting proxy objects in this process since it started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.contexts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_contexts"),
 		"Displays the current number of remoting contexts in the application.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalRemoteCalls = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_remote_calls_total"),
 		"Displays the total number of remote procedure calls invoked since the application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -94,18 +94,15 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 		return fmt.Errorf("failed to collect .NET CLR Remoting: %w", err)
 	}
 
-	suffixDuplicateProcesses(dst)
+	dst, processIDs := prepareProcesses(c, dst)
 
-	for _, process := range dst {
-		if process.Name == "_Global_" {
-			continue
-		}
-
+	for i, process := range dst {
 		ch <- scrape.MustNewConstMetric(
 			c.channels,
 			prometheus.CounterValue,
 			float64(process.Channels),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -113,6 +110,7 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 			prometheus.GaugeValue,
 			float64(process.ContextBoundClassesLoaded),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -120,6 +118,7 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 			prometheus.CounterValue,
 			float64(process.ContextBoundObjectsAllocPersec),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -127,6 +126,7 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 			prometheus.CounterValue,
 			float64(process.ContextProxies),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -134,6 +134,7 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 			prometheus.GaugeValue,
 			float64(process.Contexts),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -141,6 +142,7 @@ func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labe
 			prometheus.CounterValue,
 			float64(process.TotalRemoteCalls),
 			process.Name,
+			processIDs[i],
 		)
 	}
 

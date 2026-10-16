@@ -30,25 +30,25 @@ func (c *Collector) describeClrJIT() {
 	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.timeInJit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_time_ratio"),
 		"Displays the ratio (0-1) of elapsed time spent in JIT compilation since the last JIT compilation phase. This counter is updated at the end of every JIT compilation phase. A JIT compilation phase occurs when a method and its dependencies are compiled.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.standardJitFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_standard_failures_total"),
 		"Displays the peak number of methods the JIT compiler has failed to compile since the application started. This failure can occur if the MSIL cannot be verified or if there is an internal error in the JIT compiler.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalNumberOfILBytesJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrJIT+"_jit_il_bytes_total"),
 		"Displays the total number of Microsoft intermediate language (MSIL) bytes compiled by the just-in-time (JIT) compiler since the application started",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -81,18 +81,15 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcach
 		return fmt.Errorf("failed to collect .NET CLR Jit: %w", err)
 	}
 
-	suffixDuplicateProcesses(dst)
+	dst, processIDs := prepareProcesses(c, dst)
 
-	for _, process := range dst {
-		if process.Name == "_Global_" {
-			continue
-		}
-
+	for i, process := range dst {
 		ch <- scrape.MustNewConstMetric(
 			c.numberOfMethodsJitted,
 			prometheus.CounterValue,
 			float64(process.NumberofMethodsJitted),
 			process.Name,
+			processIDs[i],
 		)
 
 		if process.PercentTimeinJitBase > 0 {
@@ -101,6 +98,7 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcach
 				prometheus.GaugeValue,
 				process.PercentTimeinJit/process.PercentTimeinJitBase,
 				process.Name,
+				processIDs[i],
 			)
 		}
 
@@ -109,6 +107,7 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcach
 			prometheus.CounterValue,
 			float64(process.StandardJitFailures),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -116,6 +115,7 @@ func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcach
 			prometheus.CounterValue,
 			float64(process.TotalNumberofILBytesJitted),
 			process.Name,
+			processIDs[i],
 		)
 	}
 

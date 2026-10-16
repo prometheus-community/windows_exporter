@@ -65,6 +65,7 @@ YAML:
     - name: "Cache Faults/sec"
       metric: windows_performancecounter_memory_cache_faults_per_second # optional
       type: "gauge" # optional
+      multiplier: 1 # optional
 ```
 
 </details>
@@ -106,7 +107,8 @@ YAML:
       {
         "name": "Cache Faults/sec",
         "metric": "windows_performancecounter_memory_cache_faults_per_second",
-        "type": "gauge"
+        "type": "gauge",
+        "multiplier": 1
       }
     ]
   }
@@ -192,6 +194,21 @@ This key is optional.
 
 It indicates the type of the counter. The value can be `counter` or `gauge`.
 If not specified, the windows_exporter will try to determine the type based on the counter type.
+
+This key is optional.
+
+##### multiplier
+
+A factor that the value is multiplied by before it is exported, to convert it to
+the base unit the Prometheus [naming conventions](https://prometheus.io/docs/practices/naming/#base-units)
+ask for. For example, `0.001` converts milliseconds to seconds, `0.01` percent to
+a ratio and `3600` hours to seconds. It must be a positive number, so counters
+keep counting up. If the multiplier is the reciprocal of an integer, like `0.001`,
+the value is divided by that integer instead, which avoids rounding artifacts
+such as `0.009000000000000001`. If not specified, the value is exported as is.
+
+With the `raw` type, `PERF_100NSEC_TIMER_INV` counters such as `% Processor Time` are not converted to seconds
+and arrive in 100 ns ticks; a multiplier of `1e-7` converts them.
 
 This key is optional.
 

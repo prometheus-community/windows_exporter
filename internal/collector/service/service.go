@@ -95,6 +95,32 @@ type Collector struct {
 	metricCache metriccache.Cache[string, serviceValues]
 }
 
+// serviceConfig is the configuration of a service that the collector publishes.
+// Of the embedded [mgr.Config], only BinaryPathName, DisplayName, StartType,
+// ServiceStartName and DelayedAutoStart are set. DelayedAutoStart is only
+// queried for auto-start services and false for the others.
+type serviceConfig struct {
+	mgr.Config
+
+	// triggerStart is true if the service has triggers, which start or stop it
+	// on events such as a device arrival or a network change.
+	triggerStart bool
+
+	// extendedAvailable is true if DelayedAutoStart and triggerStart were queried
+	// successfully. Otherwise both are false and their labels stay empty.
+	extendedAvailable bool
+}
+
+// serviceTriggerInfo mirrors SERVICE_TRIGGER_INFO, which QueryServiceConfig2
+// returns for SERVICE_CONFIG_TRIGGER_INFO. golang.org/x/sys/windows doesn't define it.
+// Only cTriggers is read; the pointers point into the same buffer.
+// https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_trigger_info
+type serviceTriggerInfo struct {
+	triggers uint32  // cTriggers
+	trigger  uintptr // pTriggers
+	_        uintptr // pReserved
+}
+
 // serviceValues holds the inputs of the metrics of a service besides its name.
 type serviceValues struct {
 	state       uint32
@@ -102,7 +128,10 @@ type serviceValues struct {
 	displayName string
 	runAs       string
 	pathName    string
-	processID   uint32
+	// delayedStart and triggerStart are the label values "true" or "false".
+	delayedStart string
+	triggerStart string
+	processID    uint32
 	// processStartTime is the creation time of the process in nanoseconds,
 	// or 0 if it is unknown and the process metric is not published.
 	processStartTime uint64
@@ -187,7 +216,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.serviceConfigPoolBytes = sync.Pool{
 		New: func() any {
-			return new([]byte)
+			buf := make([]byte, 1024)
+
+			return &buf
 		},
 	}
 
@@ -196,7 +227,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with service information",
-		[]string{"service", "display_name", "run_as", "path_name"},
+		[]string{"service", "display_name", "run_as", "path_name", "delayed_start", "trigger_start"},
 		nil,
 	)
 	c.state = prometheus.NewDesc(
@@ -408,6 +439,13 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, scrape *metricca
 		processID:   service.status.ProcessId,
 	}
 
+	// The labels stay empty if the service configuration or the delayed
+	// auto-start flag and triggers are not available.
+	if configAvailable && serviceConfig.extendedAvailable {
+		values.delayedStart = strconv.FormatBool(serviceConfig.DelayedAutoStart)
+		values.triggerStart = strconv.FormatBool(serviceConfig.triggerStart)
+	}
+
 	if values.processID != 0 {
 		values.processStartTime = c.processStartTime(serviceName, values.processID)
 	}
@@ -435,6 +473,8 @@ func (c *Collector) serviceMetrics(serviceName string, values serviceValues) []p
 		values.displayName,
 		values.runAs,
 		values.pathName,
+		values.delayedStart,
+		values.triggerStart,
 	))
 
 	var (
@@ -588,16 +628,16 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 
 // queryServiceConfig opens the service and queries its configuration.
 // configAvailable is false if the service has no readable configuration.
-func (c *Collector) queryServiceConfig(serviceName string) (mgr.Config, bool, error) {
+func (c *Collector) queryServiceConfig(serviceName string) (serviceConfig, bool, error) {
 	serviceNamePtr, err := windows.UTF16PtrFromString(serviceName)
 	if err != nil {
-		return mgr.Config{}, false, fmt.Errorf("invalid service name: %w", err)
+		return serviceConfig{}, false, fmt.Errorf("invalid service name: %w", err)
 	}
 
 	// Open connection for service handler.
 	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
 	if err != nil {
-		return mgr.Config{}, false, fmt.Errorf("failed to open service: %w", err)
+		return serviceConfig{}, false, fmt.Errorf("failed to open service: %w", err)
 	}
 
 	// Create handle for each service.
@@ -612,10 +652,10 @@ func (c *Collector) queryServiceConfig(serviceName string) (mgr.Config, bool, er
 	}(serviceManager)
 
 	// Get Service Configuration.
-	serviceConfig, err := c.getServiceConfig(serviceManager)
+	config, err := c.getServiceConfig(serviceManager)
 	if err != nil {
 		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
-			return mgr.Config{}, false, fmt.Errorf("failed to get service configuration: %w", err)
+			return serviceConfig{}, false, fmt.Errorf("failed to get service configuration: %w", err)
 		}
 
 		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
@@ -623,10 +663,10 @@ func (c *Collector) queryServiceConfig(serviceName string) (mgr.Config, bool, er
 			slog.String("service", serviceName),
 		)
 
-		return mgr.Config{}, false, nil
+		return serviceConfig{}, false, nil
 	}
 
-	return serviceConfig, true, nil
+	return config, true, nil
 }
 
 func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
@@ -657,45 +697,100 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	return uint64(creation.Nanoseconds()), nil
 }
 
-// getServiceConfig is an optimized variant of [mgr.Service] that only
+// getServiceConfig is an optimized variant of [mgr.Service.Config] that only
 // retrieves the necessary information.
-func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
-	var serviceConfig *windows.QUERY_SERVICE_CONFIG
+func (c *Collector) getServiceConfig(service *mgr.Service) (serviceConfig, error) {
+	buf := c.serviceConfigPoolBytes.Get().(*[]byte) //nolint:forcetypeassert // The pool only holds *[]byte.
+	defer c.serviceConfigPoolBytes.Put(buf)
 
-	bytesNeeded := uint32(1024)
-
-	buf, ok := c.serviceConfigPoolBytes.Get().(*[]byte)
-	if !ok || len(*buf) == 0 {
-		*buf = make([]byte, bytesNeeded)
-	} else {
-		bytesNeeded = uint32(cap(*buf))
+	err := queryServiceConfigBuffer(buf, func(data *byte, size uint32, bytesNeeded *uint32) error {
+		return windows.QueryServiceConfig(service.Handle, (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(data)), size, bytesNeeded)
+	})
+	if err != nil {
+		return serviceConfig{}, err
 	}
 
-	for {
-		serviceConfig = (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(&(*buf)[0]))
+	queryServiceConfig := (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(&(*buf)[0]))
 
-		err := windows.QueryServiceConfig(service.Handle, serviceConfig, bytesNeeded, &bytesNeeded)
+	config := serviceConfig{
+		BinaryPathName:   windows.UTF16PtrToString(queryServiceConfig.BinaryPathName),
+		DisplayName:      windows.UTF16PtrToString(queryServiceConfig.DisplayName),
+		StartType:        queryServiceConfig.StartType,
+		ServiceStartName: windows.UTF16PtrToString(queryServiceConfig.ServiceStartName),
+	}
+
+	// A failure only leaves the delayed_start and trigger_start labels empty.
+	// It must not hide the rest of the configuration.
+	if err := queryExtendedServiceConfig(service.Handle, buf, &config); err != nil {
+		c.logger.Log(context.Background(), slog.LevelDebug, "failed to query the delayed auto-start flag and triggers of the service",
+			slog.Any("err", err),
+			slog.String("service", service.Name),
+		)
+
+		config.DelayedAutoStart = false
+		config.triggerStart = false
+
+		return config, nil
+	}
+
+	config.extendedAvailable = true
+
+	return config, nil
+}
+
+// queryExtendedServiceConfig queries the delayed auto-start flag and the
+// triggers of a service with QueryServiceConfig2 into config. buf must not be
+// empty; the configuration strings must already be copied out of it.
+func queryExtendedServiceConfig(handle windows.Handle, buf *[]byte, config *serviceConfig) error {
+	// The service control manager ignores the delayed auto-start flag of services
+	// that don't start automatically, so it is only queried for them.
+	if config.StartType == windows.SERVICE_AUTO_START {
+		var (
+			delayed     windows.SERVICE_DELAYED_AUTO_START_INFO
+			bytesNeeded uint32
+		)
+
+		err := windows.QueryServiceConfig2(handle, windows.SERVICE_CONFIG_DELAYED_AUTO_START_INFO,
+			(*byte)(unsafe.Pointer(&delayed)), uint32(unsafe.Sizeof(delayed)), &bytesNeeded)
+		if err != nil {
+			return fmt.Errorf("failed to query the delayed auto-start flag: %w", err)
+		}
+
+		config.DelayedAutoStart = delayed.IsDelayedAutoStartUp != 0
+	}
+
+	err := queryServiceConfigBuffer(buf, func(data *byte, size uint32, bytesNeeded *uint32) error {
+		return windows.QueryServiceConfig2(handle, windows.SERVICE_CONFIG_TRIGGER_INFO, data, size, bytesNeeded)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query the service triggers: %w", err)
+	}
+
+	config.triggerStart = (*serviceTriggerInfo)(unsafe.Pointer(&(*buf)[0])).triggers > 0
+
+	return nil
+}
+
+// queryServiceConfigBuffer calls query with the buffer and grows the buffer
+// until the result fits. query wraps QueryServiceConfig or QueryServiceConfig2.
+// The buffer must not be empty.
+func queryServiceConfigBuffer(buf *[]byte, query func(data *byte, size uint32, bytesNeeded *uint32) error) error {
+	for {
+		var bytesNeeded uint32
+
+		err := query(&(*buf)[0], uint32(len(*buf)), &bytesNeeded)
 		if err == nil {
-			break
+			return nil
 		}
 
 		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) && !errors.Is(err, windows.ERROR_MORE_DATA) {
-			return mgr.Config{}, err
+			return err
 		}
 
 		if bytesNeeded <= uint32(len(*buf)) {
-			return mgr.Config{}, fmt.Errorf("win32 reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(*buf)), bytesNeeded, err)
+			return fmt.Errorf("win32 reports the buffer as too small (%d bytes needed, %d available): %w", bytesNeeded, len(*buf), err)
 		}
 
 		*buf = make([]byte, bytesNeeded)
 	}
-
-	defer c.serviceConfigPoolBytes.Put(buf)
-
-	return mgr.Config{
-		BinaryPathName:   windows.UTF16PtrToString(serviceConfig.BinaryPathName),
-		DisplayName:      windows.UTF16PtrToString(serviceConfig.DisplayName),
-		StartType:        serviceConfig.StartType,
-		ServiceStartName: windows.UTF16PtrToString(serviceConfig.ServiceStartName),
-	}, nil
 }

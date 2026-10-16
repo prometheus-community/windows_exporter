@@ -33,6 +33,12 @@ import (
 
 const Name = "cpu"
 
+// maxTimeDrop is the largest decrease of a processor time counter, in
+// seconds, that Collect hides. Windows sometimes reports a per-processor time
+// one clock tick (1/64 s) lower than in the previous sample. A larger drop is
+// passed through as a counter reset.
+const maxTimeDrop = 1.0
+
 type Config struct{}
 
 //nolint:gochecknoglobals
@@ -48,6 +54,8 @@ type Collector struct {
 
 	processorRTCValues   map[string]utils.Counter
 	processorMPerfValues map[string]utils.Counter
+	// timeValues are the processor times of the last scrape by core and mode.
+	timeValues map[timeKey]float64
 
 	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
@@ -94,6 +102,20 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.mu = sync.Mutex{}
 
+	c.buildDescriptors()
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Processor Information", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Processor Information collector: %w", err)
+	}
+
+	return nil
+}
+
+// buildDescriptors creates the descriptors and the per-core state.
+func (c *Collector) buildDescriptors() {
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processor"),
 		"Total number of logical processors",
@@ -181,19 +203,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.processorRTCValues = map[string]utils.Counter{}
 	c.processorMPerfValues = map[string]utils.Counter{}
-
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Processor Information", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Processor Information collector: %w", err)
-	}
-
-	return nil
+	c.timeValues = map[timeKey]float64{}
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	c.mu.Lock() // Lock is needed to prevent concurrent map access to c.processorRTCValues
+	c.mu.Lock() // Lock is needed to prevent concurrent access to the per-core state maps.
 	defer c.mu.Unlock()
 
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
@@ -201,7 +215,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect Processor Information metrics: %w", err)
 	}
 
+	c.publish(ch)
+
+	return nil
+}
+
+// publish sends the metrics of c.perfDataObject and updates the per-core
+// state. The caller holds c.mu.
+func (c *Collector) publish(ch chan<- prometheus.Metric) {
 	var coreCount float64
+
+	timeValues := make(map[timeKey]float64, len(c.timeValues))
 
 	for _, coreData := range c.perfDataObject {
 		core := coreData.Name
@@ -232,56 +256,56 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
-			coreData.C1TimeSeconds,
+			c.monotonicTime(timeValues, core, "c1", coreData.C1TimeSeconds),
 			core, "c1",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
-			coreData.C2TimeSeconds,
+			c.monotonicTime(timeValues, core, "c2", coreData.C2TimeSeconds),
 			core, "c2",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
-			coreData.C3TimeSeconds,
+			c.monotonicTime(timeValues, core, "c3", coreData.C3TimeSeconds),
 			core, "c3",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
-			coreData.IdleTimeSeconds,
+			c.monotonicTime(timeValues, core, "idle", coreData.IdleTimeSeconds),
 			core, "idle",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
-			coreData.InterruptTimeSeconds,
+			c.monotonicTime(timeValues, core, "interrupt", coreData.InterruptTimeSeconds),
 			core, "interrupt",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
-			coreData.DpcTimeSeconds,
+			c.monotonicTime(timeValues, core, "dpc", coreData.DpcTimeSeconds),
 			core, "dpc",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
-			coreData.PrivilegedTimeSeconds,
+			c.monotonicTime(timeValues, core, "privileged", coreData.PrivilegedTimeSeconds),
 			core, "privileged",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
-			coreData.UserTimeSeconds,
+			c.monotonicTime(timeValues, core, "user", coreData.UserTimeSeconds),
 			core, "user",
 		)
 
@@ -363,11 +387,32 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		)
 	}
 
+	c.timeValues = timeValues
+
 	ch <- prometheus.MustNewConstMetric(
 		c.logicalProcessors,
 		prometheus.GaugeValue,
 		coreCount,
 	)
+}
 
-	return nil
+type timeKey struct {
+	core, mode string
+}
+
+// monotonicTime returns the processor time of the core and mode, but at least
+// the value of the last scrape if it dropped by less than maxTimeDrop. Rate
+// functions read every decrease of a counter as a reset, so a drop of one
+// clock tick would show up as a spike. The returned value is stored in
+// timeValues.
+func (c *Collector) monotonicTime(timeValues map[timeKey]float64, core, mode string, value float64) float64 {
+	key := timeKey{core: core, mode: mode}
+
+	if last, ok := c.timeValues[key]; ok && value < last && last-value < maxTimeDrop {
+		value = last
+	}
+
+	timeValues[key] = value
+
+	return value
 }

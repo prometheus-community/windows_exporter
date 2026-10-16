@@ -19,6 +19,7 @@ package performancecounter
 
 import (
 	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
+	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"go.yaml.in/yaml/v3"
 )
@@ -37,10 +38,14 @@ type Object struct {
 }
 
 type Counter struct {
-	Name   string            `json:"name"   yaml:"name"`
-	Type   string            `json:"type"   yaml:"type"`
-	Metric string            `json:"metric" yaml:"metric"`
-	Labels map[string]string `json:"labels" yaml:"labels"`
+	Name       string            `json:"name"       yaml:"name"`
+	Type       string            `json:"type"       yaml:"type"`
+	Metric     string            `json:"metric"     yaml:"metric"`
+	Labels     map[string]string `json:"labels"     yaml:"labels"`
+	Multiplier *float64          `json:"multiplier" yaml:"multiplier"`
+
+	// Resolved at Build time.
+	multiplier multiplier.Multiplier
 }
 
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150

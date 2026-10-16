@@ -56,6 +56,7 @@ const (
 	subCollectorVirtualSMB                       = "virtual_smb"
 	subCollectorVirtualStorageDevice             = "virtual_storage_device"
 	subCollectorVirtualSwitch                    = "virtual_switch"
+	subCollectorVMState                          = "vm_state"
 	subCollectorWMIHealth                        = "wmi_health"
 )
 
@@ -91,6 +92,7 @@ var ConfigDefaults = Config{
 		subCollectorVirtualSMB,
 		subCollectorVirtualStorageDevice,
 		subCollectorVirtualSwitch,
+		subCollectorVMState,
 		subCollectorWMIHealth,
 	},
 	VirtualHardDisk: VirtualHardDiskConfig{
@@ -118,6 +120,7 @@ type Collector struct {
 	collectorVirtualSMB
 	collectorVirtualStorageDevice
 	collectorVirtualSwitch
+	collectorVMState
 	collectorWMIHealth
 
 	config Config
@@ -314,6 +317,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			build:   c.buildVirtualSwitch,
 			collect: c.collectVirtualSwitch,
 			close:   func() { c.perfDataCollectorVirtualSwitch.Close() },
+		},
+		subCollectorVMState: {
+			build:   c.buildVMState,
+			collect: c.collectVMState,
+			close:   func() {},
 		},
 		subCollectorWMIHealth: {
 			build:   c.buildWMIHealth,

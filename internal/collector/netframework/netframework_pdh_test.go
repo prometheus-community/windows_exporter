@@ -58,7 +58,19 @@ type expectedMetric struct {
 	area       string
 }
 
-func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *labelcache.Scrape, time.Duration) error, expected []expectedMetric, withPID bool) {
+// fixtureProcessIDs are the process IDs of the fixture processes. The
+// .NET CLR Memory object has no valid Process ID for report_Total.
+func fixtureProcessIDs() map[processKey]string {
+	return map[processKey]string{
+		{name: "worker"}:   "101",
+		{name: "worker#1"}: "102",
+	}
+}
+
+// assertFixtureMetrics checks the metrics of the fixture processes worker,
+// worker#1 and report_Total. processIDs has the expected process_id label of
+// each process.
+func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *labelcache.Scrape, time.Duration) error, expected []expectedMetric, processIDs map[string]string) {
 	t.Helper()
 
 	// A first scrape fills the label cache, so the checked scrape publishes
@@ -112,13 +124,11 @@ func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *
 
 			require.InDelta(t, want.value, value, 1e-12, key)
 
-			labelCount := 1
+			processID, ok := labels["process_id"]
+			require.True(t, ok, "missing process_id label of %s", key)
+			require.Equal(t, processIDs[labels["process"]], processID, key)
 
-			if withPID {
-				require.Equal(t, "123", labels["process_id"])
-
-				labelCount++
-			}
+			labelCount := 2
 
 			if want.area != "" {
 				labelCount++
@@ -136,7 +146,7 @@ func assertFixtureMetrics(t *testing.T, collect func(chan<- prometheus.Metric, *
 }
 
 func TestClrExceptionsMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrExceptions()
 
 	row := perfDataClrExceptions{
@@ -158,11 +168,11 @@ func TestClrExceptionsMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrexceptions_exceptions_filters_total", dto.MetricType_COUNTER, 12, ""},
 		{"windows_netframework_clrexceptions_exceptions_finallys_total", dto.MetricType_COUNTER, 13, ""},
 		{"windows_netframework_clrexceptions_throw_to_catch_depth_total", dto.MetricType_COUNTER, 14, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrInteropMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrInterop()
 
 	row := perfDataClrInterop{
@@ -182,11 +192,11 @@ func TestClrInteropMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrinterop_com_callable_wrappers_total", dto.MetricType_COUNTER, 11, ""},
 		{"windows_netframework_clrinterop_interop_marshalling_total", dto.MetricType_COUNTER, 13, ""},
 		{"windows_netframework_clrinterop_interop_stubs_created_total", dto.MetricType_COUNTER, 12, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrJITMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrJIT()
 
 	row := perfDataClrJIT{
@@ -209,11 +219,11 @@ func TestClrJITMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrjit_jit_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
 		{"windows_netframework_clrjit_jit_standard_failures_total", dto.MetricType_COUNTER, 13, ""},
 		{"windows_netframework_clrjit_jit_il_bytes_total", dto.MetricType_COUNTER, 14, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrLoadingMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrLoading()
 
 	row := perfDataClrLoading{
@@ -245,11 +255,11 @@ func TestClrLoadingMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrloading_assemblies_loaded_total", dto.MetricType_COUNTER, 16, ""},
 		{"windows_netframework_clrloading_classes_loaded_total", dto.MetricType_COUNTER, 17, ""},
 		{"windows_netframework_clrloading_class_load_failures_total", dto.MetricType_COUNTER, 18, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrLocksAndThreadsMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrLocksAndThreads()
 
 	row := perfDataClrLocksAndThreads{
@@ -277,7 +287,7 @@ func TestClrLocksAndThreadsMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrlocksandthreads_recognized_threads_total", dto.MetricType_COUNTER, 15, ""},
 		{"windows_netframework_clrlocksandthreads_queue_length_total", dto.MetricType_COUNTER, 16, ""},
 		{"windows_netframework_clrlocksandthreads_contentions_total", dto.MetricType_COUNTER, 17, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrMemoryMetricCompatibility(t *testing.T) {
@@ -333,11 +343,11 @@ func TestClrMemoryMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrmemory_committed_bytes", dto.MetricType_GAUGE, 24, ""},
 		{"windows_netframework_clrmemory_reserved_bytes", dto.MetricType_GAUGE, 25, ""},
 		{"windows_netframework_clrmemory_gc_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
-	}, true)
+	}, map[string]string{"worker": "123", "worker#1": "123", "report_Total": "123"})
 }
 
 func TestClrRemotingMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrRemoting()
 
 	row := perfDataClrRemoting{
@@ -363,11 +373,11 @@ func TestClrRemotingMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrremoting_context_proxies_total", dto.MetricType_COUNTER, 14, ""},
 		{"windows_netframework_clrremoting_contexts", dto.MetricType_GAUGE, 15, ""},
 		{"windows_netframework_clrremoting_remote_calls_total", dto.MetricType_COUNTER, 16, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestClrSecurityMetricCompatibility(t *testing.T) {
-	c := &Collector{}
+	c := &Collector{processIDs: fixtureProcessIDs()}
 	c.describeClrSecurity()
 
 	row := perfDataClrSecurity{
@@ -390,7 +400,7 @@ func TestClrSecurityMetricCompatibility(t *testing.T) {
 		{"windows_netframework_clrsecurity_rt_checks_time_ratio", dto.MetricType_GAUGE, 0.25, ""},
 		{"windows_netframework_clrsecurity_stack_walk_depth", dto.MetricType_GAUGE, 13, ""},
 		{"windows_netframework_clrsecurity_runtime_checks_total", dto.MetricType_COUNTER, 14, ""},
-	}, false)
+	}, map[string]string{"worker": "101", "worker#1": "102", "report_Total": ""})
 }
 
 func TestGCZeroBaseDoesNotPublishInvalidRatio(t *testing.T) {

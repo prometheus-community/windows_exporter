@@ -31,6 +31,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
@@ -233,6 +234,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				continue
 			}
 
+			m, err := multiplier.New(value.Multiplier)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("value %q of key %s: %w", value.Name, label, err))
+
+				continue
+			}
+
+			value.multiplier = m
+
 			help := value.Help
 			if help == "" {
 				help = "windows_exporter: custom registry metric"
@@ -369,7 +379,7 @@ func (c *Collector) collectKey(ch chan<- prometheus.Metric, key Key) error {
 		ch <- prometheus.MustNewConstMetric(
 			value.desc,
 			value.metricType,
-			float64(val),
+			value.multiplier.Apply(float64(val)),
 		)
 	}
 
