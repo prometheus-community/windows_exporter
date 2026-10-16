@@ -54,7 +54,12 @@ in [`Makefile`](Makefile). Do not change versions to work around a local tooling
 problem. Follow [`.golangci.yaml`](.golangci.yaml), [`.editorconfig`](.editorconfig)
 and [`.gitattributes`](.gitattributes); keep LF line endings and the existing
 license headers. Use structured `slog` attributes and the existing Windows API
-wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`).
+wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`). `LazyProc.Call`
+panics for a missing export: add every proc a binding calls without its own
+`Find` check to the package's `lazyproc.Once` list, and call the package's
+`Load` in the `Build` of each collector that uses it. Mirrors of native structs
+that MI or COM read by offset need `unsafe.Sizeof`/`Offsetof` checks, see
+[`internal/mi/layout.go`](internal/mi/layout.go).
 
 Before committing, run the repository checks from its root:
 
@@ -140,8 +145,9 @@ exercised a live Windows role.
   the original `Collection` owns collectors and MI resources. A timed-out call
   may still be running: prevent overlap, drain late metrics and do not free its
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
-  `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
-  never `0` (no MI timeout), so one stalled provider cannot block startup.
+  `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`.
+  A non-positive MI query timeout selects `mi.DefaultQueryTimeout` (5s), which
+  is too short for slow providers.
 - Collectors that reuse metrics or label pairs between scrapes keep an
   `internal/metriccache` or `internal/labelcache` field and list it in
   `ScrapeCaches()` (`internal/scrapecache`). The collection resets these caches
@@ -150,9 +156,11 @@ exercised a live Windows role.
   `Commit` or `Reset` in collectors. A direct `Collect` call, as in most tests,
   runs without the caches; use `testutils.Collect` or `scrapecache.Begin` to
   test the cached path.
-- Release resources after partial initialization and on error paths. A non-nil
-  PDH collector returned with an error still belongs to the caller and must be
-  closed. Sub-collector cleanup closures must read the initialized field when
+- Release resources after partial initialization and on error paths. PDH
+  constructors release what they opened and return a nil collector or query
+  with an error, so close only what was returned without one; `Close` is
+  nil-safe (see [`internal/pdh/AGENTS.md`](internal/pdh/AGENTS.md)).
+  Sub-collector cleanup closures must read the initialized field when
   called; method values captured before initialization can retain nil receivers.
   Stop background workers before releasing the resources they use, and recover
   panics inside the goroutine that can panic.
@@ -166,6 +174,15 @@ exercised a live Windows role.
   patterns, and MI NULL values from populated unions. Respect borrowed/owned
   pointers, allocator-specific cleanup and COM thread initialization; use the
   native COM helpers rather than restoring the removed `go-ole` dependency.
+  Run COM calls on an `ole.Worker` or another long-lived COM thread that
+  `Build` starts and `Close` stops; initializing and uninitializing COM per
+  scrape unloads in-process COM servers each time. A COM call cannot be
+  interrupted: if `Collect` waits for one, wait without a deadline of its own
+  (`ole.Do` with `context.Background()`), so that the collection's busy-skip
+  handles a hung call instead of every later scrape queueing behind it.
+- A collector's `Close` waits at most 3 seconds (`closeTimeout`) for its own
+  workers, below the 5 seconds the collection gives all collectors to close.
+  Document what a worker still running after that does with its resources.
 - Keep CLI and YAML validation consistent. Reject unknown fields, unsupported
   sub-collector names and invalid values; preserve CLI precedence and repeated
   flag/list behavior. Changes to config shapes also need schema, flag parsing
@@ -279,6 +296,12 @@ covers formatting, generation and the Jsonnet tests; promtool, pint and
 dashboard-linter still need their release binaries, so report those checks as
 skipped. A Windows checkout with `core.autocrlf` has CRLF sources, so compare
 generated output with `diff --strip-trailing-cr`.
+
+`go test ./internal/metriccontract/` checks that every `windows_` metric name
+in the readme files, `docs/collector.*.md`, the runbooks, the mixin and the
+dashboards is created by a collector; it reads the Go sources, so it also runs
+on Linux. When documentation names a renamed or removed metric on purpose, add
+it to `historicalReferences` in that test with the reason.
 
 Preserve target/device labels, apply counter rates before aggregation, and
 handle zero denominators. Keep optional-role alerts configurable and provide a

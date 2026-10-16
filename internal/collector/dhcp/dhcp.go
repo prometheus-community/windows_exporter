@@ -46,6 +46,11 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"enabled"`
 }
 
+// loadDHCPServerAPI checks the DHCP server API. Tests replace it.
+//
+//nolint:gochecknoglobals
+var loadDHCPServerAPI = dhcpsapi.Load
+
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
@@ -161,6 +166,24 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
 				strings.Join(subCollectors, ", "),
 			)
+		}
+	}
+
+	// Without the DHCP server API only the scope metrics are unavailable; the
+	// server metrics come from performance counters.
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
+		if err := loadDHCPServerAPI(); err != nil {
+			if !slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
+				return fmt.Errorf("DHCP server API not available: %w", err)
+			}
+
+			c.logger.Warn("DHCP server API not available, skipping the scope_metrics sub-collector",
+				slog.Any("err", err),
+			)
+
+			c.config.CollectorsEnabled = slices.DeleteFunc(slices.Clone(c.config.CollectorsEnabled), func(name string) bool {
+				return name == subCollectorScopeMetrics
+			})
 		}
 	}
 

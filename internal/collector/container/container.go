@@ -247,7 +247,16 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	// Without the Containers feature, the Host Compute Service is missing and
 	// every scrape would fail. Report the collector as unsupported instead, so
 	// it is skipped once at startup rather than logging a warning per scrape.
+	if err := kernel32.Load(); err != nil {
+		return err
+	}
+
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorHCS) {
+		// hcn.Load also checks the hcs functions.
+		if err := hcn.Load(); err != nil {
+			return fmt.Errorf("host compute APIs not available, is the Containers feature installed? %w", err)
+		}
+
 		if _, err := hcs.GetContainers(); errors.Is(err, hcs.ErrServiceNotAvailable) {
 			return fmt.Errorf("host compute service not available, is the Containers feature installed? %w: %w",
 				errors.ErrUnsupported, err)

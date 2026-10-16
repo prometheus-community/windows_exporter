@@ -70,6 +70,10 @@ type vmVirtualNode struct {
 }
 
 func (c *Collector) buildHost() error {
+	if err := hcs.Load(); err != nil {
+		return err
+	}
+
 	var err error
 
 	c.perfDataCollectorLogicalProcessor, err = pdh.NewCollector[perfDataCounterValuesHost](c.logger, pdh.CounterTypeRaw, "Hyper-V Hypervisor Logical Processor", pdh.InstancesAll)

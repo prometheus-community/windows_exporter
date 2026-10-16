@@ -82,6 +82,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	if err := ntdll.Load(); err != nil {
+		return err
+	}
+
 	c.bootTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
 		"Unix timestamp of last system boot. Follows clock corrections.",

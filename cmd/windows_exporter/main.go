@@ -65,6 +65,9 @@ const (
 	writeTimeoutMargin = 30 * time.Second
 )
 
+// healthPath is the URL path of the health endpoint.
+const healthPath = "/health"
+
 func main() {
 	// os.Kill can't be caught. On Windows, Go delivers console close, logoff and shutdown events as SIGTERM.
 	//nolint:forbidigo // os/signal only accepts syscall.Signal values, not windows.Signal.
@@ -177,6 +180,20 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
+	if err := validateTimeoutMargin(*timeoutMargin); err != nil {
+		logStartupError(ctx, "Invalid scrape timeout margin", err)
+
+		return 1
+	}
+
+	// Check the routes before the collectors are built, so that an invalid
+	// telemetry path fails the startup instead of panicking in the router.
+	if _, err := newServeMux(*metricsPath, *debugEnabled, http.NotFoundHandler()); err != nil {
+		logStartupError(ctx, "Invalid telemetry path", err)
+
+		return 1
+	}
+
 	// When scraping to stdout, redirect logs to stderr so they don't
 	// mix with the metrics output. Only override if the user hasn't
 	// explicitly set --log.file to something other than the default.
@@ -200,7 +217,9 @@ func run(ctx context.Context, args []string) int {
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if configFile != nil && *configFile != "" {
-		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file: "+*configFile)
+		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file",
+			slog.String("file", *configFile),
+		)
 	}
 
 	// Log the build and the account before the collectors are built,
@@ -235,8 +254,18 @@ func run(ctx context.Context, args []string) int {
 
 	var disabledCollectorList []string
 	if *disabledCollectors != "" {
-		disabledCollectorList = slices.Compact(strings.Split(*disabledCollectors, ","))
+		disabledCollectorList = splitCollectorList(*disabledCollectors)
 		collectors.Disable(disabledCollectorList)
+
+		// An unknown name in --collectors.enabled fails the startup. Only warn about one in
+		// --collectors.disabled: disabling a collector that does not exist leaves nothing
+		// running that should not, and a failure would break configurations that disable a
+		// collector which a later release removed.
+		if unknown := unknownCollectors(disabledCollectorList); len(unknown) > 0 {
+			logger.LogAttrs(ctx, slog.LevelWarn, "ignoring unknown collectors in --collectors.disabled",
+				slog.Any("collectors", unknown),
+			)
+		}
 	}
 
 	// Close the collectors on every return from here on. On a regular shutdown, this runs after the HTTP server has shut down.
@@ -261,7 +290,9 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
-	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ", "))
+	logger.LogAttrs(ctx, slog.LevelInfo, "enabled collectors",
+		slog.String("collectors", strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ",")),
+	)
 
 	handlerOpts := &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
@@ -272,19 +303,18 @@ func run(ctx context.Context, args []string) int {
 		return scrapeToStdout(ctx, os.Stdout, logger, collectors, handlerOpts)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("GET /health", httphandler.NewHealthHandler())
-	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, handlerOpts))
+	mux, err := newServeMux(*metricsPath, *debugEnabled, httphandler.New(logger, collectors, handlerOpts))
+	if err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "failed to build router",
+			slog.Any("err", err),
+		)
 
-	if *debugEnabled {
-		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
-		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+		return 1
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("started windows_exporter in %s", time.Since(startTime)))
+	logger.LogAttrs(ctx, slog.LevelInfo, "started windows_exporter",
+		slog.Duration("duration", time.Since(startTime)),
+	)
 
 	// Requests derive their context from serveCtx, so that canceling it cancels in-flight scrapes.
 	serveCtx, cancelServe := context.WithCancel(ctx)
@@ -384,7 +414,9 @@ func logCurrentUser(ctx context.Context, logger *slog.Logger) {
 		return
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, "Running as "+u.Username)
+	logger.LogAttrs(ctx, slog.LevelInfo, "running as user",
+		slog.String("user", u.Username),
+	)
 
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
 		logger.LogAttrs(ctx, slog.LevelWarn, "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
@@ -460,7 +492,9 @@ func closeCollection(ctx context.Context, logger *slog.Logger, collection *colle
 			)
 		}
 	case <-timer.C:
-		logger.LogAttrs(ctx, slog.LevelWarn, fmt.Sprintf("collectors didn't close within %s", collectionCloseTimeout))
+		logger.LogAttrs(ctx, slog.LevelWarn, "collectors didn't close in time",
+			slog.Duration("timeout", collectionCloseTimeout),
+		)
 	}
 }
 
@@ -471,10 +505,94 @@ func effectiveCollectors(enabled, disabled []string) []string {
 	})
 }
 
-func expandEnabledCollectors(enabled string) []string {
-	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
+// unknownCollectors returns the names that are not available collectors.
+// Empty names, as in "cpu,,net", are skipped.
+func unknownCollectors(names []string) []string {
+	available := collector.Available()
 
-	return slices.Compact(strings.Split(expanded, ","))
+	var unknown []string
+
+	for _, name := range names {
+		if name != "" && !slices.Contains(available, name) && !slices.Contains(unknown, name) {
+			unknown = append(unknown, name)
+		}
+	}
+
+	return unknown
+}
+
+// validateTimeoutMargin rejects a negative, NaN or infinite margin. A negative
+// margin would extend the scrape timeout beyond the timeout of the client.
+func validateTimeoutMargin(margin float64) error {
+	if math.IsNaN(margin) || math.IsInf(margin, 0) || margin < 0 {
+		return fmt.Errorf("--scrape.timeout-margin must be a non-negative number of seconds, got %v", margin)
+	}
+
+	return nil
+}
+
+// newServeMux returns the router of the exporter. http.ServeMux panics on a
+// pattern it cannot parse or that conflicts with another route, so newServeMux
+// returns an error for a telemetry path that cannot be registered instead.
+func newServeMux(metricsPath string, debugEnabled bool, metricsHandler http.Handler) (*http.ServeMux, error) {
+	if !strings.HasPrefix(metricsPath, "/") {
+		return nil, fmt.Errorf("--telemetry.path %q must start with /", metricsPath)
+	}
+
+	if metricsPath == healthPath {
+		return nil, fmt.Errorf("--telemetry.path %q is reserved for the health endpoint", metricsPath)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("GET "+healthPath, httphandler.NewHealthHandler())
+
+	if debugEnabled {
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
+	}
+
+	// The metrics route is registered last, so that a conflict with any other route is detected.
+	if err := handle(mux, "GET "+metricsPath, metricsHandler); err != nil {
+		return nil, fmt.Errorf("--telemetry.path %q cannot be registered: %w", metricsPath, err)
+	}
+
+	return mux, nil
+}
+
+// handle registers handler for pattern and returns the panic of
+// http.ServeMux.Handle as an error.
+func handle(mux *http.ServeMux, pattern string, handler http.Handler) error {
+	var err error
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("%v", r)
+			}
+		}()
+
+		mux.Handle(pattern, handler)
+	}()
+
+	return err
+}
+
+func expandEnabledCollectors(enabled string) []string {
+	return splitCollectorList(strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors))
+}
+
+// splitCollectorList splits a comma-separated list of collector names and trims
+// the whitespace around each name, so that "cpu, net" names net.
+func splitCollectorList(list string) []string {
+	names := strings.Split(list, ",")
+	for i, name := range names {
+		names[i] = strings.TrimSpace(name)
+	}
+
+	return slices.Compact(names)
 }
 
 // scrapeToStdout performs a single scrape through the HTTP handler and writes

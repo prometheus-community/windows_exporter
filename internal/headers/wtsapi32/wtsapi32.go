@@ -22,8 +22,13 @@ import (
 	"log/slog"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
+
+// Load checks that wtsapi32.dll exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 type WTSTypeClass int
 
@@ -106,6 +111,8 @@ var (
 	procWTSEnumerateSessionsEx = wtsapi32.NewProc("WTSEnumerateSessionsExW")
 	procWTSFreeMemoryEx        = wtsapi32.NewProc("WTSFreeMemoryExW")
 	procWTSCloseServer         = wtsapi32.NewProc("WTSCloseServer")
+
+	load = lazyproc.Once(wtsapi32, procWTSOpenServerEx, procWTSEnumerateSessionsEx, procWTSFreeMemoryEx, procWTSCloseServer)
 
 	WTSSessionStates = map[WTSConnectState]string{
 		wtsActive:       "active",

@@ -55,6 +55,7 @@ import (
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -292,7 +293,38 @@ var (
 	pdhGetRawCounterArrayW       = libPdhDll.NewProc("PdhGetRawCounterArrayW")
 	pdhPdhGetCounterTimeBase     = libPdhDll.NewProc("PdhGetCounterTimeBase")
 	pdhRemoveCounter             = libPdhDll.NewProc("PdhRemoveCounter")
+
+	// The localized-name procs are optional and checked where they are used.
+	loadPdh = lazyproc.Once(libPdhDll,
+		pdhAddCounterW,
+		pdhAddEnglishCounterW,
+		pdhCloseQuery,
+		pdhCollectQueryData,
+		pdhCollectQueryDataWithTime,
+		pdhGetFormattedCounterValue,
+		pdhGetFormattedCounterArrayW,
+		pdhOpenQuery,
+		pdhValidatePathW,
+		pdhExpandWildCardPathW,
+		pdhGetCounterInfoW,
+		pdhGetRawCounterValue,
+		pdhGetRawCounterArrayW,
+		pdhPdhGetCounterTimeBase,
+		pdhRemoveCounter,
+	)
 )
+
+// Load checks that pdh.dll, and the kernel32 functions this package uses,
+// export every function this package calls without a check of its own.
+// [NewQuery] and the collector constructors call it, so a missing export
+// fails Build instead of panicking on the first scrape.
+func Load() error {
+	if err := loadPdh(); err != nil {
+		return err
+	}
+
+	return kernel32.Load()
+}
 
 // AddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
 // function AddEnglishCounter instead. hQuery is the query handle, which has been fetched by OpenQuery.
@@ -332,8 +364,14 @@ var (
 // The typeperf command may also be pretty easy. To find all performance counters, simply execute:
 //
 //	typeperf -qx
+//
+// A path that contains a NUL character returns CstatusBadCountername.
 func AddCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *pdhCounterHandle) uint32 {
-	ptxt, _ := windows.UTF16PtrFromString(szFullCounterPath)
+	ptxt, err := windows.UTF16PtrFromString(szFullCounterPath)
+	if err != nil {
+		return CstatusBadCountername
+	}
+
 	ret, _, _ := pdhAddCounterW.Call(
 		uintptr(hQuery),
 		uintptr(unsafe.Pointer(ptxt)),
@@ -344,13 +382,18 @@ func AddCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData uint
 }
 
 // AddEnglishCounter adds the specified language-neutral counter to the query. See the AddCounter function. This function only exists on
-// Windows versions higher than Vista.
+// Windows versions higher than Vista. A path that contains a NUL character
+// returns CstatusBadCountername.
 func AddEnglishCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *pdhCounterHandle) uint32 {
 	if pdhAddEnglishCounterW == nil {
 		return ErrorInvalidFunction
 	}
 
-	ptxt, _ := windows.UTF16PtrFromString(szFullCounterPath)
+	ptxt, err := windows.UTF16PtrFromString(szFullCounterPath)
+	if err != nil {
+		return CstatusBadCountername
+	}
+
 	ret, _, _ := pdhAddEnglishCounterW.Call(
 		uintptr(hQuery),
 		uintptr(unsafe.Pointer(ptxt)),
@@ -535,8 +578,14 @@ func OpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *pdhQueryHandle
 // If a wildcard character is specified in the counter name, all counters of the specified object are returned.
 //
 // Partial counter path string matches (for example, "pro*") are supported.
+//
+// A path that contains a NUL character returns CstatusBadCountername.
 func ExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, pcchPathListLength *uint32) uint32 {
-	ptxt, _ := windows.UTF16PtrFromString(szWildCardPath)
+	ptxt, err := windows.UTF16PtrFromString(szWildCardPath)
+	if err != nil {
+		return CstatusBadCountername
+	}
+
 	flags := uint32(0) // expand instances and counters
 	ret, _, _ := pdhExpandWildCardPathW.Call(
 		0, // search counters on local computer
@@ -548,9 +597,14 @@ func ExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, pcch
 	return uint32(ret)
 }
 
-// ValidatePath validates a path. Will return ErrorSuccess when ok, or PdhCstatusBadCountername when the path is erroneous.
+// ValidatePath validates a path. Will return ErrorSuccess when ok, or PdhCstatusBadCountername when the path is erroneous,
+// e.g. because it contains a NUL character.
 func ValidatePath(path string) uint32 {
-	ptxt, _ := windows.UTF16PtrFromString(path)
+	ptxt, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return CstatusBadCountername
+	}
+
 	ret, _, _ := pdhValidatePathW.Call(uintptr(unsafe.Pointer(ptxt)))
 
 	return uint32(ret)
