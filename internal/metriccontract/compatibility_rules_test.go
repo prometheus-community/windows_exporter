@@ -29,14 +29,18 @@ import (
 
 // compatibilityRulesFile holds recording rules that publish the metrics of
 // 0.32 under their 0.31 names and labels. It is generated from the rename
-// tables of UPGRADE.md; set UPDATE_COMPATIBILITY_RULES=1 to regenerate it.
-const compatibilityRulesFile = "docs/example-0.32-compatibility-rules-new-to-old.yml"
+// tables of the upgrade guide; set UPDATE_COMPATIBILITY_RULES=1 to regenerate
+// it.
+const (
+	upgradeGuideFile       = "docs/upgrade/0.32.md"
+	compatibilityRulesFile = "docs/upgrade/0.32.prom"
+)
 
-// renameRow matches a row of a rename table in UPGRADE.md: the 0.31 name, the
+// renameRow matches a row of a rename table in the upgrade guide: the 0.31 name, the
 // 0.32 name and a note.
 var renameRow = regexp.MustCompile("^\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*(.*?)\\s*\\|\\s*$")
 
-// labelRow matches a row of the instance label table in UPGRADE.md.
+// labelRow matches a row of the instance label table in the upgrade guide.
 var labelRow = regexp.MustCompile("^\\|\\s*`([a-z_]+)`\\s*\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|\\s*$")
 
 var backticked = regexp.MustCompile("`([^`]+)`")
@@ -118,12 +122,12 @@ type compatibilityRule struct {
 }
 
 // TestCompatibilityRules checks that the compatibility recording rules are
-// generated from the current UPGRADE.md, read only metrics the exporter
+// generated from the current upgrade guide, read only metrics the exporter
 // emits and record no name it emits itself.
 func TestCompatibilityRules(t *testing.T) {
 	t.Parallel()
 
-	upgrade, err := os.ReadFile(filepath.Join(repoRoot, "UPGRADE.md"))
+	upgrade, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(upgradeGuideFile)))
 	require.NoError(t, err)
 
 	rules := compatibilityRules(t, strings.Split(strings.ReplaceAll(string(upgrade), "\r\n", "\n"), "\n"))
@@ -139,7 +143,7 @@ func TestCompatibilityRules(t *testing.T) {
 	committed, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, generated, strings.ReplaceAll(string(committed), "\r\n", "\n"),
-		"%s is out of date with UPGRADE.md. Run: UPDATE_COMPATIBILITY_RULES=1 go test ./internal/metriccontract/", compatibilityRulesFile)
+		"%s is out of date with %s. Run: UPDATE_COMPATIBILITY_RULES=1 go test ./internal/metriccontract/", compatibilityRulesFile, upgradeGuideFile)
 
 	emitted := emittedMetricPatterns(t)
 	matcher := regexp.MustCompile("^(?:" + strings.Join(emitted, "|") + ")$")
@@ -205,7 +209,7 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 	return rules
 }
 
-// labelRenames returns the instance label renames of UPGRADE.md. A label
+// labelRenames returns the instance label renames of the upgrade guide. A label
 // named instance in 0.31 is restored as exported_instance, the name under
 // which Prometheus stored it next to the target label.
 func labelRenames(t *testing.T, upgrade []string) []labelRename {
@@ -260,7 +264,7 @@ func labelRenames(t *testing.T, upgrade []string) []labelRename {
 		})
 	}
 
-	require.NotEmpty(t, renames, "the instance label table of UPGRADE.md was not found")
+	require.NotEmpty(t, renames, "the instance label table of %s was not found", upgradeGuideFile)
 
 	return renames
 }
@@ -268,12 +272,12 @@ func labelRenames(t *testing.T, upgrade []string) []labelRename {
 func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 	var b strings.Builder
 
-	b.WriteString(`# Recording rules that publish the metrics of windows_exporter 0.32 under
+	fmt.Fprintf(&b, `# Recording rules that publish the metrics of windows_exporter 0.32 under
 # their 0.31 names, units and instance labels, for dashboards and alerts that
 # have not been migrated yet. Load them into Prometheus next to the scrape of
 # the new exporter and remove them once the queries use the new names.
 #
-# Generated from UPGRADE.md by internal/metriccontract; do not edit.
+# Generated from %s by internal/metriccontract; do not edit.
 #
 # Not covered:
 # - Metrics that only renamed their instance label, e.g. windows_service_*.
@@ -282,7 +286,7 @@ func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 #   metrics, split metrics and ratios that 0.31 computed wrongly.
 # - Series that 0.32 leaves out, e.g. mscluster settings that are zero.
 groups:
-`)
+`, upgradeGuideFile)
 
 	collectors := make([]string, 0, len(rules))
 	for collector := range rules {

@@ -3,7 +3,7 @@
 # have not been migrated yet. Load them into Prometheus next to the scrape of
 # the new exporter and remove them once the queries use the new names.
 #
-# Generated from UPGRADE.md by internal/metriccontract; do not edit.
+# Generated from docs/upgrade/0.32.md by internal/metriccontract; do not edit.
 #
 # Not covered:
 # - Metrics that only renamed their instance label, e.g. windows_service_*.
@@ -104,30 +104,6 @@ groups:
         expr: windows_gpu_engine_time_seconds_total
   - name: windows_exporter-0.32-hyperv
     rules:
-      - record: windows_hyperv_virtual_storage_device_throughput
-        expr: windows_hyperv_virtual_storage_device_throughput_total
-      - record: windows_hyperv_virtual_storage_device_normalized_throughput
-        expr: windows_hyperv_virtual_storage_device_normalized_throughput_total
-      - record: windows_hyperv_io_quota_replenishment_rate
-        expr: windows_hyperv_virtual_storage_device_io_quota_replenishment_total
-      - record: windows_hyperv_root_partition_preferred_numa_node_index
-        expr: windows_hyperv_root_partition_gpa_pages
-      - record: windows_hyperv_root_partition_physical_pages_allocated
-        expr: windows_hyperv_root_partition_skipped_timer_ticks_total
-      - record: windows_hyperv_root_partition_device_interrupt_throttle_events
-        expr: windows_hyperv_root_partition_device_interrupt_throttle_events_total
-      - record: windows_hyperv_root_partition_io_tlb_flush_cost
-        expr: windows_hyperv_root_partition_io_tlb_flush_seconds_total
-      - record: windows_hyperv_root_partition_io_tlb_flush
-        expr: windows_hyperv_root_partition_io_tlb_flushes_total
-      - record: windows_hyperv_root_partition_gpa_space_modifications
-        expr: windows_hyperv_root_partition_gpa_space_modifications_total
-      - record: windows_hyperv_root_partition_virtual_tlb_flush_entries
-        expr: windows_hyperv_root_partition_virtual_tlb_flush_entries_total
-      - record: windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total
-        expr: windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total
-      - record: windows_hyperv_hypervisor_root_virtual_cpu_wait_time_per_dispatch_total
-        expr: windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total
       - record: windows_hyperv_datastore_cache_update_operation_latency_microseconds
         expr: windows_hyperv_datastore_cache_update_operation_latency_seconds * 1e6
       - record: windows_hyperv_datastore_commit_byte_latency_microseconds
@@ -154,6 +130,30 @@ groups:
         expr: windows_hyperv_datastore_write_to_file_byte_latency_seconds * 1e6
       - record: windows_hyperv_datastore_write_to_storage_byte_latency_microseconds
         expr: windows_hyperv_datastore_write_to_storage_byte_latency_seconds * 1e6
+      - record: windows_hyperv_virtual_storage_device_throughput
+        expr: windows_hyperv_virtual_storage_device_throughput_total
+      - record: windows_hyperv_virtual_storage_device_normalized_throughput
+        expr: windows_hyperv_virtual_storage_device_normalized_throughput_total
+      - record: windows_hyperv_io_quota_replenishment_rate
+        expr: windows_hyperv_virtual_storage_device_io_quota_replenishment_total
+      - record: windows_hyperv_root_partition_preferred_numa_node_index
+        expr: windows_hyperv_root_partition_gpa_pages
+      - record: windows_hyperv_root_partition_physical_pages_allocated
+        expr: windows_hyperv_root_partition_skipped_timer_ticks_total
+      - record: windows_hyperv_root_partition_device_interrupt_throttle_events
+        expr: windows_hyperv_root_partition_device_interrupt_throttle_events_total
+      - record: windows_hyperv_root_partition_io_tlb_flush_cost
+        expr: windows_hyperv_root_partition_io_tlb_flush_seconds_total
+      - record: windows_hyperv_root_partition_io_tlb_flush
+        expr: windows_hyperv_root_partition_io_tlb_flushes_total
+      - record: windows_hyperv_root_partition_gpa_space_modifications
+        expr: windows_hyperv_root_partition_gpa_space_modifications_total
+      - record: windows_hyperv_root_partition_virtual_tlb_flush_entries
+        expr: windows_hyperv_root_partition_virtual_tlb_flush_entries_total
+      - record: windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total
+        expr: windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total
+      - record: windows_hyperv_hypervisor_root_virtual_cpu_wait_time_per_dispatch_total
+        expr: windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total
       - record: windows_hyperv_datastore_cache_update_operation_count
         expr: windows_hyperv_datastore_cache_update_operations_total
       - record: windows_hyperv_datastore_commit_byte_count
@@ -372,6 +372,10 @@ groups:
         expr: max without (queue) (label_replace(windows_msmq_queue_bytes, "name", "$1", "queue", "(.+)"))
   - name: windows_exporter-0.32-mssql
     rules:
+      - record: windows_mssql_bufman_extension_in_use_as_percentage
+        expr: windows_mssql_bufman_extension_in_use_ratio * 100
+      - record: windows_mssql_databases_log_used_percent
+        expr: windows_mssql_databases_log_used_ratio * 100
       - record: windows_mssql_databases_log_flush_wait_seconds
         expr: windows_mssql_databases_log_flush_wait_seconds_total
       - record: windows_mssql_databases_log_flush_write_seconds
@@ -410,10 +414,6 @@ groups:
         expr: windows_mssql_transactions_version_cleanup_bytes_total
       - record: windows_mssql_transactions_version_generation_rate_bytes
         expr: windows_mssql_transactions_version_generation_bytes_total
-      - record: windows_mssql_bufman_extension_in_use_as_percentage
-        expr: windows_mssql_bufman_extension_in_use_ratio * 100
-      - record: windows_mssql_databases_log_used_percent
-        expr: windows_mssql_databases_log_used_ratio * 100
       - record: windows_mssql_locks_lock_timeouts_excluding_NOWAIT
         expr: windows_mssql_locks_lock_timeouts_excluding_nowait_total
       - record: windows_mssql_accessmethods_au_batch_cleanup_failures
