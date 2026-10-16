@@ -42,6 +42,11 @@ their runtime behavior.
   for `alpha.N`/`beta.N`, 100+N for `rc.N` and 1000 for the release, so MDM
   tools that compare file versions update from one beta to the next and to the
   final release. Windows Installer itself ignores the fourth field.
+- A release is built once, by the CI run for its `release: published` event.
+  Tag pushes do not trigger CI: a second run would build and sign another
+  executable, and the container image and the release assets would no longer
+  contain the same binary. Keep the docker and publish jobs on the artifacts of
+  the same run.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as

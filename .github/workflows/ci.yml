@@ -1,8 +1,15 @@
 name: CI
 
 # Pull requests run the Windows tests only when Go sources, modules, test data,
-# tools/, the configuration examples or this workflow change. Pushes, tags and
+# tools/, the configuration examples or this workflow change. Pushes and
 # releases always run them.
+#
+# Tag pushes do not trigger a run. Publishing a release pushes its tag and fires
+# release:published, and a run for each would build and sign the binaries
+# twice: the container image would come from one run and the release assets
+# from the other, with different hashes. The release run alone builds, signs,
+# pushes the images and uploads the assets, so all of them carry the same
+# executable.
 on:
   push:
     branches:
@@ -11,8 +18,6 @@ on:
       - main
       - "0.*"
       - "1.*"
-    tags:
-      - "v*"
   pull_request:
   workflow_dispatch:
   release:
@@ -43,7 +48,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Pushes to main and the release branches, tags, releases and manual
+          # Pushes to main and the release branches, releases and manual
           # runs always test, so a gap in the filter below cannot let a
           # regression reach a branch that ships.
           if [[ "$EVENT_NAME" != "pull_request" || -z "$BASE_SHA" ]]; then
@@ -449,10 +454,8 @@ jobs:
           annotations: ${{ steps.meta.outputs.labels }}
 
   publish:
-    # Publishing a release fires both a tag push and a release:published run for
-    # the same tag. Upload only from the release run: it is the only one where
-    # the release is guaranteed to exist, and uploading from both runs would
-    # race on the same asset names.
+    # The release must exist before assets can be uploaded to it, so publish
+    # only from the release:published run.
     if: github.repository == 'prometheus-community/windows_exporter' && github.event_name == 'release'
     runs-on: ubuntu-26.04
     needs:
@@ -1832,7 +1835,7 @@ jobs:
   super-linter:
     name: Super Linter
     # Super Linter cannot derive the commit range VALIDATE_ALL_CODEBASE=false
-    # needs from release events; the tag push run already lints the same commit.
+    # needs from release events; the branch push run already linted the commit.
     if: github.event_name != 'release'
     runs-on: ubuntu-26.04
     permissions:
