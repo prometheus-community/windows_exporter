@@ -86,8 +86,8 @@ If GNU Make is unavailable on Windows, use the equivalent commands from the
 current Makefile. Its current formatter and linter commands are:
 
 ```powershell
-go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt
-go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
+go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 fmt
+go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
 go test ./...
 ```
 

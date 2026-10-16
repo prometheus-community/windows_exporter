@@ -158,7 +158,8 @@ func TestBorrowedItemsPanic(t *testing.T) {
 	)
 
 	require.Panics(t, func() {
-		for range seq {
+		for _, err := range seq {
+			require.NoError(t, err)
 			panic("consumer panic")
 		}
 	})

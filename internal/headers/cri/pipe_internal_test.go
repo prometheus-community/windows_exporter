@@ -449,8 +449,8 @@ func TestReadAheadConnCloseWaitsForReader(t *testing.T) {
 		synctest.Wait()
 
 		select {
-		case <-closed:
-			t.Fatal("Close returned before the background read finished")
+		case err := <-closed:
+			t.Fatalf("Close returned before the background read finished: %v", err)
 		default:
 		}
 

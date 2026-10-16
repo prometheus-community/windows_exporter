@@ -1866,7 +1866,7 @@ jobs:
           GOARCH: amd64
         with:
           # renovate: github=golangci/golangci-lint
-          version: v2.14.0
+          version: v2.15.0
           args: "--max-same-issues=0"
 
   super-linter:
