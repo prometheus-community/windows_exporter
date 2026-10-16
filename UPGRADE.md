@@ -353,6 +353,14 @@ Retired: `windows_net_route_info` was documented but never exported. It was remo
 windows_exporter 0.32 follows the Prometheus naming conventions for every metric: values are in base units (seconds, bytes, hertz, ratios from 0 to 1), the unit is part of the name, and counters end in `_total`.
 The metrics below were renamed. **The old names are no longer exported, there are no aliases.** Update queries, recording rules, alerts and dashboards; the sample dashboards in [`dashboard/`](dashboard/README.md) and the rules in [`contrib/mixin`](contrib/mixin) already use the new names.
 
+### Compatibility recording rules
+
+To migrate step by step, load [`docs/example-0.32-compatibility-rules-new-to-old.yml`](docs/example-0.32-compatibility-rules-new-to-old.yml) into Prometheus.
+Its recording rules publish the metrics of 0.32 under their 0.31 names, with the 0.31 units and [instance labels](#instance-label-names), so existing dashboards and alerts keep working while you update them.
+A 0.31 `instance` label comes back as `exported_instance`, the name under which Prometheus stored it.
+The rules don't cover metrics that only renamed their instance label, such as `windows_service_*`, because a rule with the same name would duplicate every series, nor metrics whose 0.31 value can't be computed from 0.32.
+Remove the rules once your queries use the new names.
+
 ### Unit changes
 
 These metrics changed their value, not only their name. A graph that mixes 0.31 and 0.32 data shows a step at the upgrade.

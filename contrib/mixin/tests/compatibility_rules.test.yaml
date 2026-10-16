@@ -1,0 +1,37 @@
+rule_files:
+  - ../../../docs/example-0.32-compatibility-rules-new-to-old.yml
+evaluation_interval: 1m
+
+tests:
+  - name: 0.32 metrics are published under their 0.31 names, units and labels
+    interval: 1m
+    input_series:
+      - series: 'windows_mscluster_resource_restart_delay_seconds{job="w",instance="h:9182",resource="SQL",node="N1",resource_group="G1"}'
+        values: '0.5'
+      - series: 'windows_hyperv_virtual_smb_open_files{job="w",instance="h:9182",vm="VM1"}'
+        values: '3'
+      - series: 'windows_cpu_core_frequency_hertz{job="w",instance="h:9182",core="0,0"}'
+        values: '3600000000'
+      - series: 'windows_cpu_time_seconds_total{job="w",instance="h:9182",core="0,0",mode="idle"}'
+        values: '42'
+    promql_expr_test:
+      - expr: windows_mscluster_resource_restart_delay
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_mscluster_resource_restart_delay{job="w",instance="h:9182",name="SQL",node_name="N1",owner_group="G1"}'
+            value: 500
+      - expr: windows_hyperv_virtual_smb_current_open_file_count
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_hyperv_virtual_smb_current_open_file_count{job="w",instance="h:9182",exported_instance="VM1"}'
+            value: 3
+      - expr: windows_cpu_core_frequency_mhz
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_cpu_core_frequency_mhz{job="w",instance="h:9182",core="0,0"}'
+            value: 3600
+      - expr: windows_cpu_time_total
+        eval_time: 0
+        exp_samples:
+          - labels: 'windows_cpu_time_total{job="w",instance="h:9182",core="0,0",mode="idle"}'
+            value: 42

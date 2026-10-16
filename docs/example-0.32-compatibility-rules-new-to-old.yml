@@ -1,0 +1,779 @@
+# Recording rules that publish the metrics of windows_exporter 0.32 under
+# their 0.31 names, units and instance labels, for dashboards and alerts that
+# have not been migrated yet. Load them into Prometheus next to the scrape of
+# the new exporter and remove them once the queries use the new names.
+#
+# Generated from UPGRADE.md by internal/metriccontract; do not edit.
+#
+# Not covered:
+# - Metrics that only renamed their instance label, e.g. windows_service_*.
+#   Recording them under the same name would duplicate every series.
+# - Metrics whose 0.31 value can't be computed from 0.32, e.g. removed
+#   metrics, split metrics and ratios that 0.31 computed wrongly.
+groups:
+  - name: windows_exporter-0.32-ad
+    rules:
+      - record: windows_ad_atq_average_request_latency
+        expr: windows_ad_atq_average_request_latency_seconds * 1000
+      - record: windows_ad_sam_group_evaluation_latency
+        expr: windows_ad_sam_group_evaluation_latency_seconds * 1000
+      - record: windows_ad_security_descriptor_propagation_events_total
+        expr: windows_ad_security_descriptor_propagation_suboperations_total
+      - record: windows_ad_security_descriptor_propagation_items_queued_total
+        expr: windows_ad_security_descriptor_propagation_items_queued
+      - record: windows_ad_replication_highest_usn
+        expr: windows_ad_replication_highest_usn_total
+  - name: windows_exporter-0.32-container
+    rules:
+      - record: windows_container_cpu_usage_seconds_kernelmode
+        expr: windows_container_cpu_usage_kernelmode_seconds_total
+      - record: windows_container_cpu_usage_seconds_usermode
+        expr: windows_container_cpu_usage_usermode_seconds_total
+  - name: windows_exporter-0.32-containers
+    rules:
+      - record: windows_container_count
+        expr: windows_containers
+  - name: windows_exporter-0.32-cpu
+    rules:
+      - record: windows_cpu_core_frequency_mhz
+        expr: windows_cpu_core_frequency_hertz / 1e6
+      - record: windows_cpu_info_l2_cache_size
+        expr: windows_cpu_info_l2_cache_size_bytes / 1024
+      - record: windows_cpu_info_l3_cache_size
+        expr: windows_cpu_info_l3_cache_size_bytes / 1024
+      - record: windows_cpu_time_total
+        expr: windows_cpu_time_seconds_total
+  - name: windows_exporter-0.32-dfsr
+    rules:
+      - record: windows_dfsr_connection_bandwidth_savings_using_dfs_replication_bytes_total
+        expr: max without (connection) (label_replace(windows_dfsr_connection_bandwidth_savings_using_dfs_replication_ratio * 100, "name", "$1", "connection", "(.+)"))
+      - record: windows_dfsr_folder_bandwidth_savings_using_dfs_replication_bytes_total
+        expr: max without (folder) (label_replace(windows_dfsr_folder_bandwidth_savings_using_dfs_replication_ratio * 100, "name", "$1", "folder", "(.+)"))
+      - record: windows_dfsr_volume_usn_journal_unread_percentage
+        expr: max without (volume) (label_replace(windows_dfsr_volume_usn_journal_unread_ratio * 100, "name", "$1", "volume", "(.+)"))
+  - name: windows_exporter-0.32-diskdrive
+    rules:
+      - record: windows_diskdrive_size
+        expr: max without (device_id) (label_replace(windows_diskdrive_size_bytes, "name", "$1", "device_id", "(.+)"))
+  - name: windows_exporter-0.32-dns
+    rules:
+      - record: windows_dns_dynamic_updates_queued
+        expr: windows_dns_dynamic_updates_queued_total
+  - name: windows_exporter-0.32-exchange
+    rules:
+      - record: windows_exchange_http_proxy_avg_auth_latency
+        expr: max without (protocol) (label_replace(windows_exchange_http_proxy_avg_auth_latency_seconds * 1000, "name", "$1", "protocol", "(.+)"))
+      - record: windows_exchange_http_proxy_mailbox_proxy_failure_rate
+        expr: max without (protocol) (label_replace(windows_exchange_http_proxy_mailbox_proxy_failure_ratio * 100, "name", "$1", "protocol", "(.+)"))
+      - record: windows_exchange_ldap_long_running_ops_per_sec
+        expr: max without (process) (label_replace(windows_exchange_ldap_long_running_operations_per_second * 3600, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_availability_service_requests_per_sec
+        expr: windows_exchange_availability_service_requests_total
+      - record: windows_exchange_http_proxy_avg_cas_processing_latency_sec
+        expr: max without (protocol) (label_replace(windows_exchange_http_proxy_avg_cas_processing_latency_seconds, "name", "$1", "protocol", "(.+)"))
+      - record: windows_exchange_http_proxy_mailbox_server_locator_avg_latency_sec
+        expr: max without (protocol) (label_replace(windows_exchange_http_proxy_mailbox_server_locator_avg_latency_seconds, "name", "$1", "protocol", "(.+)"))
+      - record: windows_exchange_ldap_read_time_sec
+        expr: max without (process) (label_replace(windows_exchange_ldap_read_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_search_time_sec
+        expr: max without (process) (label_replace(windows_exchange_ldap_search_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_ldap_write_time_sec
+        expr: max without (process) (label_replace(windows_exchange_ldap_write_time_seconds_total, "name", "$1", "process", "(.+)"))
+      - record: windows_exchange_mapihttp_emsmdb_active_user_count
+        expr: windows_exchange_mapihttp_emsmdb_active_users
+      - record: windows_exchange_rpc_active_user_count
+        expr: windows_exchange_rpc_active_users
+      - record: windows_exchange_rpc_avg_latency_sec
+        expr: windows_exchange_rpc_avg_latency_seconds
+      - record: windows_exchange_rpc_connection_count
+        expr: windows_exchange_rpc_connections
+      - record: windows_exchange_rpc_user_count
+        expr: windows_exchange_rpc_users
+      - record: windows_exchange_workload_completed_tasks
+        expr: max without (workload) (label_replace(windows_exchange_workload_completed_tasks_total, "name", "$1", "workload", "(.+)"))
+      - record: windows_exchange_workload_yielded_tasks
+        expr: max without (workload) (label_replace(windows_exchange_workload_yielded_tasks_total, "name", "$1", "workload", "(.+)"))
+  - name: windows_exporter-0.32-fsrmquota
+    rules:
+      - record: windows_fsrmquota_count
+        expr: windows_fsrmquota_quotas
+  - name: windows_exporter-0.32-gpu
+    rules:
+      - record: windows_gpu_engine_time_seconds
+        expr: windows_gpu_engine_time_seconds_total
+  - name: windows_exporter-0.32-hyperv
+    rules:
+      - record: windows_hyperv_virtual_storage_device_throughput
+        expr: windows_hyperv_virtual_storage_device_throughput_total
+      - record: windows_hyperv_virtual_storage_device_normalized_throughput
+        expr: windows_hyperv_virtual_storage_device_normalized_throughput_total
+      - record: windows_hyperv_io_quota_replenishment_rate
+        expr: windows_hyperv_virtual_storage_device_io_quota_replenishment_total
+      - record: windows_hyperv_root_partition_preferred_numa_node_index
+        expr: windows_hyperv_root_partition_gpa_pages
+      - record: windows_hyperv_root_partition_physical_pages_allocated
+        expr: windows_hyperv_root_partition_skipped_timer_ticks_total
+      - record: windows_hyperv_root_partition_device_interrupt_throttle_events
+        expr: windows_hyperv_root_partition_device_interrupt_throttle_events_total
+      - record: windows_hyperv_root_partition_io_tlb_flush_cost
+        expr: windows_hyperv_root_partition_io_tlb_flush_seconds_total
+      - record: windows_hyperv_root_partition_io_tlb_flush
+        expr: windows_hyperv_root_partition_io_tlb_flushes_total
+      - record: windows_hyperv_root_partition_gpa_space_modifications
+        expr: windows_hyperv_root_partition_gpa_space_modifications_total
+      - record: windows_hyperv_root_partition_virtual_tlb_flush_entries
+        expr: windows_hyperv_root_partition_virtual_tlb_flush_entries_total
+      - record: windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total
+        expr: windows_hyperv_hypervisor_virtual_processor_cpu_wait_seconds_total
+      - record: windows_hyperv_hypervisor_root_virtual_cpu_wait_time_per_dispatch_total
+        expr: windows_hyperv_hypervisor_root_virtual_processor_cpu_wait_seconds_total
+      - record: windows_hyperv_datastore_cache_update_operation_latency_microseconds
+        expr: windows_hyperv_datastore_cache_update_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_commit_byte_latency_microseconds
+        expr: windows_hyperv_datastore_commit_byte_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_commit_operation_latency_microseconds
+        expr: windows_hyperv_datastore_commit_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_compact_operation_latency_microseconds
+        expr: windows_hyperv_datastore_compact_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_load_file_operation_latency_microseconds
+        expr: windows_hyperv_datastore_load_file_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_query_size_operation_latency_microseconds
+        expr: windows_hyperv_datastore_query_size_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_read_from_file_byte_latency_microseconds
+        expr: windows_hyperv_datastore_read_from_file_byte_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_read_from_storage_byte_latency_microseconds
+        expr: windows_hyperv_datastore_read_from_storage_byte_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_reconnect_latency_microseconds
+        expr: windows_hyperv_datastore_reconnect_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_remove_operation_latency_microseconds
+        expr: windows_hyperv_datastore_remove_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_set_operation_latency_microseconds
+        expr: windows_hyperv_datastore_set_operation_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_write_to_file_byte_latency_microseconds
+        expr: windows_hyperv_datastore_write_to_file_byte_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_write_to_storage_byte_latency_microseconds
+        expr: windows_hyperv_datastore_write_to_storage_byte_latency_seconds * 1e6
+      - record: windows_hyperv_datastore_cache_update_operation_count
+        expr: windows_hyperv_datastore_cache_update_operations_total
+      - record: windows_hyperv_datastore_commit_byte_count
+        expr: windows_hyperv_datastore_commit_bytes_total
+      - record: windows_hyperv_datastore_commit_count
+        expr: windows_hyperv_datastore_commits_total
+      - record: windows_hyperv_datastore_commit_operation_count
+        expr: windows_hyperv_datastore_commit_operations_total
+      - record: windows_hyperv_datastore_compact_operation_count
+        expr: windows_hyperv_datastore_compact_operations_total
+      - record: windows_hyperv_datastore_disconnect_count
+        expr: windows_hyperv_datastore_disconnects_total
+      - record: windows_hyperv_datastore_load_file_operation_count
+        expr: windows_hyperv_datastore_load_file_operations_total
+      - record: windows_hyperv_datastore_query_size_operation_count
+        expr: windows_hyperv_datastore_query_size_operations_total
+      - record: windows_hyperv_datastore_read_from_file_byte_count
+        expr: windows_hyperv_datastore_read_from_file_bytes_total
+      - record: windows_hyperv_datastore_read_from_file_count
+        expr: windows_hyperv_datastore_read_from_file_operations_total
+      - record: windows_hyperv_datastore_read_from_storage_byte_count
+        expr: windows_hyperv_datastore_read_from_storage_bytes_total
+      - record: windows_hyperv_datastore_read_from_storage_count
+        expr: windows_hyperv_datastore_read_from_storage_operations_total
+      - record: windows_hyperv_datastore_remove_operation_count
+        expr: windows_hyperv_datastore_remove_operations_total
+      - record: windows_hyperv_datastore_set_operation_count
+        expr: windows_hyperv_datastore_set_operations_total
+      - record: windows_hyperv_datastore_write_to_file_byte_count
+        expr: windows_hyperv_datastore_write_to_file_bytes_total
+      - record: windows_hyperv_datastore_write_to_file_count
+        expr: windows_hyperv_datastore_write_to_file_operations_total
+      - record: windows_hyperv_datastore_write_to_storage_byte_count
+        expr: windows_hyperv_datastore_write_to_storage_bytes_total
+      - record: windows_hyperv_datastore_write_to_storage_count
+        expr: windows_hyperv_datastore_write_to_storage_operations_total
+      - record: windows_hyperv_host_logical_processor_count
+        expr: windows_hyperv_host_logical_processors
+      - record: windows_hyperv_hypervisor_logical_processor_time_total
+        expr: windows_hyperv_hypervisor_logical_processor_time_seconds_total
+      - record: windows_hyperv_hypervisor_logical_processor_total_run_time_total
+        expr: windows_hyperv_hypervisor_logical_processor_total_run_time_seconds_total
+      - record: windows_hyperv_hypervisor_root_virtual_processor_time_total
+        expr: windows_hyperv_hypervisor_root_virtual_processor_time_seconds_total
+      - record: windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total
+        expr: windows_hyperv_hypervisor_root_virtual_processor_total_run_time_seconds_total
+      - record: windows_hyperv_hypervisor_virtual_processor_mode_time_total
+        expr: windows_hyperv_hypervisor_virtual_processor_mode_time_seconds_total
+      - record: windows_hyperv_hypervisor_virtual_processor_run_time_total
+        expr: windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total
+      - record: windows_hyperv_root_partition_1G_device_pages
+        expr: windows_hyperv_root_partition_1g_device_pages
+      - record: windows_hyperv_root_partition_1G_gpa_pages
+        expr: windows_hyperv_root_partition_1g_gpa_pages
+      - record: windows_hyperv_root_partition_2M_device_pages
+        expr: windows_hyperv_root_partition_2m_device_pages
+      - record: windows_hyperv_root_partition_2M_gpa_pages
+        expr: windows_hyperv_root_partition_2m_gpa_pages
+      - record: windows_hyperv_root_partition_4K_device_pages
+        expr: windows_hyperv_root_partition_4k_device_pages
+      - record: windows_hyperv_root_partition_4K_gpa_pages
+        expr: windows_hyperv_root_partition_4k_gpa_pages
+      - record: windows_hyperv_total_vm_processor_count
+        expr: windows_hyperv_assigned_vm_processors
+      - record: windows_hyperv_virtual_machine_health_total_count
+        expr: windows_hyperv_virtual_machines
+      - record: windows_hyperv_virtual_smb_current_open_file_count
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_open_files, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_bytes_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_requests_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_read_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_tree_connect_count
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_tree_connects_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_bytes_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_requests_rdma
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_rdma_write_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_storage_device_bytes_read
+        expr: windows_hyperv_virtual_storage_device_read_bytes_total
+      - record: windows_hyperv_virtual_storage_device_bytes_written
+        expr: windows_hyperv_virtual_storage_device_written_bytes_total
+      - record: windows_hyperv_virtual_storage_device_error_count_total
+        expr: windows_hyperv_virtual_storage_device_errors_total
+      - record: windows_hyperv_vm_processor_count
+        expr: windows_hyperv_vm_processors
+      - record: windows_hyperv_virtual_network_adapter_drop_reasons
+        expr: windows_hyperv_virtual_network_adapter_drop_reasons_total
+      - record: windows_hyperv_virtual_smb_flush_requests
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_flush_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_bytes
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_read_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_read_requests
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_read_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_received_bytes
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_received_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_requests
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_sent_bytes
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_sent_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_bytes
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_write_bytes_total, "exported_instance", "$1", "vm", "(.+)"))
+      - record: windows_hyperv_virtual_smb_write_requests
+        expr: max without (vm) (label_replace(windows_hyperv_virtual_smb_write_requests_total, "exported_instance", "$1", "vm", "(.+)"))
+  - name: windows_exporter-0.32-iis
+    rules:
+      - record: windows_iis_ipapi_extension_requests_total
+        expr: windows_iis_isapi_extension_requests_total
+      - record: windows_iis_current_application_pool_start_time
+        expr: windows_iis_current_application_pool_uptime_seconds
+      - record: windows_iis_total_application_pool_start_time
+        expr: windows_iis_total_application_pool_uptime_seconds
+      - record: windows_iis_time_since_last_worker_process_failure
+        expr: windows_iis_time_since_last_worker_process_failure_seconds
+      - record: windows_iis_service_uptime
+        expr: windows_iis_service_uptime_seconds
+      - record: windows_iis_total_application_pool_recycles
+        expr: windows_iis_application_pool_recycles_total
+      - record: windows_iis_total_worker_process_failures
+        expr: windows_iis_worker_process_failures_total
+      - record: windows_iis_total_worker_process_ping_failures
+        expr: windows_iis_worker_process_ping_failures_total
+      - record: windows_iis_total_worker_process_shutdown_failures
+        expr: windows_iis_worker_process_shutdown_failures_total
+      - record: windows_iis_total_worker_process_startup_failures
+        expr: windows_iis_worker_process_startup_failures_total
+      - record: windows_iis_total_worker_processes_created
+        expr: windows_iis_worker_processes_created_total
+  - name: windows_exporter-0.32-memory
+    rules:
+      - record: windows_memory_commit_limit
+        expr: windows_memory_commit_limit_bytes
+      - record: windows_memory_pool_paged_allocs_total
+        expr: windows_memory_pool_paged_allocs
+      - record: windows_memory_pool_nonpaged_allocs_total
+        expr: windows_memory_pool_nonpaged_allocs
+  - name: windows_exporter-0.32-mscluster
+    rules:
+      - record: windows_mscluster_cluster_block_cache_size
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_block_cache_size_bytes / 1048576, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_clus_svc_regroup_tick_in_milliseconds
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_clus_svc_regroup_tick_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_cluster_log_size
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_cluster_log_size_bytes / 1048576, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_cross_site_delay
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_cross_site_delay_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_cross_subnet_delay
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_cross_subnet_delay_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_grace_period_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_grace_period_timeout_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_root_memory_reserved
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_root_memory_reserved_bytes / 1048576, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_s2d_cache_flash_reserve_percent
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_s2d_cache_flash_reserve_ratio * 100, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_s2d_cache_page_size_k_bytes
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_s2d_cache_page_size_bytes / 1024, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_s2dio_latency_threshold
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_s2dio_latency_threshold_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_same_subnet_delay
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_same_subnet_delay_seconds * 1000, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_shutdown_timeout_in_minutes
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_shutdown_timeout_seconds / 60, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_resource_deadlock_timeout
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_deadlock_timeout_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_is_alive_poll_interval
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_is_alive_poll_interval_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_looks_alive_poll_interval
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_looks_alive_poll_interval_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_pending_timeout
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_pending_timeout_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_restart_delay
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_restart_delay_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_restart_period
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_restart_period_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resource_retry_period_on_failure
+        expr: max without (resource, node, resource_group) (label_replace(label_replace(label_replace(windows_mscluster_resource_retry_period_on_failure_seconds * 1000, "name", "$1", "resource", "(.+)"), "node_name", "$1", "node", "(.+)"), "owner_group", "$1", "resource_group", "(.+)"))
+      - record: windows_mscluster_resourcegroup_failover_period
+        expr: max without (resource_group, node) (label_replace(label_replace(windows_mscluster_resourcegroup_failover_period_seconds / 3600, "name", "$1", "resource_group", "(.+)"), "node_name", "$1", "node", "(.+)"))
+      - record: windows_mscluster_cluster_add_evict_delay
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_add_evict_delay_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_clus_svc_hang_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_clus_svc_hang_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_clus_svc_regroup_opening_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_clus_svc_regroup_opening_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_clus_svc_regroup_pruning_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_clus_svc_regroup_pruning_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_clus_svc_regroup_stage_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_clus_svc_regroup_stage_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_cluster_group_wait_delay
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_cluster_group_wait_delay_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_group_dependency_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_group_dependency_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_quarantine_duration
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_quarantine_duration_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_quorum_arbitration_time_max
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_quorum_arbitration_time_max_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_quorum_arbitration_time_min
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_quorum_arbitration_time_min_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_request_reply_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_request_reply_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_resiliency_default_period
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_resiliency_default_period_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_shared_volume_vss_writer_operation_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_shared_volume_vss_writer_operation_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_witness_database_write_timeout
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_witness_database_write_timeout_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_cluster_witness_restart_interval
+        expr: max without (cluster) (label_replace(windows_mscluster_cluster_witness_restart_interval_seconds, "name", "$1", "cluster", "(.+)"))
+      - record: windows_mscluster_resourcegroup_resiliency_period
+        expr: max without (resource_group, node) (label_replace(label_replace(windows_mscluster_resourcegroup_resiliency_period_seconds, "name", "$1", "resource_group", "(.+)"), "node_name", "$1", "node", "(.+)"))
+  - name: windows_exporter-0.32-msmq
+    rules:
+      - record: windows_msmq_bytes_in_journal_queue
+        expr: max without (queue) (label_replace(windows_msmq_journal_queue_bytes, "name", "$1", "queue", "(.+)"))
+      - record: windows_msmq_bytes_in_queue
+        expr: max without (queue) (label_replace(windows_msmq_queue_bytes, "name", "$1", "queue", "(.+)"))
+  - name: windows_exporter-0.32-mssql
+    rules:
+      - record: windows_mssql_databases_log_flush_wait_seconds
+        expr: windows_mssql_databases_log_flush_wait_seconds_total
+      - record: windows_mssql_databases_log_flush_write_seconds
+        expr: windows_mssql_databases_log_flush_write_seconds_total
+      - record: windows_mssql_databases_log_growths
+        expr: windows_mssql_databases_log_growths_total
+      - record: windows_mssql_databases_log_shrinks
+        expr: windows_mssql_databases_log_shrinks_total
+      - record: windows_mssql_databases_log_truncations
+        expr: windows_mssql_databases_log_truncations_total
+      - record: windows_mssql_dbreplica_database_flow_control_wait_seconds
+        expr: windows_mssql_dbreplica_database_flow_control_wait_seconds_total
+      - record: windows_mssql_dbreplica_group_commit_stall_seconds
+        expr: windows_mssql_dbreplica_group_commit_stall_seconds_total
+      - record: windows_mssql_dbreplica_transaction_delay_seconds
+        expr: windows_mssql_dbreplica_transaction_delay_seconds_total
+      - record: windows_mssql_dbreplica_recovery_queue_records
+        expr: windows_mssql_dbreplica_recovery_queue_bytes / 1024
+      - record: windows_mssql_dbreplica_log_send_queue
+        expr: windows_mssql_dbreplica_log_send_queue_bytes / 1024
+      - record: windows_mssql_dbreplica_log_remaining_for_undo
+        expr: windows_mssql_dbreplica_log_remaining_for_undo_bytes / 1024
+      - record: windows_mssql_dbreplica_total_log_requiring_undo
+        expr: windows_mssql_dbreplica_total_log_requiring_undo_bytes / 1024
+      - record: windows_mssql_locks_wait_time_seconds
+        expr: windows_mssql_locks_wait_time_seconds_total
+      - record: windows_mssql_locks_lock_wait_seconds
+        expr: windows_mssql_locks_lock_wait_seconds_total
+      - record: windows_mssql_transactions_nonsnapshot_version_active_total
+        expr: windows_mssql_transactions_nonsnapshot_version_active
+      - record: windows_mssql_transactions_snapshot_active_total
+        expr: windows_mssql_transactions_snapshot_active
+      - record: windows_mssql_transactions_update_snapshot_active_total
+        expr: windows_mssql_transactions_update_snapshot_active
+      - record: windows_mssql_transactions_version_cleanup_rate_bytes
+        expr: windows_mssql_transactions_version_cleanup_bytes_total
+      - record: windows_mssql_transactions_version_generation_rate_bytes
+        expr: windows_mssql_transactions_version_generation_bytes_total
+      - record: windows_mssql_bufman_extension_in_use_as_percentage
+        expr: windows_mssql_bufman_extension_in_use_ratio * 100
+      - record: windows_mssql_databases_log_used_percent
+        expr: windows_mssql_databases_log_used_ratio * 100
+      - record: windows_mssql_locks_lock_timeouts_excluding_NOWAIT
+        expr: windows_mssql_locks_lock_timeouts_excluding_nowait_total
+      - record: windows_mssql_accessmethods_au_batch_cleanup_failures
+        expr: windows_mssql_accessmethods_au_batch_cleanup_failures_total
+      - record: windows_mssql_accessmethods_au_batch_cleanups
+        expr: windows_mssql_accessmethods_au_batch_cleanups_total
+      - record: windows_mssql_accessmethods_au_cleanups
+        expr: windows_mssql_accessmethods_au_cleanups_total
+      - record: windows_mssql_accessmethods_by_reference_lob_creates
+        expr: windows_mssql_accessmethods_by_reference_lob_creates_total
+      - record: windows_mssql_accessmethods_by_reference_lob_uses
+        expr: windows_mssql_accessmethods_by_reference_lob_uses_total
+      - record: windows_mssql_accessmethods_column_value_pulls
+        expr: windows_mssql_accessmethods_column_value_pulls_total
+      - record: windows_mssql_accessmethods_column_value_pushes
+        expr: windows_mssql_accessmethods_column_value_pushes_total
+      - record: windows_mssql_accessmethods_dropped_rowset_cleanups
+        expr: windows_mssql_accessmethods_dropped_rowset_cleanups_total
+      - record: windows_mssql_accessmethods_dropped_rowset_skips
+        expr: windows_mssql_accessmethods_dropped_rowset_skips_total
+      - record: windows_mssql_accessmethods_extent_allocations
+        expr: windows_mssql_accessmethods_extent_allocations_total
+      - record: windows_mssql_accessmethods_extent_deallocations
+        expr: windows_mssql_accessmethods_extent_deallocations_total
+      - record: windows_mssql_accessmethods_forwarded_records
+        expr: windows_mssql_accessmethods_forwarded_records_total
+      - record: windows_mssql_accessmethods_free_space_page_fetches
+        expr: windows_mssql_accessmethods_free_space_page_fetches_total
+      - record: windows_mssql_accessmethods_free_space_scans
+        expr: windows_mssql_accessmethods_free_space_scans_total
+      - record: windows_mssql_accessmethods_full_scans
+        expr: windows_mssql_accessmethods_full_scans_total
+      - record: windows_mssql_accessmethods_ghost_record_skips
+        expr: windows_mssql_accessmethods_ghost_record_skips_total
+      - record: windows_mssql_accessmethods_index_searches
+        expr: windows_mssql_accessmethods_index_searches_total
+      - record: windows_mssql_accessmethods_insysxact_waits
+        expr: windows_mssql_accessmethods_insysxact_waits_total
+      - record: windows_mssql_accessmethods_leaf_page_cookie_failures
+        expr: windows_mssql_accessmethods_leaf_page_cookie_failures_total
+      - record: windows_mssql_accessmethods_leaf_page_cookie_uses
+        expr: windows_mssql_accessmethods_leaf_page_cookie_uses_total
+      - record: windows_mssql_accessmethods_lob_handle_creates
+        expr: windows_mssql_accessmethods_lob_handle_creates_total
+      - record: windows_mssql_accessmethods_lob_handle_destroys
+        expr: windows_mssql_accessmethods_lob_handle_destroys_total
+      - record: windows_mssql_accessmethods_lob_read_aheads
+        expr: windows_mssql_accessmethods_lob_read_aheads_total
+      - record: windows_mssql_accessmethods_lob_ss_provider_creates
+        expr: windows_mssql_accessmethods_lob_ss_provider_creates_total
+      - record: windows_mssql_accessmethods_lob_ss_provider_destroys
+        expr: windows_mssql_accessmethods_lob_ss_provider_destroys_total
+      - record: windows_mssql_accessmethods_lob_ss_provider_truncations
+        expr: windows_mssql_accessmethods_lob_ss_provider_truncations_total
+      - record: windows_mssql_accessmethods_mixed_page_allocations
+        expr: windows_mssql_accessmethods_mixed_page_allocations_total
+      - record: windows_mssql_accessmethods_page_allocations
+        expr: windows_mssql_accessmethods_page_allocations_total
+      - record: windows_mssql_accessmethods_page_compression_attempts
+        expr: windows_mssql_accessmethods_page_compression_attempts_total
+      - record: windows_mssql_accessmethods_page_compressions
+        expr: windows_mssql_accessmethods_page_compressions_total
+      - record: windows_mssql_accessmethods_page_deallocations
+        expr: windows_mssql_accessmethods_page_deallocations_total
+      - record: windows_mssql_accessmethods_page_splits
+        expr: windows_mssql_accessmethods_page_splits_total
+      - record: windows_mssql_accessmethods_probe_scans
+        expr: windows_mssql_accessmethods_probe_scans_total
+      - record: windows_mssql_accessmethods_range_scans
+        expr: windows_mssql_accessmethods_range_scans_total
+      - record: windows_mssql_accessmethods_scan_point_revalidations
+        expr: windows_mssql_accessmethods_scan_point_revalidations_total
+      - record: windows_mssql_accessmethods_table_lock_escalations
+        expr: windows_mssql_accessmethods_table_lock_escalations_total
+      - record: windows_mssql_accessmethods_tree_page_cookie_failures
+        expr: windows_mssql_accessmethods_tree_page_cookie_failures_total
+      - record: windows_mssql_accessmethods_tree_page_cookie_uses
+        expr: windows_mssql_accessmethods_tree_page_cookie_uses_total
+      - record: windows_mssql_accessmethods_workfile_creates
+        expr: windows_mssql_accessmethods_workfile_creates_total
+      - record: windows_mssql_accessmethods_worktables_creates
+        expr: windows_mssql_accessmethods_worktables_creates_total
+      - record: windows_mssql_accessmethods_worktables_from_cache_hits
+        expr: windows_mssql_accessmethods_worktables_from_cache_hits_total
+      - record: windows_mssql_accessmethods_worktables_from_cache_lookups
+        expr: windows_mssql_accessmethods_worktables_from_cache_lookups_total
+      - record: windows_mssql_availreplica_flow_control_wait_seconds
+        expr: windows_mssql_availreplica_flow_control_wait_seconds_total
+      - record: windows_mssql_availreplica_initiated_flow_controls
+        expr: windows_mssql_availreplica_initiated_flow_controls_total
+      - record: windows_mssql_availreplica_received_from_replica_bytes
+        expr: windows_mssql_availreplica_received_from_replica_bytes_total
+      - record: windows_mssql_availreplica_receives_from_replica
+        expr: windows_mssql_availreplica_receives_from_replica_total
+      - record: windows_mssql_availreplica_resent_messages
+        expr: windows_mssql_availreplica_resent_messages_total
+      - record: windows_mssql_availreplica_sends_to_replica
+        expr: windows_mssql_availreplica_sends_to_replica_total
+      - record: windows_mssql_availreplica_sends_to_transport
+        expr: windows_mssql_availreplica_sends_to_transport_total
+      - record: windows_mssql_availreplica_sent_to_replica_bytes
+        expr: windows_mssql_availreplica_sent_to_replica_bytes_total
+      - record: windows_mssql_availreplica_sent_to_transport_bytes
+        expr: windows_mssql_availreplica_sent_to_transport_bytes_total
+      - record: windows_mssql_bufman_background_writer_pages
+        expr: windows_mssql_bufman_background_writer_pages_total
+      - record: windows_mssql_bufman_checkpoint_pages
+        expr: windows_mssql_bufman_checkpoint_pages_total
+      - record: windows_mssql_bufman_extension_page_evictions
+        expr: windows_mssql_bufman_extension_page_evictions_total
+      - record: windows_mssql_bufman_extension_page_reads
+        expr: windows_mssql_bufman_extension_page_reads_total
+      - record: windows_mssql_bufman_extension_page_writes
+        expr: windows_mssql_bufman_extension_page_writes_total
+      - record: windows_mssql_bufman_free_list_stalls
+        expr: windows_mssql_bufman_free_list_stalls_total
+      - record: windows_mssql_bufman_lazywrites
+        expr: windows_mssql_bufman_lazywrites_total
+      - record: windows_mssql_bufman_page_lookups
+        expr: windows_mssql_bufman_page_lookups_total
+      - record: windows_mssql_bufman_page_reads
+        expr: windows_mssql_bufman_page_reads_total
+      - record: windows_mssql_bufman_page_writes
+        expr: windows_mssql_bufman_page_writes_total
+      - record: windows_mssql_bufman_read_ahead_issuing_seconds
+        expr: windows_mssql_bufman_read_ahead_issuing_seconds_total
+      - record: windows_mssql_bufman_read_ahead_pages
+        expr: windows_mssql_bufman_read_ahead_pages_total
+      - record: windows_mssql_databases_backup_restore_operations
+        expr: windows_mssql_databases_backup_restore_operations_total
+      - record: windows_mssql_databases_bulk_copy_bytes
+        expr: windows_mssql_databases_bulk_copy_bytes_total
+      - record: windows_mssql_databases_bulk_copy_rows
+        expr: windows_mssql_databases_bulk_copy_rows_total
+      - record: windows_mssql_databases_dbcc_logical_scan_bytes
+        expr: windows_mssql_databases_dbcc_logical_scan_bytes_total
+      - record: windows_mssql_databases_group_commit_stall_seconds
+        expr: windows_mssql_databases_group_commit_stall_seconds_total
+      - record: windows_mssql_databases_log_cache_reads
+        expr: windows_mssql_databases_log_cache_reads_total
+      - record: windows_mssql_databases_log_flush_waits
+        expr: windows_mssql_databases_log_flush_waits_total
+      - record: windows_mssql_databases_log_flushed_bytes
+        expr: windows_mssql_databases_log_flushed_bytes_total
+      - record: windows_mssql_databases_log_flushes
+        expr: windows_mssql_databases_log_flushes_total
+      - record: windows_mssql_databases_log_pool_cache_misses
+        expr: windows_mssql_databases_log_pool_cache_misses_total
+      - record: windows_mssql_databases_log_pool_disk_reads
+        expr: windows_mssql_databases_log_pool_disk_reads_total
+      - record: windows_mssql_databases_log_pool_empty_free_pool_pushes
+        expr: windows_mssql_databases_log_pool_empty_free_pool_pushes_total
+      - record: windows_mssql_databases_log_pool_hash_deletes
+        expr: windows_mssql_databases_log_pool_hash_deletes_total
+      - record: windows_mssql_databases_log_pool_hash_inserts
+        expr: windows_mssql_databases_log_pool_hash_inserts_total
+      - record: windows_mssql_databases_log_pool_invalid_hash_entries
+        expr: windows_mssql_databases_log_pool_invalid_hash_entries_total
+      - record: windows_mssql_databases_log_pool_log_scan_pushes
+        expr: windows_mssql_databases_log_pool_log_scan_pushes_total
+      - record: windows_mssql_databases_log_pool_log_writer_pushes
+        expr: windows_mssql_databases_log_pool_log_writer_pushes_total
+      - record: windows_mssql_databases_log_pool_low_memory_pushes
+        expr: windows_mssql_databases_log_pool_low_memory_pushes_total
+      - record: windows_mssql_databases_log_pool_no_free_buffer_pushes
+        expr: windows_mssql_databases_log_pool_no_free_buffer_pushes_total
+      - record: windows_mssql_databases_log_pool_req_behind_trunc
+        expr: windows_mssql_databases_log_pool_req_behind_trunc_total
+      - record: windows_mssql_databases_log_pool_requests
+        expr: windows_mssql_databases_log_pool_requests_total
+      - record: windows_mssql_databases_log_pool_requests_old_vlf
+        expr: windows_mssql_databases_log_pool_requests_old_vlf_total
+      - record: windows_mssql_databases_repl_transactions
+        expr: windows_mssql_databases_repl_transactions_total
+      - record: windows_mssql_databases_shrink_data_movement_bytes
+        expr: windows_mssql_databases_shrink_data_movement_bytes_total
+      - record: windows_mssql_databases_tracked_transactions
+        expr: windows_mssql_databases_tracked_transactions_total
+      - record: windows_mssql_databases_transactions
+        expr: windows_mssql_databases_transactions_total
+      - record: windows_mssql_databases_write_transactions
+        expr: windows_mssql_databases_write_transactions_total
+      - record: windows_mssql_databases_xtp_controller_log_processed_bytes
+        expr: windows_mssql_databases_xtp_controller_log_processed_bytes_total
+      - record: windows_mssql_dbreplica_database_initiated_flow_controls
+        expr: windows_mssql_dbreplica_database_initiated_flow_controls_total
+      - record: windows_mssql_dbreplica_group_commits
+        expr: windows_mssql_dbreplica_group_commits_total
+      - record: windows_mssql_dbreplica_log_compressed_bytes
+        expr: windows_mssql_dbreplica_log_compressed_bytes_total
+      - record: windows_mssql_dbreplica_log_compression_cachehits
+        expr: windows_mssql_dbreplica_log_compression_cachehits_total
+      - record: windows_mssql_dbreplica_log_compression_cachemisses
+        expr: windows_mssql_dbreplica_log_compression_cachemisses_total
+      - record: windows_mssql_dbreplica_log_compressions
+        expr: windows_mssql_dbreplica_log_compressions_total
+      - record: windows_mssql_dbreplica_log_decompressed_bytes
+        expr: windows_mssql_dbreplica_log_decompressed_bytes_total
+      - record: windows_mssql_dbreplica_log_decompressions
+        expr: windows_mssql_dbreplica_log_decompressions_total
+      - record: windows_mssql_dbreplica_log_received_bytes
+        expr: windows_mssql_dbreplica_log_received_bytes_total
+      - record: windows_mssql_dbreplica_mirrored_write_transactions
+        expr: windows_mssql_dbreplica_mirrored_write_transactions_total
+      - record: windows_mssql_dbreplica_received_file_bytes
+        expr: windows_mssql_dbreplica_received_file_bytes_total
+      - record: windows_mssql_dbreplica_redo_blocks
+        expr: windows_mssql_dbreplica_redo_blocks_total
+      - record: windows_mssql_dbreplica_redone_bytes
+        expr: windows_mssql_dbreplica_redone_bytes_total
+      - record: windows_mssql_dbreplica_redones
+        expr: windows_mssql_dbreplica_redones_total
+      - record: windows_mssql_genstats_connection_resets
+        expr: windows_mssql_genstats_connection_resets_total
+      - record: windows_mssql_genstats_logins
+        expr: windows_mssql_genstats_logins_total
+      - record: windows_mssql_genstats_logouts
+        expr: windows_mssql_genstats_logouts_total
+      - record: windows_mssql_genstats_non_atomic_yields
+        expr: windows_mssql_genstats_non_atomic_yields_total
+      - record: windows_mssql_genstats_temp_tables_creations
+        expr: windows_mssql_genstats_temp_tables_creations_total
+      - record: windows_mssql_locks_deadlocks
+        expr: windows_mssql_locks_deadlocks_total
+      - record: windows_mssql_locks_lock_requests
+        expr: windows_mssql_locks_lock_requests_total
+      - record: windows_mssql_locks_lock_timeouts
+        expr: windows_mssql_locks_lock_timeouts_total
+      - record: windows_mssql_locks_lock_waits
+        expr: windows_mssql_locks_lock_waits_total
+      - record: windows_mssql_sqlstats_auto_parameterization_attempts
+        expr: windows_mssql_sqlstats_auto_parameterization_attempts_total
+      - record: windows_mssql_sqlstats_batch_requests
+        expr: windows_mssql_sqlstats_batch_requests_total
+      - record: windows_mssql_sqlstats_failed_auto_parameterization_attempts
+        expr: windows_mssql_sqlstats_failed_auto_parameterization_attempts_total
+      - record: windows_mssql_sqlstats_forced_parameterizations
+        expr: windows_mssql_sqlstats_forced_parameterizations_total
+      - record: windows_mssql_sqlstats_guided_plan_executions
+        expr: windows_mssql_sqlstats_guided_plan_executions_total
+      - record: windows_mssql_sqlstats_misguided_plan_executions
+        expr: windows_mssql_sqlstats_misguided_plan_executions_total
+      - record: windows_mssql_sqlstats_safe_auto_parameterization_attempts
+        expr: windows_mssql_sqlstats_safe_auto_parameterization_attempts_total
+      - record: windows_mssql_sqlstats_sql_attentions
+        expr: windows_mssql_sqlstats_sql_attentions_total
+      - record: windows_mssql_sqlstats_sql_compilations
+        expr: windows_mssql_sqlstats_sql_compilations_total
+      - record: windows_mssql_sqlstats_sql_recompilations
+        expr: windows_mssql_sqlstats_sql_recompilations_total
+      - record: windows_mssql_sqlstats_unsafe_auto_parameterization_attempts
+        expr: windows_mssql_sqlstats_unsafe_auto_parameterization_attempts_total
+      - record: windows_mssql_transactions_version_store_creation_units
+        expr: windows_mssql_transactions_version_store_creation_units_total
+      - record: windows_mssql_transactions_version_store_truncation_units
+        expr: windows_mssql_transactions_version_store_truncation_units_total
+  - name: windows_exporter-0.32-netframework
+    rules:
+      - record: windows_netframework_clrmemory_gc_time_percent
+        expr: windows_netframework_clrmemory_gc_time_ratio * 100
+  - name: windows_exporter-0.32-nps
+    rules:
+      - record: windows_nps_access_server_reset_time
+        expr: windows_nps_access_server_reset_time_seconds
+      - record: windows_nps_access_server_up_time
+        expr: windows_nps_access_server_up_time_seconds
+      - record: windows_nps_accounting_server_reset_time
+        expr: windows_nps_accounting_server_reset_time_seconds
+      - record: windows_nps_accounting_server_up_time
+        expr: windows_nps_accounting_server_up_time_seconds
+      - record: windows_nps_access_accepts
+        expr: windows_nps_access_accepts_total
+      - record: windows_nps_access_bad_authenticators
+        expr: windows_nps_access_bad_authenticators_total
+      - record: windows_nps_access_challenges
+        expr: windows_nps_access_challenges_total
+      - record: windows_nps_access_dropped_packets
+        expr: windows_nps_access_dropped_packets_total
+      - record: windows_nps_access_invalid_requests
+        expr: windows_nps_access_invalid_requests_total
+      - record: windows_nps_access_malformed_packets
+        expr: windows_nps_access_malformed_packets_total
+      - record: windows_nps_access_packets_received
+        expr: windows_nps_access_packets_received_total
+      - record: windows_nps_access_packets_sent
+        expr: windows_nps_access_packets_sent_total
+      - record: windows_nps_access_rejects
+        expr: windows_nps_access_rejects_total
+      - record: windows_nps_access_requests
+        expr: windows_nps_access_requests_total
+      - record: windows_nps_access_unknown_type
+        expr: windows_nps_access_unknown_type_total
+      - record: windows_nps_accounting_bad_authenticators
+        expr: windows_nps_accounting_bad_authenticators_total
+      - record: windows_nps_accounting_dropped_packets
+        expr: windows_nps_accounting_dropped_packets_total
+      - record: windows_nps_accounting_invalid_requests
+        expr: windows_nps_accounting_invalid_requests_total
+      - record: windows_nps_accounting_malformed_packets
+        expr: windows_nps_accounting_malformed_packets_total
+      - record: windows_nps_accounting_no_record
+        expr: windows_nps_accounting_no_record_total
+      - record: windows_nps_accounting_packets_received
+        expr: windows_nps_accounting_packets_received_total
+      - record: windows_nps_accounting_packets_sent
+        expr: windows_nps_accounting_packets_sent_total
+      - record: windows_nps_accounting_requests
+        expr: windows_nps_accounting_requests_total
+      - record: windows_nps_accounting_responses
+        expr: windows_nps_accounting_responses_total
+      - record: windows_nps_accounting_unknown_type
+        expr: windows_nps_accounting_unknown_type_total
+  - name: windows_exporter-0.32-printer
+    rules:
+      - record: windows_printer_job_count
+        expr: windows_printer_jobs
+  - name: windows_exporter-0.32-process
+    rules:
+      - record: windows_process_cpu_time_total
+        expr: windows_process_cpu_time_seconds_total
+  - name: windows_exporter-0.32-remote
+    rules:
+      - record: windows_remote_fx_net_current_tcp_bandwidth
+        expr: windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second
+      - record: windows_remote_fx_net_current_udp_bandwidth
+        expr: windows_remote_fx_net_current_udp_bandwidth_bytes_per_second
+      - record: windows_remote_fx_gfx_frame_quality
+        expr: windows_remote_fx_gfx_frame_quality_ratio * 100
+  - name: windows_exporter-0.32-smb
+    rules:
+      - record: windows_smb_server_shares_read_requests_count_total
+        expr: windows_smb_server_shares_read_requests_total
+      - record: windows_smb_server_shares_write_requests_count_total
+        expr: windows_smb_server_shares_write_requests_total
+      - record: windows_smb_server_shares_metadata_requests_count_total
+        expr: windows_smb_server_shares_metadata_requests_total
+      - record: windows_smb_server_shares_files_opened_count_total
+        expr: windows_smb_server_shares_files_opened_total
+      - record: windows_smb_server_shares_current_open_file_count
+        expr: windows_smb_server_shares_open_files
+      - record: windows_smb_server_shares_tree_connect_count
+        expr: windows_smb_server_shares_tree_connects
+  - name: windows_exporter-0.32-storage
+    rules:
+      - record: windows_storage_spaces_virtual_disk_storage_efficiency_percent
+        expr: max without (virtual_disk) (label_replace(windows_storage_spaces_virtual_disk_storage_efficiency_ratio * 100, "name", "$1", "virtual_disk", "(.+)"))
+  - name: windows_exporter-0.32-tcp
+    rules:
+      - record: windows_tcp_connections_state_count
+        expr: windows_tcp_connections
+  - name: windows_exporter-0.32-time
+    rules:
+      - record: windows_time_clock_frequency_adjustment_ppb
+        expr: windows_time_clock_frequency_adjustment_ratio * 1e9
+  - name: windows_exporter-0.32-vmware
+    rules:
+      - record: windows_vmware_cpu_effective_vm_speed_mhz_total
+        expr: windows_vmware_cpu_effective_vm_speed_hertz / 1e6
+      - record: windows_vmware_cpu_limit_mhz
+        expr: windows_vmware_cpu_limit_hertz / 1e6
+      - record: windows_vmware_cpu_reservation_mhz
+        expr: windows_vmware_cpu_reservation_hertz / 1e6
+      - record: windows_vmware_host_processor_speed_mhz
+        expr: windows_vmware_host_processor_speed_hertz / 1e6
