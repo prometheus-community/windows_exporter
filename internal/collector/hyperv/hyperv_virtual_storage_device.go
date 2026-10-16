@@ -210,14 +210,14 @@ func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceIOLatency,
 			prometheus.CounterValue,
-			data.VirtualStorageDeviceLatency*pdh.TicksToSecondScaleFactor,
+			data.VirtualStorageDeviceLatency/pdh.TicksPerSecond,
 			data.Name,
 		)
 
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLowerIOLatency,
 			prometheus.CounterValue,
-			data.VirtualStorageDeviceLowerLatency*pdh.TicksToSecondScaleFactor,
+			data.VirtualStorageDeviceLowerLatency/pdh.TicksPerSecond,
 			data.Name,
 		)
 	}

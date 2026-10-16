@@ -810,9 +810,9 @@ func (c *Collector[T]) setRawValue(row *T, counter *Counter, value RawCounter) b
 		if counter.FieldIndexValue != -1 {
 			c.rows.setValue(row, counter.FieldIndexValue, float64(value.SecondValue-value.FirstValue)/float64(counter.Frequency))
 		}
-	case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
+	case PERF_100NSEC_TIMER, PERF_100NSEC_TIMER_INV, PERF_100NSEC_MULTI_TIMER, PERF_100NSEC_MULTI_TIMER_INV, PERF_PRECISION_100NS_TIMER:
 		if counter.FieldIndexValue != -1 {
-			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)*TicksToSecondScaleFactor)
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)/TicksPerSecond)
 		}
 	default:
 		if counter.FieldIndexSecondValue != -1 {

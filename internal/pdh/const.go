@@ -21,8 +21,11 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // Conversion factors.
 const (
-	TicksToSecondScaleFactor       = 1 / 1e7
-	WindowsEpoch             int64 = 116444736000000000
+	// TicksPerSecond is the number of 100 ns ticks per second. Divide by it
+	// rather than multiply by its reciprocal: the quotient is correctly rounded,
+	// the product is not.
+	TicksPerSecond       = 1e7
+	WindowsEpoch   int64 = 116444736000000000
 )
 
 // Based on https://github.com/leoluk/perflib_exporter/blob/master/collector/mapper.go

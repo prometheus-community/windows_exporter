@@ -42,11 +42,10 @@ const Name = "process"
 const (
 	// windowsEpoch is the FILETIME of the Unix epoch, in 100ns intervals since 1601.
 	windowsEpoch int64 = 116444736000000000
-	// ticksPerSecond is the number of 100ns intervals per second.
+	// ticksPerSecond is the number of 100ns intervals per second. Dividing by it,
+	// like internal/pdh does, keeps the CPU time values bit-identical to the
+	// Process counter set.
 	ticksPerSecond = 1e7
-	// secondsPerTick converts 100ns intervals to seconds. Multiplying by it, like the perflib
-	// reader did, keeps the CPU time values bit-identical to the Process counter set.
-	secondsPerTick = 1 / ticksPerSecond
 )
 
 type Config struct {
@@ -486,14 +485,14 @@ func (c *Collector) collectProcess(ch chan<- prometheus.Metric, scrape *labelcac
 	ch <- scrape.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(process.kernelTime)*secondsPerTick,
+		float64(process.kernelTime)/ticksPerSecond,
 		name, pid, "privileged",
 	)
 
 	ch <- scrape.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(process.userTime)*secondsPerTick,
+		float64(process.userTime)/ticksPerSecond,
 		name, pid, "user",
 	)
 

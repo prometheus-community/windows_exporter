@@ -295,7 +295,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgDataQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgDataQueueLength/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 
@@ -303,28 +303,28 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgReadQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgReadQueueLength/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerRead*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerRead/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerWrite*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerWrite/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			data.AvgSecPerDataRequest*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerDataRequest/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 
@@ -332,7 +332,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgWriteQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgWriteQueueLength/pdh.TicksPerSecond,
 			serverValue, shareValue,
 		)
 

@@ -18,9 +18,9 @@ Hyper-V guest with 12 logical processors in one processor group.
   so `Collect` holds the previous value of `time_seconds_total` and
   `cstate_seconds_total` for drops below `maxTimeDrop` (1 s).
 - `% Processor Time` and `% Priority Time` are `PERF_100NSEC_TIMER_INV`. The
-  raw value is cumulative idle (non-busy) time in 100 ns ticks, not busy time,
-  and `internal/pdh` does not scale this type to seconds. In the sample, the
-  raw value of `% Processor Time` equals `% Idle Time`.
+  raw value is cumulative idle (non-busy) time in 100 ns ticks, not busy time.
+  `internal/pdh` scales it to seconds like the other 100 ns timers. In the
+  sample, the raw value of `% Processor Time` equals `% Idle Time`.
 - `% Processor Utility`, `% Processor Performance` and `% Privileged Utility`
   are `PERF_AVERAGE_BULK`. Raw and base are both cumulative. The displayed
   value is delta raw / delta base and is already a percentage (it can exceed
