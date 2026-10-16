@@ -30,55 +30,55 @@ func (c *Collector) describeClrLoading() {
 	c.bytesInLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.currentAppDomains = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_appdomains_loaded_current"),
 		"Displays the current number of application domains loaded in this application.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.currentAssemblies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_assemblies_loaded_current"),
 		"Displays the current number of assemblies loaded across all application domains in the currently running application. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.currentClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_classes_loaded_current"),
 		"Displays the current number of classes loaded in all assemblies.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalAppDomains = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_appdomains_loaded_total"),
 		"Displays the peak number of application domains loaded since the application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalAppDomainsUnloaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_appdomains_unloaded_total"),
 		"Displays the total number of application domains unloaded since the application started. If an application domain is loaded and unloaded multiple times, this counter increments each time the application domain is unloaded.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalAssemblies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_assemblies_loaded_total"),
 		"Displays the total number of assemblies loaded since the application started. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_classes_loaded_total"),
 		"Displays the cumulative number of classes loaded in all assemblies since the application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.totalNumberOfLoadFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_class_load_failures_total"),
 		"Displays the peak number of classes that have failed to load since the application started.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -115,18 +115,15 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 		return fmt.Errorf("failed to collect .NET CLR Loading: %w", err)
 	}
 
-	suffixDuplicateProcesses(dst)
+	dst, processIDs := prepareProcesses(c, dst)
 
-	for _, process := range dst {
-		if process.Name == "_Global_" {
-			continue
-		}
-
+	for i, process := range dst {
 		ch <- scrape.MustNewConstMetric(
 			c.bytesInLoaderHeap,
 			prometheus.GaugeValue,
 			float64(process.BytesinLoaderHeap),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -134,6 +131,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.GaugeValue,
 			float64(process.Currentappdomains),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -141,6 +139,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.GaugeValue,
 			float64(process.CurrentAssemblies),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -148,6 +147,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.GaugeValue,
 			float64(process.CurrentClassesLoaded),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -155,6 +155,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.TotalAppdomains),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -162,6 +163,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.Totalappdomainsunloaded),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -169,6 +171,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.TotalAssemblies),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -176,6 +179,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.TotalClassesLoaded),
 			process.Name,
+			processIDs[i],
 		)
 
 		ch <- scrape.MustNewConstMetric(
@@ -183,6 +187,7 @@ func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *label
 			prometheus.CounterValue,
 			float64(process.TotalNumberofLoadFailures),
 			process.Name,
+			processIDs[i],
 		)
 	}
 

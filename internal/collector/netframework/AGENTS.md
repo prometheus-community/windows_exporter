@@ -33,6 +33,22 @@ below comes from a CI probe.
 - The `.NET CLR Memory` sizes and counts are `PERF_COUNTER_LARGE_RAWCOUNT`
   gauges in bytes or counts; `# Gen N Collections` and `# Induced GC` are
   cumulative. The object also has a `Process ID` counter.
+- Only `.NET CLR Memory` has `Process ID`. For the `process_id` label of the
+  other objects, `Build` adds a second collector for that counter to the
+  shared query whenever a sub-collector other than `clrmemory` is enabled,
+  and `Collect` maps the Windows instance name and `Occurrence` (before
+  `pdh.SuffixDuplicates`) to the process ID before the sub-collectors start.
+  This relies on an undocumented assumption: the provider lists the
+  processes in the same order in every object of one sample. Evidence:
+  `PdhCollectQueryData` does one `RegQueryValueEx(HKEY_PERFORMANCE_DATA)`
+  per collect for the whole query, and the CLR provider writes every
+  object of that call from the same instance list. Separate queries per
+  object, or a provider that orders objects differently, would break the
+  join for duplicate names. With `ProcessNameFormat=1` (instance names like
+  `w3wp_1234`) names are unique and the order does not matter. An instance without a valid `Process ID` gets
+  `process_id=""`. Process filters match the name before the occurrence
+  suffix and are applied before the suffixes are added, so all objects of a
+  sample get the same suffixes.
 
 ## Counter reference
 
