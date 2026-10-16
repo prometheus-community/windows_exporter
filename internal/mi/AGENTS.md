@@ -64,8 +64,8 @@ results never look complete. A context that is done after the final result
 hand over.
 
 Tests that need a slow query must bound the work it causes. Cancelling an
-operation or an MI timeout only ends it on the client: the provider in
-WmiPrvSE finishes the enumeration on its own. `CIM_DataFile` for a whole drive
+operation may end it only on the client: providers such as CIMWin32
+(`CIM_DataFile`) keep enumerating in WmiPrvSE. `CIM_DataFile` for a whole drive
 kept the CI runner busy for minutes after the Go tests, which slowed every
 later step and made the end-to-end `/metrics` request time out. Restrict such
 queries to one directory.
