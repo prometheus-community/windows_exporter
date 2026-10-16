@@ -94,22 +94,19 @@ type Collector struct {
 	// lastMountErr is the last logged error of getAllMountedVolumes.
 	lastMountErr string
 
-	freeSpace        *prometheus.Desc
-	idleTime         *prometheus.Desc
-	information      *prometheus.Desc
-	readBytesTotal   *prometheus.Desc
-	readLatency      *prometheus.Desc
-	readOnly         *prometheus.Desc
-	readsTotal       *prometheus.Desc
-	readTime         *prometheus.Desc
-	readWriteLatency *prometheus.Desc
-	requestsQueued   *prometheus.Desc
-	splitIOs         *prometheus.Desc
-	totalSpace       *prometheus.Desc
-	writeBytesTotal  *prometheus.Desc
-	writeLatency     *prometheus.Desc
-	writesTotal      *prometheus.Desc
-	writeTime        *prometheus.Desc
+	freeSpace       *prometheus.Desc
+	idleTime        *prometheus.Desc
+	information     *prometheus.Desc
+	readBytesTotal  *prometheus.Desc
+	readOnly        *prometheus.Desc
+	readsTotal      *prometheus.Desc
+	readTime        *prometheus.Desc
+	requestsQueued  *prometheus.Desc
+	splitIOs        *prometheus.Desc
+	totalSpace      *prometheus.Desc
+	writeBytesTotal *prometheus.Desc
+	writesTotal     *prometheus.Desc
+	writeTime       *prometheus.Desc
 
 	bitlockerStatus *prometheus.Desc
 }
@@ -289,27 +286,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.readLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "read_latency_seconds_total"),
-		"Shows the average time, in seconds, of a read operation from the disk (LogicalDisk.AvgDiskSecPerRead)",
-		[]string{"volume"},
-		nil,
-	)
-
-	c.writeLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "write_latency_seconds_total"),
-		"Shows the average time, in seconds, of a write operation to the disk (LogicalDisk.AvgDiskSecPerWrite)",
-		[]string{"volume"},
-		nil,
-	)
-
-	c.readWriteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "read_write_latency_seconds_total"),
-		"Shows the time, in seconds, of the average disk transfer (LogicalDisk.AvgDiskSecPerTransfer)",
-		[]string{"volume"},
-		nil,
-	)
-
 	c.bitlockerStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bitlocker_status"),
 		"BitLocker status for the logical disk",
@@ -461,27 +437,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 				c.splitIOs,
 				prometheus.CounterValue,
 				data.SplitIOPerSec,
-				data.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.readLatency,
-				prometheus.CounterValue,
-				data.AvgDiskSecPerRead*pdh.TicksToSecondScaleFactor,
-				data.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.writeLatency,
-				prometheus.CounterValue,
-				data.AvgDiskSecPerWrite*pdh.TicksToSecondScaleFactor,
-				data.Name,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.readWriteLatency,
-				prometheus.CounterValue,
-				data.AvgDiskSecPerTransfer*pdh.TicksToSecondScaleFactor,
 				data.Name,
 			)
 		}

@@ -386,6 +386,12 @@ groups:
         expr: windows_iis_server_file_cache_max_memory_bytes
       - record: windows_iis_worker_file_cache_max_memory_bytes_total
         expr: windows_iis_worker_file_cache_max_memory_bytes
+  - name: windows_exporter-0.32-logical_disk
+    rules:
+      - record: windows_logical_disk_read_latency_seconds_total
+        expr: windows_logical_disk_read_seconds_total
+      - record: windows_logical_disk_write_latency_seconds_total
+        expr: windows_logical_disk_write_seconds_total
   - name: windows_exporter-0.32-memory
     rules:
       - record: windows_memory_commit_limit

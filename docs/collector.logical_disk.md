@@ -39,9 +39,6 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 | `windows_logical_disk_size_bytes`                | Total size of the disk in bytes                                                                                           | gauge   | `volume`                                                          |
 | `windows_logical_disk_idle_seconds_total`        | Seconds the disk was idle (not servicing read/write requests)                                                             | counter | `volume`                                                          |
 | `windows_logical_disk_split_ios_total`           | Number of I/Os to the disk split into multiple I/Os                                                                       | counter | `volume`                                                          |
-| `windows_logical_disk_read_latency_seconds_total` | Shows the average time, in seconds, of a read operation from the disk                                                     | counter | `volume`                                                          |
-| `windows_logical_disk_write_latency_seconds_total` | Shows the average time, in seconds, of a write operation to the disk                                                      | counter | `volume`                                                          |
-| `windows_logical_disk_read_write_latency_seconds_total` | Shows the time, in seconds, of the average disk transfer                                                                  | counter | `volume`                                                          |
 | `windows_logical_disk_readonly`                  | Whether the logical disk is read-only                                                                                     | gauge   | `volume`                                                          |
 | `windows_logical_disk_bitlocker_status`          | BitLocker status for the logical disk                                                                                     | gauge   | `volume`,`status`                                                 |
 
@@ -57,6 +54,18 @@ Use the rate of the `*_seconds_total` counters for the average queue length inst
 ```
 rate(windows_logical_disk_read_seconds_total[5m])
 rate(windows_logical_disk_write_seconds_total[5m])
+```
+
+### Average latency
+`Avg. Disk sec/Read`, `Avg. Disk sec/Write` and `Avg. Disk sec/Transfer` divide the busy time by the number of operations.
+Their raw time values are the same as the ones of `% Disk Read Time` and `% Disk Write Time`, so the exporter only exposes
+`windows_logical_disk_read_seconds_total` and `windows_logical_disk_write_seconds_total`.
+The former `windows_logical_disk_read_latency_seconds_total`, `windows_logical_disk_write_latency_seconds_total` and
+`windows_logical_disk_read_write_latency_seconds_total` counters held the same busy time, not a latency, and were removed in 0.32.
+Divide the busy time by the number of operations for the average latency:
+```
+rate(windows_logical_disk_read_seconds_total[5m]) / rate(windows_logical_disk_reads_total[5m])
+rate(windows_logical_disk_write_seconds_total[5m]) / rate(windows_logical_disk_writes_total[5m])
 ```
 
 ### Size metrics
