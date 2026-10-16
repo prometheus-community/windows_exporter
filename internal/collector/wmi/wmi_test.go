@@ -191,6 +191,16 @@ func TestCollectorBuildErrors(t *testing.T) {
 			err:     `invalid type "histogram"`,
 		},
 		{
+			name:    "zero multiplier",
+			queries: valid(func(q *wmi.Query) { q.Properties[0].Multiplier = new(0.0) }),
+			err:     `property "FreeSpace": multiplier must be a positive finite number, got 0`,
+		},
+		{
+			name:    "negative multiplier",
+			queries: valid(func(q *wmi.Query) { q.Properties[0].Multiplier = new(-1.0) }),
+			err:     `multiplier must be a positive finite number, got -1`,
+		},
+		{
 			name:    "invalid label property name",
 			queries: valid(func(q *wmi.Query) { q.LabelProperties = []wmi.LabelProperty{{Name: ""}} }),
 			err:     `label property "" must be a valid WMI property name`,
