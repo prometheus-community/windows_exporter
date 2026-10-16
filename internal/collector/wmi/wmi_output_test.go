@@ -201,13 +201,13 @@ windows_wmi_os_primary 1
 windows_wmi_partial_primary 1
 # HELP windows_wmi_query_success Whether the WMI query and all of its configured properties could be read successfully.
 # TYPE windows_wmi_query_success gauge
-windows_wmi_query_success{name="kernel"} 1
-windows_wmi_query_success{name="missing_class"} 0
-windows_wmi_query_success{name="os"} 1
-windows_wmi_query_success{name="partial"} 0
-windows_wmi_query_success{name="shared_a"} 1
-windows_wmi_query_success{name="shared_b"} 1
-windows_wmi_query_success{name="unsupported_label"} 0
+windows_wmi_query_success{query="kernel"} 1
+windows_wmi_query_success{query="missing_class"} 0
+windows_wmi_query_success{query="os"} 1
+windows_wmi_query_success{query="partial"} 0
+windows_wmi_query_success{query="shared_a"} 1
+windows_wmi_query_success{query="shared_b"} 1
+windows_wmi_query_success{query="unsupported_label"} 0
 # HELP windows_wmi_test_parent_pid custom wmi help text
 # TYPE windows_wmi_test_parent_pid counter
 windows_wmi_test_parent_pid{foo="bar",handle="0",path="",pid="0",process="System Idle Process"} 0
@@ -233,7 +233,7 @@ windows_wmi_test_shared{query="b"} 1
 		require.Equal(t, expected, strings.Join(lines, "\n"))
 
 		for _, name := range []string{"kernel", "missing_class", "os", "partial", "shared_a", "shared_b", "unsupported_label"} {
-			require.Regexp(t, `(?m)^windows_wmi_query_duration_seconds\{name="`+name+`"\} \d`, got)
+			require.Regexp(t, `(?m)^windows_wmi_query_duration_seconds\{query="`+name+`"\} \d`, got)
 		}
 	}
 }
@@ -302,8 +302,8 @@ func TestCollectScrapeTimeout(t *testing.T) {
 
 	got := scrapeWithTimeout(t, c, time.Nanosecond)
 
-	require.Contains(t, got, `windows_wmi_query_success{name="a"} 0`)
-	require.Contains(t, got, `windows_wmi_query_success{name="b"} 0`)
+	require.Contains(t, got, `windows_wmi_query_success{query="a"} 0`)
+	require.Contains(t, got, `windows_wmi_query_success{query="b"} 0`)
 	require.NotContains(t, got, "windows_wmi_a_primary")
 	require.NotContains(t, got, "windows_wmi_b_primary")
 

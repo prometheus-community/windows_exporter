@@ -220,6 +220,12 @@ func metricReferences(t *testing.T) []reference {
 			return filepath.SkipDir
 		}
 
+		// The test of the compatibility rules queries the 0.31 names they
+		// record; TestCompatibilityRules checks those.
+		if entry.Name() == "compatibility_rules.test.yaml" {
+			return nil
+		}
+
 		switch filepath.Ext(path) {
 		case ".jsonnet", ".libsonnet", ".yaml", ".yml":
 			files = append(files, path)

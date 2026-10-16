@@ -67,49 +67,49 @@ func (c *Collector) buildADAccessProcesses() error {
 	c.ldapReadTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_read_time_seconds_total"),
 		"Total time in seconds to send an LDAP read request and receive a response",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapReadOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_read_operations_total"),
 		"Total number of LDAP read operations",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapSearchTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_search_time_seconds_total"),
 		"Total time in seconds to send an LDAP search request and receive a response",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapSearchOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_search_operations_total"),
 		"Total number of LDAP search operations",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapWriteTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_write_time_seconds_total"),
 		"Total time in seconds to send an LDAP Add/Modify/Delete request and receive a response",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapWriteOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_write_operations_total"),
 		"Total number of LDAP Add/Modify/Delete operations",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.ldapTimeoutErrorsPerSec = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_timeout_errors_total"),
 		"Total number of LDAP timeout errors",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 	c.longRunningLDAPOperationsPerMin = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_long_running_operations_per_second"),
 		"Long running LDAP operations per second, averaged over the last minute. Exchange reports the per-minute value as a raw count (Windows has no per-minute counter type); the collector divides it by 60",
-		[]string{"name"},
+		[]string{"process"},
 		nil,
 	)
 

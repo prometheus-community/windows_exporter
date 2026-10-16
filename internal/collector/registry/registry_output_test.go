@@ -132,8 +132,8 @@ func TestCollectorMetrics(t *testing.T) {
 	// precedes "testgroup" (1).
 	expected := `# HELP windows_registry_key_success Whether the registry key could be read successfully.
 # TYPE windows_registry_key_success gauge
-windows_registry_key_success{name="missing_group"} 0
-windows_registry_key_success{name="testgroup"} 1
+windows_registry_key_success{key="missing_group"} 0
+windows_registry_key_success{key="testgroup"} 1
 # HELP windows_registry_test_custom_metric custom registry help text
 # TYPE windows_registry_test_custom_metric counter
 windows_registry_test_custom_metric{foo="bar"} 5e+09

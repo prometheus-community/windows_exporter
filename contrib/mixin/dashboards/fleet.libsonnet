@@ -32,7 +32,7 @@ function(on, config, overview=null)
       b.stat(252, 'CPU > %s%%' % config.cpuHighUsageThreshold, 'Hosts whose CPU usage is above the cpuHighUsageThreshold of the WindowsCPUHighUsage alert. The alert also requires 15 minutes above it.', countHosts(cpuBusy + ' > %s' % config.cpuHighUsageThreshold), steps=attention),
       b.stat(253, 'RAM > %s%%' % config.memoryHighUsageThreshold, 'Hosts whose physical memory usage is above the memoryHighUsageThreshold of the WindowsMemoryHighUsage alert. The alert also requires 15 minutes above it.', countHosts('max by (instance) (' + memoryUsed + ') > %s' % config.memoryHighUsageThreshold), steps=attention),
       b.stat(254, 'Low disk', 'Hosts with at least one volume with less than %s%% free space, the diskFreeWarningThreshold' % config.diskFreeWarningThreshold + ' of the WindowsDiskAlmostFull alert. HarddiskVolume* volumes without a drive letter are ignored.', countHosts('min by (instance) (' + volumeFree + ') < %s' % config.diskFreeWarningThreshold), steps=attention),
-      b.stat(255, 'Auto stopped', 'Hosts with at least one service with start mode auto that is not running. Delayed-start and trigger-start services can show up here until they start.', countHosts('count by (instance) (windows_service_state{job=~"$job", state="running"} == 0 and on (instance, name) windows_service_start_mode{job=~"$job", start_mode="auto"} == 1)'), steps=attention),
+      b.stat(255, 'Auto stopped', 'Hosts with at least one service with start mode auto that is not running. Delayed-start and trigger-start services can show up here until they start.', countHosts('count by (instance) (windows_service_state{job=~"$job", state="running"} == 0 and on (instance, service) windows_service_start_mode{job=~"$job", start_mode="auto"} == 1)'), steps=attention),
 
       b.panel.new(2, 'Hosts', 'table')
       + b.panel.withDescription('One row per scraped host. Click a hostname to open its details. C: used is the usage of the C: volume, usually the system drive; Fullest volume is the most used volume with a drive letter. Services up counts running services; Auto stopped counts services with start mode auto that are not running.')
@@ -67,7 +67,7 @@ function(on, config, overview=null)
         b.query.new('(sum by (instance) (windows_service_state{job=~"$job", state="running"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'J')
         + b.query.withInstant()
         + b.query.withFormat('table'),
-        b.query.new('(count by (instance) (windows_service_state{job=~"$job", state="running"} == 0 and on (instance, name) windows_service_start_mode{job=~"$job", start_mode="auto"} == 1)) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'K')
+        b.query.new('(count by (instance) (windows_service_state{job=~"$job", state="running"} == 0 and on (instance, service) windows_service_start_mode{job=~"$job", start_mode="auto"} == 1)) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'K')
         + b.query.withInstant()
         + b.query.withFormat('table'),
         b.query.new('(max by (instance) (windows_system_processes{job=~"$job"})) and on (instance) windows_os_hostname{job=~"$job", hostname=~"$hostname"}', 'L')

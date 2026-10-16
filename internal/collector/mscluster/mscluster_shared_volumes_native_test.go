@@ -86,7 +86,7 @@ func TestSharedVolumesNativeMetricContract(t *testing.T) {
 		t.Fatalf("families = %d", len(families))
 	}
 
-	labels := map[string]string{"name": "ClusterPerformanceHistory", "volume_guid": "d3dbada3-448f-4c4c-be4d-122b7f296007"}
+	labels := map[string]string{"shared_volume": "ClusterPerformanceHistory", "volume_guid": "d3dbada3-448f-4c4c-be4d-122b7f296007"}
 
 	for name, want := range map[string]float64{"total_bytes": 21474836480, "free_bytes": 1.9008585728e+10} {
 		family := families["windows_mscluster_shared_volumes_"+name]
@@ -105,7 +105,7 @@ func TestSharedVolumesNativeMetricContract(t *testing.T) {
 	}
 
 	info := families["windows_mscluster_shared_volumes_info"].GetMetric()[0]
-	if info.GetGauge().GetValue() != 1 || !maps.Equal(metricLabels(info), map[string]string{"name": "ClusterPerformanceHistory", "path": `C:\ClusterStorage\Volume1`, "volume_guid": "d3dbada3-448f-4c4c-be4d-122b7f296007"}) {
+	if info.GetGauge().GetValue() != 1 || !maps.Equal(metricLabels(info), map[string]string{"shared_volume": "ClusterPerformanceHistory", "path": `C:\ClusterStorage\Volume1`, "volume_guid": "d3dbada3-448f-4c4c-be4d-122b7f296007"}) {
 		t.Fatalf("info = %v", metricLabels(info))
 	}
 }

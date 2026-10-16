@@ -153,7 +153,7 @@ func TestResourceGroupNativeMetricContract(t *testing.T) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
-		if !maps.Equal(metricLabels(metric), map[string]string{"name": "Cluster Group"}) {
+		if !maps.Equal(metricLabels(metric), map[string]string{"resource_group": "Cluster Group"}) {
 			t.Fatalf("labels = %v", metricLabels(metric))
 		}
 	}
@@ -167,7 +167,7 @@ func TestResourceGroupNativeMetricContract(t *testing.T) {
 		labels := metricLabels(metric)
 
 		value := 0.0
-		if labels["node_name"] == "nodeB" {
+		if labels["node"] == "nodeB" {
 			value = 1
 		}
 
@@ -175,7 +175,7 @@ func TestResourceGroupNativeMetricContract(t *testing.T) {
 			t.Fatal("invalid owner value")
 		}
 
-		if !maps.Equal(labels, map[string]string{"name": "Cluster Group", "node_name": labels["node_name"]}) {
+		if !maps.Equal(labels, map[string]string{"resource_group": "Cluster Group", "node": labels["node"]}) {
 			t.Fatalf("invalid owner labels: %v", labels)
 		}
 	}
@@ -206,7 +206,7 @@ func TestResourceGroupPartialResultsAndJoinedErrors(t *testing.T) {
 
 	for _, family := range families {
 		for _, metric := range family.GetMetric() {
-			if metricLabels(metric)["name"] != "Cluster Group" {
+			if metricLabels(metric)["resource_group"] != "Cluster Group" {
 				t.Fatal("published invalid identity")
 			}
 		}

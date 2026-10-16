@@ -282,7 +282,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "(count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, name) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                                                "expr": "(count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, service) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -1402,7 +1402,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count((count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, name) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
+                                                "expr": "count((count by (instance) (windows_service_state{job=~\"$job\", state=\"running\"} == 0 and on (instance, service) windows_service_start_mode{job=~\"$job\", start_mode=\"auto\"} == 1)) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}) or (0 * count(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true

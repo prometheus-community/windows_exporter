@@ -29,12 +29,12 @@ Matching is case-sensitive.
 
 | Name                                                             | Description                                                                                                          | Type  | Labels                            |
 |------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|-------|-----------------------------------|
-| `windows_storage_spaces_pool_info`                               | Storage pool information (value is always 1). `primordial` is `true` for the built-in primordial pool                | gauge | `name`, `unique_id`, `primordial` |
-| `windows_storage_spaces_pool_health_status`                      | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                  | gauge | `name`, `unique_id`               |
-| `windows_storage_spaces_pool_size_bytes`                         | Total size of the storage pool in bytes                                                                              | gauge | `name`, `unique_id`               |
-| `windows_storage_spaces_pool_allocated_size_bytes`               | Allocated size of the storage pool in bytes                                                                          | gauge | `name`, `unique_id`               |
-| `windows_storage_spaces_pool_operational_status`                 | Operational status codes reported for the storage pool (one series per status value)                                 | gauge | `name`, `unique_id`, `status`     |
-| `windows_storage_spaces_pool_thin_provisioning_alert_thresholds` | Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold) | gauge | `name`, `unique_id`, `threshold`  |
+| `windows_storage_spaces_pool_info`                               | Storage pool information (value is always 1). `primordial` is `true` for the built-in primordial pool                | gauge | `pool`, `unique_id`, `primordial` |
+| `windows_storage_spaces_pool_health_status`                      | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                  | gauge | `pool`, `unique_id`               |
+| `windows_storage_spaces_pool_size_bytes`                         | Total size of the storage pool in bytes                                                                              | gauge | `pool`, `unique_id`               |
+| `windows_storage_spaces_pool_allocated_size_bytes`               | Allocated size of the storage pool in bytes                                                                          | gauge | `pool`, `unique_id`               |
+| `windows_storage_spaces_pool_operational_status`                 | Operational status codes reported for the storage pool (one series per status value)                                 | gauge | `pool`, `unique_id`, `status`     |
+| `windows_storage_spaces_pool_thin_provisioning_alert_thresholds` | Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold) | gauge | `pool`, `unique_id`, `threshold`  |
 
 Windows always reports a built-in pool named `Primordial` next to the concrete pools.
 It groups every local physical disk that can be pooled but is not yet part of a concrete pool, so its size is the sum of those disks and not usable pool capacity.
@@ -45,18 +45,18 @@ Join on `unique_id` to restrict other pool metrics to concrete pools, as shown i
 
 | Name                                                             | Description                                                                                                            | Type  | Labels              |
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-------|---------------------|
-| `windows_storage_spaces_virtual_disk_info`                       | Virtual disk information (value is always 1)                                                                           | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_health_status`              | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                    | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_size_bytes`                 | Total size of the virtual disk in bytes                                                                                | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_allocated_size_bytes`       | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_footprint_on_pool_bytes`    | Physical storage consumed by the virtual disk on the storage pool in bytes                                             | gauge | `name`, `unique_id` |
-| `windows_storage_spaces_virtual_disk_storage_efficiency_ratio`   | Storage efficiency ratio (AllocatedSize / FootprintOnPool), omitted while FootprintOnPool is 0                          | gauge | `name`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_info`                       | Virtual disk information (value is always 1)                                                                           | gauge | `virtual_disk`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_health_status`              | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown                                    | gauge | `virtual_disk`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_size_bytes`                 | Total size of the virtual disk in bytes                                                                                | gauge | `virtual_disk`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_allocated_size_bytes`       | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `virtual_disk`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_footprint_on_pool_bytes`    | Physical storage consumed by the virtual disk on the storage pool in bytes                                             | gauge | `virtual_disk`, `unique_id` |
+| `windows_storage_spaces_virtual_disk_storage_efficiency_ratio`   | Storage efficiency ratio (AllocatedSize / FootprintOnPool), omitted while FootprintOnPool is 0                          | gauge | `virtual_disk`, `unique_id` |
 
 ### Example metric
 
 ```
-windows_storage_spaces_pool_info{name="Pool01",primordial="false",unique_id="{8f2c...}"} 1
-windows_storage_spaces_pool_size_bytes{name="Pool01",unique_id="{8f2c...}"} 1.0995116277760e+12
+windows_storage_spaces_pool_info{pool="Pool01",primordial="false",unique_id="{8f2c...}"} 1
+windows_storage_spaces_pool_size_bytes{pool="Pool01",unique_id="{8f2c...}"} 1.0995116277760e+12
 ```
 
 ## Useful queries
@@ -95,6 +95,6 @@ sum(windows_storage_spaces_virtual_disk_size_bytes) / sum(windows_storage_spaces
   labels:
     severity: warning
   annotations:
-    summary: "Storage pool {{ $labels.name }} is not healthy"
-    description: "Storage pool {{ $labels.name }} on {{ $labels.instance }} reports health status {{ $value }}."
+    summary: "Storage pool {{ $labels.pool }} is not healthy"
+    description: "Storage pool {{ $labels.pool }} on {{ $labels.instance }} reports health status {{ $value }}."
 ```

@@ -39,7 +39,7 @@ func TestCollector(t *testing.T) {
 		"CI Offline IP Address": 3, // Offline
 		"CI Failed Service":     4, // Failed
 	} {
-		metric := testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_resource_state", prometheus.Labels{"name": name})
+		metric := testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_resource_state", prometheus.Labels{"resource": name})
 		if metric != nil && metric.GetGauge().GetValue() != state {
 			t.Errorf("resource %q state = %v, want %v", name, metric.GetGauge().GetValue(), state)
 		}

@@ -163,7 +163,7 @@ function(on)
       b.panel.new(17, 'Stopped auto services', 'stat')
       + b.panel.withDescription('Services with start mode "auto" that are not running. See the Services tab for names.')
       + b.panel.withQueries([
-        b.query.new('count(windows_service_state{job=~"$job", instance="$instance", state="running"} == 0 and on (name) windows_service_start_mode{job=~"$job", instance="$instance", start_mode="auto"} == 1) or vector(0)', 'A')
+        b.query.new('count(windows_service_state{job=~"$job", instance="$instance", state="running"} == 0 and on (service) windows_service_start_mode{job=~"$job", instance="$instance", start_mode="auto"} == 1) or vector(0)', 'A')
         + b.query.withInstant(),
       ])
       + b.panel.withDefaults({

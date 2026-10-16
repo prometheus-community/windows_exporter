@@ -71,7 +71,7 @@ func TestNetworkNativeMetricContract(t *testing.T) {
 			t.Errorf("%s value = %v, want %v", suffix, metric.GetGauge().GetValue(), value)
 		}
 
-		if !maps.Equal(metricLabels(metric), map[string]string{"name": "Cluster Network 1"}) {
+		if !maps.Equal(metricLabels(metric), map[string]string{"network": "Cluster Network 1"}) {
 			t.Fatalf("labels = %v", metricLabels(metric))
 		}
 	}

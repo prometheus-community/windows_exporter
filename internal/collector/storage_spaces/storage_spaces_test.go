@@ -33,10 +33,10 @@ func BenchmarkCollector(b *testing.B) {
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, storage_spaces.New, nil)
 
-	pool := prometheus.Labels{"name": "GitHubActions"}
-	virtualDisk := prometheus.Labels{"name": "CIVirtualDisk"}
+	pool := prometheus.Labels{"pool": "GitHubActions"}
+	virtualDisk := prometheus.Labels{"virtual_disk": "CIVirtualDisk"}
 
-	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_pool_info", prometheus.Labels{"name": "GitHubActions", "primordial": "false"})
+	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_pool_info", prometheus.Labels{"pool": "GitHubActions", "primordial": "false"})
 	testutils.RequireFixtureMetric(t, metrics, storage_spaces.Name, "windows_storage_spaces_virtual_disk_info", virtualDisk)
 
 	for _, tc := range []struct {

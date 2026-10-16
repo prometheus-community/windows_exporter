@@ -206,63 +206,63 @@ func (c *Collector) buildDescriptors() {
 	c.connectionBandwidthSavingsUsingDFSReplicationRatio = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_bandwidth_savings_using_dfs_replication_ratio"),
 		"Share of bandwidth saved by DFS Replication for this connection using RDC and other compression, compared to transferring the files uncompressed (0-1)",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionBytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_bytes_received_total"),
 		"Total bytes received for connection",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionCompressedSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_compressed_size_of_files_received_bytes_total"),
 		"Total compressed size of files received on the connection, in bytes",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_received_files_total"),
 		"Total number of files received for connection",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionRDCBytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_rdc_received_bytes_total"),
 		"Total bytes received on the connection while replicating files using Remote Differential Compression",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionRDCCompressedSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_rdc_compressed_size_of_received_files_bytes_total"),
 		"Total compressed size of files received with Remote Differential Compression on the connection, in bytes. This is the number of bytes that would have been received had RDC not been used",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionRDCNumberOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_rdc_received_files_total"),
 		"Total number of files received using remote differential compression",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionRDCSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_rdc_size_of_received_files_bytes_total"),
 		"Total size of received Remote Differential Compression files, in bytes.",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
 	c.connectionSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_files_received_bytes_total"),
 		"Total size of files received, in bytes",
-		[]string{"name"},
+		[]string{"connection"},
 		nil,
 	)
 
@@ -270,189 +270,189 @@ func (c *Collector) buildDescriptors() {
 	c.folderBandwidthSavingsUsingDFSReplicationRatio = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_bandwidth_savings_using_dfs_replication_ratio"),
 		"Share of bandwidth saved by DFS Replication for this replicated folder using RDC and other compression, compared to transferring the files uncompressed (0-1)",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderCompressedSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_compressed_size_of_received_files_bytes_total"),
 		"Total compressed size of files received on the folder, in bytes",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictBytesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_cleaned_up_bytes_total"),
 		"Total size of conflict loser files and folders deleted from the Conflict and Deleted folder, in bytes",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictBytesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_generated_bytes_total"),
 		"Total size of conflict loser files and folders moved to the Conflict and Deleted folder, in bytes",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictFilesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_cleaned_up_files_total"),
 		"Number of conflict loser files deleted from the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictFilesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_generated_files_total"),
 		"Number of files and folders moved to the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictFolderCleanupsCompletedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_folder_cleanups_total"),
 		"Number of deletions of conflict loser files and folders in the Conflict and Deleted",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderConflictSpaceInUse = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_conflict_space_in_use_bytes"),
 		"Total size of the conflict loser files and folders currently in the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderDeletedSpaceInUse = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_deleted_space_in_use_bytes"),
 		"Total size (in bytes) of the deleted files and folders currently in the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderDeletedBytesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_deleted_cleaned_up_bytes_total"),
 		"Total size (in bytes) of replicating deleted files and folders that were cleaned up from the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderDeletedBytesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_deleted_generated_bytes_total"),
 		"Total size (in bytes) of replicated deleted files and folders that were moved to the Conflict and Deleted folder after they were deleted from a replicated folder on a sending member",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderDeletedFilesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_deleted_cleaned_up_files_total"),
 		"Number of files and folders that were cleaned up from the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderDeletedFilesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_deleted_generated_files_total"),
 		"Number of deleted files and folders that were moved to the Conflict and Deleted folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderFileInstallsRetriedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_file_installs_retried_total"),
 		"Total number of file installs that are being retried due to sharing violations or other errors encountered when installing the files",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderFileInstallsSucceededTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_file_installs_succeeded_total"),
 		"Total number of files that were successfully received from sending members and installed locally on this server",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_received_files_total"),
 		"Total number of files received",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderRDCBytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_rdc_received_bytes_total"),
 		"Total number of bytes received in replicating files using Remote Differential Compression",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderRDCCompressedSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_rdc_compressed_size_of_received_files_bytes_total"),
 		"Total compressed size (in bytes) of the files received with Remote Differential Compression",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderRDCNumberOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_rdc_received_files_total"),
 		"Total number of files received with Remote Differential Compression",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderRDCSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_rdc_files_received_bytes_total"),
 		"Total uncompressed size (in bytes) of the files received with Remote Differential Compression",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderSizeOfFilesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_files_received_bytes_total"),
 		"Total uncompressed size (in bytes) of the files received",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderStagingSpaceInUse = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_staging_space_in_use_bytes"),
 		"Total size of files and folders currently in the staging folder.",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderStagingBytesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_staging_cleaned_up_bytes_total"),
 		"Total size (in bytes) of the files and folders that have been cleaned up from the staging folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderStagingBytesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_staging_generated_bytes_total"),
 		"Total size (in bytes) of replicated files and folders in the staging folder created by the DFS Replication service since last restart",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderStagingFilesCleanedUpTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_staging_cleaned_up_files_total"),
 		"Total number of files and folders that have been cleaned up from the staging folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderStagingFilesGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_staging_generated_files_total"),
 		"Total number of times replicated files and folders have been staged by the DFS Replication service",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
 	c.folderUpdatesDroppedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_dropped_updates_total"),
 		"Total number of redundant file replication update records that have been ignored by the DFS Replication service because they did not change the replicated file or folder",
-		[]string{"name"},
+		[]string{"folder"},
 		nil,
 	)
 
@@ -460,35 +460,35 @@ func (c *Collector) buildDescriptors() {
 	c.volumeDatabaseCommitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "volume_database_commits_total"),
 		"Total number of DFSR volume database commits",
-		[]string{"name"},
+		[]string{"volume"},
 		nil,
 	)
 
 	c.volumeDatabaseLookupsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "volume_database_lookups_total"),
 		"Total number of DFSR volume database lookups",
-		[]string{"name"},
+		[]string{"volume"},
 		nil,
 	)
 
 	c.volumeUSNJournalUnreadRatio = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "volume_usn_journal_unread_ratio"),
 		"Share of the volume USN journal that DFS Replication has not read and processed yet (0-1). A journal wrap occurs at 1",
-		[]string{"name"},
+		[]string{"volume"},
 		nil,
 	)
 
 	c.volumeUSNJournalRecordsAcceptedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "volume_usn_journal_accepted_records_total"),
 		"Total number of USN journal records accepted",
-		[]string{"name"},
+		[]string{"volume"},
 		nil,
 	)
 
 	c.volumeUSNJournalRecordsReadTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "volume_usn_journal_read_records_total"),
 		"Total number of DFSR volume USN journal records read",
-		[]string{"name"},
+		[]string{"volume"},
 		nil,
 	)
 }

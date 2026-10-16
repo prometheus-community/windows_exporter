@@ -60,37 +60,37 @@ func (c *Collector) buildHTTPProxy() error {
 	c.mailboxServerLocatorAverageLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_server_locator_avg_latency_seconds"),
 		"Average latency in seconds of MailboxServerLocator web service calls",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 	c.averageAuthenticationLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_auth_latency_seconds"),
 		"Average time in seconds spent authenticating CAS requests over the last 200 samples",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 	c.outstandingProxyRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_outstanding_proxy_requests"),
 		"Number of concurrent outstanding proxy requests",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 	c.proxyRequestsPerSec = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_requests_total"),
 		"Number of proxy requests processed each second",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 	c.averageCASProcessingLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_cas_processing_latency_seconds"),
 		"Average latency in seconds of CAS processing time over the last 200 reqs",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 	c.mailboxServerProxyFailureRate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_proxy_failure_ratio"),
 		"Ratio (0-1) of failures between this CAS and MBX servers over the last 200 samples",
-		[]string{"name"},
+		[]string{"protocol"},
 		nil,
 	)
 

@@ -71,21 +71,21 @@ func (c *Collector) buildSharedVolumesDescriptors() {
 	c.sharedVolumesInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "info"),
 		"Cluster Shared Volumes information (value is always 1)",
-		[]string{"name", "path", "volume_guid"},
+		[]string{"shared_volume", "path", "volume_guid"},
 		nil,
 	)
 
 	c.sharedVolumesTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "total_bytes"),
 		"Total size of the Cluster Shared Volume in bytes",
-		[]string{"name", "volume_guid"},
+		[]string{"shared_volume", "volume_guid"},
 		nil,
 	)
 
 	c.sharedVolumesFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "free_bytes"),
 		"Free space on the Cluster Shared Volume in bytes",
-		[]string{"name", "volume_guid"},
+		[]string{"shared_volume", "volume_guid"},
 		nil,
 	)
 }

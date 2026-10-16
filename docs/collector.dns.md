@@ -43,7 +43,7 @@ Name | Description | Type | Labels
 `windows_dns_wins_queries_total` | Number of WINS lookup requests received by the server | counter | `direction`
 `windows_dns_wins_responses_total` | Number of WINS lookup responses sent by the server | counter | `direction`
 `windows_dns_unmatched_responses_total` | Number of response packets received by the DNS server that do not match any outstanding remote query | counter | None
-`windows_dns_wmi_stats_total` | DNS WMI statistics from MicrosoftDNS_Statistic | counter | `name`, `collection_name`, `dns_server`
+`windows_dns_wmi_stats_total` | DNS WMI statistics from MicrosoftDNS_Statistic | counter | `statistic`, `collection_name`, `dns_server`
 
 ### Sub-collectors
 
@@ -73,22 +73,22 @@ windows_exporter.exe --collector.dns.enabled=metrics,wmi_stats
 
 ### Example metric
 ```
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadKey"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadSig"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadTime"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="FormError"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="Max"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NoError"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotAuth"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotImpl"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotZone"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NxDomain"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NxRRSet"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="Refused"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="ServFail"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="UnknownError"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="YxDomain"} 0
-windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="YxRRSet"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="BadKey"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="BadSig"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="BadTime"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="FormError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="Max"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NoError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NotAuth"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NotImpl"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NotZone"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NxDomain"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="NxRRSet"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="Refused"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="ServFail"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="UnknownError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="YxDomain"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",statistic="YxRRSet"} 0
 ```
 
 ## Useful queries

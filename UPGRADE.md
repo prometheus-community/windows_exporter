@@ -19,6 +19,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You alert on BitLocker status                                                                   | Replace `status="disabled"` with `status="off"`                         | [BitLocker status](#bitlocker-status)                             |
 | You query Active Directory latency or security descriptor propagation, DFSR, DNS dynamic update, Hyper-V, logical disk queue, cache, IIS, memory, RemoteFX, SQL Server, scheduled task, SMB server share or terminal services metrics | Update queries                                                          | [Renamed, removed and retyped metrics](#renamed-removed-and-retyped-metrics) |
 | You query metrics in MHz, percent, minutes, milliseconds, microseconds, kilobytes, megabytes or parts per billion, counters without a `_total` suffix, or Exchange, Hyper-V DataStore and Virtual SMB, IIS application pool, mscluster, NPS or SQL Server counters | Update queries | [Base units and counter names](#base-units-and-counter-names) |
+| You query `dfsr`, `dhcp` scope, `diskdrive`, `dns` WMI, `exchange`, Hyper-V Virtual SMB, `mscluster`, `msmq`, `registry`, `service`, `storage_spaces` or `wmi` metrics by their `name` or `instance` label, or `performancecounter` objects without `instance_label` | Rename the label in queries and alerts | [Instance label names](#instance-label-names) |
 | You enable the `scheduled_task` collector and use tasks below `\Microsoft\` or missed runs      | Set `--collector.scheduled_task.exclude` or `missed-runs`               | [scheduled_task collector](#scheduled_task-collector)             |
 | You chart SQL Server latencies, lock counts or replica queues, DHCP denials, AD LSA writes, AD computer creations, AD FS database query times, DNS zone transfers or RemoteFX skipped frames | Expect corrected values                                                 | [Corrected values](#corrected-values)                             |
 | You enable the `hyperv` or `mscluster` collector                                                | Check the new default sub-collectors                                    | [New default sub-collectors](#new-default-sub-collectors)         |
@@ -86,7 +87,7 @@ collector:
             metric: windows_thermalzone_throttle_reasons
 ```
 
-`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `instance`, which collides with the target label that Prometheus adds.
+`instance_label: name` keeps the `name` label of 0.31. Without it, the label is called `object_instance`. In 0.31 the default label was `instance`, which Prometheus stored as `exported_instance` (or, with `honor_labels: true`, as `instance`, replacing the target label); replace it with `object_instance` in queries.
 
 `windows_thermalzone_percent_passive_limit` and `windows_thermalzone_throttle_reasons` keep their names.
 The temperature is exported in Kelvin, because `performancecounter` doesn't convert units. Replace `windows_thermalzone_temperature_celsius` in queries with:
@@ -352,6 +353,14 @@ Retired: `windows_net_route_info` was documented but never exported. It was remo
 
 windows_exporter 0.32 follows the Prometheus naming conventions for every metric: values are in base units (seconds, bytes, hertz, ratios from 0 to 1), the unit is part of the name, and counters end in `_total`.
 The metrics below were renamed. **The old names are no longer exported, there are no aliases.** Update queries, recording rules, alerts and dashboards; the sample dashboards in [`dashboard/`](dashboard/README.md) and the rules in [`contrib/mixin`](contrib/mixin) already use the new names.
+
+### Compatibility recording rules
+
+To migrate step by step, load [`docs/example-0.32-compatibility-rules-new-to-old.yml`](docs/example-0.32-compatibility-rules-new-to-old.yml) into Prometheus.
+Its recording rules publish the metrics of 0.32 under their 0.31 names, with the 0.31 units and [instance labels](#instance-label-names), so existing dashboards and alerts keep working while you update them.
+A 0.31 `instance` label comes back as `exported_instance`, the name under which Prometheus stored it.
+The rules don't cover metrics that only renamed their instance label, such as `windows_service_*`, because a rule with the same name would duplicate every series, nor metrics whose 0.31 value can't be computed from 0.32.
+Remove the rules once your queries use the new names.
 
 ### Unit changes
 
@@ -684,6 +693,49 @@ If Prometheus scrapes with OpenMetrics, it already stored exactly these names, b
 | `windows_nps_accounting_responses`                                      | `windows_nps_accounting_responses_total`                                        | Same value |
 | `windows_nps_accounting_unknown_type`                                   | `windows_nps_accounting_unknown_type_total`                                     | Same value |
 
+## Instance label names
+
+The label that identifies the instance of a metric is now named after the entity it identifies, for example `service`, `queue` or `node`.
+0.31 used the generic keys `name` and `instance` for many of them. `instance` also collided with the target label that Prometheus adds, so Prometheus renamed it to `exported_instance` (or overwrote the target label with `honor_labels: true`).
+Label values are unchanged. **The old keys are no longer exported, there are no aliases.** Update label matchers, `by (...)` and `on (...)` clauses, legends and alert templates such as `{{ $labels.name }}`.
+
+| Collector        | Metrics                                                    | 0.31                  | 0.32             |
+|------------------|------------------------------------------------------------|-----------------------|------------------|
+| `dfsr`           | `windows_dfsr_connection_*`                                | `name`                | `connection`     |
+| `dfsr`           | `windows_dfsr_folder_*`                                    | `name`                | `folder`         |
+| `dfsr`           | `windows_dfsr_volume_*`                                    | `name`                | `volume`         |
+| `dhcp`           | `windows_dhcp_scope_info`                                  | `name`                | `scope_name`     |
+| `diskdrive`      | `windows_diskdrive_*`                                      | `name`                | `device_id` (the `name` label of `windows_diskdrive_info` is removed; it repeated `device_id`) |
+| `dns`            | `windows_dns_wmi_stats_total`                              | `name`                | `statistic`      |
+| `exchange`       | `windows_exchange_ldap_*`                                  | `name`                | `process`        |
+| `exchange`       | `windows_exchange_http_proxy_*`                            | `name`                | `protocol`       |
+| `exchange`       | `windows_exchange_transport_queues_*`                      | `name`                | `queue`          |
+| `exchange`       | `windows_exchange_workload_*`                              | `name`                | `workload`       |
+| `hyperv`         | `windows_hyperv_virtual_smb_*`                             | `instance`            | `vm`             |
+| `mscluster`      | `windows_mscluster_cluster_*`                              | `name`                | `cluster`        |
+| `mscluster`      | `windows_mscluster_network_*`                              | `name`                | `network`        |
+| `mscluster`      | `windows_mscluster_node_*`                                 | `name`                | `node`           |
+| `mscluster`      | `windows_mscluster_resource_*`                             | `name`, `node_name`, `owner_group` | `resource`, `node`, `resource_group` |
+| `mscluster`      | `windows_mscluster_resourcegroup_*`                        | `name`, `node_name`   | `resource_group`, `node` |
+| `mscluster`      | `windows_mscluster_shared_volumes_*`                       | `name`                | `shared_volume`  |
+| `msmq`           | `windows_msmq_*`                                           | `name`                | `queue`          |
+| `registry`       | `windows_registry_key_success`                             | `name`                | `key`            |
+| `service`        | `windows_service_*`                                        | `name`                | `service`        |
+| `storage_spaces` | `windows_storage_spaces_pool_*`                            | `name`                | `pool`           |
+| `storage_spaces` | `windows_storage_spaces_virtual_disk_*`                    | `name`                | `virtual_disk`   |
+| `wmi`            | `windows_wmi_query_success`, `windows_wmi_query_duration_seconds` | `name`         | `query`          |
+| `performancecounter` | objects without `instance_label` | `instance` (stored by Prometheus as `exported_instance`, or as `instance` with `honor_labels: true`) | `object_instance` |
+
+The `node_name` label of `windows_mscluster_resource_owner_node` and `windows_mscluster_resourcegroup_owner_node` is now `node`, like the label of the node metrics, so the owner can be joined with `on (node)`. The `owner_group` label of the resource metrics is now `resource_group`, like the label of the resource group metrics.
+Info attributes that are not the instance key keep their names, for example the `name` label of `windows_cpu_info` (the processor model) and of `windows_gpu_info` (the adapter name).
+
+For example, the stopped automatic services query becomes:
+
+```promql
+windows_service_state{state="running"} == 0
+  and on (instance, service) windows_service_start_mode{start_mode="auto"} == 1
+```
+
 ## Corrected values
 
 These metrics keep their names, but 0.31 reported wrong values. Graphs show a step at the upgrade.
@@ -733,7 +785,7 @@ Storage pool and virtual disk metrics are in the new `storage_spaces` collector 
 It works on standalone hosts too and doesn't need a failover cluster.
 
 The `mscluster` collector now reads cluster data through the Windows Cluster API (`clusapi.dll`) instead of the `root\MSCluster` WMI namespace.
-Labels and configuration are unchanged; metrics in minutes, milliseconds, hours, kilobytes, megabytes or percent are now in base units, see [Base units and counter names](#base-units-and-counter-names). `windows_mscluster_resource_is_alive_poll_interval_seconds` and `windows_mscluster_resource_looks_alive_poll_interval_seconds` are left out while the resource uses the interval of its resource type (0xFFFFFFFF in Windows). A property that can't be read is left out and reported as a collection error, instead of being exported as `0`.
+Configuration is unchanged. The `name`, `node_name` and `owner_group` labels were renamed, see [Instance label names](#instance-label-names). Metrics in minutes, milliseconds, hours, kilobytes, megabytes or percent are now in base units, see [Base units and counter names](#base-units-and-counter-names). `windows_mscluster_resource_is_alive_poll_interval_seconds` and `windows_mscluster_resource_looks_alive_poll_interval_seconds` are left out while the resource uses the interval of its resource type (0xFFFFFFFF in Windows). A property that can't be read is left out and reported as a collection error, instead of being exported as `0`.
 
 ## Scrape timeouts
 

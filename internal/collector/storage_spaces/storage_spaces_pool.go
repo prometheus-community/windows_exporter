@@ -66,42 +66,42 @@ func (c *Collector) buildStoragePool() error {
 	c.storagePoolInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "info"),
 		"Storage pool information (value is always 1). primordial is true for the built-in primordial pool",
-		[]string{"name", "unique_id", "primordial"},
+		[]string{"pool", "unique_id", "primordial"},
 		nil,
 	)
 
 	c.storagePoolHealthStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "health_status"),
 		"Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown",
-		[]string{"name", "unique_id"},
+		[]string{"pool", "unique_id"},
 		nil,
 	)
 
 	c.storagePoolSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "size_bytes"),
 		"Total size of the storage pool in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"pool", "unique_id"},
 		nil,
 	)
 
 	c.storagePoolAllocatedSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "allocated_size_bytes"),
 		"Allocated size of the storage pool in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"pool", "unique_id"},
 		nil,
 	)
 
 	c.storagePoolOperationalStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "operational_status"),
 		"Operational status codes reported for the storage pool (one series per status value)",
-		[]string{"name", "unique_id", "status"},
+		[]string{"pool", "unique_id", "status"},
 		nil,
 	)
 
 	c.storagePoolThinProvisioningAlertThresholds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "thin_provisioning_alert_thresholds"),
 		"Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold)",
-		[]string{"name", "unique_id", "threshold"},
+		[]string{"pool", "unique_id", "threshold"},
 		nil,
 	)
 

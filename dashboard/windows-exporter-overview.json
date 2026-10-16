@@ -691,7 +691,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "count(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0 and on (name) windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1) or vector(0)",
+                                                "expr": "count(windows_service_state{job=~\"$job\", instance=\"$instance\", state=\"running\"} == 0 and on (service) windows_service_start_mode{job=~\"$job\", instance=\"$instance\", start_mode=\"auto\"} == 1) or vector(0)",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
                                                 "range": false
