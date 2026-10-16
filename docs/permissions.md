@@ -39,14 +39,16 @@ Install the MSI with the account:
 msiexec /i <path-to-msi-file> --% SERVICE_ACCOUNT="NT SERVICE\windows_exporter"
 ```
 
-For a gMSA, set `SERVICE_ACCOUNT="CONTOSO\svc-exporter$"`. For a user, also set
-`SERVICE_PASSWORD`; the MSI keeps it out of its log. A gMSA or a user needs
+For a gMSA, set `SERVICE_ACCOUNT="CONTOSO\svc-exporter$"` (not verified through
+the MSI). For a user, use `CONTOSO\user` or `.\user` for a local user and also
+set `SERVICE_PASSWORD`; the MSI keeps it out of its log. A gMSA or a user needs
 "Log on as a service" before you install, because the MSI starts the service
 right away. The MSI starts it before the account has the other rights below,
 so restart the service after granting them.
 
-Then run this in an elevated PowerShell. The service must exist before Windows
-can resolve the virtual account `NT SERVICE\windows_exporter`.
+Then run this in an elevated PowerShell. Windows resolves the virtual account
+`NT SERVICE\windows_exporter` only once the service exists, so run it after the
+installation.
 
 ```powershell
 $service = 'windows_exporter'
@@ -121,10 +123,9 @@ Restart-Service windows_exporter
 ```
 
 The MSI does not remember `SERVICE_ACCOUNT`, like its other properties. An
-upgrade or a repair installs the service again, as `LocalSystem` unless you
-pass `SERVICE_ACCOUNT` (and `SERVICE_PASSWORD`) again. Group memberships and
-user rights of the account stay, so passing the same properties to every
-`msiexec` run is enough.
+upgrade installs the service again, as `LocalSystem` unless you pass
+`SERVICE_ACCOUNT` (and `SERVICE_PASSWORD`) again. Pass the same properties to
+every `msiexec` run. Group memberships and user rights of the account stay.
 
 ## Collectors with limits
 
