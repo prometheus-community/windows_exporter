@@ -409,19 +409,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoDataUnexpected)
 	}
 
-	// The query times are PERF_AVERAGE_TIMER counters: the raw value is the
-	// summed duration in ticks of the counter's time base.
-	artifactDBFrequency, _ := c.perfDataCollector.Frequency(counterArtifactDBQueryTime)
-	configDBFrequency, _ := c.perfDataCollector.Frequency(counterConfigDBQueryTime)
-
-	c.collectMetrics(ch, c.perfDataObject[0], artifactDBFrequency, configDBFrequency)
+	c.collectMetrics(ch, c.perfDataObject[0])
 
 	return nil
 }
 
-// collectMetrics sends the metrics of data. A query time is only sent if the
-// frequency of its counter is known.
-func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCounterValues, artifactDBFrequency, configDBFrequency int64) {
+// collectMetrics sends the metrics of data.
+func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCounterValues) {
 	ch <- prometheus.MustNewConstMetric(
 		c.adLoginConnectionFailures,
 		prometheus.CounterValue,
@@ -662,13 +656,13 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCou
 		data.ArtifactDBQueries,
 	)
 
-	if artifactDBFrequency > 0 {
-		ch <- prometheus.MustNewConstMetric(
-			c.artifactDBQueryTime,
-			prometheus.CounterValue,
-			data.ArtifactDBQueryTimeTicks/float64(artifactDBFrequency),
-		)
-	}
+	// PERF_AVERAGE_TIMER: the summed query time, converted to seconds by
+	// internal/pdh; the second value counts the queries.
+	ch <- prometheus.MustNewConstMetric(
+		c.artifactDBQueryTime,
+		prometheus.CounterValue,
+		data.ArtifactDBQueryTimeSeconds,
+	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.configDBFailures,
@@ -682,13 +676,13 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, data perfDataCou
 		data.ConfigDBQueries,
 	)
 
-	if configDBFrequency > 0 {
-		ch <- prometheus.MustNewConstMetric(
-			c.configDBQueryTime,
-			prometheus.CounterValue,
-			data.ConfigDBQueryTimeTicks/float64(configDBFrequency),
-		)
-	}
+	// PERF_AVERAGE_TIMER: the summed query time, converted to seconds by
+	// internal/pdh; the second value counts the queries.
+	ch <- prometheus.MustNewConstMetric(
+		c.configDBQueryTime,
+		prometheus.CounterValue,
+		data.ConfigDBQueryTimeSeconds,
+	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.federationMetadataRequests,

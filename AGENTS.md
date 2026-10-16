@@ -141,10 +141,11 @@ exercised a live Windows role.
   appropriate. Raw PDH values can be cumulative numerators, ticks or counts,
   even when the Windows counter name says average, percentage or seconds.
   Convert units explicitly; expose the base/operation count needed for ratios.
-  The raw value of a `PERF_AVERAGE_TIMER` counter is in ticks of its time
-  base: in new code, divide it by `pdh.Collector.Frequency` instead of a fixed
-  factor. The disk and `smbclient` collectors still use the fixed 1e-7
-  (10 MHz) factor.
+  With `pdh.CounterTypeRaw`, `internal/pdh` converts the time types to seconds:
+  the 100 ns timers and `PERF_COUNTER_100NS_QUEUELEN_TYPE` by dividing by
+  `pdh.TicksPerSecond`, and `PERF_AVERAGE_TIMER` by dividing by the counter's
+  own time base (its `,secondvalue` stays the operation count). Don't scale
+  these again in a collector.
   Never publish an invalid sample as zero: that can look like a counter reset.
 - Keep the typed PDH collectors and `perfdata` tags. `internal/pdh` passes
   instance names through unchanged, so a `#N` in a name always comes from

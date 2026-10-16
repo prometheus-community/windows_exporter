@@ -31,6 +31,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -487,10 +488,10 @@ func newCollector[T any](logger *slog.Logger, query *Query, resultType CounterTy
 					continue
 				}
 			case PERF_AVERAGE_TIMER:
-				// Only [Collector.Frequency] uses the time base of an average
-				// timer, so a missing one is not an error. Collect retries it.
-				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
-					counter.Frequency = 0
+				// The time base of an average timer is the performance counter
+				// frequency, so use that if PDH has none.
+				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess || counter.Frequency <= 0 {
+					counter.Frequency, _ = kernel32.QueryPerformanceFrequency()
 				}
 			}
 		}
@@ -569,11 +570,11 @@ func (c *Collector[T]) MetricType(counterName string) (prometheus.ValueType, boo
 }
 
 // Frequency returns the time base in ticks per second of the raw timer counter
-// named counterName. The raw value of a PERF_AVERAGE_TIMER counter is the sum
-// of the measured durations in these ticks; divide it by the frequency to get
-// seconds. It returns false if the counter is unknown, is not such a timer or
-// its time base is not known yet. [Collector.Collect] reads a missing time
-// base again.
+// named counterName. [Collector.Collect] already converts the values of these
+// counters to seconds; a collector needs the time base only to work on the
+// ticks, for example to extend a 32-bit counter past its wrap. It returns
+// false if the counter is unknown, is not such a timer or its time base is not
+// known yet.
 func (c *Collector[T]) Frequency(counterName string) (int64, bool) {
 	if c == nil {
 		return 0, false
@@ -724,7 +725,8 @@ func hasTimeBase(counterType uint32) bool {
 // the collector was created. Early after a reboot, PDH can report no data
 // for it, e.g. for APP_POOL_WAS while WAS is still starting (#2313). Without a
 // time base, an elapsed time counter has no valid value and every instance is
-// omitted.
+// omitted. An average timer falls back to QueryPerformanceFrequency at
+// creation, so it only needs this if that failed too.
 func (c *Collector[T]) loadTimeBase(counter *Counter) {
 	if c.resultType != CounterTypeRaw || !hasTimeBase(counter.Type) || counter.Frequency > 0 {
 		return
@@ -810,9 +812,26 @@ func (c *Collector[T]) setRawValue(row *T, counter *Counter, value RawCounter) b
 		if counter.FieldIndexValue != -1 {
 			c.rows.setValue(row, counter.FieldIndexValue, float64(value.SecondValue-value.FirstValue)/float64(counter.Frequency))
 		}
-	case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
+	case PERF_100NSEC_TIMER, PERF_100NSEC_TIMER_INV, PERF_100NSEC_MULTI_TIMER, PERF_100NSEC_MULTI_TIMER_INV, PERF_PRECISION_100NS_TIMER,
+		PERF_COUNTER_100NS_QUEUELEN_TYPE:
+		// The queue length type sums the queue length times the elapsed 100 ns
+		// ticks, so in seconds its rate is the average queue length.
 		if counter.FieldIndexValue != -1 {
-			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)*TicksToSecondScaleFactor)
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)/TicksPerSecond)
+		}
+	case PERF_AVERAGE_TIMER:
+		// The first value sums the measured durations in ticks of the counter's
+		// time base, the second value counts the operations.
+		if counter.Frequency <= 0 {
+			return false
+		}
+
+		if counter.FieldIndexSecondValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexSecondValue, float64(value.SecondValue))
+		}
+
+		if counter.FieldIndexValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)/float64(counter.Frequency))
 		}
 	default:
 		if counter.FieldIndexSecondValue != -1 {

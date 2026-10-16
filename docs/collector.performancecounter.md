@@ -218,16 +218,24 @@ keep counting up. If the multiplier is the reciprocal of an integer, like `0.001
 the value is divided by that integer instead, which avoids rounding artifacts
 such as `0.009000000000000001`. If not specified, the value is exported as is.
 
-With the object `type` `raw`, the default, some counters are already converted
-to seconds, so do not scale them again: `PERF_100NSEC_TIMER` and
-`PERF_PRECISION_100NS_TIMER` counters such as `% Idle Time` are exported in
-seconds, and `PERF_ELAPSED_TIME` counters such as `Process\Elapsed Time` as
-seconds since the start. `PERF_100NSEC_TIMER_INV` counters such as
-`% Processor Time` are not converted and arrive in 100 ns ticks of inactive time
-(for `% Processor Time`, the idle time); a multiplier of `1e-7` converts them to
-seconds. `PERF_AVERAGE_TIMER` counters such as `Avg. Disk sec/Read` count ticks
-of the performance timer, whose frequency depends on the host, so a fixed
-multiplier does not fit them; use the `formatted` type for them.
+With the object `type` `raw`, the default, time counters are already converted
+to seconds, so do not scale them again:
+
+- the 100 ns timers (`PERF_100NSEC_TIMER`, `PERF_100NSEC_TIMER_INV`,
+  `PERF_100NSEC_MULTI_TIMER`, `PERF_100NSEC_MULTI_TIMER_INV` and
+  `PERF_PRECISION_100NS_TIMER`), such as `% Idle Time`;
+- `PERF_COUNTER_100NS_QUEUELEN_TYPE` counters, such as `Avg. Data Queue Length`
+  of `SMB Client Shares`, as queue length times seconds, so their rate is the
+  average queue length;
+- `PERF_AVERAGE_TIMER` counters, such as `Avg. Disk sec/Read`, as the summed
+  duration in seconds, using the time base of the counter. Their second value
+  is the number of operations;
+- `PERF_ELAPSED_TIME` counters, such as `Process\Elapsed Time`, as seconds since
+  the start.
+
+The raw value of an `_INV` counter is the inactive time: for `% Processor Time`,
+that is the idle time, not the busy time. `MULTI_TIMER` values are summed over
+all units of the counter, so they can grow faster than wall time.
 
 This key is optional.
 

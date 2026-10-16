@@ -295,21 +295,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			data.AvgDiskSecPerRead*pdh.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerRead,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			data.AvgDiskSecPerWrite*pdh.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerWrite,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			data.AvgDiskSecPerTransfer*pdh.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerTransfer,
 			disk_number,
 		)
 	}

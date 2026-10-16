@@ -20,6 +20,7 @@ package smbclient
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"time"
 
@@ -110,6 +111,12 @@ func restartSignals(data *perfDataCounterValues) [numRestartSignals]float64 {
 		data.AvgDataQueueLength,
 	}
 }
+
+// timerCounters32 names the PERF_AVERAGE_TIMER counters in the order of
+// fields32.
+//
+//nolint:gochecknoglobals
+var timerCounters32 = [numTimers32]string{"Avg. sec/Read", "Avg. sec/Write", "Avg. sec/Data Request"}
 
 // fields32 returns the 32-bit counters: first the PERF_AVERAGE_TIMER
 // numerators, then the request counters (PERF_COUNTER_COUNTER).
@@ -275,6 +282,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	c.generation++
 
+	// internal/pdh converts the timer sums to seconds; extendCounters32 needs
+	// their ticks.
+	var frequencies [numTimers32]float64
+
+	for i, name := range timerCounters32 {
+		if frequency, ok := c.perfDataCollector.Frequency(name); ok {
+			frequencies[i] = float64(frequency)
+		}
+	}
+
 	for _, data := range c.perfDataObject {
 		serverValue, shareValue, ok := parseInstanceName(data.Name)
 		if !ok {
@@ -289,50 +306,50 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			continue
 		}
 
-		c.extendCounters32(&data)
+		c.extendCounters32(&data, frequencies)
 
-		// Request time spent on queue. Convert from ticks to seconds.
+		// Request time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgDataQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgDataQueueLength,
 			serverValue, shareValue,
 		)
 
-		// Read time spent on queue. Convert from ticks to seconds.
+		// Read time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgReadQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgReadQueueLength,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerRead*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerRead,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			data.AvgSecPerWrite*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerWrite,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			data.AvgSecPerDataRequest*pdh.TicksToSecondScaleFactor,
+			data.AvgSecPerDataRequest,
 			serverValue, shareValue,
 		)
 
-		// Write time spent on queue. Convert from  ticks to seconds.
+		// Write time spent on queue, in seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data.AvgWriteQueueLength*pdh.TicksToSecondScaleFactor,
+			data.AvgWriteQueueLength,
 			serverValue, shareValue,
 		)
 
@@ -458,10 +475,17 @@ func (c *Collector) pruneCounters32() {
 	}
 }
 
-// extendCounters32 replaces the raw 32-bit counters with values that keep
-// counting past 2^32.
-func (c *Collector) extendCounters32(data *perfDataCounterValues) {
+// extendCounters32 replaces the 32-bit counters with values that keep
+// counting past 2^32. The timer sums arrive in seconds and wrap at 2^32 ticks
+// of their time base in frequencies, so they are extended as ticks.
+func (c *Collector) extendCounters32(data *perfDataCounterValues, frequencies [numTimers32]float64) {
 	fields := fields32(data)
+
+	for i, frequency := range frequencies {
+		if frequency > 0 {
+			*fields[i] = math.Round(*fields[i] * frequency)
+		}
+	}
 
 	signals := restartSignals(data)
 
@@ -492,6 +516,12 @@ func (c *Collector) extendCounters32(data *perfDataCounterValues) {
 
 	for i, field := range fields {
 		*field = counters.counters[i].Update(*field, reset)
+	}
+
+	for i, frequency := range frequencies {
+		if frequency > 0 {
+			*fields[i] /= frequency
+		}
 	}
 }
 

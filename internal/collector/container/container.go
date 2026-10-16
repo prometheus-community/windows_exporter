@@ -671,7 +671,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.TotalRuntime100ns)*pdh.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.TotalRuntime100ns)/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -679,7 +679,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.RuntimeUser100ns)*pdh.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.RuntimeUser100ns)/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -687,7 +687,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.RuntimeKernel100ns)*pdh.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.RuntimeKernel100ns)/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -939,7 +939,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
-		(float64(jobInfo.BasicInfo.TotalKernelTime)+float64(jobInfo.BasicInfo.TotalUserTime))*pdh.TicksToSecondScaleFactor,
+		(float64(jobInfo.BasicInfo.TotalKernelTime)+float64(jobInfo.BasicInfo.TotalUserTime))/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -947,7 +947,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
-		float64(jobInfo.BasicInfo.TotalUserTime)*pdh.TicksToSecondScaleFactor,
+		float64(jobInfo.BasicInfo.TotalUserTime)/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -955,7 +955,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
-		float64(jobInfo.BasicInfo.TotalKernelTime)*pdh.TicksToSecondScaleFactor,
+		float64(jobInfo.BasicInfo.TotalKernelTime)/pdh.TicksPerSecond,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)

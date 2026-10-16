@@ -21,8 +21,11 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // Conversion factors.
 const (
-	TicksToSecondScaleFactor       = 1 / 1e7
-	WindowsEpoch             int64 = 116444736000000000
+	// TicksPerSecond is the number of 100 ns ticks per second. Divide by it
+	// rather than multiply by its reciprocal: the quotient is correctly rounded,
+	// the product is not.
+	TicksPerSecond       = 1e7
+	WindowsEpoch   int64 = 116444736000000000
 )
 
 // Based on https://github.com/leoluk/perflib_exporter/blob/master/collector/mapper.go
@@ -74,21 +77,25 @@ const (
 
 //nolint:gochecknoglobals
 var SupportedCounterTypes = map[uint32]prometheus.ValueType{
-	PERF_COUNTER_RAWCOUNT_HEX:       prometheus.GaugeValue,
-	PERF_COUNTER_LARGE_RAWCOUNT_HEX: prometheus.GaugeValue,
-	PERF_COUNTER_RAWCOUNT:           prometheus.GaugeValue,
-	PERF_COUNTER_LARGE_RAWCOUNT:     prometheus.GaugeValue,
-	PERF_COUNTER_DELTA:              prometheus.CounterValue,
-	PERF_COUNTER_COUNTER:            prometheus.CounterValue,
-	PERF_COUNTER_BULK_COUNT:         prometheus.CounterValue,
-	PERF_RAW_FRACTION:               prometheus.GaugeValue,
-	PERF_LARGE_RAW_FRACTION:         prometheus.GaugeValue,
-	PERF_100NSEC_TIMER:              prometheus.CounterValue,
-	PERF_PRECISION_100NS_TIMER:      prometheus.CounterValue,
-	PERF_SAMPLE_FRACTION:            prometheus.GaugeValue,
-	PERF_100NSEC_TIMER_INV:          prometheus.CounterValue,
-	PERF_ELAPSED_TIME:               prometheus.GaugeValue,
-	PERF_SAMPLE_BASE:                prometheus.GaugeValue,
-	PERF_RAW_BASE:                   prometheus.GaugeValue,
-	PERF_LARGE_RAW_BASE:             prometheus.GaugeValue,
+	PERF_COUNTER_RAWCOUNT_HEX:        prometheus.GaugeValue,
+	PERF_COUNTER_LARGE_RAWCOUNT_HEX:  prometheus.GaugeValue,
+	PERF_COUNTER_RAWCOUNT:            prometheus.GaugeValue,
+	PERF_COUNTER_LARGE_RAWCOUNT:      prometheus.GaugeValue,
+	PERF_COUNTER_DELTA:               prometheus.CounterValue,
+	PERF_COUNTER_COUNTER:             prometheus.CounterValue,
+	PERF_COUNTER_BULK_COUNT:          prometheus.CounterValue,
+	PERF_RAW_FRACTION:                prometheus.GaugeValue,
+	PERF_LARGE_RAW_FRACTION:          prometheus.GaugeValue,
+	PERF_100NSEC_TIMER:               prometheus.CounterValue,
+	PERF_PRECISION_100NS_TIMER:       prometheus.CounterValue,
+	PERF_SAMPLE_FRACTION:             prometheus.GaugeValue,
+	PERF_100NSEC_TIMER_INV:           prometheus.CounterValue,
+	PERF_100NSEC_MULTI_TIMER:         prometheus.CounterValue,
+	PERF_100NSEC_MULTI_TIMER_INV:     prometheus.CounterValue,
+	PERF_ELAPSED_TIME:                prometheus.GaugeValue,
+	PERF_AVERAGE_TIMER:               prometheus.CounterValue,
+	PERF_COUNTER_100NS_QUEUELEN_TYPE: prometheus.CounterValue,
+	PERF_SAMPLE_BASE:                 prometheus.GaugeValue,
+	PERF_RAW_BASE:                    prometheus.GaugeValue,
+	PERF_LARGE_RAW_BASE:              prometheus.GaugeValue,
 }

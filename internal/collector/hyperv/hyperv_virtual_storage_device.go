@@ -205,19 +205,20 @@ func (c *Collector) publishVirtualStorageDevice(ch chan<- prometheus.Metric, scr
 			data.Name,
 		)
 
-		// The raw value of a PERF_AVERAGE_TIMER counter is the sum of all IO latencies in
-		// 100ns ticks; the operation count it is averaged over is Throughput.
+		// The value of a PERF_AVERAGE_TIMER counter is the sum of all IO latencies,
+		// converted to seconds by internal/pdh; the operation count it is averaged
+		// over is Throughput.
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceIOLatency,
 			prometheus.CounterValue,
-			data.VirtualStorageDeviceLatency*pdh.TicksToSecondScaleFactor,
+			data.VirtualStorageDeviceLatency,
 			data.Name,
 		)
 
 		ch <- scrape.MustNewConstMetric(
 			c.virtualStorageDeviceLowerIOLatency,
 			prometheus.CounterValue,
-			data.VirtualStorageDeviceLowerLatency*pdh.TicksToSecondScaleFactor,
+			data.VirtualStorageDeviceLowerLatency,
 			data.Name,
 		)
 	}

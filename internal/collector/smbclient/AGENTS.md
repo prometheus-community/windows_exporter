@@ -13,12 +13,16 @@ host has connected to. These notes were recorded on a Windows Server 2025
 - `Current Data Queue Length` is the only gauge ("the current number of read
   or write requests outstanding"). The `/sec` counters are cumulative counts.
 - `Avg. Data/Read/Write Queue Length` are `PERF_COUNTER_100NS_QUEUELEN_TYPE`:
-  the raw value is accumulated queue time in 100 ns ticks. `internal/pdh` does
-  not convert this type, so the collector applies the 1e-7 factor.
+  the raw value is accumulated queue time in 100 ns ticks, which
+  `internal/pdh` converts to seconds.
 - `Avg. sec/Read`, `Avg. sec/Write` and `Avg. sec/Data Request` are
-  `PERF_AVERAGE_TIMER`. The first value is the summed latency in ticks of the
-  10 MHz counter time base and the base is the request count; the collector
-  reads only the first value.
+  `PERF_AVERAGE_TIMER`. The first value is the summed latency, which
+  `internal/pdh` converts to seconds with the counter time base, and the base
+  is the request count; the collector reads only the first value. The raw
+  sum is 32 bits, so the collector converts it back to ticks with
+  `pdh.Collector.Frequency`, extends it past the 2^32 wrap with
+  `utils.Counter32` and divides again. Keep that round trip: extending the
+  seconds directly truncates them and adds 2^32 seconds per wrap.
 - `Data Bytes/sec`, `Read Bytes/sec` and `Write Bytes/sec` are bytes
   (`PERF_COUNTER_BULK_COUNT`).
 
