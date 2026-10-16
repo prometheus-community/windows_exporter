@@ -77,6 +77,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	if err := sysinfoapi.Load(); err != nil {
+		return err
+	}
+
 	productName, revision, installationType, err := c.getWindowsVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)

@@ -289,6 +289,10 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		c.logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
 	}
 
+	if err = wtsapi32.Load(); err != nil {
+		return err
+	}
+
 	c.hServer, err = wtsapi32.WTSOpenServer("")
 	if err != nil {
 		return fmt.Errorf("failed to open WTS server: %w", err)
