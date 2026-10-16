@@ -12,7 +12,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You enable the `filetime` collector                                                             | Switch to the `file` collector                                          | [filetime collector removed](#filetime-collector-removed)         |
 | You enable the `thermalzone` collector                                                          | Switch to a `performancecounter` object                                 | [thermalzone collector removed](#thermalzone-collector-removed)   |
 | You call the `/version` endpoint                                                                | Use `windows_exporter_build_info` instead                               | [/version endpoint removed](#version-endpoint-removed)            |
-| You use a configuration file, or set `--process.priority` or `--process.memory-limit`           | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
+| You use a configuration file, or set `--process.priority`, `--process.memory-limit`, `--scrape.timeout-margin`, `--telemetry.path` or `--collectors.disabled` | Check that the exporter still starts                                    | [Stricter validation](#stricter-configuration-validation)         |
 | You use the `process` collector                                                                 | Remove `counter-version`, check the `owner` label                       | [process collector](#process-collector)                           |
 | You use the `container` collector                                                               | Replace `containerd-state-dir` with `cri-endpoint`                      | [container collector](#container-collector)                       |
 | You query `windows_gpu_info`                                                                    | Replace the `phys` label with `device_number`                           | [GPU collector](#gpu-collector)                                   |
@@ -24,7 +24,7 @@ Most installations need no changes. Go through the checklist below and read the 
 | You set scrape timeouts above 5 minutes or below the timeout margin                             | Review the new limits                                                   | [Scrape timeouts](#scrape-timeouts)                               |
 | You use the sample Grafana dashboard                                                            | Use Grafana 13 or later and import the new dashboard                    | [Dashboard and alerts](#dashboard-and-alerts)                     |
 | You install with the MSI                                                                        | Note the one-time process stop during the upgrade                       | [Installer](#installer)                                           |
-| You embed `pkg/collector` as a Go library                                                       | Rename `Config.Filetime` to `Config.File`                               | [Library users](#library-users)                                   |
+| You embed `pkg/collector` as a Go library                                                       | Rename `Config.Filetime`; pass a non-zero `Collect` timeout             | [Library users](#library-users)                                   |
 | You build from source                                                                           | Use Go 1.27.2                                                           | [Building from source](#building-from-source)                     |
 
 ## filetime collector removed
@@ -106,6 +106,9 @@ windows_exporter 0.32 rejects configuration it used to ignore. The exporter stop
 - **Sub-collector names.** `--collector.dfsr.sources-enabled`, `--collector.dhcp.enabled`, `--collector.mscluster.enabled` and `--collector.tcp.enabled` reject unknown sub-collector names. Typos used to be ignored, which disabled that sub-collector without a warning.
 - **Process priority.** An unknown `--process.priority` value stops the exporter. It used to fall back to `normal`.
 - **Memory limit.** `--process.memory-limit=0` now disables the limit, as documented. In 0.31 it set a soft limit of zero bytes, which made the Go runtime collect garbage continuously. Negative values stop the exporter.
+- **Scrape timeout margin.** A negative `--scrape.timeout-margin` stops the exporter. 0.31 treated it as `0`.
+- **Telemetry path.** `--telemetry.path` must start with `/`, must not be `/health` and, with `--debug.enabled`, must not be one of the `/debug/pprof/` routes. 0.31 accepted such a path and then crashed while starting the HTTP server.
+- **Disabled collectors.** Unknown names in `--collectors.disabled` are logged as a warning and otherwise ignored, so a configuration that still disables a removed collector keeps working. Spaces around the names in `--collectors.enabled` and `--collectors.disabled` are ignored: `cpu, net` now names `net`. In 0.31, `--collectors.disabled=cpu, net` left `net` enabled and `--collectors.enabled=cpu, net` stopped the exporter with `unknown collector  net`.
 - **update collector.** In a configuration file, the key for `--collector.update.scrape-interval` is `scrape-interval`:
 
   ```yaml
@@ -436,6 +439,7 @@ These changes affect Go programs that embed `github.com/prometheus-community/win
 - Views created by `Collection.WithCollectors` no longer own the collectors. Their `Close` does nothing; close the original `Collection`.
 - `Collector.Collect` is never called concurrently on one collector instance, and not at all after its `Build` failed.
 - A collector can return an error wrapping `errors.ErrUnsupported` from `Build` to mark itself unavailable on the host. `Collection.Build` logs a warning and continues.
+- WMI (MI) queries always have a timeout. Calling `Collector.Collect` with a `maxScrapeDuration` of 0 or less used to run the queries of MI-based collectors, such as `wmi`, `cpu_info` or `diskdrive`, without a timeout; they now time out after 5 seconds. Pass the scrape budget you want instead of 0.
 
 ## Building from source
 

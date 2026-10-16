@@ -39,6 +39,10 @@ type Query struct {
 // NewQuery opens a query for [NewQueryCollector]. The caller must Close it
 // after the collectors in it.
 func NewQuery() (*Query, error) {
+	if err := Load(); err != nil {
+		return nil, err
+	}
+
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {

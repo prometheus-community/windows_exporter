@@ -76,6 +76,10 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	if err := slc.Load(); err != nil {
+		return err
+	}
+
 	c.licenseStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of windows license",

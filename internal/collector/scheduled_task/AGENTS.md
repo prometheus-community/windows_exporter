@@ -65,7 +65,10 @@ of them empty), about 150 ms per scrape without filters.
   disabled. Skipping the read for disabled tasks would change published values.
 - A persistent COM connection (dedicated thread, service kept connected) saves
   ~1.7 ms per scrape. `CoCreateInstance` and `Connect` are cheap; the service's
-  per-call time dominates.
+  per-call time dominates. The collector reads tasks on an `ole.Worker` that
+  keeps COM initialized from `Build` to `Close`, but still creates and connects
+  the `TaskService` per scrape, so a restarted Schedule service needs no
+  reconnect logic.
 - Direct MS-TSCH RPC over `ncalrpc` (hand-marshalled NDR, `I_RpcSendReceive`)
   is only 5–8 µs faster per call. It would only save the duplicate
   `SchRpcGetLastRunInfo` (~18 ms per scrape, ~12%) plus ~9 ms of client CPU, at

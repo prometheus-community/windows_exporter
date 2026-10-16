@@ -23,6 +23,7 @@ import (
 	"net"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -35,7 +36,20 @@ var (
 	procDhcpV4EnumSubnetReservations     = modDhcpServer.NewProc("DhcpV4EnumSubnetReservations")
 	procDhcpV4FailoverGetScopeStatistics = modDhcpServer.NewProc("DhcpV4FailoverGetScopeStatistics")
 	procDhcpGetMibInfoV5                 = modDhcpServer.NewProc("DhcpGetMibInfoV5")
+
+	load = lazyproc.Once(modDhcpServer,
+		procDhcpGetSubnetInfo,
+		procDhcpGetSuperScopeInfoV4,
+		procDhcpRpcFreeMemory,
+		procDhcpV4EnumSubnetReservations,
+		procDhcpV4FailoverGetScopeStatistics,
+		procDhcpGetMibInfoV5,
+	)
 )
+
+// Load checks that dhcpsapi.dll exports every function of this package. Call
+// it in Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var mibInfo *DHCP_MIB_INFO_V5

@@ -147,6 +147,42 @@ func TestNewRotationValidation(t *testing.T) {
 	}
 }
 
+func TestAllowedFileSetEventLogIsLazy(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "windows_exporter.log")
+
+	// The service default is replaced by --log.file: Set must not open the
+	// event log, or the handle would never be closed.
+	file := &AllowedFile{}
+	require.NoError(t, file.Set(eventLogFile))
+	require.Nil(t, file.w)
+	require.False(t, file.isPath())
+
+	require.NoError(t, file.Set(path))
+	require.True(t, file.isPath())
+
+	logger, closer, err := New(&Config{Config: &promslog.Config{}, File: file})
+	require.NoError(t, err)
+
+	logger.Info("hello")
+	require.NoError(t, closer.Close())
+	require.Contains(t, readFile(t, path), "hello")
+}
+
+func TestNewEventLog(t *testing.T) {
+	t.Parallel()
+
+	logger, closer, err := New(newConfig(t, eventLogFile, Rotation{}))
+	require.NoError(t, err)
+	require.NotNil(t, logger)
+	require.NotNil(t, closer, "the event log handle must be released")
+	require.NoError(t, closer.Close())
+
+	_, _, err = New(newConfig(t, eventLogFile, Rotation{MaxSize: 1}))
+	require.ErrorContains(t, err, "requires log.file to be a file path")
+}
+
 func TestNewStreamHasNoCloser(t *testing.T) {
 	t.Parallel()
 

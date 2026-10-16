@@ -21,6 +21,7 @@ import (
 	"errors"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
 	"golang.org/x/sys/windows"
 )
 
@@ -28,7 +29,13 @@ import (
 var (
 	slc                         = windows.NewLazySystemDLL("slc.dll")
 	procSLIsWindowsGenuineLocal = slc.NewProc("SLIsWindowsGenuineLocal")
+
+	load = lazyproc.Once(slc, procSLIsWindowsGenuineLocal)
 )
+
+// Load checks that slc.dll exports every function of this package. Call it in
+// Build: a missing export panics on the first call otherwise.
+func Load() error { return load() }
 
 // SL_GENUINE_STATE enumeration
 //
