@@ -112,6 +112,8 @@ Each release provides a .msi installer. The installer will setup the windows_exp
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
 
+The service runs as `LocalSystem` unless `SERVICE_ACCOUNT` is set. To run it as an unprivileged service account instead, see [Running as a least-privilege service account](docs/permissions.md).
+
 The installer provides a configuration file to customize the exporter.
 
 The configuration file
@@ -134,6 +136,8 @@ The following parameters are available:
 | `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                               |
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                              |
 | `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                                      |
+| `SERVICE_ACCOUNT`    | Account the service runs as, for example `NT SERVICE\windows_exporter`. Defaults to an empty string (`LocalSystem`). The installer does not grant the account any rights, see [permissions](docs/permissions.md) |
+| `SERVICE_PASSWORD`   | Password of `SERVICE_ACCOUNT`. Only a user account needs one; a virtual account or a gMSA has none. The installer does not write it to its log                              |
 
 > [!NOTE]
 > The installer properties are always preferred over the values defined in the config file. If you prefer to configure via the config file, avoid using any of the properties listed above.
@@ -155,6 +159,11 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--c
 Define a config file.
 ```powershell
 msiexec /i <path-to-msi-file> --% CONFIG_FILE="D:\config.yaml"
+```
+
+Run the service as its virtual account. Grant the account its rights afterwards, see [permissions](docs/permissions.md).
+```powershell
+msiexec /i <path-to-msi-file> --% SERVICE_ACCOUNT="NT SERVICE\windows_exporter"
 ```
 
 Alternative install directory

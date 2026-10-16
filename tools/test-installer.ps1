@@ -1,8 +1,9 @@
 # Tests the MSI lifecycle on a disposable Windows host: upgrade from the
-# previous release, repair, uninstall and a fresh install. An independent
-# windows_exporter.exe from another directory must survive every operation
-# of the new package. Run it only on a throwaway machine such as a CI runner:
-# it installs and removes the windows_exporter service.
+# previous release, repair, uninstall, a fresh install and an install with a
+# virtual service account. An independent windows_exporter.exe from another
+# directory must survive every operation of the new package. Run it only on
+# a throwaway machine such as a CI runner: it installs and removes the
+# windows_exporter service.
 
 [CmdletBinding()]
 Param (
@@ -270,6 +271,26 @@ try {
     Invoke-Msiexec -Name 'uninstall-fresh' -Arguments @('/x', "`"$Msi`"")
     Assert-ServiceRemoved
     Assert-ForeignAlive -Operation 'uninstall of the fresh install'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Install this build with a virtual service account'
+    # The installer only sets the account. Without the Performance Monitor
+    # Users group, collectors may lose data, but the service must start.
+    $account = "NT SERVICE\$serviceName"
+    Invoke-Msiexec -Name 'install-account' -Arguments @('/i', "`"$Msi`"", "SERVICE_ACCOUNT=`"$account`"")
+    Assert-ServiceRunning | Out-Null
+    $startName = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").StartName
+    if ($startName -ne $account) {
+        throw "service $serviceName runs as $startName, expected $account"
+    }
+
+    Assert-ForeignAlive -Operation 'install with a service account'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Uninstall the install with a virtual service account'
+    Invoke-Msiexec -Name 'uninstall-account' -Arguments @('/x', "`"$Msi`"")
+    Assert-ServiceRemoved
+    Assert-ForeignAlive -Operation 'uninstall of the install with a service account'
     Write-Host '::endgroup::'
 
     Write-Host 'installer test passed'
