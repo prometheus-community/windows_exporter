@@ -33,6 +33,12 @@ These metrics are available on all versions of Windows:
 | `windows_cpu_processor_utility_total`            | Processor Utility Total is a newer, more accurate measure of CPU utilization, in particular handling modern CPUs with variant CPU frequencies. The rate of this counter divided by the rate of `windows_cpu_processor_rtc_total` should provide an accurate view of CPU utilisation on modern systems, as observed in Task Manager. | counter | `core`          |
 | `windows_cpu_processor_privileged_utility_total` | Processor Privileged Utility Total, when used in a similar fashion to `windows_cpu_processor_utility_total` will show the portion of CPU utilization which is happening in privileged mode.                                                                                                                                         | counter | `core`          |
 
+### Counter decreases
+Windows sometimes reports a per-processor time one clock tick (1/64 s) lower than in the previous sample.
+`rate()` would read such a drop as a counter reset and show a spike.
+The collector keeps the value of the previous scrape for `windows_cpu_time_seconds_total` and
+`windows_cpu_cstate_seconds_total` until the counter catches up again. Drops of 1 second or more are passed through.
+
 ### Example metric
 Show frequency of host CPU cores
 ```

@@ -13,6 +13,10 @@ Hyper-V guest with 12 logical processors in one processor group.
 - `% C1/C2/C3 Time`, `% DPC Time`, `% Idle Time`, `% Interrupt Time`,
   `% Privileged Time` and `% User Time` are `PERF_100NSEC_TIMER`. Their raw
   value is cumulative 100 ns ticks; `internal/pdh` scales them to seconds.
+  These raw values can drop by one clock tick (1/64 s) between two samples
+  ([#1383](https://github.com/prometheus-community/windows_exporter/issues/1383)),
+  so `Collect` holds the previous value of `time_seconds_total` and
+  `cstate_seconds_total` for drops below `maxTimeDrop` (1 s).
 - `% Processor Time` and `% Priority Time` are `PERF_100NSEC_TIMER_INV`. The
   raw value is cumulative idle (non-busy) time in 100 ns ticks, not busy time,
   and `internal/pdh` does not scale this type to seconds. In the sample, the
