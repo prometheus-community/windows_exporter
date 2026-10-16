@@ -78,6 +78,7 @@ func TestCollectorMetrics(t *testing.T) {
 	// 64-bit handling. Both are well under 2^53, so they convert to float64 exactly.
 	require.NoError(t, k.SetDWordValue("TestDword", 1234))
 	require.NoError(t, k.SetQWordValue("TestQword", 5_000_000_000))
+	require.NoError(t, k.SetDWordValue("TestMilliseconds", 9))
 	require.NoError(t, k.Close())
 
 	t.Cleanup(func() {
@@ -104,6 +105,13 @@ func TestCollectorMetrics(t *testing.T) {
 						Help:   "custom registry help text",
 						Type:   "counter",
 						Labels: map[string]string{"foo": "bar"},
+					},
+					// The multiplier converts milliseconds to seconds; 9 * 0.001
+					// would be 0.009000000000000001.
+					{
+						Name:       "TestMilliseconds",
+						Metric:     "windows_registry_test_scaled_seconds",
+						Multiplier: new(0.001),
 					},
 				},
 			},
@@ -137,6 +145,9 @@ windows_registry_key_success{key="testgroup"} 1
 # HELP windows_registry_test_custom_metric custom registry help text
 # TYPE windows_registry_test_custom_metric counter
 windows_registry_test_custom_metric{foo="bar"} 5e+09
+# HELP windows_registry_test_scaled_seconds windows_exporter: custom registry metric
+# TYPE windows_registry_test_scaled_seconds gauge
+windows_registry_test_scaled_seconds 0.009
 # HELP windows_registry_testgroup_testdword windows_exporter: custom registry metric
 # TYPE windows_registry_testgroup_testdword gauge
 windows_registry_testgroup_testdword 1234

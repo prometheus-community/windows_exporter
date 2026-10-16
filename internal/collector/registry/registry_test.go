@@ -122,6 +122,16 @@ func TestCollectorBuildErrors(t *testing.T) {
 			}},
 		},
 		{
+			name: "invalid multiplier",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Name:   "windows_nt",
+					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{{Name: "CurrentMajorVersionNumber", Multiplier: new(0.0)}},
+				},
+			}},
+		},
+		{
 			name: "shared metric name with inconsistent help text",
 			config: registry.Config{Keys: []registry.Key{
 				{
