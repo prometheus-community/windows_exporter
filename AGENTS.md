@@ -306,7 +306,7 @@ cdb -pv -p <pid> -c ".dump /ma C:\dumps\exporter.dmp; q"
 cdb -z C:\dumps\exporter.dmp -c "!address -summary; !heap -s; q"
 ```
 
-If the debugger cannot download a PDB, fetch it with curl from
+If the debugger cannot download a PDB, fetch it with cURL from
 `https://msdl.microsoft.com/download/symbols/<name>.pdb/<id>/<name>.pdb` into
 `<store>\<name>.pdb\<id>\<name>.pdb` and add `<store>` to the symbol path.
 `<id>` is the RSDS GUID of the module as 32 uppercase hex digits without
