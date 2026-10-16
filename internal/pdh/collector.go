@@ -724,8 +724,9 @@ func hasTimeBase(counterType uint32) bool {
 // loadTimeBase reads the time base of a raw timer counter that had none when
 // the collector was created. Early after a reboot, PDH can report no data
 // for it, e.g. for APP_POOL_WAS while WAS is still starting (#2313). Without a
-// time base, an elapsed time or average timer counter has no valid value and
-// every instance is omitted.
+// time base, an elapsed time counter has no valid value and every instance is
+// omitted. An average timer falls back to QueryPerformanceFrequency at
+// creation, so it only needs this if that failed too.
 func (c *Collector[T]) loadTimeBase(counter *Counter) {
 	if c.resultType != CounterTypeRaw || !hasTimeBase(counter.Type) || counter.Frequency > 0 {
 		return

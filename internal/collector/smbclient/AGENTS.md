@@ -18,7 +18,11 @@ host has connected to. These notes were recorded on a Windows Server 2025
 - `Avg. sec/Read`, `Avg. sec/Write` and `Avg. sec/Data Request` are
   `PERF_AVERAGE_TIMER`. The first value is the summed latency, which
   `internal/pdh` converts to seconds with the counter time base, and the base
-  is the request count; the collector reads only the first value.
+  is the request count; the collector reads only the first value. The raw
+  sum is 32 bits, so the collector converts it back to ticks with
+  `pdh.Collector.Frequency`, extends it past the 2^32 wrap with
+  `utils.Counter32` and divides again. Keep that round trip: extending the
+  seconds directly truncates them and adds 2^32 seconds per wrap.
 - `Data Bytes/sec`, `Read Bytes/sec` and `Write Bytes/sec` are bytes
   (`PERF_COUNTER_BULK_COUNT`).
 
