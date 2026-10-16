@@ -23,8 +23,8 @@ import (
 	"math"
 )
 
-// maxExactInteger is the largest integer up to which every integer has an
-// exact float64 representation.
+// maxExactInteger bounds the divisor. Beyond it, several integers round to the
+// same reciprocal, so the rounded divisor may not be the one the user meant.
 const maxExactInteger = 1 << 53
 
 // Multiplier scales values. The zero value leaves them unchanged.
