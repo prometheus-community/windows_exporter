@@ -204,22 +204,22 @@ Sub-collector `replica_vm`, enabled by default. The performance counter metrics 
 The `health` and `state` metrics come from the `Msvm_ReplicationRelationship` WMI class in the
 `root/virtualization/v2` namespace and exist for every virtual machine, including those without replication.
 
-| Name                                                            | Description                                                         | Type    | Labels               |
-|-----------------------------------------------------------------|---------------------------------------------------------------------|---------|----------------------|
-| `windows_hyperv_replica_vm_average_replication_latency_seconds` | The average time taken to replicate the virtual machine             | gauge   | `vm`                 |
-| `windows_hyperv_replica_vm_average_replication_size_bytes`      | The average size of the replicated data                             | gauge   | `vm`                 |
-| `windows_hyperv_replica_vm_compression_efficiency`              | The compression efficiency of the replicated data                   | gauge   | `vm`                 |
-| `windows_hyperv_replica_vm_last_replication_size_bytes`         | The size of the last replicated data                                | gauge   | `vm`                 |
-| `windows_hyperv_replica_vm_network_received_bytes_total`        | The total number of bytes received over the network for replication | counter | `vm`                 |
-| `windows_hyperv_replica_vm_network_sent_bytes_total`            | The total number of bytes sent over the network for replication     | counter | `vm`                 |
-| `windows_hyperv_replica_vm_replications_total`                  | The total number of replication cycles                              | counter | `vm`                 |
-| `windows_hyperv_replica_vm_replication_latency_seconds`         | The time taken by the last replication of the virtual machine       | gauge   | `vm`                 |
-| `windows_hyperv_replica_vm_resynchronized_bytes_total`          | The total number of bytes sent during resynchronization             | counter | `vm`                 |
-| `windows_hyperv_replica_vm_health`                              | The replication health of the virtual machine, see below            | gauge   | `vm`, `relationship` |
-| `windows_hyperv_replica_vm_state`                               | The replication state of the virtual machine, see below             | gauge   | `vm`, `relationship` |
+| Name                                                            | Description                                                         | Type    | Labels                        |
+|-----------------------------------------------------------------|---------------------------------------------------------------------|---------|-------------------------------|
+| `windows_hyperv_replica_vm_average_replication_latency_seconds` | The average time taken to replicate the virtual machine             | gauge   | `vm`                          |
+| `windows_hyperv_replica_vm_average_replication_size_bytes`      | The average size of the replicated data                             | gauge   | `vm`                          |
+| `windows_hyperv_replica_vm_compression_efficiency`              | The compression efficiency of the replicated data                   | gauge   | `vm`                          |
+| `windows_hyperv_replica_vm_last_replication_size_bytes`         | The size of the last replicated data                                | gauge   | `vm`                          |
+| `windows_hyperv_replica_vm_network_received_bytes_total`        | The total number of bytes received over the network for replication | counter | `vm`                          |
+| `windows_hyperv_replica_vm_network_sent_bytes_total`            | The total number of bytes sent over the network for replication     | counter | `vm`                          |
+| `windows_hyperv_replica_vm_replications_total`                  | The total number of replication cycles                              | counter | `vm`                          |
+| `windows_hyperv_replica_vm_replication_latency_seconds`         | The time taken by the last replication of the virtual machine       | gauge   | `vm`                          |
+| `windows_hyperv_replica_vm_resynchronized_bytes_total`          | The total number of bytes sent during resynchronization             | counter | `vm`                          |
+| `windows_hyperv_replica_vm_health`                              | The replication health of the virtual machine, see below            | gauge   | `vm`, `vm_id`, `relationship` |
+| `windows_hyperv_replica_vm_state`                               | The replication state of the virtual machine, see below             | gauge   | `vm`, `vm_id`, `relationship` |
 
 The `relationship` label is `primary` for the primary replication relationship and `extended` for
-[extended replication](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-replicationrelationship).
+[extended replication](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-replicationrelationship). The `vm_id` label is the ID of the virtual machine, which keeps virtual machines with the same name apart.
 
 Values of `windows_hyperv_replica_vm_health`:
 
