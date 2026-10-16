@@ -5,10 +5,9 @@ The collector reads the eight .NET Framework PDH objects `.NET CLR Exceptions`,
 `.NET CLR LocksAndThreads`, `.NET CLR Memory`, `.NET CLR Remoting` and
 `.NET CLR Security` with `pdh.CounterTypeRaw`, all in one shared query. The
 objects come from the .NET Framework performance counter provider
-(`mscoree.dll`), not from .NET (Core). These notes were recorded on the
-`windows-2022` GitHub Actions runner with a CI probe, because the objects are
-missing on the German development machine although the provider is
-registered.
+(`mscoree.dll`), not from .NET (Core). The objects are missing on the German
+development machine although the provider is registered, so the reference
+below comes from a CI probe.
 
 - Every object has one instance per process that loaded the .NET Framework
   CLR, named after the process image without `.exe`, plus `_Global_`. Two
@@ -19,14 +18,17 @@ registered.
   `PERF_RAW_FRACTION`. Their value is raw / base (`,secondvalue`), not a
   percentage and not a cumulative value. Per the .NET documentation, they
   cover the time since the end of the previous JIT, check or GC phase and are
-  updated when the next one ends. A base of 0 means
-  no sample yet; skip the ratio then. On `_Global_` the base is `0xFFFFFFFF`
-  and the ratio is meaningless.
+  updated when the next one ends. Skip the ratio when the base is 0. On
+  `_Global_` the base is `0xFFFFFFFF` and the ratio is meaningless. 0.31 read
+  `% Time in Jit` and `% Time in RT checks` without the base and divided the
+  raw value by the performance counter frequency, which is wrong; only
+  `% Time in GC` used the base.
 - `% Time Loading` and `% Time Sig. Authenticating` are
   `PERF_COUNTER_TIMER`, not fractions. The collector does not read them.
-- Every `/ sec` counter is `PERF_COUNTER_COUNTER` or `PERF_COUNTER_BULK_COUNT`,
-  whose raw value is a cumulative count since the process started, except the
-  Interop `# of TLB exports / sec` and `# of TLB imports / sec`, which are
+- Every rate counter (`/ sec`, `/sec`, `Rate of ...`) is
+  `PERF_COUNTER_COUNTER` or `PERF_COUNTER_BULK_COUNT`, whose raw value is a
+  cumulative count since the process started, except the Interop
+  `# of TLB exports / sec` and `# of TLB imports / sec`, which are
   `PERF_COUNTER_RAWCOUNT`.
 - The `.NET CLR Memory` sizes and counts are `PERF_COUNTER_LARGE_RAWCOUNT`
   gauges in bytes or counts; `# Gen N Collections` and `# Induced GC` are
