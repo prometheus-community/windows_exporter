@@ -116,7 +116,8 @@ See [#2698](https://github.com/prometheus-community/windows_exporter/issues/2698
 | `windows_iis_worker_max_threads`                         | Maximum number of threads to which the thread pool can grow as needed                                                                                                                                                                                                                       | gauge   | `app`, `pid`                |
 | `windows_iis_worker_requests_total`                      | Total number of HTTP requests served by the worker process                                                                                                                                                                                                                                  | counter | `app`, `pid`                |
 | `windows_iis_worker_current_requests`                    | Current number of requests being processed by the worker process                                                                                                                                                                                                                            | gauge   | `app`, `pid`                |
-| `windows_iis_worker_request_errors_total`                | Total number of requests that returned an error                                                                                                                                                                                                                                             | counter | `app`, `pid`, `status_code` |
+| `windows_iis_worker_request_errors_total`                | Total number of responses with the status code `401`, `403`, `404` or `500`. Divide by `windows_iis_worker_responses_total`                                                                                                                                                                 | counter | `app`, `pid`, `status_code` |
+| `windows_iis_worker_responses_total`                     | Total number of responses sent by the worker process. Denominator for `windows_iis_worker_request_errors_total`, read in the same sample                                                                                                                                                    | counter | `app`, `pid`                |
 | `windows_iis_worker_current_websocket_requests`          | Current number of WebSocket requests being processed by the worker process                                                                                                                                                                                                                  | gauge   | `app`, `pid`                |
 | `windows_iis_worker_websocket_connection_attempts_total` | Total number of WebSocket connection attempts since the worker process started                                                                                                                                                                                                              | counter | `app`, `pid`                |
 | `windows_iis_worker_websocket_connection_accepted_total` | Total number of WebSocket connections accepted since the worker process started                                                                                                                                                                                                             | counter | `app`, `pid`                |
@@ -158,7 +159,21 @@ See [#2698](https://github.com/prometheus-community/windows_exporter/issues/2698
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Share of HTTP 500 responses of each application pool over the last 5 minutes:
+
+```promql
+sum by (app) (rate(windows_iis_worker_request_errors_total{status_code="500"}[5m]))
+/
+sum by (app) (rate(windows_iis_worker_responses_total[5m]))
+```
+
+`windows_iis_worker_request_errors_total` and `windows_iis_worker_responses_total`
+are the value and the base of the `% <status> HTTP Response Sent` counters and
+come from the same sample. Don't divide the errors by
+`windows_iis_worker_requests_total`: that counter
+(`Total HTTP Requests Served`) is read in another query at a slightly different
+moment, so the ratio can exceed 1.
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_

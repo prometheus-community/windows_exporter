@@ -75,6 +75,7 @@ type collectorW3SVCW3WP struct {
 
 	// IIS 8+ Only
 	w3SVCW3WPRequestErrorsTotal           *prometheus.Desc
+	w3SVCW3WPResponsesTotal               *prometheus.Desc
 	w3SVCW3WPWebSocketRequestsActive      *prometheus.Desc
 	w3SVCW3WPWebSocketConnectionAttempts  *prometheus.Desc
 	w3SVCW3WPWebSocketConnectionsAccepted *prometheus.Desc
@@ -138,6 +139,12 @@ type perfDataCounterValuesW3SVCW3WPV8 struct {
 	W3SVCW3WPRequestErrors404 float64 `perfdata:"% 404 HTTP Response Sent"`
 	W3SVCW3WPRequestErrors403 float64 `perfdata:"% 403 HTTP Response Sent"`
 	W3SVCW3WPRequestErrors401 float64 `perfdata:"% 401 HTTP Response Sent"`
+
+	// The % ... HTTP Response Sent counters are PERF_SAMPLE_FRACTION. The second
+	// value is the base of the fraction, the cumulative number of responses the
+	// worker process sent. The four counters are assumed to share it, so one base
+	// is read.
+	W3SVCW3WPResponsesTotal float64 `perfdata:"% 500 HTTP Response Sent,secondvalue"`
 
 	W3SVCW3WPWebSocketRequestsActive      float64 `perfdata:"WebSocket Active Requests"`
 	W3SVCW3WPWebSocketConnectionAttempts  float64 `perfdata:"WebSocket Connection Attempts / Sec"`
@@ -366,8 +373,14 @@ func (c *Collector) buildW3SVCW3WPDescriptors() {
 	// W3SVC_W3WP_IIS8
 	c.w3SVCW3WPRequestErrorsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_request_errors_total"),
-		"Total number of requests that returned an error",
+		"Total number of responses with the status code 401, 403, 404 or 500. Divide by windows_iis_worker_responses_total",
 		[]string{"app", "pid", "status_code"},
+		nil,
+	)
+	c.w3SVCW3WPResponsesTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "worker_responses_total"),
+		"Total number of responses sent by the worker process. Denominator for windows_iis_worker_request_errors_total, read in the same sample",
+		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketRequestsActive = prometheus.NewDesc(
@@ -466,6 +479,14 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 			name,
 			pid,
 			"500",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPResponsesTotal,
+			prometheus.CounterValue,
+			data.W3SVCW3WPResponsesTotal,
+			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(

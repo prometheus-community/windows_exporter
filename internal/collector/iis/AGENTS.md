@@ -56,7 +56,13 @@ notes were recorded on Windows Server 2025 (build 26100) with only
 - `% 401/403/404/500 HTTP Response Sent` of `W3SVC_W3WP` are
   `PERF_SAMPLE_FRACTION`. Raw is the cumulative count of that status, base is
   the cumulative request count (after one 200 and one 404 request: 404 raw 1,
-  base 2).
+  base 2). The collector publishes the raw value as
+  `worker_request_errors_total` and the base of `% 500 HTTP Response Sent`
+  (`secondvalue`) as `worker_responses_total`, from the same V8 query, so both
+  come from the same sample. Both are 32-bit and wrap at 2^32. It assumes that the four counters share one base.
+  `worker_requests_total` (`Total HTTP Requests Served`) is read in the other
+  `W3SVC_W3WP` query at a different moment and is not a valid denominator
+  ([#1538](https://github.com/prometheus-community/windows_exporter/issues/1538)).
 - `APP_POOL_WAS` uptimes and `Time Since Last Worker Process Failure` are
   `PERF_ELAPSED_TIME`. Raw is the start time as a FILETIME (100 ns since 1601),
   the second value is the current time, and `internal/pdh` returns the elapsed

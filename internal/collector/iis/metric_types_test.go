@@ -197,3 +197,38 @@ func TestW3SVCW3WPCurrentValuesAreGauges(t *testing.T) {
 	requireMetric(t, metrics, "windows_iis_worker_current_websocket_requests", dto.MetricType_GAUGE, 2, labels)
 	requireMetric(t, metrics, "windows_iis_worker_requests_total", dto.MetricType_COUNTER, 10, labels)
 }
+
+func TestW3SVCW3WPResponsesTotalIsErrorDenominator(t *testing.T) {
+	t.Parallel()
+
+	c := New(nil)
+	c.buildW3SVCW3WPDescriptors()
+
+	// PERF_SAMPLE_FRACTION: raw is the count per status code, the second value
+	// is the cumulative response count of the same sample.
+	c.w3SVCW3WPPerfDataCollectorV8 = cacheFixture[perfDataCounterValuesW3SVCW3WPV8]{sources: map[string]float64{
+		"% 401 HTTP Response Sent":             1,
+		"% 403 HTTP Response Sent":             2,
+		"% 404 HTTP Response Sent":             3,
+		"% 500 HTTP Response Sent":             4,
+		"% 500 HTTP Response Sent,secondvalue": 20,
+	}}
+
+	metrics := gatherCollect(t, c.collectW3SVCW3WPv8)
+	labels := map[string]string{"app": "Example", "pid": "123"}
+
+	requireMetric(t, metrics, "windows_iis_worker_responses_total", dto.MetricType_COUNTER, 20, labels)
+	require.NotContains(t, metrics["windows_iis_worker_responses_total"][0].labels, "status_code")
+
+	errorMetrics := metrics["windows_iis_worker_request_errors_total"]
+	require.Len(t, errorMetrics, 4)
+
+	want := map[string]float64{"401": 1, "403": 2, "404": 3, "500": 4}
+
+	for _, metric := range errorMetrics {
+		require.Equal(t, dto.MetricType_COUNTER, metric.kind)
+		require.Equal(t, labels["app"], metric.labels["app"])
+		require.Equal(t, labels["pid"], metric.labels["pid"])
+		require.InDelta(t, want[metric.labels["status_code"]], metric.value, 1e-9, metric.labels["status_code"])
+	}
+}
