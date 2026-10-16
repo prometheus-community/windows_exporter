@@ -65,17 +65,22 @@ func (c *Collector) buildClrJIT() error {
 
 type perfDataClrJIT struct {
 	Name                       string
+	Occurrence                 int
 	NumberofMethodsJitted      float64 `perfdata:"# of Methods JITted"`
 	PercentTimeinJit           float64 `perfdata:"% Time in Jit"`
 	StandardJitFailures        float64 `perfdata:"Standard Jit Failures"`
 	TotalNumberofILBytesJitted float64 `perfdata:"Total # of IL Bytes Jitted"`
 }
 
+func (p *perfDataClrJIT) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrJIT
 	if err := c.perfClrJIT.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Jit: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

@@ -37,7 +37,8 @@ type collectorVirtualMachineVidPartition struct {
 }
 
 type perfDataCounterValuesVirtualMachineVidPartition struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	PhysicalPagesAllocated float64 `perfdata:"Physical Pages Allocated"`
 	PreferredNUMANodeIndex float64 `perfdata:"Preferred NUMA Node Index"`
@@ -79,6 +80,11 @@ func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metri
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V VM Vid Partition metrics: %w", err)
 	}
+
+	suffixDuplicateVMs(c.perfDataObjectVirtualMachineVidPartition,
+		func(row *perfDataCounterValuesVirtualMachineVidPartition) *string { return &row.Name },
+		func(row *perfDataCounterValuesVirtualMachineVidPartition) int { return row.Occurrence },
+	)
 
 	for _, data := range c.perfDataObjectVirtualMachineVidPartition {
 		ch <- scrape.MustNewConstMetric(

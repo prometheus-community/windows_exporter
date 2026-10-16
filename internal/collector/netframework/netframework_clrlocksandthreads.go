@@ -83,6 +83,7 @@ func (c *Collector) buildClrLocksAndThreads() error {
 
 type perfDataClrLocksAndThreads struct {
 	Name                             string
+	Occurrence                       int
 	CurrentQueueLength               float64 `perfdata:"Current Queue Length"`
 	NumberofcurrentlogicalThreads    float64 `perfdata:"# of current logical Threads"`
 	NumberofcurrentphysicalThreads   float64 `perfdata:"# of current physical Threads"`
@@ -92,11 +93,15 @@ type perfDataClrLocksAndThreads struct {
 	TotalNumberofContentions         float64 `perfdata:"Total # of Contentions"`
 }
 
+func (p *perfDataClrLocksAndThreads) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrLocksAndThreads
 	if err := c.perfClrLocksAndThreads.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR LocksAndThreads: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

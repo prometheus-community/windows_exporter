@@ -59,16 +59,21 @@ func (c *Collector) buildClrInterop() error {
 
 type perfDataClrInterop struct {
 	Name                string
+	Occurrence          int
 	NumberofCCWs        float64 `perfdata:"# of CCWs"`
 	NumberofStubs       float64 `perfdata:"# of Stubs"`
 	Numberofmarshalling float64 `perfdata:"# of marshalling"`
 }
+
+func (p *perfDataClrInterop) instance() (*string, int) { return &p.Name, p.Occurrence }
 
 func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrInterop
 	if err := c.perfClrInterop.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Interop: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

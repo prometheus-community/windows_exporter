@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"runtime"
 	"slices"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -38,6 +39,8 @@ type rowSetValues struct {
 	B        float64 `perfdata:"B"`
 	BSecond  float64 `perfdata:"B,secondvalue"`
 	Optional float64 `perfdata:"Optional"`
+	// Occurrence is last, so that the field indices of the counters stay the same.
+	Occurrence int
 }
 
 // newRowSetTestCollector returns a collector with the counters A and B, which
@@ -48,7 +51,7 @@ func newRowSetTestCollector(partialRows bool) *Collector[rowSetValues] {
 	return &Collector[rowSetValues]{
 		partialRows: partialRows,
 		logger:      slog.New(slog.DiscardHandler),
-		rows:        structRowAccessor[rowSetValues](int(unsafe.Offsetof(row.Name))),
+		rows:        structRowAccessor[rowSetValues](int(unsafe.Offsetof(row.Name)), int(unsafe.Offsetof(row.Occurrence))),
 		counters: []Counter{
 			{Name: "A", Instances: map[string]pdhCounterHandle{"*": 1}, FieldIndexValue: int(unsafe.Offsetof(row.A)), FieldIndexSecondValue: -1},
 			{Name: "B", Instances: map[string]pdhCounterHandle{"*": 2}, FieldIndexValue: int(unsafe.Offsetof(row.B)), FieldIndexSecondValue: int(unsafe.Offsetof(row.BSecond))},
@@ -121,6 +124,15 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 
 	nan := math.NaN()
 
+	// wantRow identifies a row by name and occurrence. suffixed is the name
+	// that SuffixDuplicates gives the row.
+	type wantRow struct {
+		name       string
+		occurrence int
+		suffixed   string
+		a, b       float64
+	}
+
 	for _, tc := range []struct {
 		name        string
 		names       []string
@@ -128,17 +140,17 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 		a           []float64
 		b           []float64
 		repeatArray bool
-		want        []rowSetValues
+		want        []wantRow
 	}{
 		{
 			name:  "duplicates",
 			names: []string{"A", "A", "A"},
 			a:     []float64{1, 2, 3},
 			b:     []float64{10, 20, 30},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "A#1", A: 2, B: 20},
-				{Name: "A#2", A: 3, B: 30},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: 2, b: 20},
+				{name: "A", occurrence: 2, suffixed: "A#2", a: 3, b: 30},
 			},
 		},
 		{
@@ -147,22 +159,23 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 			secondNames: []string{"B", "A", "A"},
 			a:           []float64{1, 2, 3},
 			b:           []float64{20, 10, 30},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "B", A: 2, B: 20},
-				{Name: "A#1", A: 3, B: 30},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "B", suffixed: "B", a: 2, b: 20},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: 3, b: 30},
 			},
 		},
 		{
+			// A name with a suffix reported by Windows is a different instance.
 			name:        "literal_suffix",
 			names:       []string{"A", "A", "A#1"},
 			secondNames: []string{"A#1", "A", "A"},
 			a:           []float64{1, 2, 3},
 			b:           []float64{30, 10, 20},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "A#2", A: 2, B: 20},
-				{Name: "A#1", A: 3, B: 30},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "A", occurrence: 1, suffixed: "A#2", a: 2, b: 20},
+				{name: "A#1", suffixed: "A#1", a: 3, b: 30},
 			},
 		},
 		{
@@ -170,10 +183,10 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 			names: []string{"A", "A", "A"},
 			a:     []float64{1, nan, 3},
 			b:     []float64{10, 20, 30},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "A#1", A: nan, B: 20},
-				{Name: "A#2", A: 3, B: 30},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: nan, b: 20},
+				{name: "A", occurrence: 2, suffixed: "A#2", a: 3, b: 30},
 			},
 		},
 		{
@@ -181,20 +194,21 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 			names: []string{"A", "A", "A"},
 			a:     []float64{1, 2, 3},
 			b:     []float64{nan, 20, 30},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: nan},
-				{Name: "A#1", A: 2, B: 20},
-				{Name: "A#2", A: 3, B: 30},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: nan},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: 2, b: 20},
+				{name: "A", occurrence: 2, suffixed: "A#2", a: 3, b: 30},
 			},
 		},
 		{
+			// The invalid "A#1" has no row, so its suffix is free.
 			name:  "invalid_literal_suffix",
 			names: []string{"A", "A", "A#1"},
 			a:     []float64{1, 2, nan},
 			b:     []float64{10, 20, nan},
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "A#2", A: 2, B: 20},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: 2, b: 20},
 			},
 		},
 		{
@@ -203,77 +217,92 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 			a:           []float64{1, 2},
 			b:           []float64{10, 20},
 			repeatArray: true,
-			want: []rowSetValues{
-				{Name: "A", A: 1, B: 10},
-				{Name: "A#1", A: 2, B: 20},
+			want: []wantRow{
+				{name: "A", suffixed: "A", a: 1, b: 10},
+				{name: "A", occurrence: 1, suffixed: "A#1", a: 2, b: 20},
 			},
 		},
 	} {
 		for _, resultType := range []CounterType{CounterTypeRaw, CounterTypeFormatted} {
 			for _, partialRows := range []bool{false, true} {
-				t.Run(fmt.Sprintf("%s/%s/partial=%t", tc.name, resultType, partialRows), func(t *testing.T) {
-					t.Parallel()
+				for _, keepsOccurrences := range []bool{true, false} {
+					t.Run(fmt.Sprintf("%s/%s/partial=%t/occurrences=%t", tc.name, resultType, partialRows, keepsOccurrences), func(t *testing.T) {
+						t.Parallel()
 
-					c := newRowSetTestCollector(partialRows)
-					c.counters[1].FieldIndexSecondValue = -1
+						c := newRowSetTestCollector(partialRows)
+						c.counters[1].FieldIndexSecondValue = -1
+						c.rows.keepsOccurrences = keepsOccurrences
 
-					var dst []rowSetValues
+						var dst []rowSetValues
 
-					rows := newRowSet(c, &dst, &collectState{})
+						rows := newRowSet(c, &dst, &collectState{})
 
-					addDuplicateTestItems(
-						&rows,
-						resultType,
-						0,
-						tc.names,
-						tc.a,
-					)
+						addDuplicateTestItems(&rows, resultType, 0, tc.names, tc.a)
 
-					if tc.repeatArray {
-						addDuplicateTestItems(
-							&rows,
-							resultType,
-							0,
-							tc.names,
-							tc.a,
-						)
-					}
-
-					secondNames := tc.secondNames
-					if secondNames == nil {
-						secondNames = tc.names
-					}
-
-					addDuplicateTestItems(
-						&rows,
-						resultType,
-						1,
-						secondNames,
-						tc.b,
-					)
-					rows.finish()
-
-					want := slices.DeleteFunc(slices.Clone(tc.want), func(row rowSetValues) bool {
-						return !partialRows && (math.IsNaN(row.A) || math.IsNaN(row.B))
-					})
-					require.Len(t, dst, len(want))
-
-					for _, expected := range want {
-						i := slices.IndexFunc(dst, func(row rowSetValues) bool { return row.Name == expected.Name })
-						require.NotEqual(t, -1, i, "missing instance %s", expected.Name)
-
-						for field, value := range map[string]float64{"A": expected.A, "B": expected.B} {
-							got := reflect.ValueOf(dst[i]).FieldByName(field).Float()
-							if math.IsNaN(value) {
-								require.True(t, math.IsNaN(got), "%s/%s: %v", expected.Name, field, got)
-
-								continue
-							}
-
-							require.InDelta(t, value, got, 0, "%s/%s", expected.Name, field)
+						if tc.repeatArray {
+							addDuplicateTestItems(&rows, resultType, 0, tc.names, tc.a)
 						}
-					}
-				})
+
+						secondNames := tc.secondNames
+						if secondNames == nil {
+							secondNames = tc.names
+						}
+
+						addDuplicateTestItems(&rows, resultType, 1, secondNames, tc.b)
+						rows.finish()
+
+						want := slices.DeleteFunc(slices.Clone(tc.want), func(row wantRow) bool {
+							return !partialRows && (math.IsNaN(row.a) || math.IsNaN(row.b))
+						})
+
+						if !keepsOccurrences {
+							// Without an Occurrence field, only the first remaining instance of a name is collected.
+							seen := map[string]bool{}
+							want = slices.DeleteFunc(want, func(row wantRow) bool {
+								duplicate := seen[row.name]
+								seen[row.name] = true
+
+								return duplicate
+							})
+						}
+
+						require.Len(t, dst, len(want))
+
+						for _, expected := range want {
+							i := slices.IndexFunc(dst, func(row rowSetValues) bool {
+								return row.Name == expected.name && row.Occurrence == expected.occurrence
+							})
+							require.NotEqual(t, -1, i, "missing instance %s occurrence %d", expected.name, expected.occurrence)
+
+							for field, value := range map[string]float64{"A": expected.a, "B": expected.b} {
+								got := reflect.ValueOf(dst[i]).FieldByName(field).Float()
+								if math.IsNaN(value) {
+									require.True(t, math.IsNaN(got), "%s/%s: %v", expected.name, field, got)
+
+									continue
+								}
+
+								require.InDelta(t, value, got, 0, "%s/%s", expected.name, field)
+							}
+						}
+
+						if !keepsOccurrences {
+							return
+						}
+
+						// SuffixDuplicates gives every row a unique name.
+						SuffixDuplicates(dst,
+							func(row *rowSetValues) *string { return &row.Name },
+							func(row *rowSetValues) int { return row.Occurrence },
+						)
+
+						for _, expected := range want {
+							i := slices.IndexFunc(dst, func(row rowSetValues) bool { return row.Name == expected.suffixed })
+							require.NotEqual(t, -1, i, "missing suffixed instance %s", expected.suffixed)
+							require.Equal(t, expected.occurrence, dst[i].Occurrence, expected.suffixed)
+						}
+					})
+				}
 			}
 		}
 	}
@@ -563,6 +592,35 @@ func TestInstanceNameCache(t *testing.T) {
 
 // TestRowSetReusesState checks that a sample does not see the instances of an
 // earlier sample that shared its state, even if that sample did not finish.
+// TestRowSetWarnsOnceAboutDroppedDuplicates checks that dropping duplicate
+// instances of a row type without an Occurrence field is logged once.
+func TestRowSetWarnsOnceAboutDroppedDuplicates(t *testing.T) {
+	t.Parallel()
+
+	var logs strings.Builder
+
+	c := newRowSetTestCollector(true)
+	c.logger = slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	c.rows.keepsOccurrences = false
+	state := &collectState{}
+
+	for range 3 {
+		var dst []rowSetValues
+
+		rows := newRowSet(c, &dst, state)
+		addDuplicateTestItems(&rows, CounterTypeRaw, 0, []string{"a", "a", "b"}, []float64{1, 2, 3})
+		addDuplicateTestItems(&rows, CounterTypeRaw, 1, []string{"a", "a", "b"}, []float64{4, 5, 6})
+		rows.finish()
+
+		state.keys = rows.keys
+
+		require.Len(t, dst, 2)
+		require.InDelta(t, 1, dst[0].A, 0, "the first instance of a is kept")
+	}
+
+	require.Equal(t, 1, strings.Count(logs.String(), "level=WARN"), logs.String())
+}
+
 func TestRowSetReusesState(t *testing.T) {
 	t.Parallel()
 

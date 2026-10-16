@@ -165,6 +165,10 @@ The name of the label that holds the instance name. Optional and defaults to `in
 
 The label is only added if `instances` is set.
 
+Some objects report the same instance name more than once in a sample, for example `Process` reports every `svchost` process as `svchost`.
+The first instance keeps its name, later ones get the suffix `#1`, `#2` and so on, skipping names that Windows reported itself, such as a network adapter `Ethernet#2`.
+The suffix depends on the order of the sample and does not identify an instance across scrapes.
+
 #### counters
 
 List of counters to collect from the object. See the counters sub-schema for more information.
