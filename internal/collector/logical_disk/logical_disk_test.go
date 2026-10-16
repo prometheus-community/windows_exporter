@@ -40,18 +40,22 @@ func TestCollector(t *testing.T) {
 	})
 }
 
-// TestCollectorAvgQueueRemoved checks that the removed avg_*_requests_queued gauges are
-// gone while their replacements are still emitted. The raw "Avg. Disk Read/Write Queue
-// Length" values were the same cumulative values as "% Disk Read/Write Time".
-func TestCollectorAvgQueueRemoved(t *testing.T) {
+// TestCollectorDuplicatesRemoved checks that the removed avg_*_requests_queued gauges and
+// *_latency_seconds_total counters are gone while their replacements are still emitted.
+// The raw "Avg. Disk Read/Write Queue Length" and "Avg. Disk sec/Read/Write/Transfer"
+// values were the same cumulative values as "% Disk Read/Write Time".
+func TestCollectorDuplicatesRemoved(t *testing.T) {
 	metrics := testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
 		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
 		VolumeInclude:     types.RegExpAny,
 	})
 
 	for removed, replacement := range map[string]string{
-		"windows_logical_disk_avg_read_requests_queued":  "windows_logical_disk_read_seconds_total",
-		"windows_logical_disk_avg_write_requests_queued": "windows_logical_disk_write_seconds_total",
+		"windows_logical_disk_avg_read_requests_queued":         "windows_logical_disk_read_seconds_total",
+		"windows_logical_disk_avg_write_requests_queued":        "windows_logical_disk_write_seconds_total",
+		"windows_logical_disk_read_latency_seconds_total":       "windows_logical_disk_read_seconds_total",
+		"windows_logical_disk_write_latency_seconds_total":      "windows_logical_disk_write_seconds_total",
+		"windows_logical_disk_read_write_latency_seconds_total": "windows_logical_disk_write_seconds_total",
 	} {
 		require.Empty(t, testutils.MetricValuesByLabel(metrics, removed, "volume"), "%s is still emitted", removed)
 		require.NotEmpty(t, testutils.MetricValuesByLabel(metrics, replacement, "volume"), "%s was not emitted", replacement)

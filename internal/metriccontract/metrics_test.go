@@ -86,9 +86,12 @@ var dynamicPrefixes = []string{
 //
 //nolint:gochecknoglobals
 var historicalReferences = map[string]string{
-	"windows_logical_disk_avg_read_requests_queued":  "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
-	"windows_logical_disk_avg_write_requests_queued": "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
-	"windows_net_route_info":                         "docs/collector.net.md: documented but never emitted, removed from the docs",
+	"windows_logical_disk_avg_read_requests_queued":         "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
+	"windows_logical_disk_avg_write_requests_queued":        "docs/collector.logical_disk.md: removed in 0.32, use the read/write *_seconds_total rate",
+	"windows_logical_disk_read_latency_seconds_total":       "docs/collector.logical_disk.md: removed in 0.32, duplicated read_seconds_total",
+	"windows_logical_disk_read_write_latency_seconds_total": "docs/collector.logical_disk.md: removed in 0.32, the sum of the read and write busy time",
+	"windows_logical_disk_write_latency_seconds_total":      "docs/collector.logical_disk.md: removed in 0.32, duplicated write_seconds_total",
+	"windows_net_route_info":                                "docs/collector.net.md: documented but never emitted, removed from the docs",
 }
 
 // ignoredReferences are windows_ names that are not metrics of the exporter.

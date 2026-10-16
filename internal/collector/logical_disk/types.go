@@ -20,9 +20,6 @@ package logical_disk
 type perfDataCounterValues struct {
 	Name string
 
-	AvgDiskSecPerRead      float64 `perfdata:"Avg. Disk sec/Read"`
-	AvgDiskSecPerTransfer  float64 `perfdata:"Avg. Disk sec/Transfer"`
-	AvgDiskSecPerWrite     float64 `perfdata:"Avg. Disk sec/Write"`
 	CurrentDiskQueueLength float64 `perfdata:"Current Disk Queue Length"`
 	FreeSpace              float64 `perfdata:"Free Megabytes"`
 	DiskReadBytesPerSec    float64 `perfdata:"Disk Read Bytes/sec"`
