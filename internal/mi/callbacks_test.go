@@ -327,9 +327,11 @@ func Test_MI_QueryContext_CancelDuringQuery(t *testing.T) {
 	})
 
 	t.Run("QueryContext", func(t *testing.T) {
-		// CIM_DataFile enumerates every file of the drive, which takes far
-		// longer than the context.
-		slowQuery, err := mi.NewQuery("SELECT Name FROM CIM_DataFile WHERE Drive = 'C:'")
+		// CIM_DataFile is slow, so the query outlives the context. Cancel
+		// does not stop the provider in WmiPrvSE: it finishes the
+		// enumeration on its own. Keep the query to one directory, a whole
+		// drive keeps the runner busy for minutes after the test.
+		slowQuery, err := mi.NewQuery(`SELECT Name FROM CIM_DataFile WHERE Drive = 'C:' AND Path = '\\Windows\\System32\\'`)
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)

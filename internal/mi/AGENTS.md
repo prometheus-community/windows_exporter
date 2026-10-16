@@ -63,5 +63,12 @@ results never look complete. A context that is done after the final result
 (`complete`, set under `mu`) does not fail a query that has nothing left to
 hand over.
 
+Tests that need a slow query must bound the work it causes. Cancelling an
+operation or an MI timeout only ends it on the client: the provider in
+WmiPrvSE finishes the enumeration on its own. `CIM_DataFile` for a whole drive
+kept the CI runner busy for minutes after the Go tests, which slowed every
+later step and made the end-to-end `/metrics` request time out. Restrict such
+queries to one directory.
+
 Run `CGO_ENABLED=1 go test -race` (gcc from w64devkit) and a
 `-gcflags=all=-d=checkptr` run for changes in this package.
