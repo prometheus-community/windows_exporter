@@ -68,6 +68,15 @@ rate(windows_logical_disk_read_seconds_total[5m]) / rate(windows_logical_disk_re
 rate(windows_logical_disk_write_seconds_total[5m]) / rate(windows_logical_disk_writes_total[5m])
 ```
 
+### Idle time
+`windows_logical_disk_idle_seconds_total` is the raw value of the `% Idle Time` counter: the cumulative idle time of the volume.
+Windows updates it unevenly while the disk is busy and catches up afterwards, so the rate over a short window can exceed 1
+right after a burst of I/O. Performance Monitor shows the same values above 100%.
+The errors cancel out over longer windows. Clamp the rate to 1 when you derive the busy time from it:
+```
+1 - clamp_max(rate(windows_logical_disk_idle_seconds_total[5m]), 1)
+```
+
 ### Size metrics
 The `free_bytes` and `size_bytes` metrics are read from the volume on every scrape. Both are the free and total bytes
 of the whole volume, regardless of NTFS disk quotas of the account running windows_exporter.

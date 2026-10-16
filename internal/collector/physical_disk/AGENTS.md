@@ -19,6 +19,13 @@ multi-instance. These notes were recorded on a Windows Server 2025
   (`% Disk Read Time`, `% Disk Write Time`, `% Idle Time`) to seconds.
   `PERF_AVERAGE_TIMER` values arrive in ticks of the 10 MHz counter time base
   and need the 1e-7 factor.
+- The second raw value of `% Idle Time` is the sample time as a UTC FILETIME;
+  PDH divides by its delta. Even with that divisor the idle delta of a busy
+  disk exceeded the elapsed time by up to 43% on a Windows 11 NVMe disk
+  (Performance Monitor showed 150%) after a 1.6 GB write ended, while idle
+  disks stayed at 1.000 and `Processor Information` idle time never exceeded 1.
+  The accumulator lags while busy and catches up later (#1249). The collector
+  exports the raw counter; queries clamp the rate with `clamp_max(..., 1)`.
 - The `PERF_AVERAGE_TIMER` base is the operation count: it equals
   `Disk Reads/sec` (781613), `Disk Writes/sec` (940802) and their sum
   (1722415).
