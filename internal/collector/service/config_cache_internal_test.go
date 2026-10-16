@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/registry"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 // newTestConfigCache returns a cache that watches a temporary key below
@@ -68,7 +67,7 @@ func newTestConfigCache(t *testing.T) (*serviceConfigCache, registry.Key) {
 
 		_, generation, _ := cache.get(name)
 		cache.put(name, generation, cachedServiceConfig{
-			config:    mgr.Config{DisplayName: name},
+			config:    serviceConfig{DisplayName: name},
 			available: true,
 			lastWrite: lastWrite,
 		})

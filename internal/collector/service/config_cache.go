@@ -26,7 +26,6 @@ import (
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 const (
@@ -54,7 +53,7 @@ var errConfigCacheClosed = errors.New("service configuration cache is closed")
 
 // cachedServiceConfig is the result of queryServiceConfig.
 type cachedServiceConfig struct {
-	config    mgr.Config
+	config    serviceConfig
 	available bool
 
 	// lastWrite is the last write time of the service's registry key, read
@@ -280,7 +279,7 @@ func (cache *serviceConfigCache) close() error {
 
 // getCachedServiceConfig returns the configuration of a service from the cache,
 // or queries and caches it on a miss.
-func (c *Collector) getCachedServiceConfig(serviceName string) (mgr.Config, bool, error) {
+func (c *Collector) getCachedServiceConfig(serviceName string) (serviceConfig, bool, error) {
 	entry, generation, ok := c.configCache.get(serviceName)
 	if ok {
 		return entry.config, entry.available, nil
@@ -296,7 +295,7 @@ func (c *Collector) getCachedServiceConfig(serviceName string) (mgr.Config, bool
 
 	config, available, err := c.queryServiceConfig(serviceName)
 	if err != nil {
-		return mgr.Config{}, false, err
+		return serviceConfig{}, false, err
 	}
 
 	switch {
@@ -308,6 +307,8 @@ func (c *Collector) getCachedServiceConfig(serviceName string) (mgr.Config, bool
 	case !available:
 		// An unavailable configuration, for example a display name from a missing
 		// MUI file, can become available without a change to the service key.
+	case !config.extendedAvailable:
+		// The delayed auto-start flag and triggers are queried again on the next scrape.
 	case time.Since(lastWrite) < configCacheMinKeyAge:
 		// Cached on a later scrape, once a second write in the same tick is ruled out.
 	default:
