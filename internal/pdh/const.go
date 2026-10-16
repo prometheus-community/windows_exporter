@@ -90,6 +90,8 @@ var SupportedCounterTypes = map[uint32]prometheus.ValueType{
 	PERF_PRECISION_100NS_TIMER:      prometheus.CounterValue,
 	PERF_SAMPLE_FRACTION:            prometheus.GaugeValue,
 	PERF_100NSEC_TIMER_INV:          prometheus.CounterValue,
+	PERF_100NSEC_MULTI_TIMER:        prometheus.CounterValue,
+	PERF_100NSEC_MULTI_TIMER_INV:    prometheus.CounterValue,
 	PERF_ELAPSED_TIME:               prometheus.GaugeValue,
 	PERF_SAMPLE_BASE:                prometheus.GaugeValue,
 	PERF_RAW_BASE:                   prometheus.GaugeValue,

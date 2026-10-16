@@ -225,9 +225,11 @@ to seconds, so do not scale them again: the 100 ns timers
 `% Idle Time` are exported in seconds, and `PERF_ELAPSED_TIME` counters such as
 `Process\Elapsed Time` as seconds since the start. The raw value of an `_INV`
 counter is the inactive time: for `% Processor Time`, that is the idle time, not
-the busy time. `PERF_AVERAGE_TIMER` counters such as `Avg. Disk sec/Read` count ticks
-of the performance timer, whose frequency depends on the host, so a fixed
-multiplier does not fit them; use the `formatted` type for them.
+the busy time. `MULTI_TIMER` values are summed over all units of the counter,
+so they can grow faster than wall time. `PERF_AVERAGE_TIMER` counters such as
+`Avg. Disk sec/Read` count ticks of the performance timer, whose frequency
+depends on the host, so a fixed multiplier does not fit them; use the
+`formatted` type for them.
 
 This key is optional.
 

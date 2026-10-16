@@ -385,6 +385,30 @@ func TestSetRawValueElapsedTime(t *testing.T) {
 	require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 1, SecondValue: 2}))
 }
 
+// TestSetRawValue100nsTimers checks that every 100 ns timer type is exported in
+// seconds. 115960642 * (1 / 1e7) is 11.596064199999999, so the test also
+// catches a multiplication by the reciprocal.
+func TestSetRawValue100nsTimers(t *testing.T) {
+	t.Parallel()
+
+	c := newRowSetTestCollector(false)
+
+	for _, counterType := range []uint32{
+		PERF_100NSEC_TIMER,
+		PERF_100NSEC_TIMER_INV,
+		PERF_100NSEC_MULTI_TIMER,
+		PERF_100NSEC_MULTI_TIMER_INV,
+		PERF_PRECISION_100NS_TIMER,
+	} {
+		var values rowSetValues
+
+		counter := &Counter{Type: counterType, FieldIndexValue: int(unsafe.Offsetof(values.A)), FieldIndexSecondValue: -1}
+
+		require.True(t, c.setRawValue(&values, counter, RawCounter{FirstValue: 115_960_642, SecondValue: 1}))
+		require.InDelta(t, 11.5960642, values.A, 0, "counter type %#x", counterType)
+	}
+}
+
 // TestCollectLoadsMissingTimeBase checks that an elapsed time counter whose time
 // base was not available when the collector was created gets it on a later
 // sample, instead of omitting every instance until a restart (#2313).
@@ -474,6 +498,8 @@ func TestMetricTypeForCounterType(t *testing.T) {
 
 	require.Equal(t, prometheus.GaugeValue, metricType(CounterTypeRaw, PERF_COUNTER_RAWCOUNT))
 	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_COUNTER_BULK_COUNT))
+	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_100NSEC_MULTI_TIMER))
+	require.Equal(t, prometheus.CounterValue, metricType(CounterTypeRaw, PERF_100NSEC_MULTI_TIMER_INV))
 	require.Equal(t, prometheus.GaugeValue, metricType(CounterTypeRaw, 0xFFFFFFFF))
 	require.Equal(t, prometheus.GaugeValue, metricType(CounterTypeFormatted, PERF_COUNTER_BULK_COUNT))
 }

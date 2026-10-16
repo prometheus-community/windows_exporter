@@ -20,7 +20,7 @@ multi-instance. These notes were recorded on a Windows Server 2025
   `Avg. Disk sec/Transfer` (21178037) is their sum. The raw value is the
   cumulative busy time in 100 ns ticks. `internal/pdh` converts the
   `PERF_PRECISION_100NS_TIMER` counters to seconds. The queue length and
-  `PERF_AVERAGE_TIMER` values arrive in ticks and need the 1e-7 factor; the
+  `PERF_AVERAGE_TIMER` values arrive in ticks and need dividing by 1e7; the
   counter time base is 10 MHz here. The queue length counters duplicate the
   busy time, so the collector no longer reads them; the average queue length is
   `rate(windows_logical_disk_{read,write}_seconds_total[5m])`.

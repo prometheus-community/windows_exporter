@@ -512,7 +512,7 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric, scrape 
 		ch <- scrape.MustNewConstMetric(
 			c.gpuEngineRunningTime,
 			prometheus.CounterValue,
-			data.RunningTime/10_000_000,
+			data.RunningTime/pdh.TicksPerSecond,
 			instance.Pid, instance.Luid, device.ID, instance.Phys, instance.Eng, instance.Engtype,
 		)
 	}

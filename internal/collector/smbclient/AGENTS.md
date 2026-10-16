@@ -14,7 +14,7 @@ host has connected to. These notes were recorded on a Windows Server 2025
   or write requests outstanding"). The `/sec` counters are cumulative counts.
 - `Avg. Data/Read/Write Queue Length` are `PERF_COUNTER_100NS_QUEUELEN_TYPE`:
   the raw value is accumulated queue time in 100 ns ticks. `internal/pdh` does
-  not convert this type, so the collector applies the 1e-7 factor.
+  not convert this type, so the collector divides by `pdh.TicksPerSecond`.
 - `Avg. sec/Read`, `Avg. sec/Write` and `Avg. sec/Data Request` are
   `PERF_AVERAGE_TIMER`. The first value is the summed latency in ticks of the
   10 MHz counter time base and the base is the request count; the collector
