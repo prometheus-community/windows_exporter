@@ -270,6 +270,12 @@ dashboard-linter still need their release binaries, so report those checks as
 skipped. A Windows checkout with `core.autocrlf` has CRLF sources, so compare
 generated output with `diff --strip-trailing-cr`.
 
+`go test ./internal/metriccontract/` checks that every `windows_` metric name
+in the readme files, `docs/collector.*.md`, the runbooks, the mixin and the
+dashboards is created by a collector; it reads the Go sources, so it also runs
+on Linux. When documentation names a renamed or removed metric on purpose, add
+it to `historicalReferences` in that test with the reason.
+
 Preserve target/device labels, apply counter rates before aggregation, and
 handle zero denominators. Keep optional-role alerts configurable and provide a
 runbook for each alert. Check required collector availability and the Grafana
