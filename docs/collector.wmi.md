@@ -336,8 +336,9 @@ windows_wmi_query_success{query="os"} 1
 The status of Microsoft Defender Antivirus is in the `MSFT_MpComputerStatus` class, which returns one instance.
 Windows has no performance counters for it. The query takes about 50 ms and works without administrator rights.
 On hosts without Defender, for example Windows Server without the feature installed, the namespace is missing
-and `windows_wmi_query_success{query="defender"}` is `0`. With a third-party antivirus, Defender runs in passive
-mode, which the `running_mode` label shows.
+and `windows_wmi_query_success{query="defender"}` is `0`. With a third-party antivirus, Defender turns itself off
+or, on devices onboarded to Microsoft Defender for Endpoint, runs in passive mode; the `running_mode` label shows which.
+The label is on every series of the query, so a change of the mode starts new series.
 
 ```yaml
 collector:
@@ -396,8 +397,10 @@ collector:
 Other boolean properties of the class, such as `AntispywareEnabled`, `IoavProtectionEnabled` and `NISEnabled`, can be
 added the same way, and `AntispywareSignatureLastUpdated` and `NISSignatureLastUpdated` with their own `signature` label.
 A scan that never ran has no end time, so its series is missing; the query still reports success.
+Older Defender platforms may lack some properties, for example `IsTamperProtected`; a missing property fails the
+whole query, so remove it from the list there.
 
-Example output:
+Example output (excerpt):
 
 ```
 windows_wmi_defender_protection_enabled{feature="antivirus",running_mode="Normal"} 1
@@ -419,8 +422,11 @@ management API (`Get-StorageReliabilityCounter`), and the health status Windows 
   exporter has them when it runs as a service (`LocalSystem`); as a regular user, the queries fail with
   `MI_RESULT_ACCESS_DENIED`.
 - Virtual disks of virtual machines usually report no reliability counters.
-- The reliability counters change slowly. Consider a longer scrape interval for these queries, for example with a
-  separate scrape job that uses the `collect[]` parameter.
+- `MSStorageDriver_FailurePredictStatus` fails as not supported when no disk driver implements it, which is common
+  for NVMe disks and virtual machines. Leave that query out on such hosts.
+- The reliability counters change slowly. The wmi collector runs all of its queries on every scrape, so to read them
+  less often, scrape `collect[]=wmi` from a separate job with a longer interval and leave `wmi` out of the
+  `collect[]` list of the main job. This applies to all wmi queries.
 
 ```yaml
 collector:
@@ -475,6 +481,8 @@ collector:
 ```
 
 The wmi collector exports values as they are, so `Wear` stays a percentage and `PowerOnHours` stays in hours.
+Use recording rules for base units, for example `windows_wmi_disk_wear / 100` for a ratio and
+`windows_wmi_disk_power_on_hours * 3600` for seconds.
 `MSStorageDriver_FailurePredictStatus` names the device by its PnP instance name, not by disk number.
 
 ## Useful queries
@@ -493,6 +501,9 @@ time() - windows_wmi_defender_signature_last_updated_timestamp_seconds
 
 ## Alerting examples
 
+`WMIQueryFailure` also fires for queries of classes that are missing on a host, for example the Defender query on
+Windows Server without Defender. Scope it with a `query` matcher where needed.
+
 **prometheus.rules**
 
 ```yaml
@@ -506,7 +517,7 @@ time() - windows_wmi_defender_signature_last_updated_timestamp_seconds
       description: "The WMI query {{ $labels.query }} failed for 15 minutes."
 
   - alert: DefenderSignaturesOutdated
-    expr: time() - windows_wmi_defender_signature_last_updated_timestamp_seconds{signature="antivirus"} > 3 * 86400
+    expr: time() - windows_wmi_defender_signature_last_updated_timestamp_seconds{running_mode="Normal",signature="antivirus"} > 3 * 86400
     for: 1h
     labels:
       severity: warning
@@ -515,11 +526,20 @@ time() - windows_wmi_defender_signature_last_updated_timestamp_seconds
       description: "The Microsoft Defender signatures were last updated more than 3 days ago."
 
   - alert: DiskUnhealthy
-    expr: windows_wmi_physical_disk_health_status != 0
+    expr: windows_wmi_physical_disk_health_status == 2
     for: 15m
     labels:
       severity: critical
     annotations:
-      summary: "Disk not healthy (instance {{ $labels.instance }})"
-      description: "Windows reports disk {{ $labels.disk }} ({{ $labels.model }}) as not healthy."
+      summary: "Disk unhealthy (instance {{ $labels.instance }})"
+      description: "Windows reports disk {{ $labels.disk }} ({{ $labels.model }}) as unhealthy."
+
+  - alert: DiskHealthWarning
+    expr: windows_wmi_physical_disk_health_status == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk health warning (instance {{ $labels.instance }})"
+      description: "Windows reports a health warning for disk {{ $labels.disk }} ({{ $labels.model }})."
 ```
