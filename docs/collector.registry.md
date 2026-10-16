@@ -56,6 +56,7 @@ YAML:
       metric: windows_registry_windows_major_version # optional
       help: Windows major version number # optional
       type: gauge # optional
+      multiplier: 1 # optional
       labels: # optional
         product: windows
 - name: memory_management # required
@@ -77,6 +78,7 @@ JSON:
         "metric": "windows_registry_windows_major_version",
         "help": "Windows major version number",
         "type": "gauge",
+        "multiplier": 1,
         "labels": { "product": "windows" }
       }
     ]
@@ -154,6 +156,18 @@ The metric `# HELP` text. Optional — if omitted, it defaults to
 The metric type. The value can be `gauge` or `counter`. If not specified, it
 defaults to `gauge`, which suits the configuration-style values typically stored
 in the registry.
+
+This key is optional.
+
+##### multiplier
+
+A factor that the value is multiplied by before it is exported, to convert it to
+the base unit the Prometheus [naming conventions](https://prometheus.io/docs/practices/naming/#base-units)
+ask for. For example, `0.001` converts milliseconds to seconds, `0.01` percent to
+a ratio and `3600` hours to seconds. It must be a positive number, so counters
+keep counting up. If the multiplier is the reciprocal of an integer, like `0.001`,
+the value is divided by that integer instead, which avoids rounding artifacts
+such as `0.009000000000000001`. If not specified, the value is exported as is.
 
 This key is optional.
 
