@@ -130,8 +130,9 @@ exercised a live Windows role.
   the original `Collection` owns collectors and MI resources. A timed-out call
   may still be running: prevent overlap, drain late metrics and do not free its
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
-  `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`,
-  never `0` (no MI timeout), so one stalled provider cannot block startup.
+  `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`.
+  A non-positive MI query timeout selects `mi.DefaultQueryTimeout` (5s), which
+  is too short for slow providers.
 - Collectors that reuse metrics or label pairs between scrapes keep an
   `internal/metriccache` or `internal/labelcache` field and list it in
   `ScrapeCaches()` (`internal/scrapecache`). The collection resets these caches

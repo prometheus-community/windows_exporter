@@ -18,6 +18,7 @@
 package mi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -166,6 +167,9 @@ type asyncQuery struct {
 	// instances that arrived before any failed result.
 	handlerErr error
 
+	// ctx is the context passed to wait. Only the waiting goroutine uses it.
+	ctx context.Context //nolint:containedctx // lives for the duration of one wait.
+
 	// cancelRequested asks the waiting goroutine to cancel the operation.
 	cancelRequested chan struct{}
 	// done is closed by the final callback. MI does not use the query any
@@ -181,6 +185,8 @@ type asyncQuery struct {
 	// mu also guards pending against the waiting goroutine.
 	mu  sync.Mutex
 	err error
+	// complete is set under mu by the final callback, before done is closed.
+	complete bool
 }
 
 // newAsyncQuery returns a query that calls onInstance inside the callback.
@@ -248,6 +254,10 @@ func (q *asyncQuery) instanceResult(instance *Instance, moreResults bool, result
 			q.fail(&callbackPanicError{value: r})
 		}
 
+		if !moreResults {
+			q.complete = true
+		}
+
 		q.mu.Unlock()
 
 		// The final result is the last call MI makes with this context.
@@ -308,14 +318,35 @@ func (q *asyncQuery) queueCopy(instance *Instance) error {
 }
 
 // wait blocks until the final callback and returns the query result. It
-// cancels the operation when a callback asks for it, and runs the handler of
-// a copy query.
-func (q *asyncQuery) wait() error {
+// cancels the operation when a callback asks for it or ctx is done, and runs
+// the handler of a copy query.
+//
+// A done ctx fails the query with the context's cause, unless it has failed
+// before, and stops calling the handler. wait still returns only after the
+// final callback, so close never releases memory MI may use.
+func (q *asyncQuery) wait(ctx context.Context) error {
 	guard := newGuardTimer()
 	defer releaseGuardTimer(guard)
 
+	q.ctx = ctx
+	ctxDone := ctx.Done()
+
 	for {
 		select {
+		case <-ctxDone:
+			// Fires once. The cancellation goes through cancelRequested,
+			// like one a callback asks for.
+			ctxDone = nil
+
+			// A query whose final result has arrived is complete; a late
+			// cancellation must not turn it into an error.
+			q.mu.Lock()
+
+			if !q.complete {
+				q.fail(context.Cause(ctx))
+			}
+
+			q.mu.Unlock()
 		case <-q.done:
 			// Copies queued by the last callbacks.
 			q.handleQueued()
@@ -360,7 +391,16 @@ func (q *asyncQuery) handleQueued() {
 
 		for i, instance := range batch {
 			if q.handlerErr == nil {
-				if err := q.handler(instance); err != nil {
+				err := context.Cause(q.ctx)
+				if err == nil {
+					err = q.handler(instance)
+				}
+
+				// After ctx is done, the copies are only deleted. That fails
+				// the query, also when MI has already delivered the final
+				// result: skipped instances must not look like a complete
+				// result.
+				if err != nil {
 					q.handlerErr = err
 
 					// Stops the callbacks from copying further instances.
@@ -429,10 +469,25 @@ func (q *asyncQuery) close() {
 func (s *Session) query(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
 	queryDialect QueryDialect, queryExpression Query, onInstance func(*Instance) error,
 ) error {
-	query := newAsyncQuery(onInstance)
+	return s.runQuery(context.Background(), newAsyncQuery(onInstance), flags, operationOptions, 0,
+		namespaceName, queryDialect, queryExpression)
+}
 
-	query.start(s, flags, operationOptions, namespaceName, queryDialect, queryExpression)
+// runQuery starts query, see [Session.startQuery], waits for it with
+// cancellation, see [asyncQuery.wait], and closes it.
+func (s *Session) runQuery(ctx context.Context, query *asyncQuery, flags OperationFlags, operationOptions *OperationOptions,
+	queryTimeout time.Duration, namespaceName Namespace, queryDialect QueryDialect, queryExpression Query,
+) error {
+	release, err := s.startQuery(query, flags, operationOptions, queryTimeout, namespaceName, queryDialect, queryExpression)
+	if err != nil {
+		return err
+	}
+
+	// Deferred first so the options outlive the operation that uses them.
+	defer release()
+
+	// close cancels the operation if a handler aborted it early or panicked.
 	defer query.close()
 
-	return query.wait()
+	return query.wait(ctx)
 }

@@ -37,5 +37,31 @@ Rules for the callback path:
   because the runtime treats every callback as synchronized with every native
   call.
 
+Query timeouts and options:
+
+- Every query runs with an MI timeout. MI treats a zero timeout as unset, so
+  a non-positive timeout selects `DefaultQueryTimeout` (the session default
+  options) and a positive one below 1ms is raised to 1ms.
+- Operation options must outlive every operation that uses them. Options for
+  whole-second timeouts are cached per session and shared by concurrent
+  operations; `Session.Close` deletes them after `MI_Session_Close` has
+  closed every operation. Other timeouts, e.g. the remaining scrape budget,
+  get per-query options that are deleted after the operation is closed.
+- `startQuery` holds the read lock of `Session.lifecycle` from the `closed`
+  check until `MI_Session_QueryInstances` has returned; `Close` holds the
+  write lock across `MI_Session_Close` and the option deletion. Start every
+  callback query through `runQuery`/`startQuery`, never by calling
+  `asyncQuery.start` with session options directly.
+
+Cancellation: `QueryContext` and `QueryFuncContext` do not start a query
+for a done context. When it is done during the query, `wait` fails the query
+through `fail`/`cancelRequested`, so `Cancel` runs on the waiting goroutine,
+and still waits for the final callback before `close` frees anything. The
+handler is not called after the context is done; a copy it skips fails the
+query with the context's cause, even after the final result, so partial
+results never look complete. A context that is done after the final result
+(`complete`, set under `mu`) does not fail a query that has nothing left to
+hand over.
+
 Run `CGO_ENABLED=1 go test -race` (gcc from w64devkit) and a
 `-gcflags=all=-d=checkptr` run for changes in this package.
