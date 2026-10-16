@@ -40,7 +40,7 @@ with its info metric `on (job, instance, <key>)`.
 ## Recording rules
 
 New recordings go in `rules/rules.libsonnet` with the shared expressions in
-`lib/queries.libsonnet`, a row in the README table and a test in
+`lib/queries.libsonnet`, a row in the `README.md` table and a test in
 `tests/rules.test.yaml`. Use `q.ratio` for divisions so idle devices and zero
 capacities produce no sample instead of `NaN` or `+Inf`.
 
