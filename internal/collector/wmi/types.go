@@ -20,6 +20,7 @@ package wmi
 import (
 	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
 )
@@ -48,16 +49,18 @@ type LabelProperty struct {
 }
 
 type Property struct {
-	Name   string            `json:"name"   yaml:"name"`
-	Metric string            `json:"metric" yaml:"metric"`
-	Help   string            `json:"help"   yaml:"help"`
-	Type   string            `json:"type"   yaml:"type"`
-	Labels map[string]string `json:"labels" yaml:"labels"`
+	Name       string            `json:"name"       yaml:"name"`
+	Metric     string            `json:"metric"     yaml:"metric"`
+	Help       string            `json:"help"       yaml:"help"`
+	Type       string            `json:"type"       yaml:"type"`
+	Labels     map[string]string `json:"labels"     yaml:"labels"`
+	Multiplier *float64          `json:"multiplier" yaml:"multiplier"`
 
 	// Resolved at Build time.
 	elementName mi.ElementName
 	desc        *prometheus.Desc
 	metricType  prometheus.ValueType
+	multiplier  multiplier.Multiplier
 }
 
 // UnmarshalYAML decodes the wmi block of the configuration file, where the

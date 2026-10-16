@@ -168,6 +168,21 @@ func TestCollectorMetrics(t *testing.T) {
 				Properties: []wmi.Property{{Name: "Primary", Metric: "windows_wmi_test_shared", Labels: map[string]string{"query": "b"}}},
 			},
 			{
+				// The multiplier converts units, e.g. milliseconds to seconds.
+				Name:  "scaled_down",
+				Class: "Win32_OperatingSystem",
+				Properties: []wmi.Property{
+					{Name: "Primary", Metric: "windows_wmi_test_scaled", Labels: map[string]string{"query": "down"}, Multiplier: new(0.001)},
+				},
+			},
+			{
+				Name:  "scaled_up",
+				Class: "Win32_OperatingSystem",
+				Properties: []wmi.Property{
+					{Name: "Primary", Metric: "windows_wmi_test_scaled", Labels: map[string]string{"query": "up"}, Multiplier: new(3600.0)},
+				},
+			},
+			{
 				Name:       "missing_class",
 				Class:      "Win32_WindowsExporterDoesNotExist",
 				Properties: []wmi.Property{{Name: "Value"}},
@@ -205,6 +220,8 @@ windows_wmi_query_success{query="kernel"} 1
 windows_wmi_query_success{query="missing_class"} 0
 windows_wmi_query_success{query="os"} 1
 windows_wmi_query_success{query="partial"} 0
+windows_wmi_query_success{query="scaled_down"} 1
+windows_wmi_query_success{query="scaled_up"} 1
 windows_wmi_query_success{query="shared_a"} 1
 windows_wmi_query_success{query="shared_b"} 1
 windows_wmi_query_success{query="unsupported_label"} 0
@@ -212,6 +229,10 @@ windows_wmi_query_success{query="unsupported_label"} 0
 # TYPE windows_wmi_test_parent_pid counter
 windows_wmi_test_parent_pid{foo="bar",handle="0",path="",pid="0",process="System Idle Process"} 0
 windows_wmi_test_parent_pid{foo="bar",handle="4",path="",pid="4",process="System"} 0
+# HELP windows_wmi_test_scaled windows_exporter: custom WMI metric
+# TYPE windows_wmi_test_scaled gauge
+windows_wmi_test_scaled{query="down"} 0.001
+windows_wmi_test_scaled{query="up"} 3600
 # HELP windows_wmi_test_shared windows_exporter: custom WMI metric
 # TYPE windows_wmi_test_shared gauge
 windows_wmi_test_shared{query="a"} 1
@@ -232,7 +253,7 @@ windows_wmi_test_shared{query="b"} 1
 
 		require.Equal(t, expected, strings.Join(lines, "\n"))
 
-		for _, name := range []string{"kernel", "missing_class", "os", "partial", "shared_a", "shared_b", "unsupported_label"} {
+		for _, name := range []string{"kernel", "missing_class", "os", "partial", "scaled_down", "scaled_up", "shared_a", "shared_b", "unsupported_label"} {
 			require.Regexp(t, `(?m)^windows_wmi_query_duration_seconds\{query="`+name+`"\} \d`, got)
 		}
 	}

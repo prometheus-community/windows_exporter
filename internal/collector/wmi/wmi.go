@@ -31,6 +31,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -346,6 +347,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 				continue
 			}
 
+			if property.multiplier, err = multiplier.New(property.Multiplier); err != nil {
+				errs = append(errs, fmt.Errorf("query %s: property %q: %w", query.Name, property.Name, err))
+
+				continue
+			}
+
 			if label, ok := firstCommonLabel(query.labelNames, property.Labels); ok {
 				errs = append(errs, fmt.Errorf("query %s: property %q: constant label %q is already set by a label property", query.Name, property.Name, label))
 
@@ -588,7 +595,7 @@ func (c *Collector) collectQuery(ch chan<- prometheus.Metric, scrape *labelcache
 			ch <- scrape.MustNewConstMetric(
 				property.desc,
 				property.metricType,
-				value,
+				property.multiplier.Apply(value),
 				labelValues...,
 			)
 		}
