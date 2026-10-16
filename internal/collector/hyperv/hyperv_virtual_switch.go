@@ -55,7 +55,8 @@ type collectorVirtualSwitch struct {
 }
 
 type perfDataCounterValuesVirtualSwitch struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	VirtualSwitchBroadcastPacketsReceived         float64 `perfdata:"Broadcast Packets Received/sec"`
 	VirtualSwitchBroadcastPacketsSent             float64 `perfdata:"Broadcast Packets Sent/sec"`
@@ -223,6 +224,11 @@ func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric, scrape *la
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Switch metrics: %w", err)
 	}
+
+	suffixDuplicateVMs(c.perfDataObjectVirtualSwitch,
+		func(row *perfDataCounterValuesVirtualSwitch) *string { return &row.Name },
+		func(row *perfDataCounterValuesVirtualSwitch) int { return row.Occurrence },
+	)
 
 	for _, data := range c.perfDataObjectVirtualSwitch {
 		ch <- scrape.MustNewConstMetric(

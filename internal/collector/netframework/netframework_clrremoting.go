@@ -77,6 +77,7 @@ func (c *Collector) buildClrRemoting() error {
 
 type perfDataClrRemoting struct {
 	Name                           string
+	Occurrence                     int
 	Channels                       float64 `perfdata:"Channels"`
 	ContextBoundClassesLoaded      float64 `perfdata:"Context-Bound Classes Loaded"`
 	ContextBoundObjectsAllocPersec float64 `perfdata:"Context-Bound Objects Alloc / sec"`
@@ -85,11 +86,15 @@ type perfDataClrRemoting struct {
 	TotalRemoteCalls               float64 `perfdata:"Total Remote Calls"`
 }
 
+func (p *perfDataClrRemoting) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrRemoting
 	if err := c.perfClrRemoting.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Remoting: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

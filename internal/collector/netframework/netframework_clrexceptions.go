@@ -65,17 +65,22 @@ func (c *Collector) buildClrExceptions() error {
 
 type perfDataClrExceptions struct {
 	Name                    string
+	Occurrence              int
 	NumberofExcepsThrown    float64 `perfdata:"# of Exceps Thrown"`
 	NumberofFiltersPersec   float64 `perfdata:"# of Filters / sec"`
 	NumberofFinallysPersec  float64 `perfdata:"# of Finallys / sec"`
 	ThrowToCatchDepthPersec float64 `perfdata:"Throw To Catch Depth / sec"`
 }
 
+func (p *perfDataClrExceptions) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrExceptions
 	if err := c.perfClrExceptions.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Exceptions: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

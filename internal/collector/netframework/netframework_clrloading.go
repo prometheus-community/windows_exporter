@@ -95,6 +95,7 @@ func (c *Collector) buildClrLoading() error {
 
 type perfDataClrLoading struct {
 	Name                      string
+	Occurrence                int
 	BytesinLoaderHeap         float64 `perfdata:"Bytes in Loader Heap"`
 	CurrentAssemblies         float64 `perfdata:"Current Assemblies"`
 	CurrentClassesLoaded      float64 `perfdata:"Current Classes Loaded"`
@@ -106,11 +107,15 @@ type perfDataClrLoading struct {
 	Totalappdomainsunloaded   float64 `perfdata:"Total appdomains unloaded"`
 }
 
+func (p *perfDataClrLoading) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrLoading
 	if err := c.perfClrLoading.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Loading: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

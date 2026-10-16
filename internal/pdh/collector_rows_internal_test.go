@@ -69,16 +69,15 @@ func TestStructFields(t *testing.T) {
 	var row structFieldsValues
 
 	row.Invalid = 42
-	rows.resetRow(&row, "instance")
+	rows.resetRow(&row, "instance", 0)
 	require.Equal(t, structFieldsValues{Name: "instance"}, row)
 
 	rows.setValue(&row, offsets["Inner"], 1)
 	rows.setValue(&row, offsets["Outer"], 2)
 	rows.setValue(&row, offsets["Outer,secondvalue"], 3)
-	rows.setName(&row, "renamed")
 
 	require.Equal(t, structFieldsValues{
-		Name:  "renamed",
+		Name:  "instance",
 		Inner: 1,
 		Outer: 2,
 		Base:  3,
@@ -172,9 +171,9 @@ func TestStructRowAccessorWithoutName(t *testing.T) {
 	require.Len(t, fields, 1)
 
 	row := values{Value: 1}
-	rows.resetRow(&row, "instance")
-	rows.setName(&row, "instance")
+	rows.resetRow(&row, "instance", 1)
 	require.Equal(t, values{}, row)
+	require.False(t, rows.keepsOccurrences)
 
 	rows.setValue(&row, fields[0].index, 2)
 	require.Equal(t, values{Value: 2}, row)
@@ -188,18 +187,42 @@ func TestDynamicRowAccessor(t *testing.T) {
 	rows := dynamicRowAccessor(2)
 
 	values := []float64{1, 2, 3}
-	row := Row{Name: "old", Values: values}
+	row := Row{Name: "old", Occurrence: 3, Values: values}
 
-	rows.resetRow(&row, "new")
-	require.Equal(t, Row{Name: "new", Values: []float64{0, 0}}, row)
+	rows.resetRow(&row, "new", 1)
+	require.Equal(t, Row{Name: "new", Occurrence: 1, Values: []float64{0, 0}}, row)
 	require.Same(t, unsafe.SliceData(values), unsafe.SliceData(row.Values), "Values allocated again")
 
 	rows.setValue(&row, 1, 4)
 	require.Equal(t, []float64{0, 4}, row.Values)
 
-	row = Row{Name: "old", Values: []float64{1}}
-	rows.resetRow(&row, "new")
+	row = Row{Name: "old", Occurrence: 2, Values: []float64{1}}
+	rows.resetRow(&row, "new", 0)
 	require.Equal(t, Row{Name: "new", Values: []float64{0, 0}}, row)
+}
+
+// TestStructRowAccessorOccurrence checks that a reused struct row gets the
+// occurrence of its new instance, not that of the previous sample.
+func TestStructRowAccessorOccurrence(t *testing.T) {
+	t.Parallel()
+
+	type values struct {
+		Name       string
+		Value      float64 `perfdata:"Value"`
+		Occurrence int
+	}
+
+	_, rows, errs, err := structFields[values]()
+	require.NoError(t, err)
+	require.Empty(t, errs)
+	require.True(t, rows.keepsOccurrences)
+
+	row := values{Name: "old", Value: 1, Occurrence: 3}
+	rows.resetRow(&row, "new", 1)
+	require.Equal(t, values{Name: "new", Occurrence: 1}, row)
+
+	rows.resetRow(&row, "first", 0)
+	require.Equal(t, values{Name: "first"}, row)
 }
 
 // TestRowSetReusesRows checks that a sample reuses the backing array of dst
@@ -260,40 +283,18 @@ func TestRowSetSampleDoesNotAllocate(t *testing.T) {
 		rows.finish()
 		state.names.removeUnseen()
 
+		state.keys = rows.keys
 		state.valid = rows.valid
 	}
 
 	sample()
 
 	require.Len(t, dst, instances)
-	require.Equal(t, "instance_A#3", dst[75].Name)
+	require.Equal(t, "instance_A", dst[75].Name)
+	require.Equal(t, 3, dst[75].Occurrence)
 	require.Zero(t, testing.AllocsPerRun(10, sample))
 
 	runtime.KeepAlive(items)
-}
-
-// TestInstanceNameCacheSuffixed checks that suffixed names are built once
-// while their instances exist.
-func TestInstanceNameCacheSuffixed(t *testing.T) {
-	t.Parallel()
-
-	var cache instanceNameCache
-
-	cache.startSample()
-
-	first := cache.suffixed("svchost", 2)
-	require.Equal(t, "svchost#2", first)
-	require.Equal(t, "svchost#3", cache.suffixed("svchost", 3))
-	cache.removeUnseen()
-
-	cache.startSample()
-
-	second := cache.suffixed("svchost", 2)
-	require.Same(t, unsafe.StringData(first), unsafe.StringData(second), "name built again")
-	cache.removeUnseen()
-
-	require.Len(t, cache.suffixedNames, 1, "name of a vanished instance kept")
-	require.Contains(t, cache.suffixedNames, instanceKey{name: "svchost", occurrence: 2})
 }
 
 // TestCollectReusesRows checks that Collect keeps the backing array of dst and

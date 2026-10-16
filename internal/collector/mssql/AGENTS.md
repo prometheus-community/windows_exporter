@@ -33,6 +33,14 @@ Edition (`PatchLevel` 16.0.1000.6), named instance `NONDEFAULT`.
   15 including `_Total`. `SQL Errors` instances are error classes
   (`User Errors`, `Info Errors`, `Kill Connection Errors`,
   `DB Offline Errors`); `_Total` equalled their sum (38 = 34 + 4).
+- No row type declares `Occurrence` (see `internal/pdh`), because no object
+  repeats an instance name in one sample: database names are unique per
+  instance, a database belongs to at most one availability group
+  (`Database Replica`), `Availability Replica` instances are replicas of the
+  instance's availability groups, and the other instances are fixed lock
+  types, error classes, wait statistics or the single unnamed instance. A
+  sample on this host had no duplicates in any of these objects. If pdh
+  ever logs dropped duplicates for an `MSSQL$` object, declare the field.
 - `Wait Statistics` is unusual: every counter is a wait class and every
   instance is a statistic, `Average wait time (ms)`,
   `Cumulative wait time (ms) per second`, `Waits in progress` and

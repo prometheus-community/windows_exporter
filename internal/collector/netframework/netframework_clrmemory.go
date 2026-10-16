@@ -114,6 +114,7 @@ func (c *Collector) buildClrMemory() error {
 
 type perfDataClrMemory struct {
 	Name                      string
+	Occurrence                int
 	AllocatedBytesPersec      float64 `perfdata:"Allocated Bytes/sec"`
 	FinalizationSurvivors     float64 `perfdata:"Finalization Survivors"`
 	Gen0PromotedBytesPerSec   float64 `perfdata:"Gen 0 Promoted Bytes/Sec"`
@@ -136,11 +137,15 @@ type perfDataClrMemory struct {
 	ProcessID                 float64 `perfdata:"Process ID"`
 }
 
+func (p *perfDataClrMemory) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrMemory
 	if err := c.perfClrMemory.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Memory: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {

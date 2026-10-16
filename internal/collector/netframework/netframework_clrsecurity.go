@@ -65,6 +65,7 @@ func (c *Collector) buildClrSecurity() error {
 
 type perfDataClrSecurity struct {
 	Name                      string
+	Occurrence                int
 	NumberLinkTimeChecks      float64 `perfdata:"# Link Time Checks"`
 	PercentTimeinRTchecks     float64 `perfdata:"% Time in RT checks"`
 	PercentTimeinRTchecksBase float64 `perfdata:"% Time in RT checks,secondvalue"`
@@ -72,11 +73,15 @@ type perfDataClrSecurity struct {
 	TotalRuntimeChecks        float64 `perfdata:"Total Runtime Checks"`
 }
 
+func (p *perfDataClrSecurity) instance() (*string, int) { return &p.Name, p.Occurrence }
+
 func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric, scrape *labelcache.Scrape, _ time.Duration) error {
 	var dst []perfDataClrSecurity
 	if err := c.perfClrSecurity.Collect(&dst); err != nil {
 		return fmt.Errorf("failed to collect .NET CLR Security: %w", err)
 	}
+
+	suffixDuplicateProcesses(dst)
 
 	for _, process := range dst {
 		if process.Name == "_Global_" {
