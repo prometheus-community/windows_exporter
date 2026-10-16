@@ -246,6 +246,45 @@ available on development machines (AD DS, AD CS, AD FS, DFSR, Hyper-V, IIS,
 SQL Server, NPS, RemoteFX sessions). Check a type or unit question there
 first.
 
+## Memory and leak investigations
+
+Reports of growing memory are usually warm-up or bounded high-water marks, so
+measure before changing code:
+
+- `process_virtual_memory_bytes` is the private (committed) bytes on Windows;
+  `process_resident_memory_bytes` is the working set, which Windows trims, so
+  it drops and recovers without any change in the process. Compare the daily
+  minimum of the private bytes over several days, and split it into Go
+  (`go_memstats_sys_bytes`) and native memory (the difference).
+- Go memory levels off within a few hours. On Windows the Go runtime never
+  destroys an OS thread (M); threads it adds for blocking calls and MI
+  callbacks stay, each with about six handles, so `go_threads` and
+  `process_open_fds` rise in steps and then stay flat. Investigate handles only
+  if they grow while threads stay flat. The `not_in_go` counter in the Go
+  runtime metrics grows on Windows by itself (golang/go#82136).
+- `--debug.enabled` exposes `/debug/pprof/`. Diff two `heap` profiles taken
+  hours apart for live Go memory and `allocs` profiles for allocation churn.
+- Handle counts by object type need no admin rights:
+  `NtQuerySystemInformation(SystemExtendedHandleInformation)` plus
+  `NtQueryObject(ObjectTypesInformation)`, for example from a PowerShell
+  `Add-Type` script. `handle.exe` needs admin rights.
+- For native heap growth, use UMDH from the Debugging Tools for Windows (in an
+  elevated shell): `gflags /i windows_exporter.exe +ust`, restart the service,
+  then take `umdh -p:<pid> -f:a.txt` after warm-up and again hours later, and
+  compare with `umdh a.txt b.txt`. Snapshots from different processes can't be
+  compared. Stack recording costs about 24 MB for its database plus heap
+  overhead; remove it with `-ust` afterwards. Expected entries that are not
+  leaks: single 1 MB data buffers of the `perfos` and `perfts` counter
+  providers inside `PdhCollectQueryData`, and PDH counter path strings whose
+  count grows until every instance has been seen. A leak adds allocations under
+  the same stack in every snapshot.
+- UMDH doesn't see memory a library reserves with `VirtualAlloc` directly. A
+  full dump shows it: `cdb -pv -p <pid> -c ".dump /ma <file>; q"` pauses the
+  process only while it writes; open it with `cdb -z <file>` and run
+  `!address -summary` and `!heap -s`. If the debugger can't download a PDB,
+  fetch it from `https://msdl.microsoft.com/download/symbols/<name>.pdb/<GUID+age>/<name>.pdb`
+  with curl into a local symbol store.
+
 ## Dashboards, rules and runbooks
 
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
