@@ -268,8 +268,8 @@ Renamed:
 | `windows_mssql_databases_log_shrinks`                | `windows_mssql_databases_log_shrinks_total`                    | Now a counter, use `increase()`    |
 | `windows_mssql_databases_log_truncations`            | `windows_mssql_databases_log_truncations_total`                | Now a counter, use `increase()`    |
 | `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds` | `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds_total` | Now a counter in seconds; divide its `rate()` by that of the new `windows_mssql_databases_xtp_controller_dlc_fetches_total` |
-| `windows_mssql_dbreplica_database_flow_control_wait_seconds` | `windows_mssql_dbreplica_database_flow_control_wait_seconds_total` | Now a counter, use `rate()` |
-| `windows_mssql_dbreplica_group_commit_stall_seconds` | `windows_mssql_dbreplica_group_commit_stall_seconds_total`     | Now a counter, use `rate()`        |
+| `windows_mssql_dbreplica_database_flow_control_wait_seconds` | `windows_mssql_dbreplica_database_flow_control_wait_seconds_total` | Seconds instead of microseconds, now a counter, use `rate()` |
+| `windows_mssql_dbreplica_group_commit_stall_seconds` | `windows_mssql_dbreplica_group_commit_stall_seconds_total`     | Seconds instead of microseconds, now a counter, use `rate()` |
 | `windows_mssql_dbreplica_transaction_delay_seconds`  | `windows_mssql_dbreplica_transaction_delay_seconds_total`      | Now a counter, use `rate()`        |
 | `windows_mssql_dbreplica_recovery_queue_records`     | `windows_mssql_dbreplica_recovery_queue_bytes`                 | Was kilobytes, now bytes           |
 | `windows_mssql_dbreplica_log_send_queue`             | `windows_mssql_dbreplica_log_send_queue_bytes`                 | Was kilobytes, now bytes           |
@@ -595,7 +595,7 @@ If Prometheus scrapes with OpenMetrics, it already stored exactly these names, b
 | `windows_mssql_bufman_page_lookups`                                     | `windows_mssql_bufman_page_lookups_total`                                       | Same value |
 | `windows_mssql_bufman_page_reads`                                       | `windows_mssql_bufman_page_reads_total`                                         | Same value |
 | `windows_mssql_bufman_page_writes`                                      | `windows_mssql_bufman_page_writes_total`                                        | Same value |
-| `windows_mssql_bufman_read_ahead_issuing_seconds`                       | `windows_mssql_bufman_read_ahead_issuing_seconds_total`                         | Same value |
+| `windows_mssql_bufman_read_ahead_issuing_seconds`                       | `windows_mssql_bufman_read_ahead_issuing_seconds_total`                         | Seconds instead of microseconds |
 | `windows_mssql_bufman_read_ahead_pages`                                 | `windows_mssql_bufman_read_ahead_pages_total`                                   | Same value |
 | `windows_mssql_databases_backup_restore_operations`                     | `windows_mssql_databases_backup_restore_operations_total`                       | Same value |
 | `windows_mssql_databases_bulk_copy_bytes`                               | `windows_mssql_databases_bulk_copy_bytes_total`                                 | Same value |
@@ -691,7 +691,7 @@ These metrics keep their names, but 0.31 reported wrong values. Graphs show a st
 - `windows_ad_sam_computer_creation_requests_total` and `windows_ad_sam_computer_creation_successful_requests_total` were swapped in 0.31. Requests now count all attempts, successful requests only the successful ones.
 - `windows_adfs_db_artifact_query_time_seconds_total` and `windows_adfs_db_config_query_time_seconds_total` are now in seconds. 0.31 scaled the raw ticks by a fixed `1e-8`, so on a typical 10 MHz time base the values were 10 times too small. The new `windows_adfs_db_artifact_queries_total` and `windows_adfs_db_config_queries_total` count the queries, so you can compute the average query time.
 - `windows_mssql_databases_xtp_controller_dlc_peak_latency_seconds`, `windows_mssql_bufman_read_ahead_issuing_seconds_total` (renamed, see [Base units and counter names](#base-units-and-counter-names)), `windows_mssql_dbreplica_database_flow_control_wait_seconds_total` and `windows_mssql_dbreplica_group_commit_stall_seconds_total` (renamed, see above) are now in seconds. SQL Server reports microseconds, which 0.31 did not convert correctly. `windows_mssql_databases_xtp_controller_dlc_fetch_latency_seconds_total` is converted from microseconds as well.
-- `windows_mssql_dbreplica_redo_remaining_bytes` is now in bytes. 0.31 exported kilobytes. The other renamed `windows_mssql_dbreplica_*_bytes` metrics are converted from kilobytes too.
+- `windows_mssql_dbreplica_redo_remaining_bytes` is now in bytes. 0.31 exported kilobytes. The queue and undo metrics renamed to `windows_mssql_dbreplica_*_bytes` are converted from kilobytes too; the `_bytes_total` counters are unchanged.
 - `windows_dhcp_denied_due_to_nonmatch_total` now counts denials due to a non-match. In 0.31 it repeated the match denial count.
 - `windows_remote_fx_gfx_frames_skipped_insufficient_resource_total` with `resource="client"` and `resource="server"` now count the matching frames. In 0.31 the two label values were swapped.
 - `windows_dns_zone_transfer_requests_sent_total{qtype="soa"}` now counts zone transfer SOA requests sent. In 0.31 it reported zone transfer requests received.
