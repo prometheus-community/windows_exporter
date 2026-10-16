@@ -63,8 +63,8 @@ YAML:
   type: "formatted"
   counters:
     - name: "Cache Faults/sec"
-      metric: windows_performancecounter_memory_cache_faults_total # optional
-      type: "counter" # optional
+      metric: windows_performancecounter_memory_cache_faults_per_second # optional
+      type: "gauge" # optional
 ```
 
 </details>
@@ -105,8 +105,8 @@ YAML:
     "counters": [
       {
         "name": "Cache Faults/sec",
-        "metric": "windows_performancecounter_memory_cache_faults_total",
-        "type": "counter"
+        "metric": "windows_performancecounter_memory_cache_faults_per_second",
+        "type": "gauge"
       }
     ]
   }
