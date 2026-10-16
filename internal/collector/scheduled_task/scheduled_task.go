@@ -18,11 +18,11 @@
 package scheduled_task
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -73,7 +73,15 @@ type Collector struct {
 	// the last scrape. Each task publishes 19 series, and building them is most
 	// of the allocations of a scrape.
 	metricCache metriccache.Cache[string, taskValues]
+
+	// worker reads the tasks on a thread that keeps COM initialized between
+	// scrapes, so that the Task Scheduler client is not unloaded after each one.
+	worker *ole.Worker
 }
+
+// closeTimeout bounds how long Close waits for a running task read. It stays
+// below the 5 seconds that the collection waits for its collectors to close.
+const closeTimeout = 3 * time.Second
 
 // TaskState ...
 // https://docs.microsoft.com/en-us/windows/desktop/api/taskschd/ne-taskschd-task_state
@@ -178,7 +186,22 @@ func (c *Collector) ScrapeCaches() []scrapecache.Cache {
 	return []scrapecache.Cache{&c.metricCache}
 }
 
+// Close stops the COM worker. It waits up to closeTimeout for a task read that
+// outlived its scrape. If the read is still running after that, Close returns
+// an error and the worker stops and uninitializes COM on its own once the read
+// returns.
 func (c *Collector) Close() error {
+	if c.worker == nil {
+		return nil
+	}
+
+	worker := c.worker
+	c.worker = nil
+
+	if err := worker.Close(closeTimeout); err != nil {
+		return fmt.Errorf("close Task Scheduler worker: %w", err)
+	}
+
 	return nil
 }
 
@@ -216,11 +239,31 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.folderFilter = newFolderFilter(c.config.TaskInclude, c.config.TaskExclude)
 
+	if c.worker != nil {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
+
+	worker, err := ole.NewWorker()
+	if err != nil {
+		return fmt.Errorf("start Task Scheduler worker: %w", err)
+	}
+
+	c.worker = worker
+
 	return nil
 }
 
+// Collect reads the tasks on the COM worker and waits for the result without
+// a deadline of its own. A Task Scheduler call cannot be interrupted, so a
+// read that outlives the scrape budget keeps Collect running: the collection
+// reports the scrape as timed out, keeps the collector's slot until Collect
+// returns and skips the collector in later scrapes meanwhile. Waiting for the
+// worker with the scrape budget instead would let every later scrape queue
+// behind a hung call for its whole budget.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	return c.collect(ch)
+	return c.collect(context.Background(), ch)
 }
 
 //nolint:gochecknoglobals
@@ -232,11 +275,15 @@ var TASK_RESULT_STATUSES = []string{
 	"not_scheduled", "terminated", "no_valid_triggers", "event_trigger", "queued", "unknown",
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	scheduledTasks, err := c.taskReader().getScheduledTasks()
+func (c *Collector) collect(ctx context.Context, ch chan<- prometheus.Metric) error {
+	if c.worker == nil {
+		return ole.ErrWorkerStopped
+	}
+
+	scheduledTasks, err := ole.Do(ctx, c.worker, c.taskReader().getScheduledTasks)
 	if errors.Is(err, errTasksSkipped) {
 		// Tasks and folders that can't be read are skipped, the other tasks are still collected.
-		c.logger.Warn("failed to read some scheduled tasks",
+		c.logger.WarnContext(ctx, "failed to read some scheduled tasks",
 			slog.Any("err", err),
 		)
 	} else if err != nil {
@@ -359,19 +406,10 @@ type taskReader struct {
 }
 
 // getScheduledTasks returns the tasks that pass includeTask. It does not walk
-// the subfolders that fail includeFolder.
+// the subfolders that fail includeFolder. It must run on a thread that joined
+// the multithreaded apartment, such as an [ole.Worker], and releases every COM
+// object it creates before it returns.
 func (r taskReader) getScheduledTasks() (ScheduledTasks, error) {
-	// COM initialization and every interface call stay on the same OS thread.
-	runtime.LockOSThread()
-
-	defer runtime.UnlockOSThread()
-
-	if err := ole.Initialize(); err != nil {
-		return nil, err
-	}
-
-	defer ole.Uninitialize()
-
 	service, err := taskschd.NewTaskService()
 	if err != nil {
 		return nil, fmt.Errorf("create Task Scheduler service: %w", err)
