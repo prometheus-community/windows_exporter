@@ -61,8 +61,8 @@ func TestNewInvalid(t *testing.T) {
 }
 
 // TestApplyDividesExactly checks that a multiplier that is the reciprocal of
-// an integer gives the correctly rounded quotient, which a plain
-// multiplication misses for about one in seven values.
+// an integer gives the correctly rounded quotient. A plain multiplication
+// misses it for some values, for example 9 * 0.001.
 func TestApplyDividesExactly(t *testing.T) {
 	t.Parallel()
 

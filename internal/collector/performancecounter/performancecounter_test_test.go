@@ -442,8 +442,8 @@ func TestCollectorMetricTypePerCounter(t *testing.T) {
 }
 
 // TestCollectorMultiplier checks that the multiplier scales the exported value.
-// Commit Limit only changes when a page file is resized, so both objects read
-// the same value.
+// Commit Limit only changes when a page file grows or is resized, which is
+// unlikely between the two reads, so both objects read the same value.
 func TestCollectorMultiplier(t *testing.T) {
 	t.Parallel()
 

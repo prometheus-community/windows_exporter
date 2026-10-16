@@ -207,8 +207,15 @@ keep counting up. If the multiplier is the reciprocal of an integer, like `0.001
 the value is divided by that integer instead, which avoids rounding artifacts
 such as `0.009000000000000001`. If not specified, the value is exported as is.
 
-With the `raw` type, `PERF_100NSEC_TIMER_INV` counters such as `% Processor Time` are not converted to seconds
-and arrive in 100 ns ticks; a multiplier of `1e-7` converts them.
+With the `raw` type, some counters are already converted to seconds, so do not
+scale them again: `PERF_100NSEC_TIMER` and `PERF_PRECISION_100NS_TIMER`
+counters such as `% Idle Time` are exported in seconds, and `PERF_ELAPSED_TIME`
+counters such as `Elapsed Time` as elapsed seconds. `PERF_100NSEC_TIMER_INV`
+counters such as `% Processor Time` are not converted and arrive in 100 ns ticks
+of the inactive time, which for `% Processor Time` is the idle time; a
+multiplier of `1e-7` converts them to idle seconds. `PERF_AVERAGE_TIMER` raw
+values count ticks of a time base that depends on the counter, so a fixed
+multiplier does not fit them.
 
 This key is optional.
 
