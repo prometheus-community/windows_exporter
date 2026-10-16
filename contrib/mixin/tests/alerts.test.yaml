@@ -4,7 +4,15 @@ rule_files:
 evaluation_interval: 1m
 group_eval_order:
   - windows-exporter-recording
-  - windows-exporter-alerts
+  - windows-exporter
+  - windows-cpu
+  - windows-memory
+  - windows-disk
+  - windows-network
+  - windows-service
+  - windows-system
+  - windows-active-directory
+  - windows-time
 
 tests:
   - name: Commit pressure, disk latency and network failures wait and recover
@@ -30,6 +38,10 @@ tests:
         values: '0x31'
       - series: 'windows_net_packets_outbound_discarded_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
         values: '0+120x20 2520x10'
+      - series: 'windows_net_packets_received_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+3000x31'
+      - series: 'windows_net_packets_sent_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+3000x31'
     alert_rule_test:
       - {alertname: WindowsMemoryCommitHighUsage, eval_time: 14m, exp_alerts: []}
       - alertname: WindowsMemoryCommitHighUsage
@@ -40,7 +52,8 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorycommithighusage/
               summary: Windows memory commit usage is high
               description: 'Committed memory on host:9182 has exceeded 90% of the commit limit for 15 minutes.'
-      - {alertname: WindowsMemoryCommitHighUsage, eval_time: 21m, exp_alerts: []}
+      - {alertname: WindowsMemoryCommitHighUsage, eval_time: 25m, exp_alerts: [{exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}, exp_annotations: {runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorycommithighusage/, summary: Windows memory commit usage is high, description: 'Committed memory on host:9182 has exceeded 90% of the commit limit for 15 minutes.'}}]}
+      - {alertname: WindowsMemoryCommitHighUsage, eval_time: 26m, exp_alerts: []}
       - {alertname: WindowsDiskReadLatencyHigh, eval_time: 15m, exp_alerts: []}
       - alertname: WindowsDiskReadLatencyHigh
         eval_time: 16m
@@ -50,7 +63,7 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskreadlatencyhigh/
               summary: Windows disk read latency is high
               description: 'Volume C: on host:9182 has averaged more than 0.05 seconds per read operation for 15 minutes.'
-      - {alertname: WindowsDiskReadLatencyHigh, eval_time: 25m, exp_alerts: []}
+      - {alertname: WindowsDiskReadLatencyHigh, eval_time: 30m, exp_alerts: []}
       - {alertname: WindowsDiskWriteLatencyHigh, eval_time: 15m, exp_alerts: []}
       - alertname: WindowsDiskWriteLatencyHigh
         eval_time: 16m
@@ -60,27 +73,27 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskwritelatencyhigh/
               summary: Windows disk write latency is high
               description: 'Volume C: on host:9182 has averaged more than 0.05 seconds per write operation for 15 minutes.'
-      - {alertname: WindowsDiskWriteLatencyHigh, eval_time: 25m, exp_alerts: []}
-      - {alertname: WindowsNetworkErrors, eval_time: 17m, exp_alerts: []}
+      - {alertname: WindowsDiskWriteLatencyHigh, eval_time: 30m, exp_alerts: []}
+      - {alertname: WindowsNetworkErrors, eval_time: 15m, exp_alerts: []}
       - alertname: WindowsNetworkErrors
-        eval_time: 18m
+        eval_time: 16m
         exp_alerts:
           - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, nic: Ethernet, severity: warning}
             exp_annotations:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkerrors/
               summary: Windows network packet errors are high
-              description: 'Packet errors on interface Ethernet on host:9182 have exceeded 1 per second for 15 minutes.'
-      - {alertname: WindowsNetworkErrors, eval_time: 25m, exp_alerts: []}
-      - {alertname: WindowsNetworkDiscards, eval_time: 17m, exp_alerts: []}
+              description: 'Packet errors on interface Ethernet on host:9182 have exceeded 1% of all packets for 15 minutes.'
+      - {alertname: WindowsNetworkErrors, eval_time: 30m, exp_alerts: []}
+      - {alertname: WindowsNetworkDiscards, eval_time: 15m, exp_alerts: []}
       - alertname: WindowsNetworkDiscards
-        eval_time: 18m
+        eval_time: 16m
         exp_alerts:
           - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, nic: Ethernet, severity: warning}
             exp_annotations:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkdiscards/
               summary: Windows network packet discards are high
-              description: 'Packet discards on interface Ethernet on host:9182 have exceeded 1 per second for 15 minutes.'
-      - {alertname: WindowsNetworkDiscards, eval_time: 25m, exp_alerts: []}
+              description: 'Packet discards on interface Ethernet on host:9182 have exceeded 1% of all packets for 15 minutes.'
+      - {alertname: WindowsNetworkDiscards, eval_time: 30m, exp_alerts: []}
 
   - name: New resource alerts stay quiet at exact thresholds and clock alerts are disabled
     interval: 1m
@@ -105,6 +118,10 @@ tests:
         values: '0+30x20'
       - series: 'windows_net_packets_outbound_discarded_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
         values: '0+30x20'
+      - series: 'windows_net_packets_received_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+3600x20'
+      - series: 'windows_net_packets_sent_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+3600x20'
       - series: 'windows_time_ntp_client_time_sources{job="windows_exporter", instance="host:9182"}'
         values: '0x20'
       - series: 'windows_time_computed_time_offset_seconds{job="windows_exporter", instance="host:9182"}'
@@ -178,7 +195,7 @@ tests:
               summary: Windows CPU usage is high
               description: 'CPU usage on host:9182 has exceeded 90% for 15 minutes.'
       - alertname: WindowsCPUHighUsage
-        eval_time: 25m
+        eval_time: 30m
         exp_alerts: []
       - alertname: WindowsMemoryHighUsage
         eval_time: 14m
@@ -192,16 +209,16 @@ tests:
               summary: Windows memory usage is high
               description: 'Physical memory usage on host:9182 has exceeded 90% for 15 minutes.'
       - alertname: WindowsMemoryHighUsage
-        eval_time: 21m
+        eval_time: 26m
         exp_alerts: []
 
   - name: Disk alerts retain volume labels and fire at both severity levels
     interval: 1m
     input_series:
       - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
-        values: '3x15 30x5'
+        values: '3x15 30x10'
       - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
-        values: '100x21'
+        values: '100x26'
     alert_rule_test:
       - alertname: WindowsDiskAlmostFull
         eval_time: 14m
@@ -220,7 +237,7 @@ tests:
               summary: Windows disk space is low
               description: 'Volume C: on host:9182 has less than 5% free space. Windows may delay space metrics by 10–15 minutes.'
       - alertname: WindowsDiskAlmostFull
-        eval_time: 16m
+        eval_time: 21m
         exp_alerts: []
 
   - name: Healthy resources at the exact thresholds do not fire
@@ -291,3 +308,193 @@ tests:
       - {alertname: WindowsMemoryHighUsage, eval_time: 70m, exp_alerts: []}
       - {alertname: WindowsDiskAlmostFull, eval_time: 70m, exp_alerts: []}
       - {alertname: WindowsDiskFillingUp, eval_time: 70m, exp_alerts: []}
+
+  - name: Collector and scrape queue timeouts wait ten minutes and recover without keep_firing_for
+    interval: 1m
+    input_series:
+      - series: 'windows_exporter_collector_timeout{job="windows_exporter", instance="host:9182", collector="service"}'
+        values: '1x10 0x5'
+      - series: 'windows_exporter_collector_timeout{job="windows_exporter", instance="host:9182", collector="cpu"}'
+        values: '0x15'
+      - series: 'windows_exporter_scrape_queue_timeout{job="windows_exporter", instance="host:9182"}'
+        values: '1x10 0x5'
+    alert_rule_test:
+      - {alertname: WindowsCollectorTimeout, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsCollectorTimeout
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', collector: service, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowscollectortimeout/
+              summary: Windows collector exceeds the scrape timeout
+              description: 'Collector service on host:9182 has not finished within the scrape timeout for 10 minutes.'
+      - {alertname: WindowsCollectorTimeout, eval_time: 11m, exp_alerts: []}
+      - {alertname: WindowsScrapeQueueTimeout, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsScrapeQueueTimeout
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsscrapequeuetimeout/
+              summary: Windows exporter scrapes time out in the queue
+              description: 'Scrapes of host:9182 have timed out waiting for an earlier scrape to finish for 10 minutes.'
+      - {alertname: WindowsScrapeQueueTimeout, eval_time: 11m, exp_alerts: []}
+
+  - name: CPU saturation and paging use recordings, wait fifteen minutes and keep firing five
+    interval: 1m
+    input_series:
+      - series: 'windows_system_processor_queue_length{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '9x25 0x10'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
+        values: '0+60x35'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="1", mode="idle"}'
+        values: '0+60x35'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="2", mode="idle"}'
+        values: '0+60x35'
+      - series: 'windows_memory_swap_page_operations_total{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '0+90000x20 1800000x15'
+    alert_rule_test:
+      - {alertname: WindowsCPUSaturation, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsCPUSaturation
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowscpusaturation/
+              summary: Windows processor queue is long
+              description: 'More than 2 threads per logical processor have been waiting for CPU time on host:9182 for 15 minutes.'
+      - alertname: WindowsCPUSaturation
+        eval_time: 31m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowscpusaturation/
+              summary: Windows processor queue is long
+              description: 'More than 2 threads per logical processor have been waiting for CPU time on host:9182 for 15 minutes.'
+      - {alertname: WindowsCPUSaturation, eval_time: 32m, exp_alerts: []}
+      - {alertname: WindowsMemoryPagingHigh, eval_time: 18m, exp_alerts: []}
+      - alertname: WindowsMemoryPagingHigh
+        eval_time: 19m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorypaginghigh/
+              summary: Windows memory paging is high
+              description: 'Paging on host:9182 has exceeded 1000 pages per second for 15 minutes.'
+      - {alertname: WindowsMemoryPagingHigh, eval_time: 35m, exp_alerts: []}
+
+  - name: Network utilization fires in one direction and interface flapping counts status changes
+    interval: 1m
+    input_series:
+      - series: 'windows_net_bytes_received_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+6000x20 120000x15'
+      - series: 'windows_net_bytes_sent_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0x36'
+      - series: 'windows_net_current_bandwidth_bytes{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '100x36'
+      - series: 'windows_net_nic_operation_status{job="windows_exporter", instance="host:9182", nic="Ethernet", status="up"}'
+        values: '1 0 1 0 1 0 1 0 1 0 1x10'
+      - series: 'windows_net_nic_operation_status{job="windows_exporter", instance="host:9182", nic="Ethernet", status="down"}'
+        values: '0 1 0 1 0 1 0 1 0 1 0x10'
+      - series: 'windows_net_nic_operation_status{job="windows_exporter", instance="host:9182", nic="Wi-Fi", status="up"}'
+        values: '0x21'
+    alert_rule_test:
+      - {alertname: WindowsNetworkUtilizationHigh, eval_time: 19m, exp_alerts: []}
+      - alertname: WindowsNetworkUtilizationHigh
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', nic: Ethernet, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkutilizationhigh/
+              summary: Windows network interface utilization is high
+              description: 'Traffic on interface Ethernet on host:9182 has exceeded 90% of its bandwidth in at least one direction for 15 minutes.'
+      - {alertname: WindowsNetworkUtilizationHigh, eval_time: 35m, exp_alerts: []}
+      - {alertname: WindowsNetworkInterfaceFlapping, eval_time: 4m, exp_alerts: []}
+      - alertname: WindowsNetworkInterfaceFlapping
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', nic: Ethernet, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkinterfaceflapping/
+              summary: Windows network interface is flapping
+              description: 'Interface Ethernet on host:9182 has changed its operational status more than twice in 5m.'
+      - {alertname: WindowsNetworkInterfaceFlapping, eval_time: 17m, exp_alerts: []}
+
+  - name: Service alerts skip trigger-start and manual services and count restarts by process
+    interval: 1m
+    input_series:
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="Spooler", state="running"}'
+        values: '0x15 1x5'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="Spooler", start_mode="auto"}'
+        values: '1x20'
+      - series: 'windows_service_info{job="windows_exporter", instance="host:9182", service="Spooler", trigger_start="false", delayed_start="false"}'
+        values: '1x20'
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="dcsvc", state="running"}'
+        values: '0x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="dcsvc", start_mode="auto"}'
+        values: '1x20'
+      - series: 'windows_service_info{job="windows_exporter", instance="host:9182", service="dcsvc", trigger_start="true", delayed_start="false"}'
+        values: '1x20'
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="RemoteRegistry", state="running"}'
+        values: '0x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="RemoteRegistry", start_mode="manual"}'
+        values: '1x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="RemoteRegistry", start_mode="auto"}'
+        values: '0x20'
+      - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="100"}'
+        values: '1000x4 _x16'
+      - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="200"}'
+        values: '_x5 2000x4 _x11'
+      - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="300"}'
+        values: '_x10 3000x4 _x6'
+      - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="400"}'
+        values: '_x15 4000x6'
+      - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="Spooler", process_id="500"}'
+        values: '_x16 5000x5'
+    alert_rule_test:
+      - {alertname: WindowsServiceNotRunning, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsServiceNotRunning
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', service: Spooler, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicenotrunning/
+              summary: Windows automatic service is not running
+              description: 'Service Spooler on host:9182 starts automatically but has not been running for 15 minutes.'
+      - {alertname: WindowsServiceNotRunning, eval_time: 16m, exp_alerts: []}
+      - {alertname: WindowsServiceCrashLooping, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsServiceCrashLooping
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', service: W3SVC, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicecrashlooping/
+              summary: Windows service is restarting repeatedly
+              description: 'Service W3SVC on host:9182 has restarted more than 2 times in 15 minutes.'
+
+  - name: Host reboot fires once for the first ten minutes after a new boot time
+    interval: 1m
+    input_series:
+      - series: 'windows_system_boot_time_timestamp{job="windows_exporter", instance="host:9182"}'
+        values: '-100000x10 540x15'
+      - series: 'windows_system_boot_time_timestamp{job="windows_exporter", instance="steady:9182"}'
+        values: '-100000x25'
+    alert_rule_test:
+      - {alertname: WindowsHostRebooted, eval_time: 10m, exp_alerts: []}
+      - alertname: WindowsHostRebooted
+        eval_time: 11m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: info}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowshostrebooted/
+              summary: Windows host has rebooted
+              description: 'host:9182 rebooted 2m 0s ago.'
+      - alertname: WindowsHostRebooted
+        eval_time: 18m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: info}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowshostrebooted/
+              summary: Windows host has rebooted
+              description: 'host:9182 rebooted 9m 0s ago.'
+      - {alertname: WindowsHostRebooted, eval_time: 19m, exp_alerts: []}

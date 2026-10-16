@@ -9,6 +9,7 @@
           { record: 'windows:cpu_usage:ratio', expr: q.cpuUsage },
           { record: 'windows:cpu_cores:count', expr: 'count without (core, mode) (%s)' % q.metric('windows_cpu_time_seconds_total', ['mode="idle"']) },
           { record: 'windows:cpu_time:ratio_rate', expr: 'avg without (core) (%s)' % q.rate('windows_cpu_time_seconds_total') },
+          { record: 'windows:cpu_queue_per_core:ratio', expr: q.cpuQueuePerCore },
           { record: 'windows:memory_usage:ratio', expr: q.memoryUsage },
           {
             record: 'windows:memory_used:bytes',
@@ -54,6 +55,12 @@
           {
             record: 'windows:net_%s_bytes:rate' % direction,
             expr: q.rate('windows_net_bytes_%s_total' % direction, [c.nicSelector]),
+          }
+          for direction in ['received', 'sent']
+        ] + [
+          {
+            record: 'windows:net_%s_packets:rate' % direction,
+            expr: q.rate('windows_net_packets_%s_total' % direction, [c.nicSelector]),
           }
           for direction in ['received', 'sent']
         ] + [

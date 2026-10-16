@@ -95,7 +95,7 @@ pint --offline lint tests/custom_rules.yaml tests/custom_alerts.yaml
 
 [tasks.check-runbooks]
 description = "Check runbook coverage for all alerts, including opt-in alerts"
-run = '''jsonnet -e '(import "mixin.libsonnet") { _config+:: { enableActiveDirectory: true, enableTime: true } }.prometheusAlerts' | python3 tests/check_runbooks.py ../../docs/runbooks'''
+run = '''jsonnet -e '(import "mixin.libsonnet") { _config+:: { collectors: { [name]: true for name in std.objectFields(super.collectors) } } }.prometheusAlerts' | python3 tests/check_runbooks.py ../../docs/runbooks'''
 
 [tasks.test]
 description = "Run all mixin lint, runbook, and rule tests"
@@ -103,6 +103,7 @@ depends = ["lint", "check-runbooks", "vendor"]
 run = [
   "jsonnet tests/runbooks.test.jsonnet",
   "jsonnet tests/hyperv.test.jsonnet > /dev/null",
+  "jsonnet tests/alerts.test.jsonnet",
   "jsonnet -J vendor tests/dashboard.test.jsonnet > /dev/null",
   "promtool test rules tests/*.test.yaml",
 ]
