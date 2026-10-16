@@ -39,11 +39,11 @@ test: ## run the tests
 
 .PHONY: lint
 lint: ## run golangci-lint
-	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
 
 .PHONY: fmt
 fmt: ## format the code
-	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 fmt
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
