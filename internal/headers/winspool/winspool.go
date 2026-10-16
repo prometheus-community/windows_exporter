@@ -25,6 +25,7 @@ package winspool
 import (
 	"errors"
 	"fmt"
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -50,7 +51,8 @@ func Load() error { return load() }
 // EnumPrinters returns the printers selected by flags, a combination of PRINTER_ENUM_* values.
 func EnumPrinters(flags uint32) ([]Printer, error) {
 	buf, count, err := enum(func(buf *byte, size uint32, needed, returned *uint32) (uintptr, error) {
-		r1, _, err := procEnumPrintersW.Call(
+		r1, _, err := syscall.SyscallN(
+			procEnumPrintersW.Addr(),
 			uintptr(flags),
 			0, // local machine
 			2, // PRINTER_INFO_2
@@ -94,7 +96,8 @@ func OpenPrinter(printerName string) (windows.Handle, error) {
 
 	var handle windows.Handle
 
-	r1, _, err := procOpenPrinterW.Call(
+	r1, _, err := syscall.SyscallN(
+		procOpenPrinterW.Addr(),
 		uintptr(unsafe.Pointer(printerNamePtr)),
 		uintptr(unsafe.Pointer(&handle)),
 		0, // PRINTER_DEFAULTS
@@ -107,7 +110,7 @@ func OpenPrinter(printerName string) (windows.Handle, error) {
 }
 
 func ClosePrinter(handle windows.Handle) error {
-	r1, _, err := procClosePrinter.Call(uintptr(handle))
+	r1, _, err := syscall.SyscallN(procClosePrinter.Addr(), uintptr(handle))
 	if r1 == 0 {
 		return fmt.Errorf("ClosePrinter: %w", err)
 	}
@@ -118,7 +121,8 @@ func ClosePrinter(handle windows.Handle) error {
 // EnumJobs returns all jobs of the printer in queue order.
 func EnumJobs(handle windows.Handle) ([]Job, error) {
 	buf, count, err := enum(func(buf *byte, size uint32, needed, returned *uint32) (uintptr, error) {
-		r1, _, err := procEnumJobsW.Call(
+		r1, _, err := syscall.SyscallN(
+			procEnumJobsW.Addr(),
 			uintptr(handle),
 			0,          // FirstJob
 			0xFFFFFFFF, // NoJobs

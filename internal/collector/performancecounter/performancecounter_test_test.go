@@ -373,7 +373,7 @@ func TestCollectorDuplicateInstances(t *testing.T) {
 
 		for _, metric := range family.GetMetric() {
 			for _, label := range metric.GetLabel() {
-				if label.GetName() == "instance" {
+				if label.GetName() == "object_instance" {
 					instances[label.GetValue()] = true
 				}
 			}
