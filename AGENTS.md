@@ -57,10 +57,11 @@ license headers. Use structured `slog` attributes and the existing Windows API
 wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`). `LazyProc.Call`
 panics for a missing export: add every proc a binding calls without its own
 `Find` check to the package's `lazyproc.Once` list, and call the package's
-`Load` in the `Build` of each collector that uses it. Calls that run on every
-scrape use `syscall.SyscallN(proc.Addr(), ...)` instead of `proc.Call`: the
-variadic `Call` moves the values its pointer arguments point to onto the heap,
-`SyscallN` keeps them on the stack. Mirrors of native structs
+`Load` in the `Build` of each collector that uses it. New calls that run on
+every scrape use `syscall.SyscallN(proc.Addr(), ...)` instead of `proc.Call`:
+the variadic `Call` moves the values its pointer arguments point to onto the
+heap, `SyscallN` keeps them on the stack. Some bindings, e.g. dhcpsapi and
+clusapi, still use `Call`. Mirrors of native structs
 that MI or COM read by offset need `unsafe.Sizeof`/`Offsetof` checks, see
 [`internal/mi/layout.go`](internal/mi/layout.go).
 
