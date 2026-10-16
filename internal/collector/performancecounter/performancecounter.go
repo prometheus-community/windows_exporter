@@ -31,6 +31,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -174,6 +175,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 				continue
 			}
+
+			m, err := multiplier.New(counter.Multiplier)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("object %s: counter %s: %w", object.Name, counter.Name, err))
+
+				continue
+			}
+
+			object.Counters[j].multiplier = m
 
 			if _, ok := object.valueIndex[counter.Name]; ok {
 				errs = append(errs, fmt.Errorf("object %s: counter name %s is duplicated", object.Name, counter.Name))
@@ -328,7 +338,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 					labels,
 				),
 				metricTypes[j],
-				collectedCounterValue,
+				counter.multiplier.Apply(collectedCounterValue),
 			)
 		}
 	}
