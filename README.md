@@ -112,6 +112,8 @@ Each release provides a .msi installer. The installer will setup the windows_exp
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
 
+The service runs as `LocalSystem`. To run it as an unprivileged service account instead, see [Running as a least-privilege service account](docs/permissions.md).
+
 The installer provides a configuration file to customize the exporter.
 
 The configuration file

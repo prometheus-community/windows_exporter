@@ -6,6 +6,10 @@ the [Windows exporter mixin](../contrib/mixin/README.md). Preview the runbook si
 from the repository root with `hugo server --source docs`; its dedicated GitHub
 Actions workflow publishes default-branch changes to GitHub Pages.
 
+[Running as a least-privilege service account](permissions.md) describes
+the rights the exporter needs and which collectors lose data without
+administrator rights.
+
 # Collectors
 - [`ad`](collector.ad.md)
 - [`adcs`](collector.adcs.md)
