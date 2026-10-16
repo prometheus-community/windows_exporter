@@ -33,7 +33,7 @@ concurrency:
 
 env:
   # renovate: github=gohugoio/hugo
-  HUGO_VERSION: '0.167.0'
+  HUGO_VERSION: '0.168.0'
 
 jobs:
   build:
