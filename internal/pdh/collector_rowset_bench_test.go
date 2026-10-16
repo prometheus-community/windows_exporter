@@ -60,6 +60,7 @@ func BenchmarkRowSetInstanceNames(b *testing.B) {
 		rows.finish()
 		state.names.removeUnseen()
 
+		state.keys = rows.keys
 		state.valid = rows.valid
 	}
 
@@ -171,6 +172,7 @@ func BenchmarkRowSetProcessShape(b *testing.B) {
 		rows.finish()
 		state.names.removeUnseen()
 
+		state.keys = rows.keys
 		state.valid = rows.valid
 	}
 

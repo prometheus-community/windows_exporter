@@ -40,7 +40,8 @@ func TestClrRemotingCounterPaths(t *testing.T) {
 		"TotalRemoteCalls":               "Total Remote Calls",
 	}
 	rowType := reflect.TypeFor[perfDataClrRemoting]()
-	require.Equal(t, len(expected)+1, rowType.NumField())
+	// Name and Occurrence hold the instance.
+	require.Equal(t, len(expected)+2, rowType.NumField())
 
 	for field, counter := range expected {
 		f, found := rowType.FieldByName(field)

@@ -69,20 +69,25 @@ type Collector[T any] struct {
 
 // Row holds the values of one instance collected by a collector from [NewDynamicCollector].
 type Row struct {
+	// Name is the instance name as reported by Windows.
 	Name string
+	// Occurrence counts earlier instances with the same Name in the sample, see [NewCollector].
+	Occurrence int
 	// Values holds one value per counter, in the order the counters were passed to [NewDynamicCollector].
 	// A value is NaN if the counter has no valid value for the instance in this sample.
 	Values []float64
 }
 
-// rowAccessor initializes rows of type T and sets their names and counter values.
+// rowAccessor initializes rows of type T and sets their counter values.
 // field is the index the counterField of the counter was created with.
 type rowAccessor[T any] struct {
-	// resetRow initializes row for instance. row can hold the values of a
-	// previous sample; resetRow can reuse its memory.
-	resetRow func(row *T, instance string)
-	setName  func(row *T, instance string)
-	setValue func(row *T, field int, value float64)
+	// resetRow initializes row for the occurrence of instance. row can hold
+	// the values of a previous sample; resetRow can reuse its memory.
+	resetRow func(row *T, instance string, occurrence int)
+	// keepsOccurrences is true if rows record their occurrence. Otherwise, only
+	// the first instance of each name is collected.
+	keepsOccurrences bool
+	setValue         func(row *T, field int, value float64)
 }
 
 // counterField maps a counter to the field index passed to rowAccessor.setValue.
@@ -112,9 +117,18 @@ type Counter struct {
 
 // NewCollector creates a collector for the counters declared by the perfdata tags of the struct T.
 //
-// The optional field Name (string) of T receives the instance name. Occurrence
-// suffixes distinguish duplicate names without colliding with literal names.
-// These suffixes are not stable identities across samples.
+// The optional field Name (string) of T receives the instance name exactly as
+// Windows reports it. Some objects report the same name for several instances
+// in one sample, e.g. Hyper-V VMs with the same name. The optional field
+// Occurrence (int) of T receives the number of earlier instances with the same
+// name in the sample: 0 for the first, 1 for the second, and so on. It follows
+// the order of the counter arrays, so it is not a stable identity across
+// samples. A suffix such as "#2" in Name was reported by Windows, never added
+// by this package. If T has no Occurrence field, only the first instance of
+// each name that has valid data is collected, so that the rows have unique
+// names. Dropping instances is logged once per collector as a warning; a row
+// type for an object that can report a name more than once must declare
+// Occurrence.
 //
 // An instance is only collected if every counter has a valid value for it in that
 // sample. Use [Collector.MetricType] for the metric type of a counter.
@@ -164,6 +178,14 @@ func structFields[T any]() ([]counterField, rowAccessor[T], []error, error) {
 	if f, ok := valueType.FieldByName("Name"); ok && f.Type.Kind() == reflect.String {
 		if offset, ok := fieldOffset(valueType, f.Index); ok {
 			nameOffset = offset
+		}
+	}
+
+	occurrenceOffset := -1
+
+	if f, ok := valueType.FieldByName("Occurrence"); ok && f.Type.Kind() == reflect.Int {
+		if offset, ok := fieldOffset(valueType, f.Index); ok {
+			occurrenceOffset = offset
 		}
 	}
 
@@ -217,7 +239,7 @@ func structFields[T any]() ([]counterField, rowAccessor[T], []error, error) {
 		return nil, rowAccessor[T]{}, nil, err
 	}
 
-	return fields, structRowAccessor[T](nameOffset), errs, nil
+	return fields, structRowAccessor[T](nameOffset, occurrenceOffset), errs, nil
 }
 
 // validateFloatOffsets checks that the index of every field is the byte
@@ -267,25 +289,26 @@ func fieldOffset(t reflect.Type, index []int) (int, bool) {
 }
 
 // structRowAccessor returns the accessor of the struct T. nameOffset is the
-// byte offset of its string field Name, or -1. The offsets passed to setValue
+// byte offset of its string field Name, occurrenceOffset that of its int field
+// Occurrence, each -1 if T has no such field. The offsets passed to setValue
 // come from [structFields] and address float64 fields of T, so values are
 // written without reflection.
-func structRowAccessor[T any](nameOffset int) rowAccessor[T] {
-	setName := func(row *T, instance string) {
-		if nameOffset >= 0 {
-			*(*string)(unsafe.Add(unsafe.Pointer(row), nameOffset)) = instance
-		}
-	}
-
+func structRowAccessor[T any](nameOffset, occurrenceOffset int) rowAccessor[T] {
 	return rowAccessor[T]{
-		resetRow: func(row *T, instance string) {
+		resetRow: func(row *T, instance string, occurrence int) {
 			var zero T
 
 			*row = zero
 
-			setName(row, instance)
+			if nameOffset >= 0 {
+				*(*string)(unsafe.Add(unsafe.Pointer(row), nameOffset)) = instance
+			}
+
+			if occurrenceOffset >= 0 {
+				*(*int)(unsafe.Add(unsafe.Pointer(row), occurrenceOffset)) = occurrence
+			}
 		},
-		setName: setName,
+		keepsOccurrences: occurrenceOffset >= 0,
 		setValue: func(row *T, offset int, value float64) {
 			*(*float64)(unsafe.Add(unsafe.Pointer(row), offset)) = value
 		},
@@ -309,8 +332,9 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 // keeps its Values array if it is large enough.
 func dynamicRowAccessor(n int) rowAccessor[Row] {
 	return rowAccessor[Row]{
-		resetRow: func(row *Row, instance string) {
+		resetRow: func(row *Row, instance string, occurrence int) {
 			row.Name = instance
+			row.Occurrence = occurrence
 
 			if cap(row.Values) < n {
 				row.Values = make([]float64, n)
@@ -321,9 +345,7 @@ func dynamicRowAccessor(n int) rowAccessor[Row] {
 			row.Values = row.Values[:n]
 			clear(row.Values)
 		},
-		setName: func(row *Row, instance string) {
-			row.Name = instance
-		},
+		keepsOccurrences: true,
 		setValue: func(row *Row, field int, value float64) {
 			row.Values[field] = value
 		},
@@ -613,11 +635,17 @@ type collectState struct {
 
 	names instanceNameCache
 
-	// index, occurrences and seen back the maps of rowSet. They are cleared
-	// for every sample, so their buckets are not allocated again.
-	index       map[instanceKey]int
-	occurrences map[string]int
-	seen        map[string]int
+	// index and seen back the maps of rowSet. They are cleared for every
+	// sample, so their buckets are not allocated again.
+	index map[instanceKey]int
+	seen  map[string]int
+
+	// keys backs rowSet.keys.
+	keys []instanceKey
+
+	// duplicatesLogged is true once a sample dropped duplicate instances of a
+	// row type without an Occurrence field.
+	duplicatesLogged bool
 }
 
 // collect replaces the content of dst with one sample.
@@ -674,6 +702,8 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	}
 
 	rows.finish()
+
+	state.keys = rows.keys
 
 	state.valid = rows.valid
 
@@ -810,12 +840,16 @@ type rowSet[T any] struct {
 	dst       *[]T
 	index     map[instanceKey]int
 	nameCache *instanceNameCache
-	// occurrences includes invalid items to reserve all literal names and keep occurrence positions.
-	occurrences map[string]int
 	// seen counts names in the current counter array and is cleared between arrays.
 	seen map[string]int
 	// valid has len(c.counters) entries per row.
 	valid []bool
+	// keys has the instance key of each row.
+	keys []instanceKey
+	// duplicates is true if a row has an occurrence above 0.
+	duplicates bool
+	// duplicatesLogged points to collectState.duplicatesLogged.
+	duplicatesLogged *bool
 }
 
 func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] {
@@ -823,23 +857,23 @@ func newRowSet[T any](c *Collector[T], dst *[]T, state *collectState) rowSet[T] 
 
 	if state.index == nil {
 		state.index = map[instanceKey]int{}
-		state.occurrences = map[string]int{}
 		state.seen = map[string]int{}
 	} else {
 		// A failed sample can leave entries behind.
 		clear(state.index)
-		clear(state.occurrences)
 		clear(state.seen)
 	}
 
 	return rowSet[T]{
-		c:           c,
-		dst:         dst,
-		index:       state.index,
-		nameCache:   &state.names,
-		occurrences: state.occurrences,
-		seen:        state.seen,
-		valid:       state.valid[:0],
+		c:         c,
+		dst:       dst,
+		index:     state.index,
+		nameCache: &state.names,
+		seen:      state.seen,
+		valid:     state.valid[:0],
+		keys:      state.keys[:0],
+
+		duplicatesLogged: &state.duplicatesLogged,
 	}
 }
 
@@ -855,7 +889,6 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 	// Count before checking status so invalid items do not shift subsequent duplicates.
 	occurrence := r.seen[instanceName]
 	r.seen[instanceName]++
-	r.occurrences[instanceName] = max(r.occurrences[instanceName], occurrence+1)
 
 	if status != CstatusValidData && status != CstatusNewData {
 		// Check the level first, so the attributes are not built for every
@@ -893,8 +926,10 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 		rows = append(rows, zero)
 	}
 
-	r.c.rows.resetRow(&rows[index], instanceName)
+	r.c.rows.resetRow(&rows[index], instanceName, occurrence)
 	*r.dst = rows
+	r.keys = append(r.keys, key)
+	r.duplicates = r.duplicates || occurrence > 0
 
 	n := len(r.c.counters)
 	r.valid = slices.Grow(r.valid, n)[:len(r.valid)+n]
@@ -943,37 +978,11 @@ func (r *rowSet[T]) addFormattedItems(counterIndex int, buf []byte, itemCount ui
 	}
 }
 
-// nameDuplicates assigns suffixes after all literal names in the sample are known.
-func (r *rowSet[T]) nameDuplicates() {
-	for name, count := range r.occurrences {
-		suffix := 0
-
-		for occurrence := 1; occurrence < count; occurrence++ {
-			var instanceName string
-
-			for {
-				suffix++
-				instanceName = r.nameCache.suffixed(name, suffix)
-
-				if _, literalName := r.occurrences[instanceName]; !literalName {
-					break
-				}
-			}
-
-			if row, ok := r.index[instanceKey{name: name, occurrence: occurrence}]; ok {
-				r.c.rows.setName(&(*r.dst)[row], instanceName)
-			}
-		}
-	}
-}
-
 // finish handles rows that lack a valid value for some counter. Counters
 // without any instance, e.g. those skipped by perfdata_min_build, are not
 // required. Without partial rows, such rows are removed. Otherwise, the
 // missing values are set to NaN.
 func (r *rowSet[T]) finish() {
-	r.nameDuplicates()
-
 	rows := *r.dst
 	n := len(r.c.counters)
 	kept := 0
@@ -1007,6 +1016,7 @@ func (r *rowSet[T]) finish() {
 
 		if row != kept {
 			rows[kept] = rows[row]
+			r.keys[kept] = r.keys[row]
 
 			// Do not leave two rows that share a Row.Values array.
 			var zero T
@@ -1022,10 +1032,55 @@ func (r *rowSet[T]) finish() {
 			slog.String("object", r.c.object),
 			slog.Int("instances", dropped),
 		)
-
-		clear(rows[kept:])
-		*r.dst = rows[:kept]
 	}
+
+	r.keys = r.keys[:kept]
+
+	if r.duplicates && !r.c.rows.keepsOccurrences {
+		kept = r.keepFirstOccurrences(rows[:kept])
+	}
+
+	clear(rows[kept:])
+	*r.dst = rows[:kept]
+}
+
+// keepFirstOccurrences keeps, for row types without an Occurrence field, the
+// first instance of each name among the rows that remain after finish, so
+// that an instance without valid data does not hide a later one with the
+// same name. It returns the number of rows kept at the start of rows.
+func (r *rowSet[T]) keepFirstOccurrences(rows []T) int {
+	first := make(map[string]int, len(rows))
+
+	for i, key := range r.keys {
+		if j, ok := first[key.name]; !ok || key.occurrence < r.keys[j].occurrence {
+			first[key.name] = i
+		}
+	}
+
+	kept := 0
+
+	for i, key := range r.keys {
+		if first[key.name] != i {
+			continue
+		}
+
+		rows[kept] = rows[i]
+		r.keys[kept] = key
+		kept++
+	}
+
+	if dropped := len(rows) - kept; dropped > 0 && !*r.duplicatesLogged {
+		*r.duplicatesLogged = true
+
+		r.c.logger.Warn("Windows reported instance names more than once, only the first instance of each name is collected",
+			slog.String("object", r.c.object),
+			slog.Int("instances", dropped),
+		)
+	}
+
+	r.keys = r.keys[:kept]
+
+	return kept
 }
 
 // panicError logs a panic recovered while collecting and returns it as an error.
@@ -1098,11 +1153,8 @@ func formatCounterPath(object, instance, counterName string) string {
 // Names that a sample did not decode are removed at its end, because instance names that
 // contain process IDs, like those of GPU Engine, change all the time.
 type instanceNameCache struct {
-	names map[string]*cachedInstanceName
-	// suffixedNames maps a name and an occurrence suffix to the name with
-	// the suffix, e.g. svchost and 3 to svchost#3.
-	suffixedNames map[instanceKey]*cachedInstanceName
-	sample        uint64
+	names  map[string]*cachedInstanceName
+	sample uint64
 }
 
 type cachedInstanceName struct {
@@ -1146,39 +1198,11 @@ func (cache *instanceNameCache) decode(p *uint16) string {
 	return name
 }
 
-// suffixed returns name with the occurrence suffix #suffix. Duplicate names,
-// like those of the many svchost processes, need the same suffixed names in
-// every sample.
-func (cache *instanceNameCache) suffixed(name string, suffix int) string {
-	key := instanceKey{name: name, occurrence: suffix}
-
-	if cached, ok := cache.suffixedNames[key]; ok {
-		cached.sample = cache.sample
-
-		return cached.name
-	}
-
-	if cache.suffixedNames == nil {
-		cache.suffixedNames = map[instanceKey]*cachedInstanceName{}
-	}
-
-	suffixedName := name + "#" + strconv.Itoa(suffix)
-	cache.suffixedNames[key] = &cachedInstanceName{name: suffixedName, sample: cache.sample}
-
-	return suffixedName
-}
-
-// removeUnseen removes the names that the current sample did not use.
+// removeUnseen removes the names that the current sample did not decode.
 func (cache *instanceNameCache) removeUnseen() {
 	for raw, cached := range cache.names {
 		if cached.sample != cache.sample {
 			delete(cache.names, raw)
-		}
-	}
-
-	for key, cached := range cache.suffixedNames {
-		if cached.sample != cache.sample {
-			delete(cache.suffixedNames, key)
 		}
 	}
 }

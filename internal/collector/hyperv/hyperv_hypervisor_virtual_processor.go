@@ -42,7 +42,8 @@ type collectorHypervisorVirtualProcessor struct {
 }
 
 type perfDataCounterValuesHypervisorVirtualProcessor struct {
-	Name string
+	Name       string
+	Occurrence int
 
 	// The run time counters and CPU Wait Time Per Dispatch are PERF_PRECISION_100NS_TIMER.
 	// Their raw values are cumulative times, which pdh scales to seconds. Despite its name
@@ -105,12 +106,34 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 	return c.publishHypervisorVirtualProcessor(ch, scrape)
 }
 
+// assignVirtualProcessorVMs sets the Occurrence of each virtual processor row
+// to the index of its VM among the VMs with the same name, so that all cores
+// of one VM get the same vm label. pdh counts occurrences per instance name
+// ("<VM>:Hv VP <n>"), which would give the second core of the second VM the
+// occurrence of the first VM if the first VM has a single core. Windows lists
+// the virtual processors of a VM together, starting with core 0, in the order
+// that the rows keep, so each core 0 starts the next VM with that name.
+func assignVirtualProcessorVMs(rows []perfDataCounterValuesHypervisorVirtualProcessor, coreIDs []string) {
+	vms := make(map[string]int, len(rows))
+
+	for i := range rows {
+		if coreIDs[i] == "0" {
+			vms[rows[i].Name]++
+		}
+
+		rows[i].Occurrence = max(vms[rows[i].Name]-1, 0)
+	}
+}
+
 func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metric, scrape *labelcache.Scrape) error {
-	for _, data := range c.perfDataObjectHypervisorVirtualProcessor {
+	rows := c.perfDataObjectHypervisorVirtualProcessor
+	coreIDs := make([]string, len(rows))
+
+	for i := range rows {
 		// The name format is <VM Name>:Hv VP <vcore id>
-		parts := strings.Split(data.Name, ":")
+		parts := strings.Split(rows[i].Name, ":")
 		if len(parts) != 2 {
-			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", data.Name, "<VM Name>:Hv VP <vcore id>")
+			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", rows[i].Name, "<VM Name>:Hv VP <vcore id>")
 		}
 
 		coreParts := strings.Split(parts[1], " ")
@@ -118,8 +141,21 @@ func (c *Collector) publishHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 			return fmt.Errorf("unexpected format of core identifier in Hyper-V Hypervisor Virtual Processor: %q, expected %q", parts[1], "Hv VP <vcore id>")
 		}
 
-		vmName := parts[0]
-		coreID := coreParts[2]
+		rows[i].Name = parts[0]
+		coreIDs[i] = coreParts[2]
+	}
+
+	assignVirtualProcessorVMs(rows, coreIDs)
+
+	// VMs with the same name report the same instance names, see suffixDuplicateVMs.
+	suffixDuplicateVMs(rows,
+		func(row *perfDataCounterValuesHypervisorVirtualProcessor) *string { return &row.Name },
+		func(row *perfDataCounterValuesHypervisorVirtualProcessor) int { return row.Occurrence },
+	)
+
+	for i, data := range rows {
+		vmName := data.Name
+		coreID := coreIDs[i]
 
 		ch <- scrape.MustNewConstMetric(
 			c.hypervisorVirtualProcessorModeTimeTotal,
