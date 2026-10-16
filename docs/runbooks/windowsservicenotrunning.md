@@ -40,4 +40,6 @@ Start the service after fixing the cause: the account, a missing dependency, a
 configuration error or a crash. Set recovery options so Windows restarts the
 service itself. Change the start mode to `manual` or `disabled` for services
 that should not run, or exclude them with the `serviceSelector` when the mixin
-should not watch them. Confirm the service stays running.
+should not watch them. For example
+`serviceSelector: 'service!~"sppsvc|gupdate|edgeupdate"'` ignores services that
+exit on their own by design. Confirm the service stays running.

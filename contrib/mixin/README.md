@@ -64,7 +64,7 @@ modifying its source. For example, create `custom.libsonnet` in this directory:
     cpuHighUsageThreshold: 95,
     enableActiveDirectory: true,
     enableTime: true,
-    collectors+: { pagefile: true },
+    collectors+: { process: true },
     alerts+: { WindowsHostRebooted: false },
     keepFiringFor: '10m',
     runbookURLPattern: 'https://runbooks.example.com/windows/%s/',
@@ -186,10 +186,18 @@ build, and a name missing from a replaced object stays enabled. A group whose
 alerts are all turned off is not generated.
 
 Threshold alerts set `keep_firing_for` to `keepFiringFor` (5 minutes), so a
-value that oscillates around a threshold does not flap. State alerts such as
-`WindowsExporterDown` and `WindowsServiceNotRunning` resolve as soon as their
-condition clears. `keep_firing_for` needs Prometheus 2.42 or later; set
-`keepFiringFor: ''` for older servers.
+value that oscillates around a threshold does not flap. The state alerts
+`WindowsExporterDown`, `WindowsCollectorFailed`, `WindowsCollectorTimeout`,
+`WindowsScrapeQueueTimeout`, `WindowsServiceNotRunning` and
+`WindowsClockNotSynchronising`, and the one-shot `WindowsHostRebooted`, have no
+`keep_firing_for` and resolve as soon as their condition clears.
+`keep_firing_for` needs Prometheus 2.42 or later; set `keepFiringFor: ''` for
+older servers.
+
+The network error and discard thresholds are percentages of all packets on the
+interface. Earlier versions of the mixin had `networkErrorRateThreshold` and
+`networkDiscardRateThreshold` in packets per second; setting them now fails
+the build with a message that names the replacements.
 
 `criticalSeverity` defaults to `critical` and `infoSeverity` to `info`; override
 them to match your routing labels. Below the critical disk threshold, both disk
@@ -209,8 +217,10 @@ skips trigger-start services, which stop by design, through the
 included; the 15 minute duration covers their later start after a reboot.
 `WindowsServiceCrashLooping` counts the `windows_service_process` series of a
 service within 15 minutes, one per process the service ran as. Exclude services
-with `serviceSelector`. `WindowsHostRebooted` fires once for about ten minutes
-after a reboot and resolves by itself.
+with `serviceSelector`, for example automatic services that exit by design
+after their work, such as the software protection or updater services of some
+products. `WindowsHostRebooted` fires once for about ten minutes after a
+reboot and resolves by itself.
 
 Windows disk size/free-space counters may lag by 10–15 minutes. Predictions
 depend on a sustained trend and are intentionally delayed for an hour. A target

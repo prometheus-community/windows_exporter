@@ -381,7 +381,15 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorypaginghigh/
               summary: Windows memory paging is high
               description: 'Paging on host:9182 has exceeded 1000 pages per second for 15 minutes.'
-      - {alertname: WindowsMemoryPagingHigh, eval_time: 35m, exp_alerts: []}
+      - alertname: WindowsMemoryPagingHigh
+        eval_time: 26m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorypaginghigh/
+              summary: Windows memory paging is high
+              description: 'Paging on host:9182 has exceeded 1000 pages per second for 15 minutes.'
+      - {alertname: WindowsMemoryPagingHigh, eval_time: 27m, exp_alerts: []}
 
   - name: Network utilization fires in one direction and interface flapping counts status changes
     interval: 1m
@@ -408,7 +416,15 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkutilizationhigh/
               summary: Windows network interface utilization is high
               description: 'Traffic on interface Ethernet on host:9182 has exceeded 90% of its bandwidth in at least one direction for 15 minutes.'
-      - {alertname: WindowsNetworkUtilizationHigh, eval_time: 35m, exp_alerts: []}
+      - alertname: WindowsNetworkUtilizationHigh
+        eval_time: 25m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', nic: Ethernet, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkutilizationhigh/
+              summary: Windows network interface utilization is high
+              description: 'Traffic on interface Ethernet on host:9182 has exceeded 90% of its bandwidth in at least one direction for 15 minutes.'
+      - {alertname: WindowsNetworkUtilizationHigh, eval_time: 26m, exp_alerts: []}
       - {alertname: WindowsNetworkInterfaceFlapping, eval_time: 4m, exp_alerts: []}
       - alertname: WindowsNetworkInterfaceFlapping
         eval_time: 5m
@@ -424,33 +440,33 @@ tests:
     interval: 1m
     input_series:
       - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="Spooler", state="running"}'
-        values: '0x15 1x5'
+        values: '0x15 1x8'
       - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="Spooler", start_mode="auto"}'
-        values: '1x20'
+        values: '1x23'
       - series: 'windows_service_info{job="windows_exporter", instance="host:9182", service="Spooler", trigger_start="false", delayed_start="false"}'
-        values: '1x20'
+        values: '1x23'
       - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="dcsvc", state="running"}'
-        values: '0x20'
+        values: '0x23'
       - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="dcsvc", start_mode="auto"}'
-        values: '1x20'
+        values: '1x23'
       - series: 'windows_service_info{job="windows_exporter", instance="host:9182", service="dcsvc", trigger_start="true", delayed_start="false"}'
-        values: '1x20'
+        values: '1x23'
       - series: 'windows_service_state{job="windows_exporter", instance="host:9182", service="RemoteRegistry", state="running"}'
-        values: '0x20'
+        values: '0x23'
       - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="RemoteRegistry", start_mode="manual"}'
-        values: '1x20'
+        values: '1x23'
       - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", service="RemoteRegistry", start_mode="auto"}'
-        values: '0x20'
+        values: '0x23'
       - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="100"}'
-        values: '1000x4 _x16'
+        values: '1000x4 _x19'
       - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="200"}'
-        values: '_x5 2000x4 _x11'
+        values: '_x5 2000x4 _x14'
       - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="300"}'
-        values: '_x10 3000x4 _x6'
+        values: '_x10 3000x4 _x9'
       - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="W3SVC", process_id="400"}'
-        values: '_x15 4000x6'
+        values: '_x15 4000x9'
       - series: 'windows_service_process{job="windows_exporter", instance="host:9182", service="Spooler", process_id="500"}'
-        values: '_x16 5000x5'
+        values: '_x16 5000x8'
     alert_rule_test:
       - {alertname: WindowsServiceNotRunning, eval_time: 14m, exp_alerts: []}
       - alertname: WindowsServiceNotRunning
@@ -471,6 +487,46 @@ tests:
               runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicecrashlooping/
               summary: Windows service is restarting repeatedly
               description: 'Service W3SVC on host:9182 has restarted more than 2 times in 15 minutes.'
+      - alertname: WindowsServiceCrashLooping
+        eval_time: 23m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', service: W3SVC, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicecrashlooping/
+              summary: Windows service is restarting repeatedly
+              description: 'Service W3SVC on host:9182 has restarted more than 2 times in 15 minutes.'
+      - {alertname: WindowsServiceCrashLooping, eval_time: 24m, exp_alerts: []}
+
+  - name: Service alert matches within a cluster when instance names repeat across clusters
+    interval: 1m
+    input_series:
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", cluster="a", service="Spooler", state="running"}'
+        values: '0x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", cluster="a", service="Spooler", start_mode="auto"}'
+        values: '1x20'
+      - series: 'windows_service_info{job="windows_exporter", instance="host:9182", cluster="a", service="Spooler", trigger_start="false", delayed_start="false"}'
+        values: '1x20'
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", cluster="b", service="Spooler", state="running"}'
+        values: '1x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", cluster="b", service="Spooler", start_mode="auto"}'
+        values: '1x20'
+      - series: 'windows_service_info{job="windows_exporter", instance="host:9182", cluster="b", service="Spooler", trigger_start="false", delayed_start="false"}'
+        values: '1x20'
+      - series: 'windows_service_state{job="windows_exporter", instance="host:9182", cluster="c", service="Spooler", state="running"}'
+        values: '0x20'
+      - series: 'windows_service_start_mode{job="windows_exporter", instance="host:9182", cluster="c", service="Spooler", start_mode="auto"}'
+        values: '1x20'
+      - series: 'windows_service_info{job="windows_exporter", instance="host:9182", cluster="c", service="Spooler", trigger_start="true", delayed_start="false"}'
+        values: '1x20'
+    alert_rule_test:
+      - alertname: WindowsServiceNotRunning
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, service: Spooler, severity: warning}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicenotrunning/
+              summary: Windows automatic service is not running
+              description: 'Service Spooler on host:9182 starts automatically but has not been running for 15 minutes.'
 
   - name: Host reboot fires once for the first ten minutes after a new boot time
     interval: 1m
@@ -498,3 +554,28 @@ tests:
               summary: Windows host has rebooted
               description: 'host:9182 rebooted 9m 0s ago.'
       - {alertname: WindowsHostRebooted, eval_time: 19m, exp_alerts: []}
+
+  - name: Host reboot fires after a scrape gap longer than ten minutes
+    interval: 1m
+    input_series:
+      - series: 'windows_system_boot_time_timestamp{job="windows_exporter", instance="host:9182"}'
+        values: '-100000x5 stale _x11 960x20'
+    alert_rule_test:
+      - {alertname: WindowsHostRebooted, eval_time: 17m, exp_alerts: []}
+      - alertname: WindowsHostRebooted
+        eval_time: 18m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: info}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowshostrebooted/
+              summary: Windows host has rebooted
+              description: 'host:9182 rebooted 2m 0s ago.'
+      - alertname: WindowsHostRebooted
+        eval_time: 25m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: info}
+            exp_annotations:
+              runbook_url: https://prometheus-community.github.io/windows_exporter/runbooks/windowshostrebooted/
+              summary: Windows host has rebooted
+              description: 'host:9182 rebooted 9m 0s ago.'
+      - {alertname: WindowsHostRebooted, eval_time: 26m, exp_alerts: []}

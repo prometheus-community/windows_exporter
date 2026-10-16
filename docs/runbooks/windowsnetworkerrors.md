@@ -4,9 +4,16 @@ title: WindowsNetworkErrors
 
 ## Meaning
 
-The sum of inbound and outbound packet error rates exceeds the configured
-threshold for 15 minutes. The default is one error per second per interface.
-The alert identifies the interface using its `nic` label.
+Packets with inbound or outbound errors make up more than the configured share
+of all packets on an interface for 15 minutes. The default
+`networkErrorRatioThreshold` is 1 percent. The ratio divides the error rates
+(`windows:net_received_errors:rate` plus `windows:net_outbound_errors:rate`) by
+the packet rates (`windows:net_received_packets:rate` plus
+`windows:net_sent_packets:rate`), so a quiet interface with a handful of errors
+alerts while a busy interface with the same error count does not. Interfaces
+that carry no packets produce no sample and cannot alert. The alert identifies
+the interface using its `nic` label and keeps firing for `keepFiringFor` after
+the ratio drops below the threshold.
 
 ## Impact
 
@@ -16,7 +23,10 @@ connection failures.
 ## Diagnosis
 
 1. Inspect `windows:net_received_errors:rate` and
-   `windows:net_outbound_errors:rate` separately to identify the direction.
+   `windows:net_outbound_errors:rate` separately to identify the direction, and
+   compare them with `windows:net_received_packets:rate` and
+   `windows:net_sent_packets:rate` to see whether a low packet rate inflates the
+   ratio.
 2. Compare traffic and `windows:net_received_utilization:ratio` and
    `windows:net_sent_utilization:ratio` with the normal baseline. These ratios
    use bandwidth in bytes per second and keep each direction separate.
@@ -36,4 +46,5 @@ Repair faulty links or switch ports and correct driver or adapter configuration
 problems. Apply driver and firmware fixes through the normal change process.
 Relieve congestion if it contributes. Verify errors stop increasing and affected
 application connections recover; cumulative counters do not need to return to
-zero for the rate alert to resolve.
+zero for the ratio alert to resolve. Raise `networkErrorRatioThreshold` only for
+interfaces whose error share is known and accepted.
