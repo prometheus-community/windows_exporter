@@ -109,11 +109,11 @@ exercised a live Windows role.
   the corresponding collector documentation and affected queries together.
   Replace published metrics with a hard rename: do not keep deprecated copies
   or aliases, and list the change in the upgrade guide of the next release,
-  [`docs/upgrade/<version>.md`](docs/upgrade). A test in
+  [`docs/upgrade/<version>.md`](docs/upgrade). For 0.32, a test in
   `internal/metriccontract` generates the compatibility recording rules
   `docs/upgrade/0.32.prom` from the rename and instance label tables of
-  `docs/upgrade/0.32.md`; regenerate them with `UPDATE_COMPATIBILITY_RULES=1 go test
-  ./internal/metriccontract/`.
+  `docs/upgrade/0.32.md`; regenerate them with
+  `UPDATE_COMPATIBILITY_RULES=1 go test ./internal/metriccontract/`.
 - Name metrics after the Prometheus conventions: publish base units (seconds,
   bytes, hertz, ratios from 0 to 1) and put the unit in the name (`_seconds`,
   `_bytes`, `_hertz`, `_ratio`), never `_mhz`, `_percent`, `_minutes`,

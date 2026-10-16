@@ -27,17 +27,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// compatibilityRulesFile holds recording rules that publish the metrics of
-// 0.32 under their 0.31 names and labels. It is generated from the rename
-// tables of the upgrade guide; set UPDATE_COMPATIBILITY_RULES=1 to regenerate
-// it.
 const (
-	upgradeGuideFile       = "docs/upgrade/0.32.md"
+	// upgradeGuideFile is the upgrade guide of 0.32. Its rename and instance
+	// label tables are the source of the compatibility rules.
+	upgradeGuideFile = "docs/upgrade/0.32.md"
+	// compatibilityRulesFile holds recording rules that publish the metrics
+	// of 0.32 under their 0.31 names and labels. Set
+	// UPDATE_COMPATIBILITY_RULES=1 to regenerate it.
 	compatibilityRulesFile = "docs/upgrade/0.32.prom"
 )
 
-// renameRow matches a row of a rename table in the upgrade guide: the 0.31 name, the
-// 0.32 name and a note.
+// renameRow matches a row of a rename table in the upgrade guide: the 0.31
+// name, the 0.32 name and a note.
 var renameRow = regexp.MustCompile("^\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*`(windows_[A-Za-z0-9_]+)`\\s*\\|\\s*(.*?)\\s*\\|\\s*$")
 
 // labelRow matches a row of the instance label table in the upgrade guide.
