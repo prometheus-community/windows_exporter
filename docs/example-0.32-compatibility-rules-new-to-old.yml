@@ -10,6 +10,7 @@
 #   Recording them under the same name would duplicate every series.
 # - Metrics whose 0.31 value can't be computed from 0.32, e.g. removed
 #   metrics, split metrics and ratios that 0.31 computed wrongly.
+# - Series that 0.32 leaves out, e.g. mscluster settings that are zero.
 groups:
   - name: windows_exporter-0.32-ad
     rules:
@@ -382,9 +383,9 @@ groups:
       - record: windows_mssql_databases_log_truncations
         expr: windows_mssql_databases_log_truncations_total
       - record: windows_mssql_dbreplica_database_flow_control_wait_seconds
-        expr: windows_mssql_dbreplica_database_flow_control_wait_seconds_total
+        expr: windows_mssql_dbreplica_database_flow_control_wait_seconds_total * 1e6
       - record: windows_mssql_dbreplica_group_commit_stall_seconds
-        expr: windows_mssql_dbreplica_group_commit_stall_seconds_total
+        expr: windows_mssql_dbreplica_group_commit_stall_seconds_total * 1e6
       - record: windows_mssql_dbreplica_transaction_delay_seconds
         expr: windows_mssql_dbreplica_transaction_delay_seconds_total
       - record: windows_mssql_dbreplica_recovery_queue_records
@@ -538,7 +539,7 @@ groups:
       - record: windows_mssql_bufman_page_writes
         expr: windows_mssql_bufman_page_writes_total
       - record: windows_mssql_bufman_read_ahead_issuing_seconds
-        expr: windows_mssql_bufman_read_ahead_issuing_seconds_total
+        expr: windows_mssql_bufman_read_ahead_issuing_seconds_total * 1e6
       - record: windows_mssql_bufman_read_ahead_pages
         expr: windows_mssql_bufman_read_ahead_pages_total
       - record: windows_mssql_databases_backup_restore_operations

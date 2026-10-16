@@ -280,6 +280,7 @@ func formatCompatibilityRules(rules map[string][]compatibilityRule) string {
 #   Recording them under the same name would duplicate every series.
 # - Metrics whose 0.31 value can't be computed from 0.32, e.g. removed
 #   metrics, split metrics and ratios that 0.31 computed wrongly.
+# - Series that 0.32 leaves out, e.g. mscluster settings that are zero.
 groups:
 `)
 
