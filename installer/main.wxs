@@ -71,6 +71,12 @@
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
         <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
 
+        <!-- Account of the service, used by ServiceInstall in files.wxs. Empty installs the service as LocalSystem.
+            The installer does not grant the account any rights, see docs/permissions.md. -->
+        <Property Id="SERVICE_ACCOUNT" Secure="yes" />
+        <!-- Only a user account needs a password. Hidden keeps it out of the installer log. -->
+        <Property Id="SERVICE_PASSWORD" Secure="yes" Hidden="yes" />
+
         <!-- Configuration for how the installer shows in Add/Remove Programs. -->
         <Icon Id="icon.ico" SourceFile=".\icon.ico"/>
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />

@@ -1,8 +1,8 @@
 # Running as a least-privilege service account
 
-The MSI installs the `windows_exporter` service without an account
-([`installer/files.wxs`](../installer/files.wxs) sets none on `ServiceInstall`),
-so it runs as `LocalSystem`. Every collector works with that account.
+By default, the MSI installs the `windows_exporter` service as `LocalSystem`.
+Every collector works with that account. The `SERVICE_ACCOUNT` property of the
+MSI sets another account, but the MSI does not grant that account any rights.
 
 The exporter only reads data and needs no administrator rights for the common
 collectors. This page describes how to run the service as an unprivileged
@@ -33,15 +33,27 @@ collector sets and logs, and the exporter only reads counters.
 
 ## Set up the service
 
-Run this in an elevated PowerShell after installing the MSI. It changes the
-existing service; the service must exist before Windows can resolve the virtual
-account `NT SERVICE\windows_exporter`.
+Install the MSI with the account:
+
+```powershell
+msiexec /i <path-to-msi-file> --% SERVICE_ACCOUNT="NT SERVICE\windows_exporter"
+```
+
+For a gMSA, set `SERVICE_ACCOUNT="CONTOSO\svc-exporter$"`. For a user, also set
+`SERVICE_PASSWORD`; the MSI keeps it out of its log. A gMSA or a user needs
+"Log on as a service" before you install, because the MSI starts the service
+right away. The MSI starts it before the account has the other rights below,
+so restart the service after granting them.
+
+Then run this in an elevated PowerShell. The service must exist before Windows
+can resolve the virtual account `NT SERVICE\windows_exporter`.
 
 ```powershell
 $service = 'windows_exporter'
 $account = "NT SERVICE\$service"
 
-# Run the service as its virtual account. A virtual account has no password.
+# Only needed if the MSI was installed without SERVICE_ACCOUNT. A virtual
+# account has no password.
 sc.exe config $service obj= $account
 
 # Grant read access to performance counters. S-1-5-32-558 is the Performance
@@ -60,10 +72,11 @@ Restart-Service $service
 `Add-LocalGroupMember` and `Remove-LocalGroupMember` come from the
 `Microsoft.PowerShell.LocalAccounts` module, which needs 64-bit PowerShell.
 
-For a gMSA, use `sc.exe config windows_exporter obj= 'CONTOSO\svc-exporter$'`.
-For a user, also add `password= '<password>'`. For both, grant "Log on as a
-service" with `secpol.msc` or a group policy: `sc.exe` does not grant it, only
-the Services console (`services.msc`) does when you set the account there.
+Without `SERVICE_ACCOUNT`, use `sc.exe config windows_exporter obj= 'CONTOSO\svc-exporter$'`
+for a gMSA, and also add `password= '<password>'` for a user. For both, grant
+"Log on as a service" with `secpol.msc` or a group policy: neither the MSI nor
+`sc.exe` grants it, only the Services console (`services.msc`) does when you set
+the account there.
 
 The account also needs:
 
@@ -107,10 +120,11 @@ Remove-LocalGroupMember -SID 'S-1-5-32-558' -Member 'NT SERVICE\windows_exporter
 Restart-Service windows_exporter
 ```
 
-The MSI does not keep the account. When an upgrade or a change of the
-installation installs the service again, it runs as `LocalSystem`. Run the
-setup script again afterwards, for example from the same deployment job that
-runs `msiexec`.
+The MSI does not remember `SERVICE_ACCOUNT`, like its other properties. An
+upgrade or a repair installs the service again, as `LocalSystem` unless you
+pass `SERVICE_ACCOUNT` (and `SERVICE_PASSWORD`) again. Group memberships and
+user rights of the account stay, so passing the same properties to every
+`msiexec` run is enough.
 
 ## Collectors with limits
 
