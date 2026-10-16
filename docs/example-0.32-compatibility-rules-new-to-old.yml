@@ -26,24 +26,24 @@ groups:
         expr: windows_ad_replication_highest_usn_total
   - name: windows_exporter-0.32-container
     rules:
+      - record: windows_container_count
+        expr: windows_containers
       - record: windows_container_cpu_usage_seconds_kernelmode
         expr: windows_container_cpu_usage_kernelmode_seconds_total
       - record: windows_container_cpu_usage_seconds_usermode
         expr: windows_container_cpu_usage_usermode_seconds_total
-  - name: windows_exporter-0.32-containers
-    rules:
-      - record: windows_container_count
-        expr: windows_containers
   - name: windows_exporter-0.32-cpu
     rules:
       - record: windows_cpu_core_frequency_mhz
         expr: windows_cpu_core_frequency_hertz / 1e6
+      - record: windows_cpu_time_total
+        expr: windows_cpu_time_seconds_total
+  - name: windows_exporter-0.32-cpu_info
+    rules:
       - record: windows_cpu_info_l2_cache_size
         expr: windows_cpu_info_l2_cache_size_bytes / 1024
       - record: windows_cpu_info_l3_cache_size
         expr: windows_cpu_info_l3_cache_size_bytes / 1024
-      - record: windows_cpu_time_total
-        expr: windows_cpu_time_seconds_total
   - name: windows_exporter-0.32-dfsr
     rules:
       - record: windows_dfsr_connection_bandwidth_savings_using_dfs_replication_bytes_total
@@ -734,7 +734,7 @@ groups:
     rules:
       - record: windows_process_cpu_time_total
         expr: windows_process_cpu_time_seconds_total
-  - name: windows_exporter-0.32-remote
+  - name: windows_exporter-0.32-remote_fx
     rules:
       - record: windows_remote_fx_net_current_tcp_bandwidth
         expr: windows_remote_fx_net_current_tcp_bandwidth_bytes_per_second
@@ -756,7 +756,7 @@ groups:
         expr: windows_smb_server_shares_open_files
       - record: windows_smb_server_shares_tree_connect_count
         expr: windows_smb_server_shares_tree_connects
-  - name: windows_exporter-0.32-storage
+  - name: windows_exporter-0.32-storage_spaces
     rules:
       - record: windows_storage_spaces_virtual_disk_storage_efficiency_percent
         expr: max without (virtual_disk) (label_replace(windows_storage_spaces_virtual_disk_storage_efficiency_ratio * 100, "name", "$1", "virtual_disk", "(.+)"))

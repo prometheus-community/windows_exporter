@@ -198,7 +198,7 @@ func compatibilityRules(t *testing.T, upgrade []string) map[string][]compatibili
 			expr = fmt.Sprintf("max without (%s) (%s)", strings.Join(dropped, ", "), expr)
 		}
 
-		collector, _, _ := strings.Cut(strings.TrimPrefix(newName, "windows_"), "_")
+		collector := collectorOf(t, newName)
 		rules[collector] = append(rules[collector], compatibilityRule{record: oldName, expr: expr})
 	}
 
@@ -300,4 +300,26 @@ groups:
 	}
 
 	return b.String()
+}
+
+// collectorOf returns the collector that emits the metric name: the longest
+// directory name in internal/collector that prefixes the name, e.g. container
+// for windows_containers.
+func collectorOf(t *testing.T, name string) string {
+	t.Helper()
+
+	entries, err := os.ReadDir(filepath.Join(repoRoot, "internal", "collector"))
+	require.NoError(t, err)
+
+	var collector string
+
+	for _, entry := range entries {
+		if entry.IsDir() && len(entry.Name()) > len(collector) && strings.HasPrefix(name, "windows_"+entry.Name()) {
+			collector = entry.Name()
+		}
+	}
+
+	require.NotEmpty(t, collector, "no collector for %s", name)
+
+	return collector
 }

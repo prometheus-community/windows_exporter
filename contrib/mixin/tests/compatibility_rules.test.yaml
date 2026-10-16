@@ -6,7 +6,7 @@ tests:
   - name: 0.32 metrics are published under their 0.31 names, units and labels
     interval: 1m
     input_series:
-      - series: 'windows_mscluster_resource_restart_delay_seconds{job="w",instance="h:9182",resource="SQL",node="N1",resource_group="G1"}'
+      - series: 'windows_mscluster_resource_restart_delay_seconds{job="w",instance="h:9182",type="SQL Server",resource="SQL",resource_group="G1"}'
         values: '0.5'
       - series: 'windows_hyperv_virtual_smb_open_files{job="w",instance="h:9182",vm="VM1"}'
         values: '3'
@@ -18,7 +18,7 @@ tests:
       - expr: windows_mscluster_resource_restart_delay
         eval_time: 0
         exp_samples:
-          - labels: 'windows_mscluster_resource_restart_delay{job="w",instance="h:9182",name="SQL",node_name="N1",owner_group="G1"}'
+          - labels: 'windows_mscluster_resource_restart_delay{job="w",instance="h:9182",type="SQL Server",name="SQL",owner_group="G1"}'
             value: 500
       - expr: windows_hyperv_virtual_smb_current_open_file_count
         eval_time: 0

@@ -93,7 +93,7 @@ JSON:
 
 #### name
 
-Required, unique ID for the key group. It is used as the `name` label on
+Required, unique ID for the key group. It is used as the `key` label on
 `windows_registry_key_success`, to identify the key in logs, and to seed
 auto-generated metric names (see [Metric naming](#metric-naming)). Each key must
 have a distinct `name`; duplicates are rejected at build time.
@@ -179,7 +179,7 @@ A `windows_registry_key_success` value of `0` means the key could not be opened
 *or* at least one configured value was missing or not a `REG_DWORD`/`REG_QWORD`;
 values that did read successfully are still exported.
 
-The `name` label on `windows_registry_key_success` is the configured key
+The `key` label on `windows_registry_key_success` is the configured key
 [`name`](#name), used verbatim. Because each key must have a unique `name`, the
 success metric can never emit duplicate series.
 

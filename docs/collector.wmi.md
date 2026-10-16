@@ -116,7 +116,7 @@ SELECT <label_properties>, <properties> FROM <class> [WHERE <where>]
 
 #### name
 
-Required, unique ID for the query. It is used as the `name` label on
+Required, unique ID for the query. It is used as the `query` label on
 `windows_wmi_query_success` and `windows_wmi_query_duration_seconds`, to identify
 the query in logs, and to seed auto-generated metric names (see
 [Metric naming](#metric-naming)). Duplicates are rejected at build time, and so
