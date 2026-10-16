@@ -45,8 +45,8 @@ their runtime behavior.
 - A release is built once, by the CI run for its `release: published` event.
   Tag pushes do not trigger CI: a second run would build and sign another
   executable, and the container image and the release assets would no longer
-  contain the same binary. Keep the `docker` and `publish` jobs on the artifacts of
-  the same run.
+  contain the same binary. Keep the `docker` and `publish` jobs on the
+  artifacts of the same run.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
