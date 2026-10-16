@@ -412,21 +412,15 @@ windows_wmi_defender_signatures_out_of_date{running_mode="Normal"} 0
 
 ### Disk health and SMART data
 
-Windows exposes the parsed SMART data of NVMe and SATA disks as the reliability counters of the storage
-management API (`Get-StorageReliabilityCounter`), and the health status Windows derives from them on
-`MSFT_PhysicalDisk`. The `disk` label is the disk number, the same as in the
-[physical_disk](collector.physical_disk.md) collector.
+`MSFT_PhysicalDisk` has the health status that Windows derives from the SMART data of the disk, and
+`MSStorageDriver_FailurePredictStatus` the SMART failure prediction. The `disk` label is the disk number, the same
+as in the [physical_disk](collector.physical_disk.md) collector.
 
 - `MSFT_PhysicalDisk` works without administrator rights.
-- `MSFT_StorageReliabilityCounter` and `MSStorageDriver_FailurePredictStatus` need administrator rights. The
-  exporter has them when it runs as a service (`LocalSystem`); as a regular user, the queries fail with
-  `MI_RESULT_ACCESS_DENIED`.
-- Virtual disks of virtual machines usually report no reliability counters.
-- `MSStorageDriver_FailurePredictStatus` fails as not supported when no disk driver implements it, which is common
-  for NVMe disks and virtual machines. Leave that query out on such hosts.
-- The reliability counters change slowly. The wmi collector runs all of its queries on every scrape, so to read them
-  less often, scrape `collect[]=wmi` from a separate job with a longer interval and leave `wmi` out of the
-  `collect[]` list of the main job. This applies to all wmi queries.
+- `MSStorageDriver_FailurePredictStatus` needs administrator rights. The exporter has them when it runs as a service
+  (`LocalSystem`); as a regular user, the query fails with `MI_RESULT_ACCESS_DENIED`. It only returns disks whose
+  driver implements SMART failure prediction, usually SATA disks and not NVMe disks or virtual disks. It names the
+  device by its PnP instance name, not by disk number.
 
 ```yaml
 collector:
@@ -444,30 +438,6 @@ collector:
           - name: HealthStatus
             metric: windows_wmi_physical_disk_health_status
             help: Health status of the physical disk (0 healthy, 1 warning, 2 unhealthy, 5 unknown).
-      - name: disk_reliability
-        namespace: root/Microsoft/Windows/Storage
-        class: MSFT_StorageReliabilityCounter
-        label_properties:
-          - name: DeviceId
-            label: disk
-        properties:
-          - name: Temperature
-            metric: windows_wmi_disk_temperature_celsius
-            help: Current temperature of the disk in degrees Celsius.
-          - name: Wear
-            metric: windows_wmi_disk_wear
-            help: Wear indicator of the disk in percent; at 100 the estimated wear limit is reached.
-          - name: PowerOnHours
-            metric: windows_wmi_disk_power_on_hours
-            help: Hours the disk has been powered on since it was manufactured.
-          - name: ReadErrorsUncorrected
-            metric: windows_wmi_disk_read_errors_uncorrected_total
-            help: Read errors the disk could not correct.
-            type: counter
-          - name: WriteErrorsUncorrected
-            metric: windows_wmi_disk_write_errors_uncorrected_total
-            help: Write errors the disk could not correct.
-            type: counter
       - name: disk_failure_predict
         namespace: root/wmi
         class: MSStorageDriver_FailurePredictStatus
@@ -480,10 +450,10 @@ collector:
             help: Whether the SMART self-monitoring of the disk predicts a failure.
 ```
 
-The wmi collector exports values as they are, so `Wear` stays a percentage and `PowerOnHours` stays in hours.
-Use recording rules for base units, for example `windows_wmi_disk_wear / 100` for a ratio and
-`windows_wmi_disk_power_on_hours * 3600` for seconds.
-`MSStorageDriver_FailurePredictStatus` names the device by its PnP instance name, not by disk number.
+The parsed SMART attributes, such as temperature, wear and power-on hours (`Get-StorageReliabilityCounter`), are
+in `MSFT_StorageReliabilityCounter`. Windows only returns them through the association with `MSFT_PhysicalDisk`;
+a query of the class returns no instances, even as `LocalSystem`. The wmi collector does not support association
+queries, so it cannot read them.
 
 ## Useful queries
 
