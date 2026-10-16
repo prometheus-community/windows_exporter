@@ -29,10 +29,12 @@ to generate rules. Generated rule files are ignored by Git:
 - `windows_alerts.yaml`: alerting rules.
 
 The default selector is `job="windows_exporter"`. Change it to match your scrape
-job before generating rules. Resource rules use the default `cpu`, `memory`,
-`logical_disk`, and `net` collectors. Enable `ad` on domain controllers when
-opting into Active Directory alerts. Clock alerts require the `time` collector
-with its `ntp` subcollector and are intended for hosts using NTP synchronization.
+job before generating rules. The rules read the default `cpu`, `memory`,
+`logical_disk`, `net`, `service` and `system` collectors; `_config.collectors`
+lists which collectors the targets run, and the alerts of a collector that is
+turned off are not generated. Enable `ad` on domain controllers when opting
+into Active Directory alerts. Clock alerts require the `time` collector with
+its `ntp` subcollector and are intended for hosts using NTP synchronization.
 
 Copy both generated files into your Prometheus rule directory and reference
 them in `prometheus.yml`:
@@ -62,6 +64,9 @@ modifying its source. For example, create `custom.libsonnet` in this directory:
     cpuHighUsageThreshold: 95,
     enableActiveDirectory: true,
     enableTime: true,
+    collectors+: { pagefile: true },
+    alerts+: { WindowsHostRebooted: false },
+    keepFiringFor: '10m',
     runbookURLPattern: 'https://runbooks.example.com/windows/%s/',
   },
 }
@@ -77,9 +82,11 @@ jsonnet -S -e 'std.manifestYamlDoc((import "custom.libsonnet").prometheusAlerts)
 Selectors are comma-separated Prometheus label matchers without braces. They
 apply to both recording rules and alerts. All target labels, including `job`,
 `instance`, `cluster`, and custom selector labels, are preserved. CPU usage
-averages idle rates across cores and removes only `core` and `mode`. Disk and
-network recordings also retain `volume` and `nic` respectively. The CPU mode
-recording retains `mode` and removes only `core`.
+averages idle rates across cores and removes only `core` and `mode`. Disk,
+network and service rules also retain `volume`, `nic` and `service`
+respectively, filtered by `volumeSelector`, `nicSelector` and
+`serviceSelector`. The CPU mode recording retains `mode` and removes only
+`core`.
 
 `rateInterval` is the fixed window for recording rules and Active Directory
 failure rates; keep it at least four times your scrape interval. Grafana's
@@ -93,6 +100,7 @@ rules.
 | `windows:cpu_usage:ratio` | Non-idle CPU time averaged across cores | Ratio, 0–1 |
 | `windows:cpu_cores:count` | Logical processors observed in idle CPU metrics | Count |
 | `windows:cpu_time:ratio_rate` | CPU time averaged across cores, retaining `mode` | Seconds/second |
+| `windows:cpu_queue_per_core:ratio` | Threads waiting for a processor, averaged over `rateInterval`, per logical processor | Threads/processor |
 | `windows:memory_usage:ratio` | Physical memory in use, based on available bytes | Ratio, 0–1 |
 | `windows:memory_used:bytes` | Total physical memory minus available memory | Bytes |
 | `windows:memory_cached:bytes` | Cache, modified pages, and three standby lists | Bytes |
@@ -109,6 +117,8 @@ rules.
 | `windows:logical_disk_write_latency:seconds` | Write-time rate divided by write-operation rate | Seconds/operation |
 | `windows:net_received_bytes:rate` | Received network traffic per interface | Bytes/second |
 | `windows:net_sent_bytes:rate` | Sent network traffic per interface | Bytes/second |
+| `windows:net_received_packets:rate` | Received packets per interface | Packets/second |
+| `windows:net_sent_packets:rate` | Sent packets per interface | Packets/second |
 | `windows:net_received_utilization:ratio` | Received throughput divided by interface bandwidth | Ratio |
 | `windows:net_sent_utilization:ratio` | Sent throughput divided by interface bandwidth | Ratio |
 | `windows:net_received_errors:rate` | Inbound packet errors | Packets/second |
@@ -127,45 +137,80 @@ which can exceed wall time for concurrent I/O. Latency is an average and is
 omitted when there are no operations. Memory, disk space, commit, and network
 utilization ratios are omitted when their capacity is zero or missing. Network
 bandwidth is already in bytes/second; receive and send utilization are separate
-for full-duplex links.
+for full-duplex links. The processor queue length is an instantaneous sample,
+so the queue recording averages it over `rateInterval` before dividing by the
+core count.
 The cache recording includes modified pages and is not a measure of immediately
 reclaimable memory. Paging operations can include file-backed pages as well as
 pagefile traffic.
 
 ## Alerts
 
-Threshold configuration values below are percentages except where noted.
+The alerts are grouped by collector area. Each group lists the collectors its
+rules read; a group is generated only with those collectors enabled in
+`_config.collectors`, and a rule that needs two collectors, such as the CPU
+saturation alert, only with both. Threshold configuration values below are
+percentages except where noted.
 
-| Alert | Default condition | Duration | Severity |
-| --- | --- | --- | --- |
-| `WindowsExporterDown` | Scrape target `up == 0` | 5m | Critical |
-| `WindowsCollectorFailed` | `windows_exporter_collector_success == 0` | 5m | Warning |
-| `WindowsCPUHighUsage` | CPU usage above `cpuHighUsageThreshold` (90%) | 15m | Warning |
-| `WindowsMemoryHighUsage` | Memory usage above `memoryHighUsageThreshold` (90%) | 15m | Warning |
-| `WindowsMemoryCommitHighUsage` | Commit usage above `memoryCommitHighUsageThreshold` (90%) | 15m | Warning |
-| `WindowsDiskReadLatencyHigh` | Average read latency above `diskLatencyThresholdSeconds` (0.05 seconds) | 15m | Warning |
-| `WindowsDiskWriteLatencyHigh` | Average write latency above `diskLatencyThresholdSeconds` (0.05 seconds) | 15m | Warning |
-| `WindowsNetworkErrors` | Combined receive/outbound errors above `networkErrorRateThreshold` (1 packet/second) | 15m | Warning |
-| `WindowsNetworkDiscards` | Combined receive/outbound discards above `networkDiscardRateThreshold` (1 packet/second) | 15m | Warning |
-| `WindowsDiskAlmostFull` | Free space below `diskFreeWarningThreshold` (10%) | 15m | Warning |
-| `WindowsDiskAlmostFull` | Free space below `diskFreeCriticalThreshold` (5%) | 15m | Critical |
-| `WindowsDiskFillingUp` | Below the warning threshold and predicted to fill within `diskPredictionHours` (24h), using `diskPredictionWindow` (6h) | 1h | Warning |
-| `WindowsADPendingReplication` | Pending operations above `adPendingReplicationThreshold` (50) | 15m | Warning |
-| `WindowsADReplicationFailures` | Failed synchronization requests above `adReplicationFailureRateThreshold` (0 requests/second) | 15m | Warning |
-| `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
-| `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
+| Group | Collectors | Alert | Default condition | Duration | Severity |
+| --- | --- | --- | --- | --- | --- |
+| `windows-exporter` | | `WindowsExporterDown` | Scrape target `up == 0` | 5m | Critical |
+| `windows-exporter` | | `WindowsCollectorFailed` | `windows_exporter_collector_success == 0` | 5m | Warning |
+| `windows-exporter` | | `WindowsCollectorTimeout` | `windows_exporter_collector_timeout == 1` | 10m | Warning |
+| `windows-exporter` | | `WindowsScrapeQueueTimeout` | `windows_exporter_scrape_queue_timeout == 1` | 10m | Warning |
+| `windows-cpu` | `cpu` | `WindowsCPUHighUsage` | CPU usage above `cpuHighUsageThreshold` (90%) | 15m | Warning |
+| `windows-cpu` | `cpu`, `system` | `WindowsCPUSaturation` | Waiting threads per logical processor above `cpuQueuePerCoreThreshold` (2) | 15m | Warning |
+| `windows-memory` | `memory` | `WindowsMemoryHighUsage` | Memory usage above `memoryHighUsageThreshold` (90%) | 15m | Warning |
+| `windows-memory` | `memory` | `WindowsMemoryCommitHighUsage` | Commit usage above `memoryCommitHighUsageThreshold` (90%) | 15m | Warning |
+| `windows-memory` | `memory` | `WindowsMemoryPagingHigh` | Pages read or written per second above `memoryPagingThreshold` (1000) | 15m | Warning |
+| `windows-disk` | `logical_disk` | `WindowsDiskReadLatencyHigh` | Average read latency above `diskLatencyThresholdSeconds` (0.05 seconds) | 15m | Warning |
+| `windows-disk` | `logical_disk` | `WindowsDiskWriteLatencyHigh` | Average write latency above `diskLatencyThresholdSeconds` (0.05 seconds) | 15m | Warning |
+| `windows-disk` | `logical_disk` | `WindowsDiskAlmostFull` | Free space below `diskFreeWarningThreshold` (10%) | 15m | Warning |
+| `windows-disk` | `logical_disk` | `WindowsDiskAlmostFull` | Free space below `diskFreeCriticalThreshold` (5%) | 15m | Critical |
+| `windows-disk` | `logical_disk` | `WindowsDiskFillingUp` | Below the warning threshold and predicted to fill within `diskPredictionHours` (24h), using `diskPredictionWindow` (6h) | 1h | Warning |
+| `windows-network` | `net` | `WindowsNetworkErrors` | Receive and outbound errors above `networkErrorRatioThreshold` (1%) of all packets | 15m | Warning |
+| `windows-network` | `net` | `WindowsNetworkDiscards` | Receive and outbound discards above `networkDiscardRatioThreshold` (1%) of all packets | 15m | Warning |
+| `windows-network` | `net` | `WindowsNetworkUtilizationHigh` | Received or sent throughput above `networkUtilizationThreshold` (90%) of the link bandwidth | 15m | Warning |
+| `windows-network` | `net` | `WindowsNetworkInterfaceFlapping` | Operational status changed more than twice within `rateInterval` | 2m | Warning |
+| `windows-service` | `service` | `WindowsServiceNotRunning` | Automatic service without triggers not running | 15m | Warning |
+| `windows-service` | `service` | `WindowsServiceCrashLooping` | More than `serviceRestartThreshold` (2) restarts in 15 minutes | 0m | Warning |
+| `windows-system` | `system` | `WindowsHostRebooted` | Boot time less than ten minutes old and changed | 0m | Info |
+| `windows-active-directory` | `ad` | `WindowsADPendingReplication` | Pending operations above `adPendingReplicationThreshold` (50) | 15m | Warning |
+| `windows-active-directory` | `ad` | `WindowsADReplicationFailures` | Failed synchronization requests above `adReplicationFailureRateThreshold` (0 requests/second) | 15m | Warning |
+| `windows-time` | `time` | `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
+| `windows-time` | `time` | `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
 
-Active Directory alerts are generated only when `enableActiveDirectory` is
-`true`. `criticalSeverity` defaults to `critical` and can be overridden to match
-your routing labels. Below the critical disk threshold, both disk severity
-levels fire; configure Alertmanager inhibition if only the critical
+`_config.alerts` lists every alert by name. Set one to `false` to leave it out,
+for example `alerts+: { WindowsHostRebooted: false }`; an unknown name fails the
+build, and a name missing from a replaced object stays enabled. A group whose
+alerts are all turned off is not generated.
+
+Threshold alerts set `keep_firing_for` to `keepFiringFor` (5 minutes), so a
+value that oscillates around a threshold does not flap. State alerts such as
+`WindowsExporterDown` and `WindowsServiceNotRunning` resolve as soon as their
+condition clears. `keep_firing_for` needs Prometheus 2.42 or later; set
+`keepFiringFor: ''` for older servers.
+
+`criticalSeverity` defaults to `critical` and `infoSeverity` to `info`; override
+them to match your routing labels. Below the critical disk threshold, both disk
+severity levels fire; configure Alertmanager inhibition if only the critical
 notification should be sent.
 
-Clock alerts are generated only when `enableTime` is `true`. A zero NTP source
-count may be expected on hosts using another time provider. The offset compares
-the host to its chosen source and does not independently verify that source.
-Disk latency and network error/discard thresholds should be tuned for the
+Active Directory alerts need `collectors.ad`, which `enableActiveDirectory`
+sets. Clock alerts need `collectors.time`, which `enableTime` sets. A zero NTP
+source count may be expected on hosts using another time provider. The offset
+compares the host to its chosen source and does not independently verify that
+source. Disk latency, paging and network thresholds should be tuned for the
 storage tier, traffic volume, and application requirements.
+
+`WindowsServiceNotRunning` watches services with the `auto` start mode and
+skips trigger-start services, which stop by design, through the
+`trigger_start` label of `windows_service_info`. Delayed-start services are
+included; the 15 minute duration covers their later start after a reboot.
+`WindowsServiceCrashLooping` counts the `windows_service_process` series of a
+service within 15 minutes, one per process the service ran as. Exclude services
+with `serviceSelector`. `WindowsHostRebooted` fires once for about ten minutes
+after a reboot and resolves by itself.
 
 Windows disk size/free-space counters may lag by 10–15 minutes. Predictions
 depend on a sustained trend and are intentionally delayed for an hour. A target
@@ -366,11 +411,13 @@ find unused variables and references to missing fields, checks that the
 committed dashboards are up to date, runs `dashboard-linter lint --strict`, validates generated rules with
 `promtool`, runs `pint --offline lint`, and evaluates the rules against synthetic
 time series.
-Tests cover all 25 recordings, alert timing and recovery, threshold
-boundaries, counter resets, zero denominators, disk forecasts, target-label
-preservation, and custom selectors/thresholds with Active Directory and clock
-alerts enabled. Runbook checks include opt-in alerts and verify that their pages
-and URLs exist. CI uses Prometheus 3.15.0 and the same pinned tool versions as
+Tests cover all 28 recordings, alert timing and recovery, `keep_firing_for`,
+threshold boundaries, counter resets, zero denominators, disk forecasts,
+target-label preservation, and custom selectors/thresholds with Active
+Directory and clock alerts enabled. `tests/alerts.test.jsonnet` checks the
+collector gating, the per-alert switches and the group layout. Runbook checks
+render the alerts of every collector and verify that their pages and URLs
+exist. CI uses Prometheus 3.15.0 and the same pinned tool versions as
 `mise install`.
 
 To list the available tasks:

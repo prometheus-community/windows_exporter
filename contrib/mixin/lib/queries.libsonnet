@@ -7,6 +7,13 @@ function(c)
     ratio(numerator, denominator): '(%s / (%s > 0))' % [numerator, denominator],
     cpuUsage:
       '1 - avg without (core, mode) (%s)' % self.rate('windows_cpu_time_seconds_total', ['mode="idle"']),
+    // Threads waiting for a processor, averaged over the rate interval, per
+    // logical processor. The queue length is an instantaneous sample.
+    cpuQueuePerCore:
+      self.ratio(
+        'avg_over_time(%s[%s])' % [self.metric('windows_system_processor_queue_length'), c.rateInterval],
+        self.metric('windows:cpu_cores:count')
+      ),
     memoryUsage:
       '1 - %s' % self.ratio(
         self.metric('windows_memory_available_bytes'),

@@ -4,11 +4,12 @@
     windowsExporterSelector: 'job="windows_exporter"',
     volumeSelector: 'volume!=""',
     nicSelector: 'nic!=""',
+    serviceSelector: 'service!=""',
     rateInterval: '5m',
 
-    // Opt in only for targets with the ad collector enabled.
+    // Opt in only for targets with the ad collector enabled. Sets collectors.ad.
     enableActiveDirectory: false,
-    // Requires the time collector with its ntp subcollector enabled.
+    // Requires the time collector with its ntp subcollector enabled. Sets collectors.time.
     enableTime: false,
 
     // Grafana dashboard metadata. A UID is the v2 metadata.name; change the
@@ -37,8 +38,10 @@
 
     // Collectors enabled on the windows_exporter targets, by collector name.
     // The dashboard only renders the tabs, rows and panels of enabled
-    // collectors. The defaults match the exporter's default collectors.
+    // collectors, and the alerts only the rules whose collectors are enabled.
+    // The defaults match the exporter's default collectors.
     collectors: {
+      ad: $._config.enableActiveDirectory,
       cpu: true,
       diskdrive: false,
       gpu: false,
@@ -62,20 +65,66 @@
       update: false,
     },
 
+    // Alerts by name. Set one to false to leave it out of the generated
+    // rules, for example alerts+: { WindowsHostRebooted: false }. Names that
+    // are not listed here fail the build; names left out of a replaced object
+    // stay enabled.
+    alerts: {
+      WindowsExporterDown: true,
+      WindowsCollectorFailed: true,
+      WindowsCollectorTimeout: true,
+      WindowsScrapeQueueTimeout: true,
+      WindowsCPUHighUsage: true,
+      WindowsCPUSaturation: true,
+      WindowsMemoryHighUsage: true,
+      WindowsMemoryCommitHighUsage: true,
+      WindowsMemoryPagingHigh: true,
+      WindowsDiskReadLatencyHigh: true,
+      WindowsDiskWriteLatencyHigh: true,
+      WindowsDiskAlmostFull: true,
+      WindowsDiskFillingUp: true,
+      WindowsNetworkErrors: true,
+      WindowsNetworkDiscards: true,
+      WindowsNetworkUtilizationHigh: true,
+      WindowsNetworkInterfaceFlapping: true,
+      WindowsServiceNotRunning: true,
+      WindowsServiceCrashLooping: true,
+      WindowsHostRebooted: true,
+      WindowsADPendingReplication: true,
+      WindowsADReplicationFailures: true,
+      WindowsClockNotSynchronising: true,
+      WindowsClockSkewDetected: true,
+    },
+
     runbookURLPattern: 'https://prometheus-community.github.io/windows_exporter/runbooks/%s/',
 
+    // Threshold alerts keep firing this long after their condition clears,
+    // so a value oscillating around a threshold does not flap. Needs
+    // Prometheus 2.42 or later; set it to '' to leave keep_firing_for out.
+    keepFiringFor: '5m',
+
     cpuHighUsageThreshold: 90,
+    // Threads waiting for a processor, per logical processor.
+    cpuQueuePerCoreThreshold: 2,
     memoryHighUsageThreshold: 90,
     memoryCommitHighUsageThreshold: 90,
+    // Pages read from or written to disk per second.
+    memoryPagingThreshold: 1000,
     diskLatencyThresholdSeconds: 0.05,
-    networkErrorRateThreshold: 1,
-    networkDiscardRateThreshold: 1,
+    // Percent of all packets on the interface.
+    networkErrorRatioThreshold: 1,
+    networkDiscardRatioThreshold: 1,
+    // Percent of the interface bandwidth, in either direction.
+    networkUtilizationThreshold: 90,
     clockOffsetThresholdSeconds: 0.05,
     diskFreeWarningThreshold: 10,
     diskFreeCriticalThreshold: 5,
     diskPredictionWindow: '6h',
     diskPredictionHours: 24,
+    // Restarts of one service within 15 minutes.
+    serviceRestartThreshold: 2,
     criticalSeverity: 'critical',
+    infoSeverity: 'info',
     adPendingReplicationThreshold: 50,
     adReplicationFailureRateThreshold: 0,
   },

@@ -111,3 +111,44 @@ tests:
         exp_samples:
           - labels: 'windows:net_sent_bytes:rate{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
             value: 30
+
+  - name: Processor queue per core averages the queue and packet rates keep the nic label
+    interval: 1m
+    input_series:
+      - series: 'windows_system_processor_queue_length{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '12x5 0x5'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
+        values: '0+60x10'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="1", mode="idle"}'
+        values: '0+60x10'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="2", mode="idle"}'
+        values: '0+60x10'
+      - series: 'windows_cpu_time_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", core="3", mode="idle"}'
+        values: '0+60x10'
+      - series: 'windows_system_processor_queue_length{job="windows_exporter", instance="nocpu:9182", cluster="a"}'
+        values: '12x10'
+      - series: 'windows_net_packets_received_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+600x10'
+      - series: 'windows_net_packets_sent_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+1200x10'
+    promql_expr_test:
+      - expr: windows:cpu_queue_per_core:ratio
+        eval_time: 5m
+        exp_samples:
+          - labels: 'windows:cpu_queue_per_core:ratio{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 3
+      - expr: windows:cpu_queue_per_core:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:cpu_queue_per_core:ratio{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 0
+      - expr: windows:net_received_packets:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_received_packets:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 10
+      - expr: windows:net_sent_packets:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_sent_packets:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 20

@@ -4,7 +4,15 @@ rule_files:
 evaluation_interval: 1m
 group_eval_order:
   - windows-exporter-recording
-  - windows-exporter-alerts
+  - windows-exporter
+  - windows-cpu
+  - windows-memory
+  - windows-disk
+  - windows-network
+  - windows-service
+  - windows-system
+  - windows-active-directory
+  - windows-time
 
 tests:
   - name: Memory cache includes all lists, commit is a ratio and paging is a rate
