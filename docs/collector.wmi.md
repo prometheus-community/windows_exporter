@@ -59,8 +59,15 @@ collector:
           - name: LastBootUpTime
             metric: windows_wmi_os_last_boot_timestamp_seconds
             help: Time of the last boot as a Unix timestamp.
+          - name: FreePhysicalMemory
+            metric: windows_wmi_os_physical_free_bytes
+            help: Free physical memory in bytes.
+            multiplier: 1024 # WMI reports kilobytes
           - name: NumberOfProcesses
 ```
+
+`FreePhysicalMemory` shows the [`multiplier`](#multiplier); the [memory](collector.memory.md) collector already
+exports this value as `windows_memory_physical_free_bytes`.
 
 #### Schema
 
@@ -226,7 +233,7 @@ This key is optional.
 A factor that the value is multiplied by before it is exported, to convert it to
 the base unit the Prometheus [naming conventions](https://prometheus.io/docs/practices/naming/#base-units)
 ask for. For example, `0.001` converts milliseconds to seconds, `0.01` percent to
-a ratio and `3600` hours to seconds. It must be a positive number, so counters
+a ratio, `3600` hours to seconds and `1024` kilobytes to bytes. It must be a positive number, so counters
 keep counting up. If the multiplier is the reciprocal of an integer, like `0.001`,
 the value is divided by that integer instead, which avoids rounding artifacts
 such as `0.009000000000000001`. If not specified, the value is exported as is.
@@ -322,6 +329,9 @@ windows_wmi_os_last_boot_timestamp_seconds 1.791272732355078e+09
 # HELP windows_wmi_os_numberofprocesses windows_exporter: custom WMI metric
 # TYPE windows_wmi_os_numberofprocesses gauge
 windows_wmi_os_numberofprocesses 478
+# HELP windows_wmi_os_physical_free_bytes Free physical memory in bytes.
+# TYPE windows_wmi_os_physical_free_bytes gauge
+windows_wmi_os_physical_free_bytes 1.6777216e+10
 # HELP windows_wmi_query_duration_seconds Duration of the WMI query.
 # TYPE windows_wmi_query_duration_seconds gauge
 windows_wmi_query_duration_seconds{query="logical_disk"} 0.0375302
@@ -343,6 +353,135 @@ windows_wmi_query_success{query="os"} 1
   the 64-bit float used by Prometheus.
 - WQL `ASSOCIATORS OF` and `REFERENCES OF` queries are not supported.
 
+## More examples
+
+The values in these examples are already in base units: `datetime` properties are exported as Unix timestamps in
+seconds, and the others are flags or status codes, so they need no [`multiplier`](#multiplier).
+
+### Microsoft Defender Antivirus
+
+The status of Microsoft Defender Antivirus is in the `MSFT_MpComputerStatus` class, which returns one instance.
+Windows has no performance counters for it. The query takes about 50 ms and works without administrator rights.
+On hosts without Defender, for example Windows Server without the feature installed, the namespace is missing
+and `windows_wmi_query_success{query="defender"}` is `0`. With a third-party antivirus, Defender turns itself off
+or, on devices onboarded to Microsoft Defender for Endpoint, runs in passive mode; the `running_mode` label shows which.
+The label is on every series of the query, so a change of the mode starts new series.
+
+```yaml
+collector:
+  wmi:
+    queries: |-
+      - name: defender
+        namespace: root/Microsoft/Windows/Defender
+        class: MSFT_MpComputerStatus
+        label_properties:
+          - name: AMRunningMode
+            label: running_mode
+        properties:
+          - name: AntivirusEnabled
+            metric: windows_wmi_defender_protection_enabled
+            help: Whether a Microsoft Defender protection feature is enabled.
+            labels:
+              feature: antivirus
+          - name: RealTimeProtectionEnabled
+            metric: windows_wmi_defender_protection_enabled
+            help: Whether a Microsoft Defender protection feature is enabled.
+            labels:
+              feature: real_time_protection
+          - name: BehaviorMonitorEnabled
+            metric: windows_wmi_defender_protection_enabled
+            help: Whether a Microsoft Defender protection feature is enabled.
+            labels:
+              feature: behavior_monitor
+          - name: IsTamperProtected
+            metric: windows_wmi_defender_protection_enabled
+            help: Whether a Microsoft Defender protection feature is enabled.
+            labels:
+              feature: tamper_protection
+          - name: AntivirusSignatureLastUpdated
+            metric: windows_wmi_defender_signature_last_updated_timestamp_seconds
+            help: Time of the last Microsoft Defender signature update as a Unix timestamp.
+            labels:
+              signature: antivirus
+          - name: DefenderSignaturesOutOfDate
+            metric: windows_wmi_defender_signatures_out_of_date
+            help: Whether the Microsoft Defender signatures are out of date.
+          - name: QuickScanEndTime
+            metric: windows_wmi_defender_scan_end_timestamp_seconds
+            help: End time of the last Microsoft Defender scan as a Unix timestamp.
+            labels:
+              scan: quick
+          - name: FullScanEndTime
+            metric: windows_wmi_defender_scan_end_timestamp_seconds
+            help: End time of the last Microsoft Defender scan as a Unix timestamp.
+            labels:
+              scan: full
+          - name: RebootRequired
+            metric: windows_wmi_defender_reboot_required
+            help: Whether Microsoft Defender needs a reboot to finish an action.
+```
+
+Other boolean properties of the class, such as `AntispywareEnabled`, `IoavProtectionEnabled` and `NISEnabled`, can be
+added the same way, and `AntispywareSignatureLastUpdated` and `NISSignatureLastUpdated` with their own `signature` label.
+A scan that never ran has no end time, so its series is missing; the query still reports success.
+Older Defender platforms may lack some properties, for example `IsTamperProtected`; a missing property fails the
+whole query, so remove it from the list there.
+
+Example output (excerpt):
+
+```
+windows_wmi_defender_protection_enabled{feature="antivirus",running_mode="Normal"} 1
+windows_wmi_defender_protection_enabled{feature="real_time_protection",running_mode="Normal"} 1
+windows_wmi_defender_scan_end_timestamp_seconds{running_mode="Normal",scan="quick"} 1.792057959101e+09
+windows_wmi_defender_signature_last_updated_timestamp_seconds{running_mode="Normal",signature="antivirus"} 1.792124105e+09
+windows_wmi_defender_signatures_out_of_date{running_mode="Normal"} 0
+```
+
+### Disk health and SMART data
+
+`MSFT_PhysicalDisk` has the health status that Windows derives from the SMART data of the disk, and
+`MSStorageDriver_FailurePredictStatus` the SMART failure prediction. The `disk` label is the disk number, the same
+as in the [physical_disk](collector.physical_disk.md) collector.
+
+- `MSFT_PhysicalDisk` works without administrator rights.
+- `MSStorageDriver_FailurePredictStatus` needs administrator rights. The exporter has them when it runs as a service
+  (`LocalSystem`); as a regular user, the query fails with `MI_RESULT_ACCESS_DENIED`. It only returns disks whose
+  driver implements SMART failure prediction, usually SATA disks and not NVMe disks or virtual disks. It names the
+  device by its PnP instance name, not by disk number.
+
+```yaml
+collector:
+  wmi:
+    queries: |-
+      - name: physical_disk_health
+        namespace: root/Microsoft/Windows/Storage
+        class: MSFT_PhysicalDisk
+        label_properties:
+          - name: DeviceId
+            label: disk
+          - name: FriendlyName
+            label: model
+        properties:
+          - name: HealthStatus
+            metric: windows_wmi_physical_disk_health_status
+            help: Health status of the physical disk (0 healthy, 1 warning, 2 unhealthy, 5 unknown).
+      - name: disk_failure_predict
+        namespace: root/wmi
+        class: MSStorageDriver_FailurePredictStatus
+        label_properties:
+          - name: InstanceName
+            label: device
+        properties:
+          - name: PredictFailure
+            metric: windows_wmi_disk_failure_predicted
+            help: Whether the SMART self-monitoring of the disk predicts a failure.
+```
+
+The parsed SMART attributes, such as temperature, wear and power-on hours (`Get-StorageReliabilityCounter`), are
+in `MSFT_StorageReliabilityCounter`. Windows only returns them through the association with `MSFT_PhysicalDisk`;
+a query of the class returns no instances, even as `LocalSystem`. The wmi collector does not support association
+queries, so it cannot read them.
+
 ## Useful queries
 
 Free space ratio per volume:
@@ -351,7 +490,16 @@ Free space ratio per volume:
 windows_wmi_logical_disk_free_bytes / windows_wmi_logical_disk_size_bytes
 ```
 
+Age of the Microsoft Defender signatures in seconds:
+
+```
+time() - windows_wmi_defender_signature_last_updated_timestamp_seconds
+```
+
 ## Alerting examples
+
+`WMIQueryFailure` also fires for queries of classes that are missing on a host, for example the Defender query on
+Windows Server without Defender. Scope it with a `query` matcher where needed.
 
 **prometheus.rules**
 
@@ -364,4 +512,31 @@ windows_wmi_logical_disk_free_bytes / windows_wmi_logical_disk_size_bytes
     annotations:
       summary: "WMI query failed (instance {{ $labels.instance }})"
       description: "The WMI query {{ $labels.query }} failed for 15 minutes."
+
+  - alert: DefenderSignaturesOutdated
+    expr: time() - windows_wmi_defender_signature_last_updated_timestamp_seconds{running_mode="Normal",signature="antivirus"} > 3 * 86400
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      summary: "Defender signatures outdated (instance {{ $labels.instance }})"
+      description: "The Microsoft Defender signatures were last updated more than 3 days ago."
+
+  - alert: DiskUnhealthy
+    expr: windows_wmi_physical_disk_health_status == 2
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Disk unhealthy (instance {{ $labels.instance }})"
+      description: "Windows reports disk {{ $labels.disk }} ({{ $labels.model }}) as unhealthy."
+
+  - alert: DiskHealthWarning
+    expr: windows_wmi_physical_disk_health_status == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk health warning (instance {{ $labels.instance }})"
+      description: "Windows reports a health warning for disk {{ $labels.disk }} ({{ $labels.model }})."
 ```
