@@ -52,6 +52,16 @@ func TestCollector(t *testing.T) {
 		require.Regexp(t, `^[0-9A-Fa-f-]{36}$`, labelValue(metric, "vm_id"))
 	}
 
+	// The PDH objects only list running VMs; vm_state also lists the CIVirtualHardDisk VM, which is never started.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_state", prometheus.Labels{"vm": "GitHubActions", "state": "running"}); metric != nil {
+		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "expected the GitHubActions VM to be running")
+		require.Regexp(t, `^[0-9A-Fa-f-]{36}$`, labelValue(metric, "vm_id"))
+	}
+
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_state", prometheus.Labels{"vm": "CIVirtualHardDisk", "state": "off"}); metric != nil {
+		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "expected the CIVirtualHardDisk VM to be off")
+	}
+
 	// The health query reports failures as 0 instead of an error, so check the value.
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_wmi_health", nil); metric != nil {
 		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "Hyper-V WMI health query failed")
