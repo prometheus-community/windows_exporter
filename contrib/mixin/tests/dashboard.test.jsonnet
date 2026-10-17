@@ -36,6 +36,7 @@ local results = {
   diskWithDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true, diskdrive: true }))).Disk,
   storageSpacesOnly: summary(render(only({ storage_spaces: true }))).Disk,
   hypervOnly: summary(render(only({ hyperv: true }))),
+  msclusterOnly: summary(render(only({ mscluster: true }))),
   // A collectors object given without +: enables only the listed collectors.
   replaced: summary(render(function(_) { os: true, cpu: true })),
   // Only collector tabs, for a compact dashboard.
@@ -110,7 +111,7 @@ assert custom['windows-exporter-cpu.json'].spec.title == 'Windows / CPU' : 'cust
 assert custom['windows-exporter.json'].metadata.name == 'win-full' : 'custom prefix: got full UID ' + custom['windows-exporter.json'].metadata.name;
 assert std.objectFields(dashboards(function(collectors) collectors, { enableTabDashboards: false })) == ['windows-exporter.json'] : 'enableTabDashboards: false renders tab dashboards';
 
-assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
+assert std.length(std.objectFields(results.all)) == 16 : 'all: got ' + std.join(', ', std.objectFields(results.all));
 // MSSQL renders only as a dashboard of its own unless separateDashboardTabs drops it.
 local withMSSQL = dashboards(only({ mssql: true }));
 assert !std.objectHas(results.all, 'MSSQL') : 'all: the full dashboard has the MSSQL tab';
@@ -159,5 +160,12 @@ assert !std.objectHas(hypervFull.spec.elements, 'panel-290') : 'hyperv without m
 assert std.objectHas(hypervMemory.spec.elements, 'panel-290') : 'hyperv with memory: VM memory / host RAM stat missing';
 
 assert std.all([std.objectHas(hypervFull.spec.elements, 'panel-' + id) for id in [293, 294, 295, 296, 297, 298]]) : 'hyperv: Hyper-V tab additions missing';
+
+assert expect('msclusterOnly', {
+  Exporter: exporter,
+  'Failover Cluster': ['Summary', 'Nodes', 'Resource groups and resources', 'Networks', 'Cluster Shared Volumes'],
+  Fleet: ['Summary', 'Hosts'],
+  Overview: ['Summary'],
+});
 
 results

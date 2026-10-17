@@ -45,6 +45,7 @@
       hyperv: false,
       logical_disk: true,
       memory: true,
+      mscluster: false,
       mssql: false,
       net: true,
       os: true,
