@@ -20915,7 +20915,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"} == 1))",
+                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"}))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -21296,7 +21296,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"} == 1))",
+                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"}))",
                                                 "instant": false,
                                                 "legendFormat": "{{node}}",
                                                 "range": true

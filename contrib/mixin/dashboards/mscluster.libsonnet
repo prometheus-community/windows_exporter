@@ -64,7 +64,7 @@ function(on, selector='job=~"$job", instance="$instance"', title='Failover Clust
         nodeState,
         by('node', 'node_node_drain_status'),
         by('node', 'node_dynamic_weight'),
-        'sum by (node) (%s)' % owner('resource_group', 'resourcegroup_owner_node'),
+        'sum by (node) (%s)' % by('resource_group, node', 'resourcegroup_owner_node'),
         by('node', 'node_build_number'),
       ], [
         ['node', 'Node'],
@@ -84,7 +84,7 @@ function(on, selector='job=~"$job", instance="$instance"', title='Failover Clust
       + b.panel.withDefaults({ mappings: nodeStates, color: { mode: 'thresholds' }, thresholds: { mode: 'absolute', steps: [{ color: 'text', value: null }] } }),
 
       b.graph(339, 'Resource groups per node', 'Resource groups each node owns. Steps show failovers and live migrations; a node without groups runs no roles.', 'short', [
-        ['sum by (node) (%s)' % owner('resource_group', 'resourcegroup_owner_node'), '{{node}}'],
+        ['sum by (node) (%s)' % by('resource_group, node', 'resourcegroup_owner_node'), '{{node}}'],
       ]),
 
       b.joinedTable(340, 'Resource groups not online', 'Resource groups that are not online and the node that owns them. Offline groups of stopped VMs are listed too.', 'resource_group', [
