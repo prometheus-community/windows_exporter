@@ -18,7 +18,7 @@ rule_files:
 The files expect the exporter under the job name `windows_exporter`. For other
 job names, thresholds, selectors or the alerts of opt-in collectors, render
 the mixin with your own configuration as the
-[mixin README](../mixin/README.md#customize-or-compose) describes. Every alert links
+[mixin documentation](../mixin/README.md#customize-or-compose) describes. Every alert links
 to its [runbook](https://prometheus-community.github.io/windows_exporter/runbooks/).
 
 Do not edit these files by hand: `mise run rules` in `contrib/mixin`
