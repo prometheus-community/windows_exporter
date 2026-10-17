@@ -265,7 +265,9 @@ queries, IDs, variables, annotations, transformations, and tab/row layout.
 `git add --intent-to-add` and runs `git diff --exit-code`, displaying any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
 `enableFleetTab`, `enableOverviewTab`, `enableTabDashboards`,
-`separateDashboardTabs` and the dashboard metadata below.
+`separateDashboardTabs`, `hypervDiskLatencyThresholdSeconds` (average latency
+per I/O above which the Hyper-V tab counts a virtual disk as slow, default
+`0.01`) and the dashboard metadata below.
 
 ### Metadata
 
