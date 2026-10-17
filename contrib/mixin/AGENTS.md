@@ -59,7 +59,8 @@ A new alert touches six places, and CI checks all of them:
    a runbook mentions against the metrics the exporter emits; the names in
    the collector docs are not always current, so check the collector source.
 5. A row in the alerts table of `README.md`.
-6. The committed `windows_rules.yaml` and `windows_alerts.yaml`, regenerated
+6. The committed `contrib/monitoring/windows_rules.yaml` and
+   `windows_alerts.yaml`, regenerated
    with `mise run rules`; `mise run check-rules` fails in CI when they are
    stale.
 

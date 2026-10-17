@@ -6,7 +6,8 @@ on:
   pull_request:
     paths:
       - contrib/mixin/**
-      - dashboard/*.json
+      - contrib/dashboard/*.json
+      - contrib/monitoring/*.yaml
       - docs/collector.*.md
       - docs/runbooks/**
       - docs/upgrade/**
@@ -21,7 +22,8 @@ on:
       - main
     paths:
       - contrib/mixin/**
-      - dashboard/*.json
+      - contrib/dashboard/*.json
+      - contrib/monitoring/*.yaml
       - docs/collector.*.md
       - docs/runbooks/**
       - docs/upgrade/**
