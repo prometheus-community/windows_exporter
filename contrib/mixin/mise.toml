@@ -74,8 +74,8 @@ run = "jsonnetfmt {{vars.fmt_flags}} -i {{vars.sources}}"
 description = "Generate rules and alerts with the test configuration"
 hide = true
 run = [
-  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusRules)' > tests/custom_rules.yaml''',
-  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusAlerts)' > tests/custom_alerts.yaml''',
+  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusRules, quote_keys=false)' > tests/custom_rules.yaml''',
+  '''jsonnet -S -e 'std.manifestYamlDoc((import "tests/config.libsonnet").prometheusAlerts, quote_keys=false)' > tests/custom_alerts.yaml''',
 ]
 
 [tasks.lint]
