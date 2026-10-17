@@ -14,7 +14,9 @@ function(on, config)
   local deviceLatency = '%s / (%s > 1)' % [h.deviceRate('io_latency_seconds_total', hosts), h.deviceRate('throughput_total', hosts)];
   local iops = '(%s + %s)' % [h.deviceRate('operations_read_total', hosts), h.deviceRate('operations_written_total', hosts)];
   local slowest = 'topk(10, count_over_time((%s > %s)[$__range:5m]) * 300)' % [deviceLatency, threshold];
-  local slowTable(expr) = 'max by (device, disk, vm, instance) (%s)' % h.diskName(h.withVm(expr, hosts));
+  // device is only unique per host, so the rows are joined by host and device.
+  local slowRows(expr) = 'label_join(max by (device, disk, vm, instance) (%s), "key", "/", "instance", "device")' % h.diskName(h.withVm(expr, hosts));
+  local slowValues(expr) = 'max by (key) (%s)' % slowRows(expr);
   local bytes(pattern) = { matcher: { id: 'byRegexp', options: pattern }, properties: [{ id: 'unit', value: 'bytes' }] };
   b.tab(
     'VM disks',
@@ -72,11 +74,11 @@ function(on, config)
         { matcher: { id: 'byName', options: 'Fill' }, properties: [{ id: 'unit', value: 'percentunit' }] },
       ]),
 
-      b.joinedTable(389, 'Slowest virtual disks', 'Virtual disks of the cluster that were above %s s average latency per I/O in the time range, worst first. Time above threshold is counted in 5-minute steps, so permanently slow disks rank above short spikes. Disks with less than one I/O per second are ignored.' % threshold, 'device', [
-        slowTable(slowest),
-        slowTable('avg_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
-        slowTable('max_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
-        slowTable('avg_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [iops, slowest]),
+      b.joinedTable(389, 'Slowest virtual disks', 'Virtual disks of the cluster that were above %s s average latency per I/O in the time range, worst first. Time above threshold is counted in 5-minute steps, so permanently slow disks rank above short spikes. Disks with less than one I/O per second are ignored.' % threshold, 'key', [
+        slowRows(slowest),
+        slowValues('avg_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
+        slowValues('max_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
+        slowValues('avg_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [iops, slowest]),
       ], [
         ['disk', 'Disk'],
         ['vm', 'VM'],
@@ -86,6 +88,7 @@ function(on, config)
         ['Value #C', 'Maximum latency'],
         ['Value #D', 'IOPS'],
       ], [
+        { matcher: { id: 'byRegexp', options: '^(key|device)$' }, properties: [{ id: 'custom.hidden', value: true }] },
         { matcher: { id: 'byName', options: 'Time above threshold' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-background', mode: 'basic' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(900, 3600) } }] },
         { matcher: { id: 'byRegexp', options: '^(Average|Maximum) latency$' }, properties: [{ id: 'unit', value: 's' }] },
         { matcher: { id: 'byName', options: 'IOPS' }, properties: [{ id: 'unit', value: 'iops' }] },

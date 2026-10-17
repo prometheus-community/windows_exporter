@@ -8418,7 +8418,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (device, disk, vm, instance) (label_replace(topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "expr": "label_join(max by (device, disk, vm, instance) (label_replace(topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\")), \"key\", \"/\", \"instance\", \"device\")",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -8441,7 +8441,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (device, disk, vm, instance) (label_replace(avg_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "expr": "max by (key) (label_join(max by (device, disk, vm, instance) (label_replace(avg_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\")), \"key\", \"/\", \"instance\", \"device\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -8464,7 +8464,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (device, disk, vm, instance) (label_replace(max_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "expr": "max by (key) (label_join(max by (device, disk, vm, instance) (label_replace(max_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\")), \"key\", \"/\", \"instance\", \"device\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -8487,7 +8487,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "max by (device, disk, vm, instance) (label_replace(avg_over_time(((rate(windows_hyperv_virtual_storage_device_operations_read_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) + rate(windows_hyperv_virtual_storage_device_operations_written_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval])))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\"))",
+                                                "expr": "max by (key) (label_join(max by (device, disk, vm, instance) (label_replace(avg_over_time(((rate(windows_hyperv_virtual_storage_device_operations_read_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) + rate(windows_hyperv_virtual_storage_device_operations_written_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval])))[$__range:5m]) and on (instance, device) topk(10, count_over_time((rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) / (rate(windows_hyperv_virtual_storage_device_throughput_total{job=~\"$job\", instance=~\"$cluster_instance\"}[$__rate_interval]) > 1) > 0.01)[$__range:5m]) * 300) * on (instance, device) group_left (vm, path) (0 * topk by (instance, device) (1, max by (instance, device, vm, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=~\"$cluster_instance\", device!=\"\"})) + 1), \"disk\", \"$1\", \"path\", \".*[\\\\\\\\/]([^\\\\\\\\/]+)$\")), \"key\", \"/\", \"instance\", \"device\"))",
                                                 "format": "table",
                                                 "instant": true,
                                                 "legendFormat": "__auto",
@@ -8506,7 +8506,7 @@
                                     "kind": "Transformation",
                                     "spec": {
                                         "options": {
-                                            "byField": "device",
+                                            "byField": "key",
                                             "mode": "outer"
                                         }
                                     }
@@ -8582,6 +8582,18 @@
                                     "unit": "short"
                                 },
                                 "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": "^(key|device)$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.hidden",
+                                                "value": true
+                                            }
+                                        ]
+                                    },
                                     {
                                         "matcher": {
                                             "id": "byName",
