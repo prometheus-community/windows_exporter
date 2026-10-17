@@ -10,11 +10,6 @@
     sharedVolumeSelector: 'shared_volume!="ClusterPerformanceHistory"',
     rateInterval: '5m',
 
-    // Opt in only for targets with the ad collector enabled. Sets collectors.ad.
-    enableActiveDirectory: false,
-    // Requires the time collector with its ntp subcollector enabled. Sets collectors.time.
-    enableTime: false,
-
     // Grafana dashboard metadata. A UID is the v2 metadata.name; change the
     // UIDs to import the dashboards next to the sample ones.
     // Every tab also renders as a dashboard of its own with the UID
@@ -44,7 +39,8 @@
     // collectors, and the alerts only the rules whose collectors are enabled.
     // The defaults match the exporter's default collectors.
     collectors: {
-      ad: $._config.enableActiveDirectory,
+      // Only for targets with the ad collector enabled, such as domain controllers.
+      ad: false,
       cpu: true,
       dhcp: false,
       diskdrive: false,
@@ -68,7 +64,8 @@
       storage_spaces: false,
       system: true,
       tcp: false,
-      time: $._config.enableTime,
+      // Needs the time collector with its ntp and clock_source subcollectors.
+      time: false,
       udp: false,
       update: false,
     },

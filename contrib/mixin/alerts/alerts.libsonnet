@@ -6,6 +6,8 @@
   assert std.length(unknown) == 0 : 'Unknown alerts in _config.alerts: ' + std.join(', ', unknown),
   assert !std.objectHas(c, 'networkErrorRateThreshold') && !std.objectHas(c, 'networkDiscardRateThreshold') :
          'networkErrorRateThreshold and networkDiscardRateThreshold (packets per second) were replaced by networkErrorRatioThreshold and networkDiscardRatioThreshold (percent of all packets)',
+  assert !std.objectHas(c, 'enableActiveDirectory') && !std.objectHas(c, 'enableTime') :
+         'enableActiveDirectory and enableTime were replaced by collectors+: { ad: true } and collectors+: { time: true }',
   // A collector missing from a replaced collectors object counts as disabled;
   // an alert missing from a replaced alerts object counts as enabled.
   local collectorEnabled(collector) = std.get(c.collectors, collector, false),

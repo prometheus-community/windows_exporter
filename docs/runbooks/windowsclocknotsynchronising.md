@@ -5,7 +5,7 @@ title: WindowsClockNotSynchronising
 ## Meaning
 
 Windows Time reports no active NTP time source for ten minutes. This alert is
-generated only with `enableTime: true` and requires the `time` collector and its
+generated only with `collectors+: { time: true }` and requires the `time` collector and its
 `ntp` subcollector. Enable it on hosts expected to synchronize through NTP;
 hosts intentionally using another clock source may legitimately report zero.
 

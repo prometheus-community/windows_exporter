@@ -2,7 +2,7 @@
 // keep_firing_for and the group layout.
 local mixin = import '../mixin.libsonnet';
 local config = (import '../config.libsonnet')._config;
-local everything = mixin { _config+:: { enableActiveDirectory: true, enableTime: true, collectors: { [name]: true for name in std.objectFields(config.collectors) } } };
+local everything = mixin { _config+:: { collectors: { [name]: true for name in std.objectFields(config.collectors) } } };
 local optionalGroups = ['windows-active-directory', 'windows-time', 'windows-scheduled-task', 'windows-update', 'windows-hyperv', 'windows-cluster', 'windows-storage-spaces', 'windows-dhcp', 'windows-dns'];
 local names(alerts) = std.sort([rule.alert for group in alerts.groups for rule in group.rules]);
 local groupNames(alerts) = [group.name for group in alerts.groups];
@@ -15,7 +15,7 @@ assert all == std.set(std.objectFields(config.alerts)) : 'alerts map differs fro
 assert groupNames(mixin.prometheusAlerts) == ['windows-exporter', 'windows-cpu', 'windows-memory', 'windows-disk', 'windows-network', 'windows-service', 'windows-system'] : std.manifestJson(groupNames(mixin.prometheusAlerts));
 assert groupNames(everything.prometheusAlerts) == groupNames(mixin.prometheusAlerts) + optionalGroups : std.manifestJson(groupNames(everything.prometheusAlerts));
 // Opt-in collectors add their alerts to the default groups of their area too.
-local adOnly = mixin { _config+:: { enableActiveDirectory: true } };
+local adOnly = mixin { _config+:: { collectors+: { ad: true } } };
 assert groupNames(adOnly.prometheusAlerts) == groupNames(mixin.prometheusAlerts) + ['windows-active-directory'];
 local pagefile = mixin { _config+:: { collectors+: { pagefile: true, diskdrive: true, license: true } } };
 assert groupNames(pagefile.prometheusAlerts) == groupNames(mixin.prometheusAlerts);

@@ -62,9 +62,7 @@ modifying its source. For example, create `custom.libsonnet` in this directory:
     nicSelector: 'nic!="Loopback"',
     rateInterval: '5m',
     cpuHighUsageThreshold: 95,
-    enableActiveDirectory: true,
-    enableTime: true,
-    collectors+: { process: true },
+    collectors+: { ad: true, time: true, process: true },
     alerts+: { WindowsHostRebooted: false },
     keepFiringFor: '10m',
     runbookURLPattern: 'https://runbooks.example.com/windows/%s/',
@@ -223,15 +221,17 @@ older servers.
 The network error and discard thresholds are percentages of all packets on the
 interface. Earlier versions of the mixin had `networkErrorRateThreshold` and
 `networkDiscardRateThreshold` in packets per second; setting them now fails
-the build with a message that names the replacements.
+the build with a message that names the replacements. The same goes for
+`enableActiveDirectory` and `enableTime`, replaced by `collectors+: { ad: true }`
+and `collectors+: { time: true }`.
 
 `criticalSeverity` defaults to `critical` and `infoSeverity` to `info`; override
 them to match your routing labels. Below the critical disk threshold, both disk
 severity levels fire; configure Alertmanager inhibition if only the critical
 notification should be sent.
 
-Active Directory alerts need `collectors.ad`, which `enableActiveDirectory`
-sets. Clock alerts need `collectors.time`, which `enableTime` sets. A zero NTP
+Active Directory alerts need `collectors.ad`, clock alerts `collectors.time`;
+both are off by default. A zero NTP
 source count may be expected on hosts using another time provider;
 `WindowsClockSourceLocal` covers domain members, whose source is `NT5DS`, and
 fires only for the local clock or no synchronization. The offset compares the
@@ -427,7 +427,7 @@ tab to the full dashboard:
 names, such as `cpu`, `physical_disk`, `diskdrive`, `smb` or `update`. The
 dashboard renders only the tabs, rows, panels and variables of enabled
 collectors, so a tab for a collector you do not run does not appear. The
-defaults match the exporter's default collectors; `time` follows `enableTime`.
+defaults match the exporter's default collectors.
 The `os` collector is required, because the variables select hosts through
 `windows_os_hostname`. An unknown collector name fails the build. Enable
 optional collectors on top of the defaults with `collectors+:`; replacing the
