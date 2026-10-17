@@ -39,6 +39,15 @@ rm -f {{vars.dashboards}}/windows-exporter-*.json
 cp "$out"/*.json {{vars.dashboards}}/
 '''
 
+[tasks.check-rules]
+description = "Regenerate the rules and alerts and fail on uncommitted changes"
+depends = ["rules"]
+run = '''
+set -eu
+git add --intent-to-add -- windows_rules.yaml windows_alerts.yaml
+git diff --exit-code -- windows_rules.yaml windows_alerts.yaml
+'''
+
 [tasks.check-dashboards]
 description = "Regenerate the dashboards and fail on uncommitted changes"
 depends = ["dashboard"]
@@ -99,7 +108,7 @@ run = '''jsonnet -e '(import "mixin.libsonnet") { _config+:: { collectors: { [na
 
 [tasks.test]
 description = "Run all mixin lint, runbook, and rule tests"
-depends = ["lint", "check-runbooks", "vendor"]
+depends = ["lint", "check-rules", "check-runbooks", "vendor"]
 run = [
   "jsonnet tests/runbooks.test.jsonnet",
   "jsonnet tests/hyperv.test.jsonnet > /dev/null",
@@ -109,5 +118,5 @@ run = [
 ]
 
 [tasks.clean]
-description = "Remove generated rule and alert files"
-run = "rm -f windows_rules.yaml windows_alerts.yaml tests/custom_rules.yaml tests/custom_alerts.yaml"
+description = "Remove the generated test rule and alert files"
+run = "rm -f tests/custom_rules.yaml tests/custom_alerts.yaml"

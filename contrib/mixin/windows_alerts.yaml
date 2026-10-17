@@ -1,0 +1,217 @@
+"groups":
+- "name": "windows-exporter"
+  "rules":
+  - "alert": "WindowsExporterDown"
+    "annotations":
+      "description": "Prometheus cannot scrape Windows exporter on {{ $labels.instance }} (job {{ $labels.job }})."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsexporterdown/"
+      "summary": "Windows exporter is unreachable"
+    "expr": "up{job=\"windows_exporter\"} == 0"
+    "for": "5m"
+    "labels":
+      "severity": "critical"
+  - "alert": "WindowsCollectorFailed"
+    "annotations":
+      "description": "Collector {{ $labels.collector }} on {{ $labels.instance }} has failed for at least 5 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowscollectorfailed/"
+      "summary": "Windows collector failed"
+    "expr": "windows_exporter_collector_success{job=\"windows_exporter\"} == 0"
+    "for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsCollectorTimeout"
+    "annotations":
+      "description": "Collector {{ $labels.collector }} on {{ $labels.instance }} has not finished within the scrape timeout for 10 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowscollectortimeout/"
+      "summary": "Windows collector exceeds the scrape timeout"
+    "expr": "windows_exporter_collector_timeout{job=\"windows_exporter\"} == 1"
+    "for": "10m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsScrapeQueueTimeout"
+    "annotations":
+      "description": "Scrapes of {{ $labels.instance }} have timed out waiting for an earlier scrape to finish for 10 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsscrapequeuetimeout/"
+      "summary": "Windows exporter scrapes time out in the queue"
+    "expr": "windows_exporter_scrape_queue_timeout{job=\"windows_exporter\"} == 1"
+    "for": "10m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-cpu"
+  "rules":
+  - "alert": "WindowsCPUHighUsage"
+    "annotations":
+      "description": "CPU usage on {{ $labels.instance }} has exceeded 90% for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowscpuhighusage/"
+      "summary": "Windows CPU usage is high"
+    "expr": "windows:cpu_usage:ratio{job=\"windows_exporter\"} * 100 > 90"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsCPUSaturation"
+    "annotations":
+      "description": "More than 2 threads per logical processor have been waiting for CPU time on {{ $labels.instance }} for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowscpusaturation/"
+      "summary": "Windows processor queue is long"
+    "expr": "windows:cpu_queue_per_core:ratio{job=\"windows_exporter\"} > 2"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-memory"
+  "rules":
+  - "alert": "WindowsMemoryHighUsage"
+    "annotations":
+      "description": "Physical memory usage on {{ $labels.instance }} has exceeded 90% for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemoryhighusage/"
+      "summary": "Windows memory usage is high"
+    "expr": "windows:memory_usage:ratio{job=\"windows_exporter\"} * 100 > 90"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsMemoryCommitHighUsage"
+    "annotations":
+      "description": "Committed memory on {{ $labels.instance }} has exceeded 90% of the commit limit for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorycommithighusage/"
+      "summary": "Windows memory commit usage is high"
+    "expr": "windows:memory_committed:ratio{job=\"windows_exporter\"} * 100 > 90"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsMemoryPagingHigh"
+    "annotations":
+      "description": "Paging on {{ $labels.instance }} has exceeded 1000 pages per second for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsmemorypaginghigh/"
+      "summary": "Windows memory paging is high"
+    "expr": "windows:memory_swap_page_operations:rate{job=\"windows_exporter\"} > 1000"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-disk"
+  "rules":
+  - "alert": "WindowsDiskReadLatencyHigh"
+    "annotations":
+      "description": "Volume {{ $labels.volume }} on {{ $labels.instance }} has averaged more than 0.05 seconds per read operation for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskreadlatencyhigh/"
+      "summary": "Windows disk read latency is high"
+    "expr": "windows:logical_disk_read_latency:seconds{job=\"windows_exporter\", volume!=\"\"} > 0.05"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsDiskWriteLatencyHigh"
+    "annotations":
+      "description": "Volume {{ $labels.volume }} on {{ $labels.instance }} has averaged more than 0.05 seconds per write operation for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskwritelatencyhigh/"
+      "summary": "Windows disk write latency is high"
+    "expr": "windows:logical_disk_write_latency:seconds{job=\"windows_exporter\", volume!=\"\"} > 0.05"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsDiskAlmostFull"
+    "annotations":
+      "description": "Volume {{ $labels.volume }} on {{ $labels.instance }} has less than 10% free space. Windows may delay space metrics by 10–15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskalmostfull/"
+      "summary": "Windows disk space is low"
+    "expr": "windows:logical_disk_free:ratio{job=\"windows_exporter\", volume!=\"\"} * 100 < 10"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsDiskAlmostFull"
+    "annotations":
+      "description": "Volume {{ $labels.volume }} on {{ $labels.instance }} has less than 5% free space. Windows may delay space metrics by 10–15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskalmostfull/"
+      "summary": "Windows disk space is low"
+    "expr": "windows:logical_disk_free:ratio{job=\"windows_exporter\", volume!=\"\"} * 100 < 5"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "critical"
+  - "alert": "WindowsDiskFillingUp"
+    "annotations":
+      "description": "Volume {{ $labels.volume }} on {{ $labels.instance }} is predicted to fill within 24 hours."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsdiskfillingup/"
+      "summary": "Windows disk is predicted to fill up"
+    "expr": "windows:logical_disk_free:ratio{job=\"windows_exporter\", volume!=\"\"} * 100 < 10 and predict_linear(windows_logical_disk_free_bytes{job=\"windows_exporter\", volume!=\"\"}[6h], 86400) < 0"
+    "for": "1h"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-network"
+  "rules":
+  - "alert": "WindowsNetworkErrors"
+    "annotations":
+      "description": "Packet errors on interface {{ $labels.nic }} on {{ $labels.instance }} have exceeded 1% of all packets for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkerrors/"
+      "summary": "Windows network packet errors are high"
+    "expr": "((windows:net_received_errors:rate{job=\"windows_exporter\", nic!=\"\"} + windows:net_outbound_errors:rate{job=\"windows_exporter\", nic!=\"\"}) / ((windows:net_received_packets:rate{job=\"windows_exporter\", nic!=\"\"} + windows:net_sent_packets:rate{job=\"windows_exporter\", nic!=\"\"}) > 0)) * 100 > 1"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsNetworkDiscards"
+    "annotations":
+      "description": "Packet discards on interface {{ $labels.nic }} on {{ $labels.instance }} have exceeded 1% of all packets for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkdiscards/"
+      "summary": "Windows network packet discards are high"
+    "expr": "((windows:net_received_discarded:rate{job=\"windows_exporter\", nic!=\"\"} + windows:net_outbound_discarded:rate{job=\"windows_exporter\", nic!=\"\"}) / ((windows:net_received_packets:rate{job=\"windows_exporter\", nic!=\"\"} + windows:net_sent_packets:rate{job=\"windows_exporter\", nic!=\"\"}) > 0)) * 100 > 1"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsNetworkUtilizationHigh"
+    "annotations":
+      "description": "Traffic on interface {{ $labels.nic }} on {{ $labels.instance }} has exceeded 90% of its bandwidth in at least one direction for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkutilizationhigh/"
+      "summary": "Windows network interface utilization is high"
+    "expr": "(windows:net_received_utilization:ratio{job=\"windows_exporter\", nic!=\"\"} * 100 > 90) or (windows:net_sent_utilization:ratio{job=\"windows_exporter\", nic!=\"\"} * 100 > 90)"
+    "for": "15m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsNetworkInterfaceFlapping"
+    "annotations":
+      "description": "Interface {{ $labels.nic }} on {{ $labels.instance }} has changed its operational status more than twice in 5m."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsnetworkinterfaceflapping/"
+      "summary": "Windows network interface is flapping"
+    "expr": "max without (status) (changes(windows_net_nic_operation_status{job=\"windows_exporter\", nic!=\"\", status=\"up\"}[5m])) > 2"
+    "for": "2m"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-service"
+  "rules":
+  - "alert": "WindowsServiceNotRunning"
+    "annotations":
+      "description": "Service {{ $labels.service }} on {{ $labels.instance }} starts automatically but has not been running for 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicenotrunning/"
+      "summary": "Windows automatic service is not running"
+    "expr": "max without (state) (windows_service_state{job=\"windows_exporter\", service!=\"\", state=\"running\"} == 0) and ignoring (start_mode) (windows_service_start_mode{job=\"windows_exporter\", service!=\"\", start_mode=\"auto\"} == 1) unless ignoring (display_name, run_as, path_name, delayed_start, trigger_start) (windows_service_info{job=\"windows_exporter\", service!=\"\", trigger_start=\"true\"} == 1)"
+    "for": "15m"
+    "labels":
+      "severity": "warning"
+  - "alert": "WindowsServiceCrashLooping"
+    "annotations":
+      "description": "Service {{ $labels.service }} on {{ $labels.instance }} has restarted more than 2 times in 15 minutes."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowsservicecrashlooping/"
+      "summary": "Windows service is restarting repeatedly"
+    "expr": "count without (process_id) (count_over_time(windows_service_process{job=\"windows_exporter\", service!=\"\"}[15m])) - 1 > 2"
+    "keep_firing_for": "5m"
+    "labels":
+      "severity": "warning"
+- "name": "windows-system"
+  "rules":
+  - "alert": "WindowsHostRebooted"
+    "annotations":
+      "description": "{{ $labels.instance }} rebooted {{ $value | humanizeDuration }} ago."
+      "runbook_url": "https://prometheus-community.github.io/windows_exporter/runbooks/windowshostrebooted/"
+      "summary": "Windows host has rebooted"
+    "expr": "(time() - windows_system_boot_time_timestamp{job=\"windows_exporter\"}) < 600 and (time() - last_over_time(windows_system_boot_time_timestamp{job=\"windows_exporter\"}[1h] offset 10m)) > 600"
+    "labels":
+      "severity": "info"
