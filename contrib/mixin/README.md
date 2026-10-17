@@ -224,11 +224,7 @@ have no `keep_firing_for` and resolve as soon as their condition clears.
 older servers.
 
 The network error and discard thresholds are percentages of all packets on the
-interface. Earlier versions of the mixin had `networkErrorRateThreshold` and
-`networkDiscardRateThreshold` in packets per second; setting them now fails
-the build with a message that names the replacements. The same goes for
-`enableActiveDirectory` and `enableTime`, replaced by `collectors+: { ad: true }`
-and `collectors+: { time: true }`.
+interface.
 
 `criticalSeverity` defaults to `critical` and `infoSeverity` to `info`; override
 them to match your routing labels. Below the critical disk threshold, both disk
