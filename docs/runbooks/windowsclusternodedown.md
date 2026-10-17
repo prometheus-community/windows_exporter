@@ -20,7 +20,7 @@ redundancy; with too few nodes for quorum, the whole cluster stops.
 ## Diagnosis
 
 1. Inspect `windows_mscluster_node_state` for all nodes and
-   `windows_mscluster_cluster_quorum_type` and the dynamic quorum metrics to
+   `windows_mscluster_cluster_quorum_type_value` and the dynamic quorum metrics to
    see how far the cluster is from losing quorum. Check whether the node's own
    exporter target is up.
 2. On a working node, read the cluster state:
