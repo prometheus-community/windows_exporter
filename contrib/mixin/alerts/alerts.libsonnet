@@ -6,10 +6,6 @@
   local known = std.objectFields((import '../config.libsonnet')._config.alerts),
   local unknown = std.setDiff(std.set(std.objectFields(c.alerts)), std.set(known)),
   assert std.length(unknown) == 0 : 'Unknown alerts in _config.alerts: ' + std.join(', ', unknown),
-  assert !std.objectHas(c, 'networkErrorRateThreshold') && !std.objectHas(c, 'networkDiscardRateThreshold') :
-         'networkErrorRateThreshold and networkDiscardRateThreshold (packets per second) were replaced by networkErrorRatioThreshold and networkDiscardRatioThreshold (percent of all packets)',
-  assert !std.objectHas(c, 'enableActiveDirectory') && !std.objectHas(c, 'enableTime') :
-         'enableActiveDirectory and enableTime were replaced by collectors+: { ad: true } and collectors+: { time: true }',
 }
 + (import 'exporter.libsonnet')
 + (import 'cpu.libsonnet')
