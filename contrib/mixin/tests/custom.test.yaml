@@ -4,7 +4,13 @@ rule_files:
 evaluation_interval: 1m
 group_eval_order:
   - windows-exporter-recording
-  - windows-exporter-alerts
+  - windows-exporter
+  - windows-cpu
+  - windows-memory
+  - windows-disk
+  - windows-network
+  - windows-service
+  - windows-system
   - windows-active-directory
   - windows-time
 
@@ -52,6 +58,14 @@ tests:
         values: '0+120x20'
       - series: 'windows_net_packets_outbound_discarded_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
         values: '0+120x20'
+      - series: 'windows_net_packets_received_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0+3000x20'
+      - series: 'windows_net_packets_sent_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0+3000x20'
+      - series: 'windows_net_packets_received_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
+      - series: 'windows_net_packets_sent_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
     alert_rule_test:
       - alertname: WindowsMemoryCommitHighUsage
         eval_time: 20m
@@ -84,7 +98,7 @@ tests:
             exp_annotations:
               runbook_url: https://runbooks.example.com/windows/windowsnetworkerrors/
               summary: Windows network packet errors are high
-              description: 'Packet errors on interface Ethernet on host:9182 have exceeded 0.5 per second for 15 minutes.'
+              description: 'Packet errors on interface Ethernet on host:9182 have exceeded 0.5% of all packets for 15 minutes.'
       - alertname: WindowsNetworkDiscards
         eval_time: 20m
         exp_alerts:
@@ -92,7 +106,7 @@ tests:
             exp_annotations:
               runbook_url: https://runbooks.example.com/windows/windowsnetworkdiscards/
               summary: Windows network packet discards are high
-              description: 'Packet discards on interface Ethernet on host:9182 have exceeded 0.5 per second for 15 minutes.'
+              description: 'Packet discards on interface Ethernet on host:9182 have exceeded 0.5% of all packets for 15 minutes.'
 
   - name: Clock alerts opt in, use absolute offset, custom URLs and recover
     interval: 1m
@@ -129,7 +143,7 @@ tests:
               runbook_url: https://runbooks.example.com/windows/windowsclockskewdetected/
               summary: Windows clock offset is high
               description: 'Windows Time on host:9182 reports a clock offset above 0.1 seconds for 10 minutes.'
-      - {alertname: WindowsClockSkewDetected, eval_time: 11m, exp_alerts: []}
+      - {alertname: WindowsClockSkewDetected, eval_time: 16m, exp_alerts: []}
   - name: Custom selectors, thresholds and critical severity propagate to alerts
     interval: 1m
     input_series:
@@ -239,7 +253,7 @@ tests:
               summary: Active Directory replication queue is high
               description: 'Pending replication operations on host:9182 have exceeded 10 for 15 minutes.'
       - alertname: WindowsADPendingReplication
-        eval_time: 21m
+        eval_time: 26m
         exp_alerts: []
       - alertname: WindowsADReplicationFailures
         eval_time: 16m
@@ -253,5 +267,5 @@ tests:
               summary: Active Directory replication requests are failing
               description: 'Replication synchronization requests on host:9182 have been failing for 15 minutes.'
       - alertname: WindowsADReplicationFailures
-        eval_time: 23m
+        eval_time: 28m
         exp_alerts: []

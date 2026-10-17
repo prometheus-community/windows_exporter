@@ -10,7 +10,7 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
   The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V and Time tabs and the MSSQL dashboard, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `time`, `mssql`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
-  The sample shows every tab; build the dashboard from the [mixin](../contrib/mixin#collectors) with your collectors to hide the others.
+  The sample shows every tab; build the dashboard from the [mixin](../mixin#collectors) with your collectors to hide the others.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
 
@@ -22,7 +22,7 @@ Import the JSON files through **Dashboards > New > Import** and pick the Prometh
 | Windows Exporter / `<tab>` | `windows-exporter-<tab>.json`, for example [windows-exporter-cpu.json](windows-exporter-cpu.json) | `windows-exporter-<tab>`, for example `windows-exporter-cpu` |
 | Windows Exporter / MSSQL | [windows-exporter-mssql.json](windows-exporter-mssql.json) | `windows-exporter-mssql` |
 
-The MSSQL dashboard is not a tab of the full dashboard. The [mixin](../contrib/mixin#metadata) adds it as a tab with `separateDashboardTabs: []`.
+The MSSQL dashboard is not a tab of the full dashboard. The [mixin](../mixin#metadata) adds it as a tab with `separateDashboardTabs: []`.
 
 The tab dashboards show only the variables their panels use.
 The **Windows Exporter** dropdown in the links of the tab dashboards opens the other imported dashboards and keeps the time range and variables.
@@ -82,11 +82,11 @@ appear. I/O graphs combine read, write and other operations per process.
 
 ### Changing the dashboard
 
-Don't edit the JSON files by hand. They are generated from Jsonnet with [grafonnet](https://github.com/grafana/grafonnet) as part of the [windows_exporter mixin](../contrib/mixin):
+Don't edit the JSON files by hand. They are generated from Jsonnet with [grafonnet](https://github.com/grafana/grafonnet) as part of the [windows_exporter mixin](../mixin):
 
-- [dashboards/windows-exporter.libsonnet](../contrib/mixin/dashboards/windows-exporter.libsonnet) composes the dashboards from one file per tab.
-- [dashboards/builders.libsonnet](../contrib/mixin/dashboards/builders.libsonnet) holds the panel, query, and layout builders.
-- [dashboards/styles.libsonnet](../contrib/mixin/dashboards/styles.libsonnet) shares the visualization defaults.
+- [dashboards/windows-exporter.libsonnet](../mixin/dashboards/windows-exporter.libsonnet) composes the dashboards from one file per tab.
+- [dashboards/builders.libsonnet](../mixin/dashboards/builders.libsonnet) holds the panel, query, and layout builders.
+- [dashboards/styles.libsonnet](../mixin/dashboards/styles.libsonnet) shares the visualization defaults.
 
 The generator writes the v2 schema directly, so it needs neither Grafana nor Prometheus.
 Install [mise](https://mise.jdx.dev/) and Go, then install the pinned tools and

@@ -27,9 +27,10 @@ their runtime behavior.
   and examples. [`docs/collector-template.md`](docs/collector-template.md) is the
   documentation template.
 - [`contrib/mixin`](contrib/mixin): Jsonnet recording rules, alerts and dashboard
-  sources. [`dashboard`](dashboard) contains the generated Grafana dashboards;
-  [`docs/runbooks`](docs/runbooks) documents the alerts.
-- [`installer`](installer), [`kubernetes`](kubernetes) and [`tools`](tools): MSI
+  sources. [`contrib/dashboard`](contrib/dashboard) contains the generated Grafana
+  dashboards, [`contrib/monitoring`](contrib/monitoring) the rendered Prometheus
+  rules and alerts; [`docs/runbooks`](docs/runbooks) documents the alerts.
+- [`installer`](installer), [`docs/kubernetes`](docs/kubernetes) and [`tools`](tools): MSI
   packaging, deployment examples, CI fixtures and end-to-end helpers. The CI
   package job validates installer changes with
   [`tools/test-installer.ps1`](tools/test-installer.ps1), which installs the
@@ -356,9 +357,9 @@ dashes, followed by its age in hex.
 ## Dashboards, rules and runbooks
 
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
-[`dashboard/README.md`](dashboard/README.md) before editing monitoring artifacts.
+[`contrib/dashboard/README.md`](contrib/dashboard/README.md) before editing monitoring artifacts.
 Edit the Jsonnet/Grafonnet source under `contrib/mixin/dashboards`, including its
-tab modules and shared builders, and regenerate `dashboard/windows-exporter-*.json`:
+tab modules and shared builders, and regenerate `contrib/dashboard/windows-exporter-*.json`:
 the full dashboard `windows-exporter-dashboard.json` and one dashboard per tab.
 Do not hand-edit generated JSON. Tab dashboards keep only the variables their
 panels reference, so reference variables as `$name` or `${name}`.

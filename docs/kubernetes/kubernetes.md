@@ -30,7 +30,7 @@ Before beginning you need to deploy the [Prometheus Operator](https://github.com
 This creates a pod on every Windows node. A ConfigMap holds the configuration of the Windows exporter with [configuration file](../README.md#using-a-configuration-file).  Adjust the configuration file for the collectors you are interested in.
 
 ```bash
-kubectl apply -f kubernetes/windows-exporter-daemonset.yaml
+kubectl apply -f docs/kubernetes/windows-exporter-daemonset.yaml
 ```
 
 > Note: This example manifest deploys the latest bleeding edge image `ghcr.io/prometheus-community/windows-exporter:latest` built from the main branch.  You should update this to use a released version which you can find at https://github.com/prometheus-community/windows_exporter/releases
@@ -58,7 +58,7 @@ spec:
 Create the [Pod Monitor](https://prometheus-operator.dev/docs/operator/design/#podmonitor) to configure the scraping:
 
 ```bash
-kubectl apply -f kubernetes/windows-exporter-podmonitor.yaml
+kubectl apply -f docs/kubernetes/windows-exporter-podmonitor.yaml
 ```
 
 ### View Metrics
