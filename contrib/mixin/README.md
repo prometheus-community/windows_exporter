@@ -24,7 +24,8 @@ Bundler using Go. `mise run` makes the pinned tools available automatically.
 
 Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
 to generate rules. The rules rendered from the default configuration are
-committed next to the sources, so they can be used without Jsonnet:
+committed in [`contrib/monitoring`](../monitoring), so they can be used
+without Jsonnet:
 
 - `windows_rules.yaml`: recording rules.
 - `windows_alerts.yaml`: alerting rules.
@@ -310,10 +311,10 @@ Fork users should override `runbookURLPattern` to match their published URL.
 
 `grafanaDashboards` contains `windows-exporter.json`, the full sample dashboard
 with all tabs in
-[dashboard/windows-exporter-dashboard.json](../../dashboard/windows-exporter-dashboard.json),
+[contrib/dashboard/windows-exporter-dashboard.json](../dashboard/windows-exporter-dashboard.json),
 and a shorter dashboard per tab, such as `windows-exporter-cpu.json`, in
-[dashboard](../../dashboard). They are Grafana v2 dashboards and need Grafana 13
-or later. See the [dashboard documentation](../../dashboard/README.md) for their
+[contrib/dashboard](../dashboard). They are Grafana v2 dashboards and need Grafana 13
+or later. See the [dashboard documentation](../dashboard/README.md) for their
 content.
 
 The dashboard uses additive builders with [grafonnet](https://github.com/grafana/grafonnet),
@@ -360,7 +361,7 @@ Regenerate the committed files after changing the dashboard source:
 mise run dashboard
 ```
 
-This runs `jb install` and writes `../../dashboard/windows-exporter-*.json`.
+This runs `jb install` and writes `../dashboard/windows-exporter-*.json`.
 `mise run dashboards` is an alias. `mise run generate` builds both the rules and the
 dashboard, while `mise run rules` builds only the rules. The same commands work
 inside WSL; mise supplies the tool binaries on `PATH`.
@@ -513,7 +514,7 @@ prometheus "local" {
 }
 ```
 
-Then run `pint --config /path/to/local.pint.hcl lint windows_rules.yaml windows_alerts.yaml`
+Then run `pint --config /path/to/local.pint.hcl lint ../monitoring/windows_rules.yaml ../monitoring/windows_alerts.yaml`
 without `--offline`. See the [pint documentation](https://cloudflare.github.io/pint/)
 for available checks.
 

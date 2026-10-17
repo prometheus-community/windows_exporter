@@ -1,6 +1,6 @@
 rule_files:
-  - ../windows_rules.yaml
-  - ../windows_alerts.yaml
+  - ../../monitoring/windows_rules.yaml
+  - ../../monitoring/windows_alerts.yaml
 evaluation_interval: 1m
 group_eval_order:
   - windows-exporter-recording

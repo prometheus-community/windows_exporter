@@ -1,5 +1,5 @@
 rule_files:
-  - ../windows_rules.yaml
+  - ../../monitoring/windows_rules.yaml
 evaluation_interval: 1m
 fuzzy_compare: true
 

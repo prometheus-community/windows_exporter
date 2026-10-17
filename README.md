@@ -204,7 +204,7 @@ The Docker image is tagged with the version of the exporter. The `latest` tag is
 
 ## Kubernetes Implementation
 
-See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernetes.md).
+See detailed steps to install on Windows Kubernetes [here](./docs/kubernetes/kubernetes.md).
 
 ## Prometheus rules
 

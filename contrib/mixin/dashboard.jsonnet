@@ -1,4 +1,4 @@
-// Renders the sample dashboards into ../../dashboard. Run with
+// Renders the sample dashboards into ../dashboard. Run with
 // jsonnet -J vendor -S -m <directory>. The sample dashboards show every
 // collector; mixin users select theirs with _config.collectors.
 local manifest = import 'lib/manifest.libsonnet';
