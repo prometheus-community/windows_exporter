@@ -10,6 +10,8 @@ function(on, config)
   local byVm(expr) = 'sum by (vm) (%s)' % h.withVm(expr, host);
   local size = 'max by (instance, path) (%s)' % metric('windows_hyperv_virtual_hard_disk_size_bytes');
   local file = 'max by (instance, path) (%s)' % metric('windows_hyperv_virtual_hard_disk_file_size_bytes');
+  // Only dynamic disks grow; a differencing disk's parent already holds most of its size.
+  local dynamic(name) = 'max by (instance, path) (windows_hyperv_virtual_hard_disk_%s{%s, type="dynamic"})' % [name, host];
   // Range-wide values of the slowest disks: time above the threshold in
   // 5-minute steps ranks permanently slow disks above short spikes.
   local slowest = 'topk(10, count_over_time((%s > %s)[$__range:5m]) * 300)' % [deviceLatency, threshold];
@@ -372,7 +374,7 @@ function(on, config)
         { matcher: { id: 'byName', options: 'Disk latency' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: [{ color: 'green', value: null }, { color: 'orange', value: config.hypervDiskLatencyThresholdSeconds }] } }] },
       ]),
 
-      b.graph(293, 'Busiest VMs', "The ten VMs with the highest CPU usage relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.", 'percentunit', [
+      b.graph(293, 'Busiest VMs', "The ten VMs with the highest CPU usage at each point in time, so the graph can show more than ten VMs over the time range relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.", 'percentunit', [
         ['topk(10, sum by (vm) (rate(%s[$__rate_interval])) / max by (vm) (%s))' % [metric('windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total'), metric('windows_hyperv_vm_processors')], '{{vm}}'],
       ])
       + b.panel.withDefaults({ max: 1 }),
@@ -399,9 +401,9 @@ function(on, config)
 
       b.stat(295, 'VHD size', 'Maximum size of all virtual hard disks of the VMs on this host.', 'sum(%s)' % size, 'bytes'),
 
-      b.stat(296, 'VHD file size', 'Space the virtual hard disk files of the VMs on this host take on storage.', 'sum(%s)' % file, 'bytes'),
+      b.stat(296, 'VHD file size', 'Space the virtual hard disk files of the VMs on this host take on storage. For a VM with checkpoints, only the current .avhdx counts, not its parent disks.', 'sum(%s)' % file, 'bytes'),
 
-      b.stat(297, 'VHD growth if thick', 'Space the disks of the VMs on this host would still take if every disk grew to its full size.', 'sum(clamp_min(%s - %s, 0))' % [size, file], 'bytes'),
+      b.stat(297, 'VHD growth if thick', 'Space the dynamic (thin provisioned) disks of the VMs on this host would still take if every one grew to its full size.', 'sum(clamp_min(%s - %s, 0))' % [dynamic('size_bytes'), dynamic('file_size_bytes')], 'bytes'),
 
       b.graph(298, 'Dropped packets per VM', 'Packets dropped per second by the network adapters of each VM; incoming drops are drawn below the axis. Adapters are matched to VMs by the VM GUID in their name.', 'pps', [
         ['sum by (vm) (%s)' % h.vnicVm('rate(%s[$__rate_interval])' % metric('windows_hyperv_virtual_network_adapter_outgoing_dropped_packets_total'), host), '{{vm}} outgoing'],

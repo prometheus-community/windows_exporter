@@ -694,7 +694,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "The ten VMs with the highest CPU usage relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.",
+                    "description": "The ten VMs with the highest CPU usage at each point in time, so the graph can show more than ten VMs over the time range relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.",
                     "id": 293,
                     "links": [],
                     "title": "Busiest VMs",
@@ -1179,7 +1179,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Space the virtual hard disk files of the VMs on this host take on storage.",
+                    "description": "Space the virtual hard disk files of the VMs on this host take on storage. For a VM with checkpoints, only the current .avhdx counts, not its parent disks.",
                     "id": 296,
                     "links": [],
                     "title": "VHD file size",
@@ -1247,7 +1247,7 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "sum(clamp_min(max by (instance, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\"}) - max by (instance, path) (windows_hyperv_virtual_hard_disk_file_size_bytes{job=~\"$job\", instance=\"$instance\"}), 0))",
+                                                "expr": "sum(clamp_min(max by (instance, path) (windows_hyperv_virtual_hard_disk_size_bytes{job=~\"$job\", instance=\"$instance\", type=\"dynamic\"}) - max by (instance, path) (windows_hyperv_virtual_hard_disk_file_size_bytes{job=~\"$job\", instance=\"$instance\", type=\"dynamic\"}), 0))",
                                                 "instant": false,
                                                 "legendFormat": "__auto",
                                                 "range": true
@@ -1264,7 +1264,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Space the disks of the VMs on this host would still take if every disk grew to its full size.",
+                    "description": "Space the dynamic (thin provisioned) disks of the VMs on this host would still take if every one grew to its full size.",
                     "id": 297,
                     "links": [],
                     "title": "VHD growth if thick",
