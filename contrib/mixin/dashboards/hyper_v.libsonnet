@@ -347,7 +347,7 @@ function(on, config)
 
       b.stat(291, 'Slow virtual disks', 'Virtual disks with an average latency per I/O above %s s and at least one I/O per second.' % threshold, 'count((%s) > %s) or vector(0)' % [deviceLatency, threshold], 'short', b.levels(1, 5)),
 
-      b.joinedTable(292, 'Virtual machines', "VMs running on this host. CPU usage is relative to the VM's own virtual processors; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory. Click a VM for its details.", 'vm', [
+      b.joinedTable(292, 'Virtual machines', "VMs running on this host. CPU usage is busy time on the host's physical processors relative to the VM's own virtual processors, not the utilization Task Manager shows inside the VM; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory.", 'vm', [
         'max by (vm) (%s)' % metric('windows_hyperv_vm_processors'),
         'max by (vm) (%s)' % metric('windows_hyperv_dynamic_memory_vm_physical_bytes'),
         '1 - max by (vm) (%s) / max by (vm) (%s)' % [metric('windows_hyperv_dynamic_memory_vm_guest_available_bytes'), metric('windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes')],
@@ -372,7 +372,7 @@ function(on, config)
         { matcher: { id: 'byName', options: 'Disk latency' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: [{ color: 'green', value: null }, { color: 'orange', value: config.hypervDiskLatencyThresholdSeconds }] } }] },
       ]),
 
-      b.graph(293, 'Busiest VMs', 'The ten VMs with the highest CPU usage relative to their own virtual processors. Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left.', 'percentunit', [
+      b.graph(293, 'Busiest VMs', "The ten VMs with the highest CPU usage relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.", 'percentunit', [
         ['topk(10, sum by (vm) (rate(%s[$__rate_interval])) / max by (vm) (%s))' % [metric('windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total'), metric('windows_hyperv_vm_processors')], '{{vm}}'],
       ])
       + b.panel.withDefaults({ max: 1 }),

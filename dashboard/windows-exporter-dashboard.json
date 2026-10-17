@@ -18556,7 +18556,7 @@
                             ]
                         }
                     },
-                    "description": "VMs running on this host. CPU usage is relative to the VM's own virtual processors; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory. Click a VM for its details.",
+                    "description": "VMs running on this host. CPU usage is busy time on the host's physical processors relative to the VM's own virtual processors, not the utilization Task Manager shows inside the VM; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory.",
                     "id": 292,
                     "links": [],
                     "title": "Virtual machines",
@@ -18784,7 +18784,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "The ten VMs with the highest CPU usage relative to their own virtual processors. Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left.",
+                    "description": "The ten VMs with the highest CPU usage relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.",
                     "id": 293,
                     "links": [],
                     "title": "Busiest VMs",
