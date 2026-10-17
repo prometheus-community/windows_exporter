@@ -151,10 +151,11 @@ pagefile traffic.
 
 ## Alerts
 
-The alerts are grouped by collector area. Each group lists the collectors its
-rules read; a group is generated only with those collectors enabled in
-`_config.collectors`, and a rule that needs two collectors, such as the CPU
-saturation alert, only with both. Threshold configuration values below are
+The alerts come in one rule group per collector, from one file per collector
+in `alerts/` (`alerts/cpu.libsonnet`, `alerts/service.libsonnet`, and so on).
+Each group lists the collectors its rules read; a group is generated only with
+those collectors enabled in `_config.collectors`, and a rule that needs two
+collectors, such as the CPU saturation alert, only with both. Threshold configuration values below are
 percentages except where noted.
 
 | Group | Collectors | Alert | Default condition | Duration | Severity |
@@ -185,9 +186,9 @@ percentages except where noted.
 | `windows-time` | `time` | `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSourceLocal` | Clock source is `Local CMOS Clock` or `NoSync` | 10m | Warning |
-| `windows-memory` | `pagefile` | `WindowsPagefileAlmostFull` | Page file usage above `pagefileUsageThreshold` (80%) | 15m | Warning |
-| `windows-disk` | `diskdrive` | `WindowsDiskDriveNotOK` | Drive status other than `OK` or `Unknown` | 5m | Critical |
-| `windows-system` | `license` | `WindowsLicenseNotGenuine` | License status is not `genuine` | 1h | Warning |
+| `windows-pagefile` | `pagefile` | `WindowsPagefileAlmostFull` | Page file usage above `pagefileUsageThreshold` (80%) | 15m | Warning |
+| `windows-diskdrive` | `diskdrive` | `WindowsDiskDriveNotOK` | Drive status other than `OK` or `Unknown` | 5m | Critical |
+| `windows-license` | `license` | `WindowsLicenseNotGenuine` | License status is not `genuine` | 1h | Warning |
 | `windows-scheduled-task` | `scheduled_task` | `WindowsScheduledTaskFailed` | Last result of an enabled task matching `taskSelector` is `unknown` or `terminated` | 1h | Warning |
 | `windows-update` | `update` | `WindowsUpdatesPending` | Updates waiting for installation | `updatePendingDuration` (7d) | Info |
 | `windows-hyperv` | `hyperv` | `WindowsHyperVWMIUnhealthy` | Hyper-V WMI namespace not responding | 10m | Warning |
@@ -244,7 +245,7 @@ host to its chosen source and does not independently verify that source.
 The other opt-in alerts follow `_config.collectors`: enable `pagefile`,
 `diskdrive`, `license`, `scheduled_task`, `update`, `hyperv`, `mscluster`,
 `storage_spaces`, `dhcp` or `dns` and the alerts of that collector are
-generated, in the group of their area or in a group of their own.
+generated, each collector in a group of its own.
 `WindowsScheduledTaskFailed` treats `unknown`, the status of every result code
 without a name, including the exit codes of the task's program, as a failure;
 narrow the tasks with `taskSelector`. Disabling a task clears the alert.

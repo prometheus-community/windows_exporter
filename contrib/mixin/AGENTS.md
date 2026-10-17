@@ -7,23 +7,48 @@ keep it in sync with every change.
 
 ## Alerts
 
-`alerts/alerts.libsonnet` renders one rule group per collector area. Every
-alert names the collectors it reads (`collectors=[...]`) and is generated only
-with those enabled in `_config.collectors`; `_config.alerts` switches single
-alerts off by name. Threshold alerts get `keep_firing_for` from
-`keepFiringFor`; pass `threshold=false` for state alerts (`== 0`, `== 1`) and
-one-shot alerts, which must resolve at once.
+`alerts/` holds one file per collector, each rendering one rule group, and
+`alerts/alerts.libsonnet` imports them in the order of the generated file.
+A rule is a plain Prometheus alerting rule, like in kubernetes-mixin:
 
-A new alert touches five places, and CI checks all of them:
+```jsonnet
+{
+  alert: 'WindowsCPUHighUsage',
+  expr: |||
+    windows:cpu_usage:ratio{%(windowsExporterSelector)s} * 100 > %(cpuHighUsageThreshold)s
+  ||| % c,
+  'for': '15m',
+  labels: { severity: 'warning' },
+  annotations: { summary: '...', description: '...' },
+}
+```
 
-1. The rule in `alerts/alerts.libsonnet`, in the group of its area, with
-   `{{ $labels.<key> }}` templates that use the 0.32 label keys (`service`,
-   `volume`, `nic`, `task`, `device_id`, never `name`).
+Write the PromQL out in the `expr` block with `%(name)s` placeholders for the
+`_config` values; selectors go inside the braces as
+`{%(windowsExporterSelector)s, %(volumeSelector)s}`. `lib/alerts.libsonnet`
+provides `a.group(name, collectors, rules)`, which keeps a rule only when every
+collector in `collectors` is enabled in `_config.collectors` and the alert is
+not switched off in `_config.alerts`, and adds `keep_firing_for` from
+`keepFiringFor`. Two hidden fields change that per rule: `collectors:: [...]`
+when a rule reads other collectors than its group (the CPU saturation alert
+reads `cpu` and `system`), and `state:: true` for state alerts (`== 0`,
+`== 1`) and one-shot alerts, which must resolve at once and get no
+`keep_firing_for`. A one-shot alert has no `for`.
+
+A new alert touches six places, and CI checks all of them:
+
+1. The rule in `alerts/<collector>.libsonnet`, with `{{ $labels.<key> }}`
+   templates that use the 0.32 label keys (`service`, `volume`, `nic`,
+   `task`, `device_id`, never `name`). Alerts for a new collector go in a new
+   file, imported from `alerts/alerts.libsonnet`, with the collector added to
+   `_config.collectors` in `config.libsonnet`; the group expectations in
+   `tests/alerts.test.jsonnet` list every group.
 2. Its switch in `_config.alerts` in `config.libsonnet`; `tests/alerts.test.jsonnet`
    fails when the map and the generated alerts differ. Thresholds are
    `_config` knobs named `<area><Condition>Threshold[Unit]`.
-3. A unit test in `tests/alerts.test.yaml` that checks the first firing
-   evaluation, the labels and annotations, and the recovery. With
+3. A unit test in `tests/alerts.test.yaml` (`tests/optional.test.yaml` for
+   opt-in collectors, which `tests/config.libsonnet` enables) that checks the
+   first firing evaluation, the labels and annotations, and the recovery. With
    `keep_firing_for` a threshold alert resolves `keepFiringFor` after its
    condition clears. `rate()` extrapolates while a window has few samples, so
    ratios of two rates activate earlier than a single rate; probe the
