@@ -168,4 +168,19 @@ assert expect('msclusterOnly', {
   Overview: ['Summary'],
 });
 
+// The Hyper-V cluster dashboard needs the hyperv and mscluster collectors.
+assert !std.objectHas(dashboards(only({ hyperv: true })), 'windows-exporter-hyper-v-cluster.json') : 'hyperv without mscluster: got a Hyper-V cluster dashboard';
+local hypervCluster = dashboards(only({ hyperv: true, mscluster: true, memory: true, storage_spaces: true }))['windows-exporter-hyper-v-cluster.json'];
+assert hypervCluster.metadata.name == 'windows-exporter-hyper-v-cluster' : 'hyper-v cluster: got UID ' + hypervCluster.metadata.name;
+assert hypervCluster.spec.title == 'Windows Exporter / Hyper-V Cluster' : 'hyper-v cluster: got title ' + hypervCluster.spec.title;
+assert summary(hypervCluster) == {
+  Overview: ['Summary', 'Hosts', 'Load'],
+  Cluster: ['Summary', 'Nodes', 'Resource groups and resources', 'Networks'],
+  Host: ['Summary', 'Virtual machines', 'CPU', 'Memory', 'Storage', 'Network'],
+  VM: ['Summary', 'CPU', 'Memory', 'Disks', 'Network'],
+  'VM disks': ['Summary', 'Capacity', 'Virtual hard disks', 'Performance'],
+  Storage: ['Summary', 'Cluster Shared Volumes', 'Storage Spaces Direct'],
+} : 'hyper-v cluster: got ' + std.manifestJson(summary(hypervCluster));
+assert variableNames(hypervCluster) == ['datasource', 'job', 'cluster', 'cluster_instance', 'instance', 'vm'] : 'hyper-v cluster: got variables ' + std.join(', ', variableNames(hypervCluster));
+
 results

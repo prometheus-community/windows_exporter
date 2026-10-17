@@ -9,7 +9,7 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V, Failover Cluster and Time tabs and the MSSQL dashboard, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `mscluster`, `time`, `mssql`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
+  The SMB, Processes, Scheduled tasks, Updates, GPU, Hyper-V, Failover Cluster and Time tabs, the MSSQL and Hyper-V Cluster dashboards, the TCP and UDP rows of the Network tab and the Drives and Storage Spaces rows of the Disk tab need the `smb` or `smbclient`, `process`, `scheduled_task`, `update`, `gpu`, `hyperv`, `mscluster`, `time`, `mssql`, `tcp`, `udp`, `diskdrive` and `storage_spaces` collectors, which are not enabled by default.
   The sample shows every tab; build the dashboard from the [mixin](../contrib/mixin#collectors) with your collectors to hide the others.
   The process names in the GPU tab need the `process` collector.
   GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
@@ -21,8 +21,10 @@ Import the JSON files through **Dashboards > New > Import** and pick the Prometh
 | Windows Exporter / Full | [windows-exporter-dashboard.json](windows-exporter-dashboard.json) | `windows-exporter-full` |
 | Windows Exporter / `<tab>` | `windows-exporter-<tab>.json`, for example [windows-exporter-cpu.json](windows-exporter-cpu.json) | `windows-exporter-<tab>`, for example `windows-exporter-cpu` |
 | Windows Exporter / MSSQL | [windows-exporter-mssql.json](windows-exporter-mssql.json) | `windows-exporter-mssql` |
+| Windows Exporter / Hyper-V Cluster | [windows-exporter-hyper-v-cluster.json](windows-exporter-hyper-v-cluster.json) | `windows-exporter-hyper-v-cluster` |
 
 The MSSQL dashboard is not a tab of the full dashboard. The [mixin](../contrib/mixin#metadata) adds it as a tab with `separateDashboardTabs: []`.
+The Hyper-V Cluster dashboard has tabs of its own, see [Hyper-V Cluster dashboard](#hyper-v-cluster-dashboard).
 
 The tab dashboards show only the variables their panels use.
 The **Windows Exporter** dropdown in the links of the tab dashboards opens the other imported dashboards and keeps the time range and variables.
@@ -68,6 +70,23 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |
 
 Click a hostname in the Fleet tab to open that host in the Overview tab. In the Fleet dashboard, it opens the Overview dashboard.
+
+### Hyper-V Cluster dashboard
+
+The Hyper-V Cluster dashboard shows the Hyper-V hosts of one failover cluster. It needs the `hyperv` and `mscluster` collectors on all nodes,
+the `memory` collector for the memory shares and the `storage_spaces` collector for the Storage Spaces Direct row.
+The **Cluster** variable lists the clusters by the `cluster` label of the mscluster metrics, and the dashboard shows the instances that report that cluster.
+If your scrape configuration sets its own `cluster` target label, Prometheus renames the exporter's label to `exported_cluster` unless `honor_labels` is set; the variable then lists your label values instead.
+**Host** selects the host of the Host tab and **VM** the virtual machine of the VM tab, on whichever node runs it.
+
+| Tab      | Content |
+|----------|---------|
+| Overview | Nodes up, running VMs, VMs in critical health, virtual processors per logical processor, VM memory as a share of all host memory and of the memory left when the largest host fails, host CPU usage and slow virtual disks; running VMs, vCPU ratio, CPU usage and VM memory share per host; CPU usage, running VMs, VM memory and virtual disk IOPS per host over time. |
+| Cluster  | The Failover Cluster tab for the selected cluster, without the Cluster Shared Volumes, which are in the Storage tab. |
+| Host     | The Hyper-V tab for the selected host. |
+| VM       | The host that runs the VM, virtual processors, assigned memory, RAM in use and committed memory, CPU usage by state and per virtual processor, dynamic memory changes, size, file size and fill of its virtual hard disks, disk IOPS, throughput and latency, and network throughput and dropped packets per adapter. |
+| VM disks | Count, size, file size and growth if thick of all virtual hard disks, differencing disks and slow disks; capacity by provisioning type; every disk with its VM, host and type; the slowest, busiest and highest-latency disks. |
+| Storage  | Size and free space of the Cluster Shared Volumes, also if every dynamic virtual hard disk on them grew to its full size; usage per volume; virtual hard disks per folder below `C:\ClusterStorage`; health, size and usage of the Storage Spaces pools and health, size, footprint and efficiency of their virtual disks. |
 
 Each per-host tab starts with a row of current values, each with a sparkline
 of the time range behind it. Green, orange and red show health against fixed

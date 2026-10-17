@@ -79,6 +79,15 @@ local merge(base, patch) = base + {
     )
     + $.panel.withOptions({ graphMode: 'area' }),
 
+  // Current value of a label instead of a number, for example the host a VM
+  // runs on. Shows the label of every returned series.
+  labelStat(id, title, description, expr, label):
+    $.panel.new(id, title, 'stat')
+    + $.panel.withDescription(description)
+    + $.panel.withQueries([$.query.new(expr) + $.query.withInstant() + $.query.withLegendFormat('{{%s}}' % label)])
+    + $.panel.withDefaults({ unit: 'short', color: { fixedColor: 'text', mode: 'fixed' } })
+    + $.panel.withOptions({ graphMode: 'none', textMode: 'name' }),
+
   // Time series of [expr, legend] queries. Series whose name matches below are
   // drawn below the axis, for example reads against writes.
   graph(id, title, description, unit, queries, below=null):

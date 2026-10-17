@@ -22,8 +22,38 @@ local new(name, definition) = common
                                 refId: 'PrometheusVariableQueryEditor-VariableQuery',
                               }));
 
-// Variables of disabled collectors are left out.
-function(on) [variable for variable in [
+local all = query.spec.withCurrent({
+              text: [
+                'All',
+              ],
+              value: [
+                '$__all',
+              ],
+            })
+            + query.spec.withIncludeAll(true)
+            + query.spec.withMulti(true);
+local job = new('job', 'label_values(windows_os_hostname, job)')
+            + all
+            + query.spec.withLabel('Job');
+
+// The Hyper-V cluster dashboard selects a failover cluster by its name, which
+// the mscluster collector reports, and the hosts that are nodes of it.
+local cluster = [
+  new('cluster', 'label_values(windows_mscluster_cluster_quorum_type_value{job=~"$job"}, cluster)')
+  + query.spec.withLabel('Cluster'),
+  new('cluster_instance', 'label_values(windows_mscluster_cluster_quorum_type_value{job=~"$job", cluster="$cluster"}, instance)')
+  + all
+  + query.spec.withHide('hideVariable')
+  + query.spec.withLabel('Cluster hosts'),
+  new('instance', 'label_values(windows_mscluster_cluster_quorum_type_value{job=~"$job", cluster="$cluster"}, instance)')
+  + query.spec.withLabel('Host'),
+  new('vm', 'label_values(windows_hyperv_vm_processors{job=~"$job", instance=~"$cluster_instance"}, vm)')
+  + query.spec.withLabel('VM'),
+];
+
+// Variables of disabled collectors are left out. With hypervCluster, the
+// variables of the Hyper-V cluster dashboard.
+function(on, hypervCluster=false) [variable for variable in [
   datasource.withKind()
   + datasource.spec.withAllowCustomValue(true)
   + datasource.spec.withCurrent({
@@ -41,36 +71,52 @@ function(on) [variable for variable in [
   + datasource.spec.withRegex('')
   + datasource.spec.withSkipUrlSync(false)
   ,
-  new('job', 'label_values(windows_os_hostname, job)')
-  + query.spec.withCurrent({
-    text: [
-      'All',
-    ],
-    value: [
-      '$__all',
-    ],
-  })
-  + query.spec.withIncludeAll(true)
-  + query.spec.withLabel('Job')
-  + query.spec.withMulti(true)
-  ,
-  new('hostname', 'label_values(windows_os_hostname{job=~"$job"}, hostname)')
-  + query.spec.withCurrent({
-    text: [
-      'All',
-    ],
-    value: [
-      '$__all',
-    ],
-  })
-  + query.spec.withIncludeAll(true)
-  + query.spec.withLabel('Hostname')
-  + query.spec.withMulti(true)
-  ,
-  new('instance', 'label_values(windows_os_hostname{job=~"$job", hostname=~"$hostname"}, instance)')
-  + query.spec.withLabel('Instance')
-  ,
-  if on('logical_disk') then new('volume', 'label_values(windows_logical_disk_size_bytes{job=~"$job", instance="$instance"}, volume)')
+  job,
+] + (if hypervCluster then cluster else [
+       new('hostname', 'label_values(windows_os_hostname{job=~"$job"}, hostname)')
+       + query.spec.withCurrent({
+         text: [
+           'All',
+         ],
+         value: [
+           '$__all',
+         ],
+       })
+       + query.spec.withIncludeAll(true)
+       + query.spec.withLabel('Hostname')
+       + query.spec.withMulti(true)
+       ,
+       new('instance', 'label_values(windows_os_hostname{job=~"$job", hostname=~"$hostname"}, instance)')
+       + query.spec.withLabel('Instance')
+       ,
+       if on('logical_disk') then new('volume', 'label_values(windows_logical_disk_size_bytes{job=~"$job", instance="$instance"}, volume)')
+                                  + query.spec.withCurrent({
+                                    text: [
+                                      'All',
+                                    ],
+                                    value: [
+                                      '$__all',
+                                    ],
+                                  })
+                                  + query.spec.withIncludeAll(true)
+                                  + query.spec.withLabel('Volume')
+                                  + query.spec.withMulti(true)
+                                  + query.spec.withRegex('/^(?!HarddiskVolume).+$/')
+       ,
+       if on('net') then new('nic', 'label_values(windows_net_bytes_total{job=~"$job", instance="$instance"}, nic)')
+                         + query.spec.withCurrent({
+                           text: [
+                             'All',
+                           ],
+                           value: [
+                             '$__all',
+                           ],
+                         })
+                         + query.spec.withIncludeAll(true)
+                         + query.spec.withLabel('Network interface')
+                         + query.spec.withMulti(true)
+                         + query.spec.withRegex('/^(?!isatap|Teredo|6to4).+$/'),
+       if on('process') then new('process', 'label_values(windows_process_info{job=~"$job", instance="$instance", process_id!="0"}, process)')
                              + query.spec.withCurrent({
                                text: [
                                  'All',
@@ -80,61 +126,34 @@ function(on) [variable for variable in [
                                ],
                              })
                              + query.spec.withIncludeAll(true)
-                             + query.spec.withLabel('Volume')
-                             + query.spec.withMulti(true)
-                             + query.spec.withRegex('/^(?!HarddiskVolume).+$/')
-  ,
-  if on('net') then new('nic', 'label_values(windows_net_bytes_total{job=~"$job", instance="$instance"}, nic)')
-                    + query.spec.withCurrent({
-                      text: [
-                        'All',
-                      ],
-                      value: [
-                        '$__all',
-                      ],
-                    })
-                    + query.spec.withIncludeAll(true)
-                    + query.spec.withLabel('Network interface')
-                    + query.spec.withMulti(true)
-                    + query.spec.withRegex('/^(?!isatap|Teredo|6to4).+$/'),
-  if on('process') then new('process', 'label_values(windows_process_info{job=~"$job", instance="$instance", process_id!="0"}, process)')
-                        + query.spec.withCurrent({
-                          text: [
-                            'All',
-                          ],
-                          value: [
-                            '$__all',
-                          ],
-                        })
-                        + query.spec.withIncludeAll(true)
-                        + query.spec.withLabel('Process')
-                        + query.spec.withMulti(true),
-  if on('process') then variables.CustomVariableKind.withKind()
-                        + variables.CustomVariableKind.withSpec({
-                          name: 'process_top',
-                          label: 'Top N processes',
-                          description: 'Maximum number of processes per graph. Summary counters include all selected processes.',
-                          query: '5,10,20',
-                          current: { text: '10', value: '10' },
-                          options: [{ text: value, value: value, selected: value == '10' } for value in ['5', '10', '20']],
-                          multi: false,
-                          includeAll: false,
-                          allowCustomValue: false,
-                          hide: 'dontHide',
-                          skipUrlSync: false,
-                        }),
-  if on('mssql') then new('mssql_instance', 'label_values(windows_mssql_collector_success{job=~"$job", instance="$instance"}, mssql_instance)')
-                      + query.spec.withLabel('SQL Server instance'),
-  if on('mssql') then new('database', 'label_values(windows_mssql_databases_data_files_size_bytes{job=~"$job", instance="$instance", mssql_instance="$mssql_instance"}, database)')
-                      + query.spec.withCurrent({
-                        text: [
-                          'All',
-                        ],
-                        value: [
-                          '$__all',
-                        ],
-                      })
-                      + query.spec.withIncludeAll(true)
-                      + query.spec.withLabel('Database')
-                      + query.spec.withMulti(true),
-] if variable != null]
+                             + query.spec.withLabel('Process')
+                             + query.spec.withMulti(true),
+       if on('process') then variables.CustomVariableKind.withKind()
+                             + variables.CustomVariableKind.withSpec({
+                               name: 'process_top',
+                               label: 'Top N processes',
+                               description: 'Maximum number of processes per graph. Summary counters include all selected processes.',
+                               query: '5,10,20',
+                               current: { text: '10', value: '10' },
+                               options: [{ text: value, value: value, selected: value == '10' } for value in ['5', '10', '20']],
+                               multi: false,
+                               includeAll: false,
+                               allowCustomValue: false,
+                               hide: 'dontHide',
+                               skipUrlSync: false,
+                             }),
+       if on('mssql') then new('mssql_instance', 'label_values(windows_mssql_collector_success{job=~"$job", instance="$instance"}, mssql_instance)')
+                           + query.spec.withLabel('SQL Server instance'),
+       if on('mssql') then new('database', 'label_values(windows_mssql_databases_data_files_size_bytes{job=~"$job", instance="$instance", mssql_instance="$mssql_instance"}, database)')
+                           + query.spec.withCurrent({
+                             text: [
+                               'All',
+                             ],
+                             value: [
+                               '$__all',
+                             ],
+                           })
+                           + query.spec.withIncludeAll(true)
+                           + query.spec.withLabel('Database')
+                           + query.spec.withMulti(true),
+     ]) if variable != null]

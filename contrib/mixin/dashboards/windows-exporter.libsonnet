@@ -90,11 +90,29 @@ function(config)
   assert std.length(panelNames) == std.length(std.set(panelNames)) : 'Panel IDs must be unique across tabs';
 
   local variables = (import 'variables.libsonnet')(on);
+  local hypervClusterVariables = (import 'variables.libsonnet')(on, hypervCluster=true);
+
+  // The Hyper-V cluster dashboard: the hosts of one failover cluster, its
+  // VMs and their storage. Its panel IDs are unique within the dashboard.
+  local hypervClusterTabs = [
+    tab
+    for tab in [
+      (import 'hyper_v_cluster_overview.libsonnet')(on, config),
+      (import 'mscluster.libsonnet')(on, 'job=~"$job", instance=~"$cluster_instance"', 'Cluster', withVolumes=false),
+      (import 'hyper_v.libsonnet')(on, config) + { layout+: { spec+: { title: 'Host' } } },
+      (import 'hyper_v_vm.libsonnet')(on, config),
+      (import 'hyper_v_vm_disks.libsonnet')(on, config),
+      (import 'hyper_v_storage.libsonnet')(on),
+    ]
+    if !tab.empty
+  ];
+  local hypervClusterPanels = std.flattenArrays([std.objectFields(tab.elements) for tab in hypervClusterTabs]);
+  assert std.length(hypervClusterPanels) == std.length(std.set(hypervClusterPanels)) : 'Panel IDs must be unique across the Hyper-V cluster tabs';
   local annotations = (import 'annotations.libsonnet')(on);
 
   // Tab dashboards link to each other through a dropdown of the dashboards
   // with the same tags; the full dashboard has the tabs instead.
-  local new(uid, title, description, elements, layout, dropdown=true) =
+  local new(uid, title, description, elements, layout, dropdown=true, dashboardVariables=variables) =
     // Grafana rejects longer dashboard UIDs.
     assert std.length(uid) <= 40 : 'Dashboard UID ' + uid + ' is longer than 40 characters; shorten dashboardUIDPrefix or dashboardUID';
     // Keeps the variables that the panels reference, directly or through
@@ -105,10 +123,10 @@ function(config)
         if std.setMember(variable.spec.name, used)
         then std.setUnion(used, references(variable))
         else used,
-      std.reverse(variables),
+      std.reverse(dashboardVariables),
       references(elements),
     );
-    local dropped = std.set([variable.spec.name for variable in variables if !std.setMember(variable.spec.name, kept)]);
+    local dropped = std.set([variable.spec.name for variable in dashboardVariables if !std.setMember(variable.spec.name, kept)]);
     dashboard.new(uid, title)
     + dashboard.spec.withCursorSync('Crosshair')
     + dashboard.spec.withDescription(description)
@@ -170,7 +188,7 @@ function(config)
       for annotation in annotations
       if std.length(std.setInter(references(annotation), dropped)) == 0
     ])
-    + dashboard.spec.withVariables([variable for variable in variables if std.setMember(variable.spec.name, kept)])
+    + dashboard.spec.withVariables([variable for variable in dashboardVariables if std.setMember(variable.spec.name, kept)])
     + dashboard.spec.withElements(elements)
     + dashboard.spec.withLayout(layout);
 
@@ -193,5 +211,16 @@ function(config)
       )
       for tab in allTabs(if config.enableOverviewTab then uid('Overview'))
       if config.enableTabDashboards || separate(tab)
-    },
+    } + (
+      if on('hyperv') && on('mscluster') then {
+        'windows-exporter-hyper-v-cluster.json': new(
+          uid('Hyper-V Cluster'),
+          config.dashboardTitlePrefix + ' / Hyper-V Cluster',
+          'Hosts, virtual machines, virtual hard disks and storage of a Hyper-V failover cluster.',
+          std.foldl(function(elements, tab) elements + tab.elements, hypervClusterTabs, {}),
+          b.tabs([tab.layout for tab in hypervClusterTabs]),
+          dashboardVariables=hypervClusterVariables,
+        ),
+      } else {}
+    ),
   }
