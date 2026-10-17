@@ -30,6 +30,9 @@ A new alert touches five places, and CI checks all of them:
    activation time with `ALERTS_FOR_STATE` instead of guessing it.
 4. A runbook `docs/runbooks/<lowercase-alert-name>.md` with the `Meaning`,
    `Impact`, `Diagnosis` and `Mitigation` sections.
+   `go test ./internal/metriccontract/` checks every `windows_*` metric name
+   a runbook mentions against the metrics the exporter emits; the names in
+   the collector docs are not always current, so check the collector source.
 5. A row in the alerts table of `README.md`.
 
 Metrics with a state label (`windows_service_state{state="running"} == 0`)
