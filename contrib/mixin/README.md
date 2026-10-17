@@ -23,18 +23,22 @@ Mise installs release binaries with checksum verification and builds Jsonnet
 Bundler using Go. `mise run` makes the pinned tools available automatically.
 
 Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
-to generate rules. Generated rule files are ignored by Git:
+to generate rules. The rules rendered from the default configuration are
+committed next to the sources, so they can be used without Jsonnet:
 
 - `windows_rules.yaml`: recording rules.
 - `windows_alerts.yaml`: alerting rules.
+
+`mise run rules` regenerates them after a source change, and CI fails when the
+committed files are out of date (`mise run check-rules`).
 
 The default selector is `job="windows_exporter"`. Change it to match your scrape
 job before generating rules. The rules read the default `cpu`, `memory`,
 `logical_disk`, `net`, `service` and `system` collectors; `_config.collectors`
 lists which collectors the targets run, and the alerts of a collector that is
-turned off are not generated. Enable `ad` on domain controllers when opting
-into Active Directory alerts. Clock alerts require the `time` collector with
-its `ntp` subcollector and are intended for hosts using NTP synchronization.
+turned off are not generated. Enable `ad` on domain controllers for the Active
+Directory alerts and `time` for the clock alerts, which need the `ntp` and
+`clock_source` subcollectors.
 
 Copy both generated files into your Prometheus rule directory and reference
 them in `prometheus.yml`:
@@ -468,7 +472,7 @@ mise run test
 
 This checks Jsonnet formatting, runs `jsonnet-lint` on the Jsonnet sources to
 find unused variables and references to missing fields, checks that the
-committed dashboards are up to date, runs `dashboard-linter lint --strict`, validates generated rules with
+committed dashboards and rule files are up to date, runs `dashboard-linter lint --strict`, validates generated rules with
 `promtool`, runs `pint --offline lint`, and evaluates the rules against synthetic
 time series.
 Tests cover all 28 recordings, alert timing and recovery, `keep_firing_for`,
@@ -513,8 +517,8 @@ Then run `pint --config /path/to/local.pint.hcl lint windows_rules.yaml windows_
 without `--offline`. See the [pint documentation](https://cloudflare.github.io/pint/)
 for available checks.
 
-Run `mise run fmt` after source changes and `mise run clean` to remove generated rule
-files. For downstream composition with Jsonnet Bundler, import
+Run `mise run fmt` and `mise run rules` after source changes, and `mise run clean`
+to remove the rule files generated for the tests. For downstream composition with Jsonnet Bundler, import
 `github.com/prometheus-community/windows_exporter/contrib/mixin/mixin.libsonnet`
 and extend `_config`. See the [monitoring mixin documentation](https://github.com/monitoring-mixins/docs)
 for the standard composition workflow.
