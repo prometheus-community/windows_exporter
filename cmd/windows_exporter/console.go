@@ -58,16 +58,10 @@ func disableConsoleQuickEdit() (bool, func()) {
 		return false, noop
 	}
 
-	// ENABLE_EXTENDED_FLAGS is required to change ENABLE_QUICK_EDIT_MODE.
+	// ENABLE_EXTENDED_FLAGS is required to change ENABLE_QUICK_EDIT_MODE. conhost
+	// reports it, together with the QuickEdit and insert mode flags, from the
+	// creation of the console on, so the mode as read is the complete state.
 	newMode := (mode | windows.ENABLE_EXTENDED_FLAGS) &^ windows.ENABLE_QUICK_EDIT_MODE
-
-	// Until a process has set ENABLE_EXTENDED_FLAGS on a console, GetConsoleMode
-	// reports the extended flags as clear although QuickEdit and insert mode are
-	// on by default. Keep insert mode on in that case instead of switching the
-	// shell to overwrite mode.
-	if mode&windows.ENABLE_EXTENDED_FLAGS == 0 {
-		newMode |= windows.ENABLE_INSERT_MODE
-	}
 
 	if err := windows.SetConsoleMode(conin, newMode); err != nil {
 		_ = windows.CloseHandle(conin)
@@ -76,8 +70,6 @@ func disableConsoleQuickEdit() (bool, func()) {
 	}
 
 	return true, func() {
-		// The mode as read restores the previous state: without the extended
-		// flags, the console returns to its own defaults.
 		_ = windows.SetConsoleMode(conin, mode)
 		_ = windows.CloseHandle(conin)
 	}
