@@ -85,10 +85,15 @@ func main() {
 		}
 	}()
 
+	// The console mode is shared with the shell that started the exporter,
+	// so the previous mode is restored before the process exits.
+	restoreConsole := disableConsoleQuickEdit()
+
 	exitCode := run(ctx, os.Args[1:])
 
 	cancel(nil)
 	stop()
+	restoreConsole()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {

@@ -354,6 +354,18 @@ If the debugger cannot download a PDB, fetch it with cURL from
 `<id>` is the RSDS GUID of the module as 32 uppercase hex digits without
 dashes, followed by its age in hex.
 
+## Hang investigations
+
+When `/metrics` stops answering while the process stays alive, take
+`/debug/pprof/goroutine?debug=2` (needs `--debug.enabled`), twice a few seconds
+apart. Scrapes queued behind one goroutine in `syscall.WriteConsole` under
+`log/slog` mean the console paused output: with QuickEdit on, a click into the
+console window starts a selection, and Ctrl+C copies it instead of stopping the
+process. `cmd/windows_exporter/console.go` disables QuickEdit on the attached
+console for that reason. Without goroutines in Go code, or when pprof doesn't
+answer either, ask for a full process dump and the loaded module list
+(`tasklist /m`); EDR hooks have caused such hangs (#2024).
+
 ## Dashboards, rules and runbooks
 
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
