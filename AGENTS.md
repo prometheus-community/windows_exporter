@@ -354,6 +354,61 @@ If the debugger cannot download a PDB, fetch it with cURL from
 `<id>` is the RSDS GUID of the module as 32 uppercase hex digits without
 dashes, followed by its age in hex.
 
+## Console mode and hangs
+
+The Windows console pauses all output of the attached processes while a text
+selection is active. In a conhost window (cmd.exe, PowerShell, RDP sessions)
+QuickEdit mode starts one on a click into the window, mark mode (`Ctrl+M` or
+the window menu) on request; Windows Terminal selects without pausing. A
+paused console blocks `WriteConsole`, so a `slog` handler writing to stdout or
+stderr blocks while holding its mutex, and every scrape that logs queues
+behind it: `/metrics` stops answering while the process stays alive. Ctrl+C
+copies the selection instead of sending the break signal, so it looks like a
+crash without a log line (#2024). `--log.level=debug` logs on every scrape and
+hits this within minutes; the default level needs a warning or error first.
+
+`cmd/windows_exporter/console.go` turns QuickEdit off while the exporter logs
+to a console and restores the previous mode when `run` returns. Rules for that
+code, from the conhost source (`src/host/getset.cpp`):
+
+- The flags live on the console input buffer. Open it as `CONIN$` instead of
+  using stdin, which may be redirected while the output still is a console.
+- `ENABLE_EXTENDED_FLAGS` must be set in the mode passed to `SetConsoleMode`
+  to change `ENABLE_QUICK_EDIT_MODE`, `ENABLE_INSERT_MODE` or
+  `ENABLE_AUTO_POSITION`; a mode without any of these four bits leaves them
+  alone and only stops `GetConsoleMode` from reporting them.
+- conhost sets `CONSOLE_USE_PRIVATE_FLAGS` when it creates the console
+  (`src/host/output.cpp`), so `GetConsoleMode` reports those four bits with
+  their real state from the start. Restore the mode exactly as read; do not
+  guess defaults. The mode is shared with the shell that started the exporter,
+  so restore it on every exit path after flag parsing (`--help`, usage errors
+  and startup failures included). A hard kill skips the restore.
+- Run it only when the log destination is stdout or stderr. A service has no
+  console, and a file or the event log is not affected by selections.
+
+When `/metrics` stops answering while the process stays alive, take
+`/debug/pprof/goroutine?debug=2` (needs `--debug.enabled`), twice a few seconds
+apart. One goroutine in `syscall.WriteConsole` under `log/slog` with the
+collectors waiting on a mutex is the paused console above. Without goroutines
+in Go code, or when pprof doesn't answer either, ask for a full process dump
+and the loaded module list (`tasklist /m`); EDR hooks have caused such hangs
+(#2024). A hang of the service cannot be QuickEdit.
+
+## Service startup
+
+The service control manager gives a service 30 seconds by default (45 in some
+reports) to connect, and a host busy after a Windows update can spend that on
+loading the executable alone (#551). `cmd/windows_exporter/0_service.go`
+therefore calls `svc.Run` from the package-level `IsService` declaration, which
+runs before every `init` function and `main`; the `0_` prefix keeps it the first
+file of the package, and the file must not import packages with slow
+initialization. `Execute` reports `StartPending` and `Running` at once and
+leaves the actual startup to `run`, so a slow collector `Build` cannot time
+out the service start. The MSI adds delayed automatic start, a dependency on
+`wmiApSrv` and restart on failure after 60 seconds (`installer/files.wxs`).
+A startup failure before the logger exists goes to the event log and to
+`%TEMP%` through `logStartupError`.
+
 ## Dashboards, rules and runbooks
 
 Read [`contrib/mixin/README.md`](contrib/mixin/README.md) and
