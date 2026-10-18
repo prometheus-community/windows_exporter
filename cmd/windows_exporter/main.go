@@ -85,15 +85,10 @@ func main() {
 		}
 	}()
 
-	// The console mode is shared with the shell that started the exporter,
-	// so the previous mode is restored before the process exits.
-	restoreConsole := disableConsoleQuickEdit()
-
 	exitCode := run(ctx, os.Args[1:])
 
 	cancel(nil)
 	stop()
-	restoreConsole()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
@@ -220,6 +215,19 @@ func run(ctx context.Context, args []string) int {
 	}
 
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
+
+	// A console that pauses its output, for example for a QuickEdit text
+	// selection, blocks the logger and with it every scrape. The console mode
+	// is shared with the shell that started the exporter, so the previous mode
+	// is restored when run returns.
+	if dest := logFile.String(); dest == "stdout" || dest == "stderr" {
+		disabled, restoreConsole := disableConsoleQuickEdit()
+		defer restoreConsole()
+
+		if disabled {
+			logger.LogAttrs(ctx, slog.LevelDebug, "disabled the QuickEdit mode of the console")
+		}
+	}
 
 	if configFile != nil && *configFile != "" {
 		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file",
