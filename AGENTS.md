@@ -106,7 +106,7 @@ actual emitted metric values, types and labels through registry gathering;
 configuration or struct assertions alone do not prove publication is correct.
 
 Write invisible or non-ASCII whitespace in source and test data as Go escapes
-(` `, `　`, `​`), never as literal characters. Renovate warns about
+(`\u00a0`, `\u3000`, `\u200b`), never as literal characters. Renovate warns about
 hidden Unicode on `main`, and literals are hard to review.
 
 Read [`docs/ci-testing.md`](docs/ci-testing.md) before changing fixtures or test
