@@ -8,6 +8,10 @@
 
 A Prometheus exporter for Windows machines.
 
+## Dashboard and Alerting rules
+
+You can find [dashboards](https://github.com/prometheus-community/windows_exporter/tree/main/contrib/dashboard) and [alerting rules](https://github.com/prometheus-community/windows_exporter/tree/main/contrib/monitoring) in the [`contrib`](https://github.com/prometheus-community/windows_exporter/tree/main/contrib) directory.
+
 ## Collectors
 
 <!-- textlint-disable terminology -->
