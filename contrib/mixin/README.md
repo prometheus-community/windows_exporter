@@ -265,7 +265,9 @@ queries, IDs, variables, annotations, transformations, and tab/row layout.
 `git add --intent-to-add` and runs `git diff --exit-code`, displaying any drift. CI runs that check before the mixin tests. The dashboard uses its own
 variables for selectors; from `_config` it reads only `collectors`,
 `enableFleetTab`, `enableOverviewTab`, `enableTabDashboards`,
-`separateDashboardTabs` and the dashboard metadata below.
+`separateDashboardTabs`, `hypervDiskLatencyThresholdSeconds` (average latency
+per I/O above which the Hyper-V tab counts a virtual disk as slow, default
+`0.01`) and the dashboard metadata below.
 
 ### Metadata
 
@@ -276,6 +278,7 @@ Every dashboard has a readable UID (`metadata.name`) built from
 | --- | --- | --- |
 | Full, all tabs | `windows-exporter-full` | Windows Exporter / Full |
 | One tab | `windows-exporter-<tab>`, for example `windows-exporter-cpu` or `windows-exporter-scheduled-tasks` | Windows Exporter / `<tab>` |
+| Hyper-V cluster, with the `hyperv` and `mscluster` collectors | `windows-exporter-hyper-v-cluster` | Windows Exporter / Hyper-V Cluster |
 
 `dashboardUID`, `dashboardTitle` and `dashboardDescription` override the UID,
 title and description of the full dashboard. `dashboardTags` sets the tags of

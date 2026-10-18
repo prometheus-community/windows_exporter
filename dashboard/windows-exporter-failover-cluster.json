@@ -1,0 +1,2813 @@
+{
+    "apiVersion": "dashboard.grafana.app/v2",
+    "kind": "Dashboard",
+    "metadata": {
+        "name": "windows-exporter-failover-cluster"
+    },
+    "spec": {
+        "annotations": [
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "builtIn": true,
+                    "enable": true,
+                    "hide": true,
+                    "iconColor": "rgba(0, 211, 255, 1)",
+                    "legacyOptions": {
+                        "type": "dashboard"
+                    },
+                    "name": "Annotations & Alerts",
+                    "query": {
+                        "datasource": {
+                            "name": "-- Grafana --"
+                        },
+                        "group": "grafana",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            },
+            {
+                "kind": "AnnotationQuery",
+                "spec": {
+                    "enable": true,
+                    "hide": false,
+                    "iconColor": "orange",
+                    "legacyOptions": {
+                        "expr": "windows_system_boot_time_timestamp{job=~\"$job\", instance=\"$instance\"} * 1000 > $__from < $__to",
+                        "step": "1m",
+                        "tagKeys": "instance",
+                        "textFormat": "",
+                        "titleFormat": "Reboot",
+                        "useValueForTime": "on"
+                    },
+                    "name": "Reboots",
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {},
+                        "version": "v0"
+                    }
+                }
+            }
+        ],
+        "cursorSync": "Crosshair",
+        "description": "Nodes, resource groups, resources, networks and Cluster Shared Volumes of the failover cluster of one Windows host.",
+        "editable": true,
+        "elements": {
+            "panel-330": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"}) == 0) or (0 * count(max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Cluster nodes in state Up. Requires the mscluster collector, which is not enabled by default.",
+                    "id": 330,
+                    "links": [],
+                    "title": "Nodes up",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-331": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"}) != 0) or (0 * count(max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Cluster nodes that are down, paused or joining. A paused node runs no new roles, for example during maintenance.",
+                    "id": 331,
+                    "links": [],
+                    "title": "Nodes not up",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 1
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 2
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-332": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"}) >= 2 < 4) or (0 * count(max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Resource groups (cluster roles, for example VMs) that failed or are only partially online.",
+                    "id": 332,
+                    "links": [],
+                    "title": "Groups failed",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-333": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"}) == 1) or (0 * count(max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Resource groups that are offline, for example stopped VMs. Offline is often intended.",
+                    "id": 333,
+                    "links": [],
+                    "title": "Groups offline",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-334": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (resource, type, resource_group) (windows_mscluster_resource_state{job=~\"$job\", instance=\"$instance\"}) == 4) or (0 * count(max by (resource, type, resource_group) (windows_mscluster_resource_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Cluster resources in state Failed.",
+                    "id": 334,
+                    "links": [],
+                    "title": "Resources failed",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-335": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(max by (network) (windows_mscluster_network_state{job=~\"$job\", instance=\"$instance\"}) != 3) or (0 * count(max by (network) (windows_mscluster_network_state{job=~\"$job\", instance=\"$instance\"})))",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Cluster networks that are unavailable, down or partitioned. A partitioned network has lost connectivity between some nodes.",
+                    "id": 335,
+                    "links": [],
+                    "title": "Networks not up",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 1
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-336": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max(windows_mscluster_cluster_quorum_type_value{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "__auto",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 100
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Quorum type of the cluster: node majority, file share witness or disk (storage) witness.",
+                    "id": 336,
+                    "links": [],
+                    "title": "Quorum",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "fixedColor": "text",
+                                        "mode": "fixed"
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "-1": {
+                                                    "color": "text",
+                                                    "index": 0,
+                                                    "text": "Unknown"
+                                                },
+                                                "1": {
+                                                    "color": "text",
+                                                    "index": 1,
+                                                    "text": "Node majority"
+                                                },
+                                                "2": {
+                                                    "color": "text",
+                                                    "index": 2,
+                                                    "text": "File share witness"
+                                                },
+                                                "3": {
+                                                    "color": "text",
+                                                    "index": 3,
+                                                    "text": "Disk witness"
+                                                },
+                                                "4": {
+                                                    "color": "text",
+                                                    "index": 4,
+                                                    "text": "None"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-337": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (node) (windows_mscluster_node_node_drain_status{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (node) (windows_mscluster_node_dynamic_weight{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"}))",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "D"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (node) (windows_mscluster_node_build_number{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "E"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "node",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true,
+                                                "Time 4": true,
+                                                "Time 5": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 1,
+                                                "Value #B": 2,
+                                                "Value #C": 3,
+                                                "Value #D": 4,
+                                                "Value #E": 5,
+                                                "node": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "State",
+                                                "Value #B": "Drain",
+                                                "Value #C": "Vote",
+                                                "Value #D": "Resource groups",
+                                                "Value #E": "Build",
+                                                "node": "Node"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "State, drain status, current vote, owned resource groups and build of each cluster node. Dynamic quorum removes the vote of some nodes to keep quorum when nodes fail.",
+                    "id": 337,
+                    "links": [],
+                    "title": "Nodes",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "State"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "-1": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "Unknown"
+                                                            },
+                                                            "0": {
+                                                                "color": "green",
+                                                                "index": 1,
+                                                                "text": "Up"
+                                                            },
+                                                            "1": {
+                                                                "color": "red",
+                                                                "index": 2,
+                                                                "text": "Down"
+                                                            },
+                                                            "2": {
+                                                                "color": "orange",
+                                                                "index": 3,
+                                                                "text": "Paused"
+                                                            },
+                                                            "3": {
+                                                                "color": "blue",
+                                                                "index": 4,
+                                                                "text": "Joining"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Drain"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "Not initiated"
+                                                            },
+                                                            "1": {
+                                                                "color": "blue",
+                                                                "index": 1,
+                                                                "text": "In progress"
+                                                            },
+                                                            "2": {
+                                                                "color": "text",
+                                                                "index": 2,
+                                                                "text": "Completed"
+                                                            },
+                                                            "3": {
+                                                                "color": "red",
+                                                                "index": 3,
+                                                                "text": "Failed"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Node"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-338": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (node) (windows_mscluster_node_state{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{node}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "State of each cluster node over time.",
+                    "id": 338,
+                    "links": [],
+                    "title": "Node state",
+                    "vizConfig": {
+                        "group": "state-timeline",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "fillOpacity": 90,
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineWidth": 0,
+                                        "spanNulls": false
+                                    },
+                                    "mappings": [
+                                        {
+                                            "options": {
+                                                "-1": {
+                                                    "color": "text",
+                                                    "index": 0,
+                                                    "text": "Unknown"
+                                                },
+                                                "0": {
+                                                    "color": "green",
+                                                    "index": 1,
+                                                    "text": "Up"
+                                                },
+                                                "1": {
+                                                    "color": "red",
+                                                    "index": 2,
+                                                    "text": "Down"
+                                                },
+                                                "2": {
+                                                    "color": "orange",
+                                                    "index": 3,
+                                                    "text": "Paused"
+                                                },
+                                                "3": {
+                                                    "color": "blue",
+                                                    "index": 4,
+                                                    "text": "Joining"
+                                                }
+                                            },
+                                            "type": "value"
+                                        }
+                                    ],
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "none"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "alignValue": "left",
+                                "legend": {
+                                    "displayMode": "list",
+                                    "placement": "bottom",
+                                    "showLegend": false
+                                },
+                                "mergeValues": false,
+                                "rowHeight": 1,
+                                "showValue": "never",
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "single",
+                                    "sort": "none"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-339": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (node) (max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": false,
+                                                "legendFormat": "{{node}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Resource groups each node owns. Steps show failovers and live migrations; a node without groups runs no roles.",
+                    "id": 339,
+                    "links": [],
+                    "title": "Resource groups per node",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-340": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"}) != 0",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (resource_group, node) (windows_mscluster_resourcegroup_owner_node{job=~\"$job\", instance=\"$instance\"} == 1) and on (resource_group) (max by (resource_group) (windows_mscluster_resourcegroup_state{job=~\"$job\", instance=\"$instance\"}) != 0)",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "resource_group",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Value #B": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 1,
+                                                "node": 2,
+                                                "resource_group": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "State",
+                                                "node": "Node",
+                                                "resource_group": "Resource group"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Resource groups that are not online and the node that owns them. Offline groups of stopped VMs are listed too.",
+                    "id": 340,
+                    "links": [],
+                    "title": "Resource groups not online",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "State"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "-1": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "Unknown"
+                                                            },
+                                                            "0": {
+                                                                "color": "green",
+                                                                "index": 1,
+                                                                "text": "Online"
+                                                            },
+                                                            "1": {
+                                                                "color": "text",
+                                                                "index": 2,
+                                                                "text": "Offline"
+                                                            },
+                                                            "2": {
+                                                                "color": "red",
+                                                                "index": 3,
+                                                                "text": "Failed"
+                                                            },
+                                                            "3": {
+                                                                "color": "orange",
+                                                                "index": 4,
+                                                                "text": "Partial online"
+                                                            },
+                                                            "4": {
+                                                                "color": "blue",
+                                                                "index": 5,
+                                                                "text": "Pending"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Resource group"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-341": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (resource, type, resource_group) (windows_mscluster_resource_state{job=~\"$job\", instance=\"$instance\"}) != 2",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (resource, node) (windows_mscluster_resource_owner_node{job=~\"$job\", instance=\"$instance\"} == 1) and on (resource) (max by (resource, type, resource_group) (windows_mscluster_resource_state{job=~\"$job\", instance=\"$instance\"}) != 2)",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "resource",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Value #B": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 3,
+                                                "node": 4,
+                                                "resource": 0,
+                                                "resource_group": 2,
+                                                "type": 1
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "State",
+                                                "node": "Node",
+                                                "resource": "Resource",
+                                                "resource_group": "Resource group",
+                                                "type": "Type"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Cluster resources that are not online, with their type, resource group and owner node.",
+                    "id": 341,
+                    "links": [],
+                    "title": "Resources not online",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "State"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "-1": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "Unknown"
+                                                            },
+                                                            "0": {
+                                                                "color": "text",
+                                                                "index": 1,
+                                                                "text": "Inherited"
+                                                            },
+                                                            "1": {
+                                                                "color": "blue",
+                                                                "index": 2,
+                                                                "text": "Initializing"
+                                                            },
+                                                            "128": {
+                                                                "color": "blue",
+                                                                "index": 6,
+                                                                "text": "Pending"
+                                                            },
+                                                            "129": {
+                                                                "color": "blue",
+                                                                "index": 7,
+                                                                "text": "Online pending"
+                                                            },
+                                                            "130": {
+                                                                "color": "blue",
+                                                                "index": 8,
+                                                                "text": "Offline pending"
+                                                            },
+                                                            "2": {
+                                                                "color": "green",
+                                                                "index": 3,
+                                                                "text": "Online"
+                                                            },
+                                                            "3": {
+                                                                "color": "text",
+                                                                "index": 4,
+                                                                "text": "Offline"
+                                                            },
+                                                            "4": {
+                                                                "color": "red",
+                                                                "index": 5,
+                                                                "text": "Failed"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Resource"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-342": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (network) (windows_mscluster_network_state{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (network) (windows_mscluster_network_role{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (network) (windows_mscluster_network_metric{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "network",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 1,
+                                                "Value #B": 2,
+                                                "Value #C": 3,
+                                                "network": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "State",
+                                                "Value #B": "Role",
+                                                "Value #C": "Metric",
+                                                "network": "Network"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "State, role and metric of each cluster network. The cluster prefers networks with a lower metric for cluster traffic.",
+                    "id": 342,
+                    "links": [],
+                    "title": "Networks",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "State"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "-1": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "Unknown"
+                                                            },
+                                                            "0": {
+                                                                "color": "red",
+                                                                "index": 1,
+                                                                "text": "Unavailable"
+                                                            },
+                                                            "1": {
+                                                                "color": "red",
+                                                                "index": 2,
+                                                                "text": "Down"
+                                                            },
+                                                            "2": {
+                                                                "color": "orange",
+                                                                "index": 3,
+                                                                "text": "Partitioned"
+                                                            },
+                                                            "3": {
+                                                                "color": "green",
+                                                                "index": 4,
+                                                                "text": "Up"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Role"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "mappings",
+                                                "value": [
+                                                    {
+                                                        "options": {
+                                                            "0": {
+                                                                "color": "text",
+                                                                "index": 0,
+                                                                "text": "None"
+                                                            },
+                                                            "1": {
+                                                                "color": "text",
+                                                                "index": 1,
+                                                                "text": "Cluster"
+                                                            },
+                                                            "2": {
+                                                                "color": "text",
+                                                                "index": 2,
+                                                                "text": "Client"
+                                                            },
+                                                            "3": {
+                                                                "color": "text",
+                                                                "index": 3,
+                                                                "text": "Cluster and client"
+                                                            }
+                                                        },
+                                                        "type": "value"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "type": "color-text"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Network"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-343": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (shared_volume) (windows_mscluster_shared_volumes_total_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "max by (shared_volume) (windows_mscluster_shared_volumes_free_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "1 - max by (shared_volume) (windows_mscluster_shared_volumes_free_bytes{job=~\"$job\", instance=\"$instance\"}) / max by (shared_volume) (windows_mscluster_shared_volumes_total_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "format": "table",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "C"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": [
+                                {
+                                    "group": "joinByField",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "byField": "shared_volume",
+                                            "mode": "outer"
+                                        }
+                                    }
+                                },
+                                {
+                                    "group": "organize",
+                                    "kind": "Transformation",
+                                    "spec": {
+                                        "options": {
+                                            "excludeByName": {
+                                                "Time": true,
+                                                "Time 1": true,
+                                                "Time 2": true,
+                                                "Time 3": true
+                                            },
+                                            "includeByName": {},
+                                            "indexByName": {
+                                                "Value #A": 1,
+                                                "Value #B": 2,
+                                                "Value #C": 3,
+                                                "shared_volume": 0
+                                            },
+                                            "renameByName": {
+                                                "Value #A": "Size",
+                                                "Value #B": "Free",
+                                                "Value #C": "Used",
+                                                "shared_volume": "Volume"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "description": "Size, free space and used share of each Cluster Shared Volume. Requires the mscluster collector.",
+                    "id": 343,
+                    "links": [],
+                    "title": "Cluster Shared Volumes",
+                    "vizConfig": {
+                        "group": "table",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "custom": {
+                                        "align": "auto",
+                                        "cellOptions": {
+                                            "type": "auto"
+                                        },
+                                        "filterable": false,
+                                        "inspect": false,
+                                        "minWidth": 60
+                                    },
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": "^(Size|Free)$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "bytes"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "Used"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "percentunit"
+                                            },
+                                            {
+                                                "id": "min",
+                                                "value": 0
+                                            },
+                                            {
+                                                "id": "max",
+                                                "value": 1
+                                            },
+                                            {
+                                                "id": "decimals",
+                                                "value": 1
+                                            },
+                                            {
+                                                "id": "thresholds",
+                                                "value": {
+                                                    "mode": "absolute",
+                                                    "steps": [
+                                                        {
+                                                            "color": "green",
+                                                            "value": null
+                                                        },
+                                                        {
+                                                            "color": "orange",
+                                                            "value": 0.8
+                                                        },
+                                                        {
+                                                            "color": "red",
+                                                            "value": 0.9
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "id": "color",
+                                                "value": {
+                                                    "mode": "thresholds"
+                                                }
+                                            },
+                                            {
+                                                "id": "custom.cellOptions",
+                                                "value": {
+                                                    "mode": "basic",
+                                                    "type": "gauge",
+                                                    "valueDisplayMode": "text"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "options": {
+                                "cellHeight": "sm",
+                                "enablePagination": false,
+                                "footer": {
+                                    "countRows": false,
+                                    "fields": "",
+                                    "reducer": [
+                                        "sum"
+                                    ],
+                                    "show": false
+                                },
+                                "showHeader": true,
+                                "sortBy": [
+                                    {
+                                        "desc": false,
+                                        "displayName": "Volume"
+                                    }
+                                ]
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-344": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "1 - max by (shared_volume) (windows_mscluster_shared_volumes_free_bytes{job=~\"$job\", instance=\"$instance\"}) / max by (shared_volume) (windows_mscluster_shared_volumes_total_bytes{job=~\"$job\", instance=\"$instance\"})",
+                                                "instant": false,
+                                                "legendFormat": "{{shared_volume}}",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Used share of each Cluster Shared Volume. Thin provisioned virtual hard disks keep growing into the free space.",
+                    "id": 344,
+                    "links": [],
+                    "title": "Cluster Shared Volume usage",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "dashed"
+                                        }
+                                    },
+                                    "max": 1,
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            },
+                                            {
+                                                "color": "orange",
+                                                "value": 0.8
+                                            },
+                                            {
+                                                "color": "red",
+                                                "value": 0.9
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            }
+        },
+        "layout": {
+            "kind": "RowsLayout",
+            "spec": {
+                "rows": [
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-330"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-331"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-332"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-333"
+                                                },
+                                                "height": 4,
+                                                "width": 3,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-334"
+                                                },
+                                                "height": 4,
+                                                "width": 3,
+                                                "x": 15,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-335"
+                                                },
+                                                "height": 4,
+                                                "width": 3,
+                                                "x": 18,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-336"
+                                                },
+                                                "height": 4,
+                                                "width": 3,
+                                                "x": 21,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Summary"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-337"
+                                                },
+                                                "height": 7,
+                                                "width": 24,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-338"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 7
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-339"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 7
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Nodes"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-340"
+                                                },
+                                                "height": 9,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-341"
+                                                },
+                                                "height": 9,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Resource groups and resources"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-342"
+                                                },
+                                                "height": 6,
+                                                "width": 24,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Networks"
+                        }
+                    },
+                    {
+                        "kind": "RowsLayoutRow",
+                        "spec": {
+                            "collapse": false,
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-343"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-344"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Cluster Shared Volumes"
+                        }
+                    }
+                ]
+            }
+        },
+        "links": [
+            {
+                "asDropdown": true,
+                "icon": "external link",
+                "includeVars": true,
+                "keepTime": true,
+                "tags": [
+                    "prometheus",
+                    "windows",
+                    "windows_exporter"
+                ],
+                "targetBlank": false,
+                "title": "Windows Exporter",
+                "tooltip": "Dashboards for windows_exporter",
+                "type": "dashboards",
+                "url": ""
+            },
+            {
+                "asDropdown": false,
+                "icon": "doc",
+                "includeVars": false,
+                "keepTime": false,
+                "tags": [],
+                "targetBlank": true,
+                "title": "windows_exporter",
+                "tooltip": "",
+                "type": "link",
+                "url": "https://github.com/prometheus-community/windows_exporter"
+            }
+        ],
+        "liveNow": false,
+        "preload": false,
+        "tags": [
+            "prometheus",
+            "windows",
+            "windows_exporter"
+        ],
+        "timeSettings": {
+            "autoRefresh": "1m",
+            "autoRefreshIntervals": [
+                "5s",
+                "10s",
+                "30s",
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "2h",
+                "1d"
+            ],
+            "fiscalYearStartMonth": 0,
+            "from": "now-3h",
+            "hideTimepicker": false,
+            "to": "now"
+        },
+        "title": "Windows Exporter / Failover Cluster",
+        "variables": [
+            {
+                "kind": "DatasourceVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Data source",
+                    "multi": false,
+                    "name": "datasource",
+                    "options": [],
+                    "pluginId": "prometheus",
+                    "refresh": "onDashboardLoad",
+                    "regex": "",
+                    "skipUrlSync": false
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname, job)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Job",
+                    "multi": true,
+                    "name": "job",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname, job)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Hostname",
+                    "multi": true,
+                    "name": "hostname",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\"}, hostname)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": "",
+                        "value": ""
+                    },
+                    "definition": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Instance",
+                    "multi": false,
+                    "name": "instance",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}, instance)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            }
+        ]
+    }
+}

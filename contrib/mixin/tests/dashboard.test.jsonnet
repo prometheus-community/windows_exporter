@@ -35,6 +35,8 @@ local results = {
   diskWithoutDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true }))).Disk,
   diskWithDiskdrive: summary(render(only({ logical_disk: true, physical_disk: true, diskdrive: true }))).Disk,
   storageSpacesOnly: summary(render(only({ storage_spaces: true }))).Disk,
+  hypervOnly: summary(render(only({ hyperv: true }))),
+  msclusterOnly: summary(render(only({ mscluster: true }))),
   // A collectors object given without +: enables only the listed collectors.
   replaced: summary(render(function(_) { os: true, cpu: true })),
   // Only collector tabs, for a compact dashboard.
@@ -109,7 +111,7 @@ assert custom['windows-exporter-cpu.json'].spec.title == 'Windows / CPU' : 'cust
 assert custom['windows-exporter.json'].metadata.name == 'win-full' : 'custom prefix: got full UID ' + custom['windows-exporter.json'].metadata.name;
 assert std.objectFields(dashboards(function(collectors) collectors, { enableTabDashboards: false })) == ['windows-exporter.json'] : 'enableTabDashboards: false renders tab dashboards';
 
-assert std.length(std.objectFields(results.all)) == 15 : 'all: got ' + std.join(', ', std.objectFields(results.all));
+assert std.length(std.objectFields(results.all)) == 16 : 'all: got ' + std.join(', ', std.objectFields(results.all));
 // MSSQL renders only as a dashboard of its own unless separateDashboardTabs drops it.
 local withMSSQL = dashboards(only({ mssql: true }));
 assert !std.objectHas(results.all, 'MSSQL') : 'all: the full dashboard has the MSSQL tab';
@@ -144,5 +146,41 @@ assert expect('collectorTabsOnly', {
   CPU: ['Summary', 'Utilization', 'System calls and frequency'],
   Exporter: exporter,
 });
+
+assert expect('hypervOnly', {
+  Exporter: exporter,
+  Fleet: ['Summary', 'Hosts'],
+  'Hyper-V': ['Summary', 'Virtual machines', 'CPU', 'Memory', 'Storage', 'Network'],
+  Overview: ['Summary'],
+});
+
+local hypervFull = render(only({ hyperv: true }));
+local hypervMemory = render(only({ hyperv: true, memory: true }));
+assert !std.objectHas(hypervFull.spec.elements, 'panel-290') : 'hyperv without memory: VM memory / host RAM stat rendered';
+assert std.objectHas(hypervMemory.spec.elements, 'panel-290') : 'hyperv with memory: VM memory / host RAM stat missing';
+
+assert std.all([std.objectHas(hypervFull.spec.elements, 'panel-' + id) for id in [293, 294, 295, 296, 297, 298]]) : 'hyperv: Hyper-V tab additions missing';
+
+assert expect('msclusterOnly', {
+  Exporter: exporter,
+  'Failover Cluster': ['Summary', 'Nodes', 'Resource groups and resources', 'Networks', 'Cluster Shared Volumes'],
+  Fleet: ['Summary', 'Hosts'],
+  Overview: ['Summary'],
+});
+
+// The Hyper-V cluster dashboard needs the hyperv and mscluster collectors.
+assert !std.objectHas(dashboards(only({ hyperv: true })), 'windows-exporter-hyper-v-cluster.json') : 'hyperv without mscluster: got a Hyper-V cluster dashboard';
+local hypervCluster = dashboards(only({ hyperv: true, mscluster: true, memory: true, storage_spaces: true }))['windows-exporter-hyper-v-cluster.json'];
+assert hypervCluster.metadata.name == 'windows-exporter-hyper-v-cluster' : 'hyper-v cluster: got UID ' + hypervCluster.metadata.name;
+assert hypervCluster.spec.title == 'Windows Exporter / Hyper-V Cluster' : 'hyper-v cluster: got title ' + hypervCluster.spec.title;
+assert summary(hypervCluster) == {
+  Overview: ['Summary', 'Hosts', 'Load'],
+  Cluster: ['Summary', 'Nodes', 'Resource groups and resources', 'Networks'],
+  Host: ['Summary', 'Virtual machines', 'CPU', 'Memory', 'Storage', 'Network'],
+  VM: ['Summary', 'CPU', 'Memory', 'Disks', 'Network'],
+  'VM disks': ['Summary', 'Capacity', 'Virtual hard disks', 'Performance'],
+  Storage: ['Summary', 'Cluster Shared Volumes', 'Storage Spaces Direct'],
+} : 'hyper-v cluster: got ' + std.manifestJson(summary(hypervCluster));
+assert variableNames(hypervCluster) == ['datasource', 'job', 'cluster', 'cluster_instance', 'instance', 'vm'] : 'hyper-v cluster: got variables ' + std.join(', ', variableNames(hypervCluster));
 
 results

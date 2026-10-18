@@ -1,14 +1,39 @@
+local h = import '../lib/hyperv.libsonnet';
 local b = import 'builders.libsonnet';
 
-function(on)
+function(on, config)
+  local host = 'job=~"$job", instance="$instance"';
+  local metric(name) = '%s{%s}' % [name, host];
+  local threshold = std.toString(config.hypervDiskLatencyThresholdSeconds);
+  // Latency per I/O of each virtual disk with at least one I/O per second.
+  local deviceLatency = '%s / (%s > 1)' % [h.deviceRate('io_latency_seconds_total', host), h.deviceRate('throughput_total', host)];
+  local byVm(expr) = 'sum by (vm) (%s)' % h.withVm(expr, host);
+  local size = 'max by (instance, path) (%s)' % metric('windows_hyperv_virtual_hard_disk_size_bytes');
+  local file = 'max by (instance, path) (%s)' % metric('windows_hyperv_virtual_hard_disk_file_size_bytes');
+  // Only dynamic disks grow; a differencing disk's parent already holds most of its size.
+  local dynamic(name) = 'max by (instance, path) (windows_hyperv_virtual_hard_disk_%s{%s, type="dynamic"})' % [name, host];
+  // Range-wide values of the slowest disks: time above the threshold in
+  // 5-minute steps ranks permanently slow disks above short spikes.
+  local slowest = 'topk(10, count_over_time((%s > %s)[$__range:5m]) * 300)' % [deviceLatency, threshold];
+  // Tables show every label as a column, so keep only the joined ones.
+  local slowTable(expr) = 'max by (device, disk, vm) (%s)' % h.diskName(h.withVm(expr, host));
   b.tab(
     'Hyper-V',
     b.rows([
-      if on('hyperv') then b.summary([63, 64, 65, 66, 67, 68]),
-      if on('hyperv') then b.row('CPU', b.flow([[69, 12, 8], [70, 12, 8]])),
+      if on('hyperv') then b.summary([63, 64, 65, 66, 67, 68, if on('memory') then 290, 291]),
+      if on('hyperv') then b.row('Virtual machines', b.flow([[292, 24, 10]])),
+      if on('hyperv') then b.row('CPU', b.flow([[69, 12, 8], [70, 12, 8], [293, 24, 8]])),
       if on('hyperv') then b.row('Memory', b.flow([[72, 8, 8], [73, 8, 8], [74, 8, 8]])),
-      if on('hyperv') then b.row('Storage', b.flow([[76, 8, 8], [77, 8, 8], [78, 8, 8]])),
-      if on('hyperv') then b.row('Network', b.flow([[80, 8, 8], [81, 8, 8], [82, 8, 8]])),
+      if on('hyperv') then b.row('Storage', b.flow([
+        [76, 8, 8],
+        [77, 8, 8],
+        [78, 8, 8],
+        [294, 24, 9],
+        [295, 8, 4],
+        [296, 8, 4],
+        [297, 8, 4],
+      ])),
+      if on('hyperv') then b.row('Network', b.flow([[80, 8, 8], [81, 8, 8], [82, 8, 8], [298, 24, 8]])),
     ]),
     [
       b.stat(63, 'Virtual machines', 'Needs the hyperv collector, which is not enabled by default.', 'sum(windows_hyperv_virtual_machines{job=~"$job", instance="$instance"})', 'short'),
@@ -122,7 +147,7 @@ function(on)
       }),
 
       b.panel.new(73, 'VM memory pressure', 'timeseries')
-      + b.panel.withDescription('Memory a VM needs as a share of the memory it has. Above 100% the VM needs more memory than it is assigned.')
+      + b.panel.withDescription("Hyper-V memory demand of each VM as a share of its assigned memory. The demand follows the guest's commit charge, not the RAM in use, and is reported for static and dynamic memory. Above 100% the guest has committed more than its RAM: the rest is only reserved or paged out. Check paging inside the guest before adding RAM.")
       + b.panel.withQueries([
         b.query.new('windows_hyperv_dynamic_memory_vm_pressure_current_ratio{job=~"$job", instance="$instance"}', 'A')
         + b.query.withLegendFormat('{{vm}}'),
@@ -319,5 +344,70 @@ function(on)
           ],
         },
       ]),
+
+      b.stat(290, 'VM memory / host RAM', "Memory assigned to all VMs as a share of the host's physical memory. Needs the memory collector.", 'sum(%s) / max(%s)' % [metric('windows_hyperv_dynamic_memory_vm_physical_bytes'), metric('windows_memory_physical_total_bytes')], 'percentunit', b.levels(0.85, 0.95)),
+
+      b.stat(291, 'Slow virtual disks', 'Virtual disks with an average latency per I/O above %s s and at least one I/O per second.' % threshold, 'count((%s) > %s) or vector(0)' % [deviceLatency, threshold], 'short', b.levels(1, 5)),
+
+      b.joinedTable(292, 'Virtual machines', "VMs running on this host. CPU usage is busy time on the host's physical processors relative to the VM's own virtual processors, not the utilization Task Manager shows inside the VM; committed vs. RAM is the Hyper-V memory demand (guest commit charge) as a share of the assigned memory.", 'vm', [
+        'max by (vm) (%s)' % metric('windows_hyperv_vm_processors'),
+        'max by (vm) (%s)' % metric('windows_hyperv_dynamic_memory_vm_physical_bytes'),
+        '1 - max by (vm) (%s) / max by (vm) (%s)' % [metric('windows_hyperv_dynamic_memory_vm_guest_available_bytes'), metric('windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes')],
+        'max by (vm) (%s)' % metric('windows_hyperv_dynamic_memory_vm_pressure_current_ratio'),
+        'sum by (vm) (rate(%s[$__rate_interval])) / max by (vm) (%s)' % [metric('windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total'), metric('windows_hyperv_vm_processors')],
+        byVm('(%s + %s)' % [h.deviceRate('operations_read_total', host), h.deviceRate('operations_written_total', host)]),
+        h.latency(byVm(h.deviceRate('io_latency_seconds_total', host)), byVm(h.deviceRate('throughput_total', host))),
+      ], [
+        ['vm', 'VM'],
+        ['Value #A', 'vCPUs'],
+        ['Value #B', 'Assigned memory'],
+        ['Value #C', 'RAM in use'],
+        ['Value #D', 'Committed vs. RAM'],
+        ['Value #E', 'CPU'],
+        ['Value #F', 'Disk IOPS'],
+        ['Value #G', 'Disk latency'],
+      ], [
+        { matcher: { id: 'byName', options: 'Assigned memory' }, properties: [{ id: 'unit', value: 'bytes' }] },
+        { matcher: { id: 'byRegexp', options: '^(RAM in use|CPU)$' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(0.85, 0.95) } }] },
+        { matcher: { id: 'byName', options: 'Committed vs. RAM' }, properties: [{ id: 'unit', value: 'percentunit' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(1, 1.5) } }] },
+        { matcher: { id: 'byName', options: 'Disk IOPS' }, properties: [{ id: 'unit', value: 'iops' }] },
+        { matcher: { id: 'byName', options: 'Disk latency' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-text' } }, { id: 'thresholds', value: { mode: 'absolute', steps: [{ color: 'green', value: null }, { color: 'orange', value: config.hypervDiskLatencyThresholdSeconds }] } }] },
+      ]),
+
+      b.graph(293, 'Busiest VMs', "The ten VMs with the highest CPU usage at each point in time, so the graph can show more than ten VMs over the time range relative to their own virtual processors (run time per second; 100% means every virtual processor ran all the time). Near 100% a VM runs at its limit and needs more virtual processors, even when the host has CPU left. This is busy time on the host's physical processors as Hyper-V sees it, not the utilization Task Manager shows inside the VM: when a virtual processor waits for a physical processor, the guest counts that time as busy, the host doesn't.", 'percentunit', [
+        ['topk(10, sum by (vm) (rate(%s[$__rate_interval])) / max by (vm) (%s))' % [metric('windows_hyperv_hypervisor_virtual_processor_run_time_seconds_total'), metric('windows_hyperv_vm_processors')], '{{vm}}'],
+      ])
+      + b.panel.withDefaults({ max: 1 }),
+
+      b.joinedTable(294, 'Slowest virtual disks', 'Virtual disks that were above %s s average latency per I/O in the time range, worst first. Time above threshold is counted in 5-minute steps, so permanently slow disks rank above short spikes. Disks with less than one I/O per second are ignored.' % threshold, 'device', [
+        slowTable(slowest),
+        slowTable('avg_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
+        slowTable('max_over_time((%s)[$__range:5m]) and on (instance, device) %s' % [deviceLatency, slowest]),
+        slowTable('avg_over_time((%s + %s)[$__range:5m]) and on (instance, device) %s' % [h.deviceRate('operations_read_total', host), h.deviceRate('operations_written_total', host), slowest]),
+      ], [
+        ['disk', 'Disk'],
+        ['vm', 'VM'],
+        ['Value #A', 'Time above threshold'],
+        ['Value #B', 'Average latency'],
+        ['Value #C', 'Maximum latency'],
+        ['Value #D', 'IOPS'],
+      ], [
+        { matcher: { id: 'byName', options: 'device' }, properties: [{ id: 'custom.hidden', value: true }] },
+        { matcher: { id: 'byName', options: 'Time above threshold' }, properties: [{ id: 'unit', value: 's' }, { id: 'custom.cellOptions', value: { type: 'color-background', mode: 'basic' } }, { id: 'thresholds', value: { mode: 'absolute', steps: b.levels(900, 3600) } }] },
+        { matcher: { id: 'byRegexp', options: '^(Average|Maximum) latency$' }, properties: [{ id: 'unit', value: 's' }] },
+        { matcher: { id: 'byName', options: 'IOPS' }, properties: [{ id: 'unit', value: 'iops' }] },
+      ])
+      + b.panel.withOptions({ sortBy: [{ desc: true, displayName: 'Time above threshold' }] }),
+
+      b.stat(295, 'VHD size', 'Maximum size of all virtual hard disks of the VMs on this host.', 'sum(%s)' % size, 'bytes'),
+
+      b.stat(296, 'VHD file size', 'Space the virtual hard disk files of the VMs on this host take on storage. For a VM with checkpoints, only the current .avhdx counts, not its parent disks.', 'sum(%s)' % file, 'bytes'),
+
+      b.stat(297, 'VHD growth if thick', 'Space the dynamic (thin provisioned) disks of the VMs on this host would still take if every one grew to its full size.', 'sum(clamp_min(%s - %s, 0))' % [dynamic('size_bytes'), dynamic('file_size_bytes')], 'bytes'),
+
+      b.graph(298, 'Dropped packets per VM', 'Packets dropped per second by the network adapters of each VM; incoming drops are drawn below the axis. Adapters are matched to VMs by the VM GUID in their name.', 'pps', [
+        ['sum by (vm) (%s)' % h.vnicVm('rate(%s[$__rate_interval])' % metric('windows_hyperv_virtual_network_adapter_outgoing_dropped_packets_total'), host), '{{vm}} outgoing'],
+        ['sum by (vm) (%s)' % h.vnicVm('rate(%s[$__rate_interval])' % metric('windows_hyperv_virtual_network_adapter_incoming_dropped_packets_total'), host), '{{vm}} incoming'],
+      ], below='.* incoming$'),
     ]
   )
