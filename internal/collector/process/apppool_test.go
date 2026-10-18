@@ -68,7 +68,7 @@ var commandLineTests = []struct {
 	{"control character after program", "a \vb", []string{`a`, "\vb"}},
 	{"control character after quoted program", "\"a\"\vb", []string{`a`, "\vb"}},
 	{"control character in argument", "a b\vc\nd", []string{`a`, "b\vc\nd"}},
-	{"unicode spaces", "a b c　d", []string{"a b", "c　d"}},
+	{"unicode spaces", "a\u00a0b c\u3000d", []string{"a\u00a0b", "c\u3000d"}},
 	{"three quotes", `a """b c`, []string{`a`, `"b`, `c`}},
 	{"unicode", `a "Café Пул ✓ Ωμέγα" b`, []string{`a`, `Café Пул ✓ Ωμέγα`, `b`}},
 	{"was command line", wasCommandLine, []string{
