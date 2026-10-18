@@ -1,0 +1,508 @@
+# Alerts of the opt-in collectors, rendered with tests/config.libsonnet.
+rule_files:
+  - custom_rules.yaml
+  - custom_alerts.yaml
+evaluation_interval: 1m
+group_eval_order:
+  - windows-exporter-recording
+  - windows-memory
+  - windows-disk
+  - windows-system
+  - windows-time
+  - windows-scheduled-task
+  - windows-update
+  - windows-hyperv
+  - windows-cluster
+  - windows-storage-spaces
+  - windows-dhcp
+  - windows-dns
+
+tests:
+  - name: Page file usage fires above the custom threshold and resolves after keep_firing_for
+    interval: 1m
+    input_series:
+      - series: 'windows_pagefile_free_bytes{job="windows-custom", instance="host:9182", cluster="test", file="C:\\pagefile.sys"}'
+        values: '20x19 50x10'
+      - series: 'windows_pagefile_limit_bytes{job="windows-custom", instance="host:9182", cluster="test", file="C:\\pagefile.sys"}'
+        values: '100x30'
+      - series: 'windows_pagefile_free_bytes{job="windows-custom", instance="host:9182", cluster="test", file="D:\\pagefile.sys"}'
+        values: '30x30'
+      - series: 'windows_pagefile_limit_bytes{job="windows-custom", instance="host:9182", cluster="test", file="D:\\pagefile.sys"}'
+        values: '100x30'
+      - series: 'windows_pagefile_free_bytes{job="windows-custom", instance="host:9182", cluster="test", file="E:\\pagefile.sys"}'
+        values: '0x30'
+      - series: 'windows_pagefile_limit_bytes{job="windows-custom", instance="host:9182", cluster="test", file="E:\\pagefile.sys"}'
+        values: '0x30'
+    alert_rule_test:
+      - {alertname: WindowsPagefileAlmostFull, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsPagefileAlmostFull
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, file: 'C:\pagefile.sys', severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowspagefilealmostfull/
+              summary: Windows page file is almost full
+              description: 'Page file C:\pagefile.sys on host:9182 has been more than 75% in use for 15 minutes.'
+      - alertname: WindowsPagefileAlmostFull
+        eval_time: 24m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, file: 'C:\pagefile.sys', severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowspagefilealmostfull/
+              summary: Windows page file is almost full
+              description: 'Page file C:\pagefile.sys on host:9182 has been more than 75% in use for 15 minutes.'
+      - {alertname: WindowsPagefileAlmostFull, eval_time: 25m, exp_alerts: []}
+
+  - name: Disk drive status reports the status the drive has, resolves at once and skips Unknown, and the license alert waits an hour
+    interval: 1m
+    input_series:
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE0", status="OK"}'
+        values: '0x9 1x10'
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE0", status="Pred Fail"}'
+        values: '1x9 0x10'
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE2", status="OK"}'
+        values: '0x20'
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE2", status="Unknown"}'
+        values: '1x20'
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE1", status="OK"}'
+        values: '1x10'
+      - series: 'windows_diskdrive_status{job="windows-custom", instance="host:9182", cluster="test", device_id="\\\\.\\PHYSICALDRIVE1", status="Pred Fail"}'
+        values: '0x10'
+      - series: 'windows_license_status{job="windows-custom", instance="host:9182", cluster="test", state="genuine"}'
+        values: '0x60'
+      - series: 'windows_license_status{job="windows-custom", instance="host:9182", cluster="test", state="invalid_license"}'
+        values: '1x60'
+      - series: 'windows_license_status{job="windows-custom", instance="licensed:9182", cluster="test", state="genuine"}'
+        values: '1x60'
+      - series: 'windows_license_status{job="windows-custom", instance="licensed:9182", cluster="test", state="invalid_license"}'
+        values: '0x60'
+    alert_rule_test:
+      - {alertname: WindowsDiskDriveNotOK, eval_time: 4m, exp_alerts: []}
+      - alertname: WindowsDiskDriveNotOK
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, device_id: '\\.\PHYSICALDRIVE0', status: Pred Fail, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskdrivenotok/
+              summary: Windows disk drive is not healthy
+              description: 'Disk drive \\.\PHYSICALDRIVE0 on host:9182 has reported status Pred Fail for 5 minutes.'
+      - alertname: WindowsDiskDriveNotOK
+        eval_time: 9m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, device_id: '\\.\PHYSICALDRIVE0', status: Pred Fail, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskdrivenotok/
+              summary: Windows disk drive is not healthy
+              description: 'Disk drive \\.\PHYSICALDRIVE0 on host:9182 has reported status Pred Fail for 5 minutes.'
+      - {alertname: WindowsDiskDriveNotOK, eval_time: 10m, exp_alerts: []}
+      - {alertname: WindowsLicenseNotGenuine, eval_time: 59m, exp_alerts: []}
+      - alertname: WindowsLicenseNotGenuine
+        eval_time: 60m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, state: invalid_license, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowslicensenotgenuine/
+              summary: Windows license is not genuine
+              description: 'Windows on host:9182 has reported license status invalid_license for 1 hour.'
+
+  - name: Clock source alert names the local source and ignores NTP and domain sources
+    interval: 1m
+    input_series:
+      - series: 'windows_time_clock_sync_source{job="windows-custom", instance="host:9182", cluster="test", type="Local CMOS Clock"}'
+        values: '1x10'
+      - series: 'windows_time_clock_sync_source{job="windows-custom", instance="host:9182", cluster="test", type="NTP"}'
+        values: '0x10'
+      - series: 'windows_time_clock_sync_source{job="windows-custom", instance="dc:9182", cluster="test", type="NT5DS"}'
+        values: '1x10'
+      - series: 'windows_time_clock_sync_source{job="windows-custom", instance="dc:9182", cluster="test", type="NoSync"}'
+        values: '0x10'
+    alert_rule_test:
+      - {alertname: WindowsClockSourceLocal, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsClockSourceLocal
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, type: Local CMOS Clock, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclocksourcelocal/
+              summary: Windows clock has no external time source
+              description: 'Windows Time on host:9182 has used Local CMOS Clock as its clock source for 10 minutes.'
+
+  - name: Scheduled task alert fires for unmapped and terminated results after an hour and skips disabled and deselected tasks
+    interval: 1m
+    input_series:
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Backup", status="unknown"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Backup", status="success"}'
+        values: '0x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Cleanup", status="terminated"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Report", status="has_not_run"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Report", status="unknown"}'
+        values: '0x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Ignored/Flaky", status="unknown"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_last_result_status{job="windows-custom", instance="host:9182", cluster="test", task="/Retired", status="unknown"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_state{job="windows-custom", instance="host:9182", cluster="test", task="/Retired", state="disabled"}'
+        values: '1x60'
+      - series: 'windows_scheduled_task_state{job="windows-custom", instance="host:9182", cluster="test", task="/Retired", state="ready"}'
+        values: '0x60'
+      - series: 'windows_scheduled_task_state{job="windows-custom", instance="host:9182", cluster="test", task="/Backup", state="disabled"}'
+        values: '0x60'
+      - series: 'windows_scheduled_task_state{job="windows-custom", instance="host:9182", cluster="test", task="/Backup", state="ready"}'
+        values: '1x60'
+    alert_rule_test:
+      - {alertname: WindowsScheduledTaskFailed, eval_time: 59m, exp_alerts: []}
+      - alertname: WindowsScheduledTaskFailed
+        eval_time: 60m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, task: /Backup, status: unknown, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsscheduledtaskfailed/
+              summary: Windows scheduled task did not succeed
+              description: 'The last run of task /Backup on host:9182 ended with result unknown, and the task has not succeeded in the hour since.'
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, task: /Cleanup, status: terminated, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsscheduledtaskfailed/
+              summary: Windows scheduled task did not succeed
+              description: 'The last run of task /Cleanup on host:9182 ended with result terminated, and the task has not succeeded in the hour since.'
+
+  - name: Pending updates fire as info after the configured duration and count installations only
+    interval: 1m
+    input_series:
+      - series: 'windows_update_pending_info{job="windows-custom", instance="host:9182", cluster="test", id="a", revision="1", category="Security Updates", severity="Critical", title="KB1", deployment_action="installation"}'
+        values: '1x2880'
+      - series: 'windows_update_pending_info{job="windows-custom", instance="host:9182", cluster="test", id="b", revision="1", category="Updates", severity="", title="KB2", deployment_action="installation"}'
+        values: '1x2880'
+      - series: 'windows_update_pending_info{job="windows-custom", instance="host:9182", cluster="test", id="c", revision="1", category="Updates", severity="", title="KB3", deployment_action="uninstallation"}'
+        values: '1x2880'
+      - series: 'windows_update_pending_info{job="windows-custom", instance="clean:9182", cluster="test", id="d", revision="1", category="Updates", severity="", title="KB4", deployment_action="uninstallation"}'
+        values: '1x2880'
+    alert_rule_test:
+      - {alertname: WindowsUpdatesPending, eval_time: 47h, exp_alerts: []}
+      - alertname: WindowsUpdatesPending
+        eval_time: 48h
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, deployment_action: installation, severity: info}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsupdatespending/
+              summary: Windows updates are waiting for installation
+              description: 'host:9182 has had 2 updates waiting for installation for 2d.'
+
+  - name: Hyper-V alerts cover the WMI namespace and both replication health levels
+    interval: 1m
+    input_series:
+      - series: 'windows_hyperv_wmi_health{job="windows-custom", instance="hv:9182", cluster="test"}'
+        values: '0x15'
+      - series: 'windows_hyperv_replica_vm_health{job="windows-custom", instance="hv:9182", cluster="test", vm="web", vm_id="1", relationship="primary"}'
+        values: '3x15'
+      - series: 'windows_hyperv_replica_vm_health{job="windows-custom", instance="hv:9182", cluster="test", vm="db", vm_id="2", relationship="extended"}'
+        values: '2x15'
+      - series: 'windows_hyperv_replica_vm_health{job="windows-custom", instance="hv:9182", cluster="test", vm="dev", vm_id="3", relationship="primary"}'
+        values: '0x15'
+    alert_rule_test:
+      - {alertname: WindowsHyperVWMIUnhealthy, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsHyperVWMIUnhealthy
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'hv:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowshypervwmiunhealthy/
+              summary: Hyper-V WMI namespace is not responding
+              description: 'The Hyper-V WMI namespace on hv:9182 has not responded for 10 minutes; Hyper-V metrics are missing.'
+      - {alertname: WindowsHyperVReplicationCritical, eval_time: 4m, exp_alerts: []}
+      - alertname: WindowsHyperVReplicationCritical
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'hv:9182', cluster: test, vm: web, vm_id: '1', relationship: primary, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowshypervreplicationcritical/
+              summary: Hyper-V replication is critical
+              description: 'Replication of virtual machine web (primary) on hv:9182 has been in critical health for 5 minutes.'
+      - {alertname: WindowsHyperVReplicationWarning, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsHyperVReplicationWarning
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'hv:9182', cluster: test, vm: db, vm_id: '2', relationship: extended, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowshypervreplicationwarning/
+              summary: Hyper-V replication has a warning
+              description: 'Replication of virtual machine db (extended) on hv:9182 has been in warning health for 15 minutes.'
+
+  - name: Cluster alerts fire for down nodes, failed resources and groups, and nearly full shared volumes
+    interval: 1m
+    input_series:
+      - series: 'windows_mscluster_node_state{job="windows-custom", instance="node1:9182", cluster="test", node="node2"}'
+        values: '1x30'
+      - series: 'windows_mscluster_node_state{job="windows-custom", instance="node1:9182", cluster="test", node="node1"}'
+        values: '0x30'
+      - series: 'windows_mscluster_node_state{job="windows-custom", instance="node3:9182", cluster="test", node="node2"}'
+        values: '1x30'
+      - series: 'windows_mscluster_resource_state{job="windows-custom", instance="node1:9182", cluster="test", type="IP Address", resource_group="SQL", resource="SQL IP"}'
+        values: '4x30'
+      - series: 'windows_mscluster_resource_state{job="windows-custom", instance="node1:9182", cluster="test", type="Network Name", resource_group="SQL", resource="SQL Name"}'
+        values: '3x30'
+      - series: 'windows_mscluster_resourcegroup_state{job="windows-custom", instance="node1:9182", cluster="test", resource_group="SQL"}'
+        values: '2x30'
+      - series: 'windows_mscluster_resourcegroup_state{job="windows-custom", instance="node1:9182", cluster="test", resource_group="Cluster Group"}'
+        values: '1x30'
+      - series: 'windows_mscluster_shared_volumes_free_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Volume1", volume_guid="g1"}'
+        values: '15x19 50x10'
+      - series: 'windows_mscluster_shared_volumes_total_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Volume1", volume_guid="g1"}'
+        values: '100x30'
+      - series: 'windows_mscluster_shared_volumes_free_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Volume2", volume_guid="g2"}'
+        values: '5x30'
+      - series: 'windows_mscluster_shared_volumes_total_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Volume2", volume_guid="g2"}'
+        values: '100x30'
+      - series: 'windows_mscluster_shared_volumes_free_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="ClusterPerformanceHistory", volume_guid="g3"}'
+        values: '1x30'
+      - series: 'windows_mscluster_shared_volumes_total_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="ClusterPerformanceHistory", volume_guid="g3"}'
+        values: '100x30'
+      - series: 'windows_mscluster_shared_volumes_free_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Empty", volume_guid="g4"}'
+        values: '0x30'
+      - series: 'windows_mscluster_shared_volumes_total_bytes{job="windows-custom", instance="node1:9182", cluster="test", shared_volume="Empty", volume_guid="g4"}'
+        values: '0x30'
+    alert_rule_test:
+      - {alertname: WindowsClusterNodeDown, eval_time: 4m, exp_alerts: []}
+      - alertname: WindowsClusterNodeDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, node: node2, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclusternodedown/
+              summary: Failover cluster node is down
+              description: 'Cluster node node2 has been down for 5 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node3:9182', cluster: test, node: node2, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclusternodedown/
+              summary: Failover cluster node is down
+              description: 'Cluster node node2 has been down for 5 minutes, as reported by node3:9182.'
+      - alertname: WindowsClusterResourceFailed
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, type: IP Address, resource_group: SQL, resource: SQL IP, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclusterresourcefailed/
+              summary: Failover cluster resource has failed
+              description: 'Cluster resource SQL IP (IP Address) in group SQL has been in the failed state for 5 minutes, as reported by node1:9182.'
+      - alertname: WindowsClusterResourceGroupFailed
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, resource_group: SQL, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclusterresourcegroupfailed/
+              summary: Failover cluster resource group has failed
+              description: 'Cluster resource group SQL has been in the failed state for 5 minutes, as reported by node1:9182.'
+      - {alertname: WindowsClusterSharedVolumeAlmostFull, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsClusterSharedVolumeAlmostFull
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume1, volume_guid: g1, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume1 has had less than 20% free space for 15 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 20% free space for 15 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 10% free space for 15 minutes, as reported by node1:9182.'
+      - alertname: WindowsClusterSharedVolumeAlmostFull
+        eval_time: 24m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume1, volume_guid: g1, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume1 has had less than 20% free space for 15 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 20% free space for 15 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 10% free space for 15 minutes, as reported by node1:9182.'
+      - alertname: WindowsClusterSharedVolumeAlmostFull
+        eval_time: 25m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 20% free space for 15 minutes, as reported by node1:9182.'
+          - exp_labels: {job: windows-custom, instance: 'node1:9182', cluster: test, shared_volume: Volume2, volume_guid: g2, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclustersharedvolumealmostfull/
+              summary: Cluster shared volume is almost full
+              description: 'Cluster shared volume Volume2 has had less than 10% free space for 15 minutes, as reported by node1:9182.'
+
+  - name: Storage Spaces alerts skip the primordial pool and separate warning from unhealthy
+    interval: 1m
+    input_series:
+      - series: 'windows_storage_spaces_pool_health_status{job="windows-custom", instance="host:9182", cluster="test", pool="Pool A", unique_id="a"}'
+        values: '2x15'
+      - series: 'windows_storage_spaces_pool_info{job="windows-custom", instance="host:9182", cluster="test", pool="Pool A", unique_id="a", primordial="false"}'
+        values: '1x15'
+      - series: 'windows_storage_spaces_pool_health_status{job="windows-custom", instance="host:9182", cluster="test", pool="Pool B", unique_id="b"}'
+        values: '1x15'
+      - series: 'windows_storage_spaces_pool_info{job="windows-custom", instance="host:9182", cluster="test", pool="Pool B", unique_id="b", primordial="false"}'
+        values: '1x15'
+      - series: 'windows_storage_spaces_pool_health_status{job="windows-custom", instance="host:9182", cluster="test", pool="Primordial", unique_id="p"}'
+        values: '2x15'
+      - series: 'windows_storage_spaces_pool_info{job="windows-custom", instance="host:9182", cluster="test", pool="Primordial", unique_id="p", primordial="true"}'
+        values: '1x15'
+      - series: 'windows_storage_spaces_virtual_disk_health_status{job="windows-custom", instance="host:9182", cluster="test", virtual_disk="Data", unique_id="v1"}'
+        values: '2x15'
+      - series: 'windows_storage_spaces_virtual_disk_health_status{job="windows-custom", instance="host:9182", cluster="test", virtual_disk="Logs", unique_id="v2"}'
+        values: '1x15'
+      - series: 'windows_storage_spaces_virtual_disk_health_status{job="windows-custom", instance="host:9182", cluster="test", virtual_disk="Scratch", unique_id="v3"}'
+        values: '0x15'
+    alert_rule_test:
+      - {alertname: WindowsStoragePoolUnhealthy, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsStoragePoolUnhealthy
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, pool: Pool A, unique_id: a, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsstoragepoolunhealthy/
+              summary: Storage pool is unhealthy
+              description: 'Storage pool Pool A on host:9182 has reported unhealthy status for 10 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, pool: Pool B, unique_id: b, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsstoragepoolunhealthy/
+              summary: Storage pool has a health warning
+              description: 'Storage pool Pool B on host:9182 has reported warning status for 10 minutes.'
+      - alertname: WindowsStorageVirtualDiskUnhealthy
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, virtual_disk: Data, unique_id: v1, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsstoragevirtualdiskunhealthy/
+              summary: Storage Spaces virtual disk is unhealthy
+              description: 'Virtual disk Data on host:9182 has reported unhealthy status for 10 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, virtual_disk: Logs, unique_id: v2, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsstoragevirtualdiskunhealthy/
+              summary: Storage Spaces virtual disk has a health warning
+              description: 'Virtual disk Logs on host:9182 has reported warning status for 10 minutes.'
+
+  - name: DHCP scope exhaustion counts active scopes only and uses both thresholds
+    interval: 1m
+    input_series:
+      - series: 'windows_dhcp_scope_addresses_free{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.0.0/24"}'
+        values: '10x19 50x10'
+      - series: 'windows_dhcp_scope_addresses_in_use{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.0.0/24"}'
+        values: '90x19 50x10'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.0.0/24", state="Enabled"}'
+        values: '1x30'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.0.0/24", state="Disabled"}'
+        values: '0x30'
+      - series: 'windows_dhcp_scope_addresses_free{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.1.0/24"}'
+        values: '2x30'
+      - series: 'windows_dhcp_scope_addresses_in_use{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.1.0/24"}'
+        values: '98x30'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.1.0/24", state="EnabledSwitched"}'
+        values: '1x30'
+      - series: 'windows_dhcp_scope_addresses_free{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.2.0/24"}'
+        values: '0x30'
+      - series: 'windows_dhcp_scope_addresses_in_use{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.2.0/24"}'
+        values: '100x30'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.2.0/24", state="Disabled"}'
+        values: '1x30'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.2.0/24", state="Enabled"}'
+        values: '0x30'
+      - series: 'windows_dhcp_scope_addresses_free{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.3.0/24"}'
+        values: '0x30'
+      - series: 'windows_dhcp_scope_addresses_in_use{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.3.0/24"}'
+        values: '0x30'
+      - series: 'windows_dhcp_scope_state{job="windows-custom", instance="dhcp:9182", cluster="test", scope="10.0.3.0/24", state="Enabled"}'
+        values: '1x30'
+    alert_rule_test:
+      - {alertname: WindowsDHCPScopeAlmostExhausted, eval_time: 14m, exp_alerts: []}
+      - alertname: WindowsDHCPScopeAlmostExhausted
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.0.0/24, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.0.0/24 on dhcp:9182 has had less than 20% free addresses for 15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 20% free addresses for 15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 5% free addresses for 15 minutes.'
+      - alertname: WindowsDHCPScopeAlmostExhausted
+        eval_time: 24m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.0.0/24, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.0.0/24 on dhcp:9182 has had less than 20% free addresses for 15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 20% free addresses for 15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 5% free addresses for 15 minutes.'
+      - alertname: WindowsDHCPScopeAlmostExhausted
+        eval_time: 25m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 20% free addresses for 15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'dhcp:9182', cluster: test, scope: 10.0.1.0/24, severity: page}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdhcpscopealmostexhausted/
+              summary: DHCP scope is almost exhausted
+              description: 'DHCP scope 10.0.1.0/24 on dhcp:9182 has had less than 5% free addresses for 15 minutes.'
+
+  - name: DNS zone transfer failures fire on a rising counter and resolve after keep_firing_for
+    interval: 1m
+    input_series:
+      - series: 'windows_dns_zone_transfer_failures_total{job="windows-custom", instance="dns:9182", cluster="test"}'
+        values: '0+6x20 120x15'
+      - series: 'windows_dns_zone_transfer_failures_total{job="windows-custom", instance="quiet:9182", cluster="test"}'
+        values: '7x36'
+      - series: 'windows_dns_zone_transfer_failures_total{job="windows-custom", instance="scanned:9182", cluster="test"}'
+        values: '0+1x36'
+    alert_rule_test:
+      - {alertname: WindowsDNSZoneTransferFailures, eval_time: 16m, exp_alerts: []}
+      - alertname: WindowsDNSZoneTransferFailures
+        eval_time: 17m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'dns:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdnszonetransferfailures/
+              summary: DNS zone transfers are failing
+              description: 'Zone transfers from DNS server dns:9182 have been failing for 15 minutes.'
+      - alertname: WindowsDNSZoneTransferFailures
+        eval_time: 25m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'dns:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdnszonetransferfailures/
+              summary: DNS zone transfers are failing
+              description: 'Zone transfers from DNS server dns:9182 have been failing for 15 minutes.'
+      - {alertname: WindowsDNSZoneTransferFailures, eval_time: 26m, exp_alerts: []}

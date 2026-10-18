@@ -6,7 +6,8 @@ on:
   pull_request:
     paths:
       - contrib/mixin/**
-      - dashboard/*.json
+      - contrib/dashboard/*.json
+      - contrib/monitoring/*.yaml
       - docs/collector.*.md
       - docs/runbooks/**
       - docs/upgrade/**
@@ -21,7 +22,8 @@ on:
       - main
     paths:
       - contrib/mixin/**
-      - dashboard/*.json
+      - contrib/dashboard/*.json
+      - contrib/monitoring/*.yaml
       - docs/collector.*.md
       - docs/runbooks/**
       - docs/upgrade/**
@@ -63,6 +65,9 @@ jobs:
 
       - name: Build dashboard and check generated changes
         run: mise run check-dashboards
+
+      - name: Generate rules and check generated changes
+        run: mise run check-rules
 
       - name: Lint dashboard and test rules
         run: mise run test

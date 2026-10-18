@@ -6,7 +6,7 @@ title: WindowsADPendingReplication
 
 Pending Active Directory replication operations exceed the configured threshold
 for 15 minutes. The default is 50 operations. This alert is generated only with
-`enableActiveDirectory: true` and requires the `ad` collector on domain controllers.
+`collectors+: { ad: true }` and requires the `ad` collector on domain controllers.
 
 ## Impact
 

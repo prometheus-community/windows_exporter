@@ -189,7 +189,7 @@ type reference struct {
 }
 
 // metricReferences returns the windows_ metric names in the collector
-// documentation, the mixin sources and the generated dashboards.
+// documentation, the mixin sources, the rendered rules and the generated dashboards.
 func metricReferences(t *testing.T) []reference {
 	t.Helper()
 
@@ -209,10 +209,15 @@ func metricReferences(t *testing.T) []reference {
 
 	files = append(files, runbooks...)
 
-	dashboards, err := filepath.Glob(filepath.Join(repoRoot, "dashboard", "*.json"))
+	dashboards, err := filepath.Glob(filepath.Join(repoRoot, "contrib", "dashboard", "*.json"))
 	require.NoError(t, err)
 
 	files = append(files, dashboards...)
+
+	rules, err := filepath.Glob(filepath.Join(repoRoot, "contrib", "monitoring", "*.yaml"))
+	require.NoError(t, err)
+
+	files = append(files, rules...)
 
 	err = filepath.WalkDir(filepath.Join(repoRoot, "contrib", "mixin"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -239,6 +244,7 @@ func metricReferences(t *testing.T) []reference {
 	require.NoError(t, err)
 	require.NotEmpty(t, docs)
 	require.NotEmpty(t, dashboards)
+	require.NotEmpty(t, rules)
 
 	var refs []reference
 

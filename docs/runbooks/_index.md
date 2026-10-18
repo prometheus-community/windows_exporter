@@ -8,5 +8,9 @@ the affected host. Disk alerts also identify a `volume`; network alerts identify
 a `nic`. Adjust example PromQL selectors to match your scrape configuration.
 
 The default thresholds are starting points. Check the generated alert rules for
-your configured thresholds and durations. Active Directory and NTP clock alerts
-are opt-in and require their collectors to be enabled.
+your configured thresholds and durations. The rules are grouped by collector
+area, and each alert is generated only when the collectors it reads are enabled
+in the mixin configuration. Active Directory and NTP clock alerts need the `ad`
+and `time` collectors, which are off by default, and the alerts for page files,
+disk drives, licensing, scheduled tasks, updates, Hyper-V, failover clusters,
+Storage Spaces, DHCP and DNS need the collector of that role.
