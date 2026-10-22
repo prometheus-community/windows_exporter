@@ -60,18 +60,28 @@ func TestGetProcessOwner(t *testing.T) {
 		t.Run("full="+strconv.FormatBool(full), func(t *testing.T) {
 			t.Parallel()
 
-			c := &Collector{}
+			logger := slog.New(slog.DiscardHandler)
+			c := New(nil)
+			require.NoError(t, c.Build(logger, nil))
 
 			if full {
 				for i := range maxCachedOwners {
-					c.lookupCache.put(strconv.Itoa(i), "cached owner")
+					c.lookupCache.Add(strconv.Itoa(i), "cached owner")
 				}
 			}
 
-			owner, err := c.getProcessOwner(slog.New(slog.DiscardHandler), windows.CurrentProcess())
+			owner, err := c.getProcessOwner(logger, windows.CurrentProcess())
 			require.NoError(t, err)
 			require.Equal(t, currentUser.Username, owner)
-			require.LessOrEqual(t, len(c.lookupCache.entries), maxCachedOwners)
+
+			cachedOwner, ok := c.lookupCache.Get(currentUser.Uid)
+			require.True(t, ok)
+			require.Equal(t, owner, cachedOwner)
+
+			if full {
+				require.Equal(t, maxCachedOwners, c.lookupCache.Len())
+				require.False(t, c.lookupCache.Contains("0"))
+			}
 		})
 	}
 }
@@ -98,10 +108,17 @@ func TestProcessOwnerCacheLifecycle(t *testing.T) {
 			t.Parallel()
 
 			c := New(nil)
-			c.lookupCache.put("old", "previous owner")
+			require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+			c.lookupCache.Add("old", "previous owner")
 
 			require.NoError(t, tc.reset(c))
-			require.Nil(t, c.lookupCache.entries)
+
+			if tc.name == "Close" {
+				require.Nil(t, c.lookupCache)
+			} else {
+				require.NotNil(t, c.lookupCache)
+				require.Zero(t, c.lookupCache.Len())
+			}
 		})
 	}
 }

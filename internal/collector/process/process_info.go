@@ -278,7 +278,7 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 
 	sid := tokenUser.User.Sid.String()
 
-	owner, ok := c.lookupCache.get(sid)
+	owner, ok := c.lookupCache.Get(sid)
 	if !ok {
 		account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
 		if err != nil {
@@ -287,7 +287,7 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 			owner = fmt.Sprintf(`%s\%s`, domain, account)
 		}
 
-		c.lookupCache.put(sid, owner)
+		c.lookupCache.Add(sid, owner)
 	}
 
 	return owner, nil
