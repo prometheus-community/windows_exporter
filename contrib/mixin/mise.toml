@@ -1,7 +1,7 @@
 [tools]
 "github:google/go-jsonnet" = "0.22.0"
 "go:github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb" = "0.6.0"
-"github:cloudflare/pint" = "0.89.2"
+"github:cloudflare/pint" = "0.89.4"
 "github:grafana/dashboard-linter" = "0.3.0"
 "github:prometheus/prometheus" = "3.15.0"
 
