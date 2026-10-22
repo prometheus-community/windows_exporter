@@ -20,6 +20,7 @@ package process
 import (
 	"log/slog"
 	"os/user"
+	"strconv"
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -55,9 +56,52 @@ func TestGetProcessOwner(t *testing.T) {
 	currentUser, err := user.Current()
 	require.NoError(t, err)
 
-	c := &Collector{}
+	for _, full := range []bool{false, true} {
+		t.Run("full="+strconv.FormatBool(full), func(t *testing.T) {
+			t.Parallel()
 
-	owner, err := c.getProcessOwner(slog.New(slog.DiscardHandler), windows.CurrentProcess())
-	require.NoError(t, err)
-	require.Equal(t, currentUser.Username, owner)
+			c := &Collector{}
+
+			if full {
+				for i := range maxCachedOwners {
+					c.lookupCache.put(strconv.Itoa(i), "cached owner")
+				}
+			}
+
+			owner, err := c.getProcessOwner(slog.New(slog.DiscardHandler), windows.CurrentProcess())
+			require.NoError(t, err)
+			require.Equal(t, currentUser.Username, owner)
+			require.LessOrEqual(t, len(c.lookupCache.entries), maxCachedOwners)
+		})
+	}
+}
+
+func TestProcessOwnerCacheLifecycle(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name  string
+		reset func(*Collector) error
+	}{
+		{
+			name: "Build",
+			reset: func(c *Collector) error {
+				return c.Build(slog.New(slog.DiscardHandler), nil)
+			},
+		},
+		{
+			name:  "Close",
+			reset: (*Collector).Close,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := New(nil)
+			c.lookupCache.put("old", "previous owner")
+
+			require.NoError(t, tc.reset(c))
+			require.Nil(t, c.lookupCache.entries)
+		})
+	}
 }

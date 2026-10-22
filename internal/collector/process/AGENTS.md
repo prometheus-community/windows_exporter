@@ -18,6 +18,8 @@ and `Config.CounterVersion` were removed.
   access-denied results are cached as empty labels.
 - Read the snapshot buffer with bounds checks against the returned length, and
   keep it 8-byte aligned (`[]uint64` backing array).
+- Keep SID-to-owner lookups bounded under identity churn. The cache keeps at most
+  1,024 entries, leaves excess lookups uncached, and is reset by `Build` and `Close`.
 
 To check value parity after changes, compare the snapshot against the `Process`
 counter set by PID in a temporary test, for example with

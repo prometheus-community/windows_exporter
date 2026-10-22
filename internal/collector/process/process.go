@@ -82,7 +82,7 @@ type Collector struct {
 	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
 	infoCache map[uint32]processInfo
 
-	lookupCache sync.Map
+	lookupCache ownerCache
 
 	mu sync.RWMutex
 
@@ -170,6 +170,7 @@ func (c *Collector) Close() error {
 	c.snapshot = snapshotBuffer{}
 	c.processes = nil
 	c.infoCache = nil
+	c.lookupCache.reset()
 
 	// The session belongs to the caller of Build.
 	c.miSession = nil
@@ -181,7 +182,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
 	c.infoCache = nil
-	c.lookupCache = sync.Map{}
+	c.lookupCache.reset()
 
 	if utils.IsMatchAll(c.config.ProcessInclude) && utils.IsMatchNone(c.config.ProcessExclude) {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
