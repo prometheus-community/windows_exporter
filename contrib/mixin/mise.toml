@@ -3,7 +3,7 @@
 "go:github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb" = "0.6.0"
 "github:cloudflare/pint" = "0.89.4"
 "github:grafana/dashboard-linter" = "0.3.0"
-"github:prometheus/prometheus" = "3.15.0"
+"github:prometheus/prometheus" = "3.15.1"
 
 [vars]
 sources = "*.libsonnet *.jsonnet lib/*.libsonnet rules/*.libsonnet alerts/*.libsonnet dashboards/*.libsonnet tests/*.libsonnet tests/*.jsonnet"
