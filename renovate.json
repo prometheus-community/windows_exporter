@@ -67,7 +67,7 @@
       "enabled": true,
       "matchDepNames": ["go", "golang"],
       "groupName": "go version"
-    },        
+    },
     {
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
