@@ -1890,7 +1890,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MULTI_STATUS: false
           LINTER_RULES_PATH: .github/linters
-          GITHUB_ACTIONS_ZIZMOR_CONFIG_FILE: ../../../github/workspace/.github/linters/zizmor.yml
+          # Relative to LINTER_RULES_PATH. A plain `zizmor .` (as zizmor-action
+          # runs it) finds .github/zizmor.yml on its own, so both share one policy.
+          GITHUB_ACTIONS_ZIZMOR_CONFIG_FILE: ../zizmor.yml
           ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: true
           ENABLE_GITHUB_PULL_REQUEST_SUMMARY_COMMENT: false
           SAVE_SUPER_LINTER_SUMMARY: true
