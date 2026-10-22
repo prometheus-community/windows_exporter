@@ -67,6 +67,13 @@
       "enabled": true,
       "matchDepNames": ["go", "golang"],
       "groupName": "go version"
+    },        
+    {
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.0$/",
+      "rangeStrategy": "bump"
     },
     {
       "enabled": true,
