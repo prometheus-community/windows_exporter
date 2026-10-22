@@ -104,7 +104,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           # renovate: golang=go
-          go-version: '1.27.2'
+          go-version: '1.27.3'
 
       # Windows file versions and MSI versions only compare numbers, so every
       # 0.32.0 beta and the final release would all be 0.32.0.0 and MDM tools
@@ -562,7 +562,7 @@ jobs:
         background: true
         with:
           # renovate: golang=go
-          go-version: '1.27.2'
+          go-version: '1.27.3'
 
       # Steps that do not register services run in the background while Windows features install.
       - name: Download SQL Server media
@@ -1855,7 +1855,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           # renovate: golang=go
-          go-version: '1.27.2'
+          go-version: '1.27.3'
 
       # Only the lint step targets Windows; the action installs the Linux
       # golangci-lint binary for the runner.
