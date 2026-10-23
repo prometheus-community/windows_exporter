@@ -35,8 +35,19 @@ import (
 // maxInfoWorkers bounds the goroutines that open processes for new cache entries.
 const maxInfoWorkers = 8
 
-// errProcessGone reports that the PID no longer belongs to the snapshot process.
-var errProcessGone = errors.New("process exited")
+var (
+	// errProcessGone reports that the PID no longer belongs to the snapshot process.
+	errProcessGone = errors.New("process exited")
+	// errOwnerUnresolved reports that the owner SID could not be resolved to an account name for now.
+	// The SID is used as the owner until a later scrape resolves it.
+	errOwnerUnresolved = errors.New("process owner not resolved")
+)
+
+// ownerLookup is a lookupCache entry.
+type ownerLookup struct {
+	owner string
+	err   error
+}
 
 // processInfo holds the values of windows_process_info that are fixed for the lifetime of a process.
 type processInfo struct {
@@ -87,6 +98,8 @@ func (c *Collector) resolveProcessInfo(processes []*processSnapshot) []processIn
 		}
 
 		wg.Wait()
+
+		c.lookupCache.Clear()
 	}
 
 	cache := make(map[uint32]processInfo, len(processes))
@@ -137,6 +150,7 @@ func (c *Collector) lookupProcessInfo(process *processSnapshot, info *processInf
 
 // getProcessInformation returns the command line, owner and process group ID of a process.
 // createTime is checked after opening the process, so a reused PID is not attributed to the old process.
+// If the owner SID can't be resolved yet, the values are returned together with errOwnerUnresolved.
 //
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
 func (c *Collector) getProcessInformation(pid uint32, createTime int64) (string, string, uint32, error) {
@@ -168,9 +182,10 @@ func (c *Collector) getProcessInformation(pid uint32, createTime int64) (string,
 		return "", "", 0, errProcessGone
 	}
 
-	owner, err := c.getProcessOwner(c.logger, hProcess)
-	if err != nil {
-		return "", "", 0, err
+	// An unresolved owner is still returned, but the error keeps the info from being cached.
+	owner, ownerErr := c.getProcessOwner(c.logger, hProcess)
+	if ownerErr != nil && !errors.Is(ownerErr, errOwnerUnresolved) {
+		return "", "", 0, ownerErr
 	}
 
 	var (
@@ -185,7 +200,7 @@ func (c *Collector) getProcessInformation(pid uint32, createTime int64) (string,
 		}
 	}
 
-	return cmdLine, owner, processGroupID, nil
+	return cmdLine, owner, processGroupID, ownerErr
 }
 
 func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (string, uint32, error) {
@@ -278,26 +293,29 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 
 	sid := tokenUser.User.Sid.String()
 
-	var owner string
+	if cached, ok := c.lookupCache.Load(sid); ok {
+		lookup := cached.(ownerLookup) //nolint:forcetypeassert // only ownerLookup values are stored
 
-	ownerVal, ok := c.lookupCache.Load(sid)
-
-	if ok {
-		owner, ok = ownerVal.(string)
+		return lookup.owner, lookup.err
 	}
 
-	if !ok {
-		account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
-		if err != nil {
-			owner = sid
-		} else {
-			owner = fmt.Sprintf(`%s\%s`, domain, account)
-		}
+	lookup := ownerLookup{owner: sid}
 
-		c.lookupCache.Store(sid, owner)
+	account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
+
+	switch {
+	case err == nil:
+		lookup.owner = fmt.Sprintf(`%s\%s`, domain, account)
+	case errors.Is(err, windows.ERROR_NONE_MAPPED):
+		// The SID has no account name, for example a deleted account. The SID is the final owner.
+	default:
+		// For example, the domain controller is unreachable.
+		lookup.err = fmt.Errorf("%w: %w", errOwnerUnresolved, err)
 	}
 
-	return owner, nil
+	c.lookupCache.Store(sid, lookup)
+
+	return lookup.owner, lookup.err
 }
 
 func (c *Collector) openProcess(pid uint32) (windows.Handle, bool, error) {

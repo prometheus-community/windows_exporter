@@ -140,6 +140,12 @@ func TestResolveProcessInfoCache(t *testing.T) {
 	require.Contains(t, c.infoCache, self.pid)
 	require.NotContains(t, c.infoCache, exited.pid, "failed lookups must be retried")
 
+	c.lookupCache.Range(func(sid, _ any) bool {
+		t.Errorf("owner of %v is kept after the scrape", sid)
+
+		return true
+	})
+
 	// A cached entry with the same creation time is reused without opening the process.
 	c.infoCache[self.pid] = processInfo{createTime: self.createTime, owner: "cached"}
 	infos = c.resolveProcessInfo([]*processSnapshot{&self})

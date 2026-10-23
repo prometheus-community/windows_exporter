@@ -60,4 +60,9 @@ func TestGetProcessOwner(t *testing.T) {
 	owner, err := c.getProcessOwner(slog.New(slog.DiscardHandler), windows.CurrentProcess())
 	require.NoError(t, err)
 	require.Equal(t, currentUser.Username, owner)
+
+	// On Windows, the Uid is the SID string.
+	cached, ok := c.lookupCache.Load(currentUser.Uid)
+	require.True(t, ok)
+	require.Equal(t, ownerLookup{owner: owner}, cached)
 }
