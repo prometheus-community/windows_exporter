@@ -137,6 +137,26 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 .*`),
 		},
 		{
+			// A const label of the same name takes precedence over the instance label.
+			name:          "instance_label_overridden",
+			object:        "Processor Information",
+			counterType:   pdh.CounterTypeRaw,
+			instances:     []string{"_Total"},
+			instanceLabel: "core",
+			buildErr:      "",
+			counters:      []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"core": "all"}}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+windows_performancecounter_collector_duration_seconds\{collector="instance_label_overridden"} [0-9.e+-]+
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+windows_performancecounter_collector_success\{collector="instance_label_overridden"} 1
+# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_processor_information_processor_time counter
+windows_performancecounter_processor_information_processor_time\{core="all"} [0-9.e+-]+
+`),
+		},
+		{
 			name:            "",
 			object:          "Processor Information",
 			counterType:     pdh.CounterTypeRaw,
@@ -327,6 +347,15 @@ func TestBuildInvalidConfig(t *testing.T) {
 				}},
 			},
 			buildErr: "object processor: counters % Processor Time and % User Time produce identical series windows_processor_time",
+		},
+		{
+			name: "invalid instance label",
+			objects: []performancecounter.Object{
+				{Name: "processor", Object: "Processor Information", Instances: pdh.InstancesAll, InstanceLabel: "__core", Counters: []performancecounter.Counter{
+					{Name: "% Processor Time"},
+				}},
+			},
+			buildErr: `object processor: counter % Processor Time: "__core" is not a valid label name`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -158,6 +158,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		names = append(names, object.Name)
+
+		if object.InstanceLabel == "" {
+			object.InstanceLabel = "object_instance"
+		}
+
 		counters := make([]Counter, 0, len(object.Counters))
 		counterNames := make([]string, 0, len(object.Counters))
 		object.valueIndex = make(map[string]int, len(object.Counters))
@@ -201,6 +206,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				continue
 			}
 
+			if err := object.buildDescs(&object.Counters[j]); err != nil {
+				errs = append(errs, fmt.Errorf("object %s: counter %s: %w", object.Name, counter.Name, err))
+
+				continue
+			}
+
 			counters = append(counters, counter)
 
 			object.valueIndex[counter.Name] = len(counterNames)
@@ -214,10 +225,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		collector, err := pdh.NewDynamicCollector(c.logger, object.Type, object.Object, object.Instances, counterNames)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
-		}
-
-		if object.InstanceLabel == "" {
-			object.InstanceLabel = "object_instance"
 		}
 
 		object.collector = collector
@@ -322,28 +329,39 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				continue
 			}
 
-			labels := make(prometheus.Labels, len(counter.Labels)+1)
+			value := counter.multiplier.Apply(collectedCounterValue)
 
-			if perfDataObject.Instances != nil && row.Name != pdh.InstanceEmpty {
-				labels[perfDataObject.InstanceLabel] = row.Name
+			if counter.instanceDesc != nil && row.Name != pdh.InstanceEmpty {
+				ch <- prometheus.MustNewConstMetric(counter.instanceDesc, metricTypes[j], value, row.Name)
+			} else {
+				ch <- prometheus.MustNewConstMetric(counter.desc, metricTypes[j], value)
 			}
-
-			maps.Copy(labels, counter.Labels)
-
-			ch <- prometheus.MustNewConstMetric(
-				prometheus.NewDesc(
-					counter.Metric,
-					"windows_exporter: custom Performance Counter metric",
-					nil,
-					labels,
-				),
-				metricTypes[j],
-				counter.multiplier.Apply(collectedCounterValue),
-			)
 		}
 	}
 
 	return errors.Join(errs...)
+}
+
+// buildDescs creates the descs of counter once, so that a scrape doesn't
+// build one desc per series. The instance becomes a variable label; a
+// const label of the same name takes precedence over it.
+func (o *Object) buildDescs(counter *Counter) error {
+	const help = "windows_exporter: custom Performance Counter metric"
+
+	counter.desc = prometheus.NewDesc(counter.Metric, help, nil, counter.Labels)
+	if err := counter.desc.Err(); err != nil {
+		return err
+	}
+
+	counter.instanceDesc = nil
+
+	if _, ok := counter.Labels[o.InstanceLabel]; o.Instances == nil || ok {
+		return nil
+	}
+
+	counter.instanceDesc = prometheus.NewDesc(counter.Metric, help, []string{o.InstanceLabel}, counter.Labels)
+
+	return counter.instanceDesc.Err()
 }
 
 // counterMetricTypes returns the metric type of every counter of the object.
