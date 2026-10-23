@@ -148,7 +148,7 @@ jobs:
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           # renovate: github=goreleaser/goreleaser
-          version: v2.18.3
+          version: v2.19.0
           args: build --snapshot --clean
 
       - name: Build release
@@ -156,7 +156,7 @@ jobs:
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           # renovate: github=goreleaser/goreleaser
-          version: v2.18.3
+          version: v2.19.0
           args: build --clean
         env:
           # Several tags can point at one commit, such as an rc on the last
