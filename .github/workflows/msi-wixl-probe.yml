@@ -66,6 +66,12 @@ jobs:
           openssl pkcs12 -export -inkey "$RUNNER_TEMP/key.pem" -in "$RUNNER_TEMP/cert.pem" \
             -out "$RUNNER_TEMP/probe.p12" -passout pass:probe -name probe
 
+      # Windows Installer only replaces a versioned file with a newer version,
+      # so the executable needs a version resource, as in the release build.
+      - name: Generate Windows resources
+        working-directory: cmd/windows_exporter
+        run: go run github.com/tc-hib/go-winres@v0.3.3 make --product-version=98.0.0.0 --file-version=98.0.0.0 --arch=amd64,arm64
+
       - name: Build, sign and package
         run: |
           mkdir -p output
@@ -79,11 +85,11 @@ jobs:
           for arch in amd64 arm64; do
             GOOS=windows GOARCH=$arch CGO_ENABLED=0 go build -o "output/windows_exporter-$arch.exe" ./cmd/windows_exporter
             sign "output/windows_exporter-$arch.exe"
-            installer/wixl/build.sh "output/windows_exporter-$arch.exe" 98.0.0 "$arch" "output/windows_exporter-98.0.0-$arch.msi"
+            installer/wixl/build.sh "output/windows_exporter-$arch.exe" 98.0.0 "$arch" "output/windows_exporter-98.0.0-$arch.msi" 98.0.0.0
             sign "output/windows_exporter-98.0.0-$arch.msi"
           done
           # Same executable with a higher version for the upgrade test.
-          installer/wixl/build.sh output/windows_exporter-amd64.exe 99.0.0 amd64 output/windows_exporter-99.0.0-amd64.msi
+          installer/wixl/build.sh output/windows_exporter-amd64.exe 99.0.0 amd64 output/windows_exporter-99.0.0-amd64.msi 98.0.0.0
           sign output/windows_exporter-99.0.0-amd64.msi
           cp "$RUNNER_TEMP/cert.pem" output/probe-cert.pem
           ls -la output
@@ -182,6 +188,16 @@ jobs:
           Check 'uninstall' ($p.ExitCode -eq 0 -and -not (Get-Service windows_exporter -ErrorAction SilentlyContinue)) "exit $($p.ExitCode)"
 
           if ($failed) { throw "failed: $($failed -join ', ')" }
+
+      - name: Show installer log excerpts
+        if: ${{ failure() }}
+        run: |
+          Get-ChildItem "$env:RUNNER_TEMP\installer-test\*.log*" | ForEach-Object {
+            Write-Host "::group::$($_.Name)"
+            Select-String -Path $_.FullName -Pattern 'Return value 3', 'Error \d', 'Component: (windows_exporter|C_Firewall)', 'Feature: ', 'Disallowing installation', 'Won''t Overwrite', 'InstallServices', 'MsiConfigureServices', 'RemoveExistingProducts', 'Firewall', 'CreateConfigFile', 'ServiceInstall' |
+              Select-Object -First 120 | ForEach-Object { $_.Line }
+            Write-Host '::endgroup::'
+          }
 
       - name: Upload installer test logs
         if: ${{ always() }}

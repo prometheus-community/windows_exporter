@@ -125,7 +125,7 @@
             <Directory Id="ProgramFiles64Folder">
                 <Directory Id="APPLICATIONFOLDER" Name="windows_exporter">
                     <Component Id="windows_exporter.exe" Guid="*" Win64="yes">
-                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" />
+                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" DefaultVersion="$(var.FileVersion)" />
 
                         <!-- util:EventSource; the Name must match the argument to eventlog.Open() -->
                         <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter"
