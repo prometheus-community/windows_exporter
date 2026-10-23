@@ -67,6 +67,7 @@
         <CustomAction Id="Set_CMD_EXE" Property="CMD_EXE" Value="[System64Folder]cmd.exe" />
         <CustomAction Id="Set_POWERSHELL_EXE" Property="POWERSHELL_EXE" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
         <CustomAction Id="Set_NETSH_EXE" Property="NETSH_EXE" Value="[System64Folder]netsh.exe" />
+        <CustomAction Id="Set_SC_EXE" Property="SC_EXE" Value="[System64Folder]sc.exe" />
 
         <!-- Deferred exe custom actions. Their command line is formatted when the script is written. -->
         <CustomAction Id="CreateConfigFile" Property="CMD_EXE"
@@ -75,6 +76,12 @@
         <CustomAction Id="KillProcess" Property="POWERSHELL_EXE"
                         ExeCommand="-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
                         Execute="deferred" Impersonate="no" Return="ignore" />
+
+        <!-- util:ServiceConfig. MsiServiceConfigFailureActions cannot be used: Windows Installer fails
+             with error 5 (access denied) when it sets a restart action, which fails the install. -->
+        <CustomAction Id="ConfigureServiceFailureActions" Property="SC_EXE"
+                      ExeCommand="failure windows_exporter reset= 0 actions= restart/60000/restart/60000/restart/60000"
+                      Execute="deferred" Impersonate="no" Return="ignore" />
 
         <CustomAction Id="FirewallRemoveBeforeAdd" Property="NETSH_EXE"
                         ExeCommand="advfirewall firewall delete rule name=&quot;$(var.ProductName)&quot;"
@@ -101,7 +108,8 @@
             <Custom Action="Set_CMD_EXE" After="CostFinalize" />
             <Custom Action="Set_POWERSHELL_EXE" After="Set_CMD_EXE" />
             <Custom Action="Set_NETSH_EXE" After="Set_POWERSHELL_EXE" />
-            <Custom Action="Set_FW_REMOTEIP" After="Set_NETSH_EXE" Condition="REMOTE_ADDR" />
+            <Custom Action="Set_SC_EXE" After="Set_NETSH_EXE" />
+            <Custom Action="Set_FW_REMOTEIP" After="Set_SC_EXE" Condition="REMOTE_ADDR" />
 
             <Custom Action="Set_CollectorsFlag" Sequence="4001" Condition="ENABLED_COLLECTORS" />
             <Custom Action="Set_ExtraFlags" Sequence="4002" Condition="EXTRA_FLAGS" />
@@ -116,6 +124,7 @@
             <Custom Action="KillProcess" Sequence="3499" />
 
             <Custom Action="FirewallRemove" Sequence="3498" Condition="(&amp;FirewallException=2) AND (!FirewallException=3)" />
+            <Custom Action="ConfigureServiceFailureActions" Sequence="5860" Condition="NOT REMOVE" />
             <Custom Action="FirewallRemoveBeforeAdd" Sequence="5801" Condition="&amp;FirewallException=3" />
             <Custom Action="FirewallAddRollback" Sequence="5802" Condition="&amp;FirewallException=3" />
             <Custom Action="FirewallAdd" Sequence="5803" Condition="&amp;FirewallException=3" />

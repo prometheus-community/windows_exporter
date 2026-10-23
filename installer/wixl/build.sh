@@ -27,10 +27,8 @@ secure="ENABLED_COLLECTORS;EXTRA_FLAGS;CONFIG_FILE;LISTEN_ADDR;LISTEN_PORT;METRI
 # Native Windows Installer 5 service configuration, applied by the MsiConfigureServices action:
 #   ConfigType 3 = delayed auto start, 4 = failure actions also on non-crash failures (sc failureflag 1)
 #   Event 5 = install + reinstall
-#   failure actions: restart after 60 s, three times, reset period 0
+#   The failure actions themselves are set by a custom action, see windows_exporter.wxs.
 "$MSIBUILD" "$out" -q "CREATE TABLE \`MsiServiceConfig\` (\`MsiServiceConfig\` CHAR(72) NOT NULL, \`Name\` CHAR(255) NOT NULL, \`Event\` SHORT NOT NULL, \`ConfigType\` LONG NOT NULL, \`Argument\` CHAR(0), \`Component_\` CHAR(72) NOT NULL PRIMARY KEY \`MsiServiceConfig\`)"
 "$MSIBUILD" "$out" -q "INSERT INTO \`MsiServiceConfig\` (\`MsiServiceConfig\`, \`Name\`, \`Event\`, \`ConfigType\`, \`Argument\`, \`Component_\`) VALUES ('DelayedAutoStart', 'windows_exporter', 5, 3, '1', 'windows_exporter.exe')"
 "$MSIBUILD" "$out" -q "INSERT INTO \`MsiServiceConfig\` (\`MsiServiceConfig\`, \`Name\`, \`Event\`, \`ConfigType\`, \`Argument\`, \`Component_\`) VALUES ('FailureActionsFlag', 'windows_exporter', 5, 4, '1', 'windows_exporter.exe')"
-"$MSIBUILD" "$out" -q "CREATE TABLE \`MsiServiceConfigFailureActions\` (\`MsiServiceConfigFailureActions\` CHAR(72) NOT NULL, \`Name\` CHAR(255) NOT NULL, \`Event\` SHORT NOT NULL, \`ResetPeriod\` LONG, \`RebootMessage\` CHAR(0), \`Command\` CHAR(0), \`Actions\` CHAR(0), \`DelayActions\` CHAR(0), \`Component_\` CHAR(72) NOT NULL PRIMARY KEY \`MsiServiceConfigFailureActions\`)"
-"$MSIBUILD" "$out" -q "INSERT INTO \`MsiServiceConfigFailureActions\` (\`MsiServiceConfigFailureActions\`, \`Name\`, \`Event\`, \`ResetPeriod\`, \`Actions\`, \`DelayActions\`, \`Component_\`) VALUES ('RestartOnFailure', 'windows_exporter', 5, 0, '1[~]1[~]1', '60000[~]60000[~]60000', 'windows_exporter.exe')"
 "$MSIBUILD" "$out" -q "INSERT INTO \`InstallExecuteSequence\` (\`Action\`, \`Condition\`, \`Sequence\`) VALUES ('MsiConfigureServices', 'VersionNT>=600', 5850)"
