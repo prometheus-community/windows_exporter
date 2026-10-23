@@ -1,0 +1,190 @@
+# Probe: build the MSI on Linux with msitools' wixl, sign it with jsign and a
+# throwaway self-signed certificate, then run the regular installer test on a
+# Windows runner. Not part of the release pipeline.
+name: MSI wixl probe
+
+on:
+  pull_request:
+    paths:
+      - installer/wixl/**
+      - .github/workflows/msi-wixl-probe.yml
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  # msitools master: arm64 support is not in a release yet (v0.106 has none).
+  MSITOOLS_COMMIT: 452f9b6a9d734a370429cf406bd92108dce9422b
+  JSIGN_VERSION: '7.6'
+  JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.3'
+
+      - name: Build msitools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valac ninja-build libgsf-1-dev libgcab-dev bison libglib2.0-dev gobject-introspection libgirepository1.0-dev libxml2-dev osslsigncode
+          pipx install 'meson>=1.4'
+          git init -q "$RUNNER_TEMP/msitools"
+          cd "$RUNNER_TEMP/msitools"
+          git fetch -q --depth 1 https://gitlab.gnome.org/GNOME/msitools.git "$MSITOOLS_COMMIT"
+          git checkout -q FETCH_HEAD
+          meson setup build --prefix "$RUNNER_TEMP/msitools-install"
+          ninja -C build install
+          {
+            echo "WIXL=$RUNNER_TEMP/msitools/build/tools/wixl/wixl"
+            echo "MSIBUILD=$RUNNER_TEMP/msitools/build/tools/msibuild"
+            echo "WIXL_EXTDIR=$(echo "$RUNNER_TEMP"/msitools-install/share/wixl-*/ext)"
+          } >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/msitools/build/tools/wixl/wixl" --version
+
+      - name: Install jsign
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/jsign.jar" "https://repo1.maven.org/maven2/net/jsign/jsign/$JSIGN_VERSION/jsign-$JSIGN_VERSION.jar"
+          echo "$JSIGN_SHA1  $RUNNER_TEMP/jsign.jar" | sha1sum -c -
+
+      - name: Create a throwaway code signing certificate
+        run: |
+          openssl req -x509 -newkey rsa:3072 -sha256 -days 2 -nodes \
+            -keyout "$RUNNER_TEMP/key.pem" -out "$RUNNER_TEMP/cert.pem" \
+            -subj "/CN=windows_exporter wixl probe" \
+            -addext "extendedKeyUsage=codeSigning" -addext "keyUsage=digitalSignature"
+          openssl pkcs12 -export -inkey "$RUNNER_TEMP/key.pem" -in "$RUNNER_TEMP/cert.pem" \
+            -out "$RUNNER_TEMP/probe.p12" -passout pass:probe -name probe
+
+      - name: Build, sign and package
+        run: |
+          mkdir -p output
+          sign() {
+            java -jar "$RUNNER_TEMP/jsign.jar" --storetype PKCS12 --keystore "$RUNNER_TEMP/probe.p12" \
+              --storepass probe --alias probe --alg SHA-256 \
+              --tsaurl http://timestamp.digicert.com --tsmode RFC3161 \
+              --name "Prometheus exporter for Windows machines" "$1"
+            osslsigncode verify -CAfile "$RUNNER_TEMP/cert.pem" -in "$1"
+          }
+          for arch in amd64 arm64; do
+            GOOS=windows GOARCH=$arch CGO_ENABLED=0 go build -o "output/windows_exporter-$arch.exe" ./cmd/windows_exporter
+            sign "output/windows_exporter-$arch.exe"
+            installer/wixl/build.sh "output/windows_exporter-$arch.exe" 98.0.0 "$arch" "output/windows_exporter-98.0.0-$arch.msi"
+            sign "output/windows_exporter-98.0.0-$arch.msi"
+          done
+          # Same executable with a higher version for the upgrade test.
+          installer/wixl/build.sh output/windows_exporter-amd64.exe 99.0.0 amd64 output/windows_exporter-99.0.0-amd64.msi
+          sign output/windows_exporter-99.0.0-amd64.msi
+          cp "$RUNNER_TEMP/cert.pem" output/probe-cert.pem
+          ls -la output
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wixl-msi
+          path: output/
+
+  test:
+    needs: build
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wixl-msi
+          path: output
+
+      - name: Show signatures
+        run: |
+          Get-ChildItem output\*.msi, output\*.exe | Get-AuthenticodeSignature |
+            Format-Table Path, Status, @{ n = 'Signer'; e = { $_.SignerCertificate.Subject } }, @{ n = 'Timestamp'; e = { $_.TimeStamperCertificate.Subject } } -AutoSize -Wrap
+
+      - name: Test installer
+        timeout-minutes: 10
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PreviousVersion = (gh release view --repo prometheus-community/windows_exporter --json tagName --jq .tagName) -replace '^v', ''
+          if ($LASTEXITCODE -ne 0 -or -not $PreviousVersion) {
+            throw "Could not determine the latest release"
+          }
+          if ([Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1') -lt [Version]'0.32.0') {
+            $PreviousVersion = '0.32.0-beta.1'
+          }
+          .\tools\test-installer.ps1 -Msi output\windows_exporter-98.0.0-amd64.msi -UpgradeMsi output\windows_exporter-99.0.0-amd64.msi -Executable output\windows_exporter-amd64.exe -PreviousVersion $PreviousVersion
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # What test-installer.ps1 does not check: the parts that wixl cannot
+      # express and that are emulated with custom actions or added tables.
+      - name: Test wixl replacements
+        timeout-minutes: 10
+        run: |
+          $ErrorActionPreference = "Stop"
+          $msi = (Resolve-Path output\windows_exporter-98.0.0-amd64.msi).Path
+          $log = Join-Path $env:RUNNER_TEMP 'installer-test\wixl-extra-install.log'
+
+          # The EXTRA_FLAGS launch condition must refuse --config.file.
+          $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$msi`"", '/qn', 'EXTRA_FLAGS="--config.file=x"', '/l*v', "`"$log.reject`"") -Wait -PassThru
+          if ($p.ExitCode -ne 1603) { throw "EXTRA_FLAGS with --config.file: expected 1603, got $($p.ExitCode)" }
+          if (Get-Service windows_exporter -ErrorAction SilentlyContinue) { throw 'service exists after a refused install' }
+
+          $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$msi`"", '/qn', 'ADDLOCAL=ALL', 'LISTEN_PORT=9183', 'REMOTE_ADDR=127.0.0.1', 'ENABLED_COLLECTORS=os,service', '/l*v', "`"$log`"") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "install failed with $($p.ExitCode), see $log" }
+
+          $failed = @()
+          function Check([String] $Name, [Bool] $Ok, $Detail) {
+            Write-Host ("{0,-28} {1}  {2}" -f $Name, $(if ($Ok) { 'ok  ' } else { 'FAIL' }), ($Detail | Out-String).Trim())
+            if (-not $Ok) { $script:failed += $Name }
+          }
+
+          $svc = Get-CimInstance Win32_Service -Filter "Name='windows_exporter'"
+          Check 'service command line' ($svc.PathName -match '--collectors.enabled os,service' -and $svc.PathName -match ':9183') $svc.PathName
+          $delayed = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\windows_exporter').DelayedAutostart
+          Check 'delayed auto start' ($delayed -eq 1) "DelayedAutostart=$delayed"
+          $qfailure = sc.exe qfailure windows_exporter
+          Check 'failure actions' ((($qfailure | Select-String 'RESTART -- Delay = 60000').Count) -eq 3) $qfailure
+          $qflag = sc.exe qfailureflag windows_exporter
+          Check 'failure actions flag' ([Bool]($qflag | Select-String 'TRUE')) $qflag
+          $qc = sc.exe qc windows_exporter
+          Check 'dependency wmiApSrv' ([Bool]($qc | Select-String 'wmiApSrv')) $qc
+          $es = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter' -ErrorAction SilentlyContinue
+          Check 'event source' ($es -and $es.EventMessageFile -match 'EventCreate.exe' -and $es.TypesSupported -eq 7) $es
+          Check 'config.yaml created' (Test-Path "$env:ProgramFiles\windows_exporter\config.yaml") ''
+          Check 'textfile_inputs created' (Test-Path "$env:ProgramFiles\windows_exporter\textfile_inputs") ''
+          $rule = Get-NetFirewallRule -DisplayName windows_exporter -ErrorAction SilentlyContinue
+          $port = $rule | Get-NetFirewallPortFilter
+          $addr = $rule | Get-NetFirewallAddressFilter
+          $app = $rule | Get-NetFirewallApplicationFilter
+          Check 'firewall rule' ($rule -and $port.LocalPort -eq '9183' -and $addr.RemoteAddress -eq '127.0.0.1' -and $app.Program -match 'windows_exporter.exe') "$($port.LocalPort) $($addr.RemoteAddress) $($app.Program)"
+          $arp = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -eq 'windows_exporter'
+          Check 'ARP entry' ($arp -and $arp.HelpLink -and $arp.NoRepair -eq 1) ($arp | Select-Object DisplayName, DisplayVersion, HelpLink, NoRepair)
+          $metrics = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:9183/metrics).Content
+          Check 'scrape on 9183' ($metrics -match 'windows_exporter_build_info') ''
+
+          # Remove only the firewall feature, then uninstall.
+          $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$msi`"", '/qn', 'REMOVE=FirewallException', '/l*v', "`"$log.removefw`"") -Wait -PassThru
+          Check 'remove firewall feature' ($p.ExitCode -eq 0 -and -not (Get-NetFirewallRule -DisplayName windows_exporter -ErrorAction SilentlyContinue)) "exit $($p.ExitCode)"
+          $p = Start-Process msiexec.exe -ArgumentList @('/x', "`"$msi`"", '/qn', '/l*v', "`"$log.uninstall`"") -Wait -PassThru
+          Check 'uninstall' ($p.ExitCode -eq 0 -and -not (Get-Service windows_exporter -ErrorAction SilentlyContinue)) "exit $($p.ExitCode)"
+
+          if ($failed) { throw "failed: $($failed -join ', ')" }
+
+      - name: Upload installer test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installer-test-logs
+          path: ${{ runner.temp }}\installer-test\*
+          if-no-files-found: ignore
