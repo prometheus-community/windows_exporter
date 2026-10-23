@@ -41,6 +41,8 @@ jobs:
           cd "$RUNNER_TEMP/msitools"
           git fetch -q --depth 1 https://gitlab.gnome.org/GNOME/msitools.git "$MSITOOLS_COMMIT"
           git checkout -q FETCH_HEAD
+          # meson.build requires the bats submodule even when the tests are not run.
+          git submodule update -q --init --depth 1
           meson setup build --prefix "$RUNNER_TEMP/msitools-install"
           ninja -C build install
           {
