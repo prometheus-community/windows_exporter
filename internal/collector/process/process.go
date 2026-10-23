@@ -82,8 +82,9 @@ type Collector struct {
 	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
 	infoCache map[uint32]processInfo
 
-	// lookupCache holds the owner of each SID resolved during the current scrape. It is cleared after
-	// each scrape, so it holds only the owners of new processes, and a failed lookup is retried.
+	// lookupCache holds the owner of each SID looked up during the current scrape, keyed by SID.
+	// Resolved owners are removed after each scrape. Failed lookups are kept until ownerRetryInterval
+	// has passed, so an unreachable domain controller is not asked again on every scrape.
 	lookupCache sync.Map
 
 	mu sync.RWMutex

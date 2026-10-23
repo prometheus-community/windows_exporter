@@ -27,13 +27,18 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-// maxInfoWorkers bounds the goroutines that open processes for new cache entries.
-const maxInfoWorkers = 8
+const (
+	// maxInfoWorkers bounds the goroutines that open processes for new cache entries.
+	maxInfoWorkers = 8
+	// ownerRetryInterval is how long a failed owner lookup is reused before the SID is looked up again.
+	ownerRetryInterval = time.Minute
+)
 
 var (
 	// errProcessGone reports that the PID no longer belongs to the snapshot process.
@@ -47,6 +52,8 @@ var (
 type ownerLookup struct {
 	owner string
 	err   error
+	// retryAt is when a failed lookup expires.
+	retryAt time.Time
 }
 
 // processInfo holds the values of windows_process_info that are fixed for the lifetime of a process.
@@ -98,9 +105,9 @@ func (c *Collector) resolveProcessInfo(processes []*processSnapshot) []processIn
 		}
 
 		wg.Wait()
-
-		c.lookupCache.Clear()
 	}
+
+	c.expireOwnerLookups(time.Now())
 
 	cache := make(map[uint32]processInfo, len(processes))
 
@@ -113,6 +120,20 @@ func (c *Collector) resolveProcessInfo(processes []*processSnapshot) []processIn
 	c.infoCache = cache
 
 	return infos
+}
+
+// expireOwnerLookups removes the resolved owners and the failed lookups that are due for a retry.
+// Resolved owners of known processes are kept by infoCache, so lookupCache only holds the
+// failed lookups between scrapes.
+func (c *Collector) expireOwnerLookups(now time.Time) {
+	c.lookupCache.Range(func(sid, value any) bool {
+		lookup := value.(ownerLookup) //nolint:forcetypeassert // The cache only holds ownerLookup values.
+		if lookup.err == nil || !now.Before(lookup.retryAt) {
+			c.lookupCache.Delete(sid)
+		}
+
+		return true
+	})
 }
 
 // lookupProcessInfo opens the process and reads its owner, command line and process group ID.
@@ -130,7 +151,8 @@ func (c *Collector) lookupProcessInfo(process *processSnapshot, info *processInf
 
 	cmdLine, owner, processGroupID, err := c.getProcessInformation(process.pid, process.createTime)
 	if err != nil {
-		if !errors.Is(err, errProcessGone) {
+		// Unresolved owners are logged once per lookup by getProcessOwner.
+		if !errors.Is(err, errProcessGone) && !errors.Is(err, errOwnerUnresolved) {
 			c.logger.LogAttrs(context.Background(), slog.LevelDebug, "Failed to get process information",
 				slog.Uint64("pid", uint64(process.pid)),
 				slog.String("process", process.name),
@@ -293,24 +315,30 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 
 	sid := tokenUser.User.Sid.String()
 
-	if cached, ok := c.lookupCache.Load(sid); ok {
-		lookup := cached.(ownerLookup) //nolint:forcetypeassert // only ownerLookup values are stored
+	now := time.Now()
 
-		return lookup.owner, lookup.err
+	if cached, ok := c.lookupCache.Load(sid); ok {
+		lookup := cached.(ownerLookup) //nolint:forcetypeassert // The cache only holds ownerLookup values.
+		if lookup.err == nil || now.Before(lookup.retryAt) {
+			return lookup.owner, lookup.err
+		}
 	}
 
 	lookup := ownerLookup{owner: sid}
 
 	account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
-
-	switch {
-	case err == nil:
+	if err == nil {
 		lookup.owner = fmt.Sprintf(`%s\%s`, domain, account)
-	case errors.Is(err, windows.ERROR_NONE_MAPPED):
-		// The SID has no account name, for example a deleted account. The SID is the final owner.
-	default:
-		// For example, the domain controller is unreachable.
+	} else {
+		// ERROR_NONE_MAPPED is returned for deleted accounts, but also if a network time-out prevents
+		// the lookup, so no error is final. The SID is the owner until a retry resolves it.
 		lookup.err = fmt.Errorf("%w: %w", errOwnerUnresolved, err)
+		lookup.retryAt = now.Add(ownerRetryInterval)
+
+		logger.LogAttrs(context.Background(), slog.LevelDebug, "Failed to resolve process owner",
+			slog.String("sid", sid),
+			slog.Any("err", err),
+		)
 	}
 
 	c.lookupCache.Store(sid, lookup)
