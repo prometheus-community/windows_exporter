@@ -20,6 +20,7 @@ package process
 import (
 	"log/slog"
 	"os/user"
+	"strconv"
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -55,9 +56,69 @@ func TestGetProcessOwner(t *testing.T) {
 	currentUser, err := user.Current()
 	require.NoError(t, err)
 
-	c := &Collector{}
+	for _, full := range []bool{false, true} {
+		t.Run("full="+strconv.FormatBool(full), func(t *testing.T) {
+			t.Parallel()
 
-	owner, err := c.getProcessOwner(slog.New(slog.DiscardHandler), windows.CurrentProcess())
-	require.NoError(t, err)
-	require.Equal(t, currentUser.Username, owner)
+			logger := slog.New(slog.DiscardHandler)
+			c := New(nil)
+			require.NoError(t, c.Build(logger, nil))
+
+			if full {
+				for i := range maxCachedOwners {
+					c.lookupCache.Add(strconv.Itoa(i), "cached owner")
+				}
+			}
+
+			owner, err := c.getProcessOwner(logger, windows.CurrentProcess())
+			require.NoError(t, err)
+			require.Equal(t, currentUser.Username, owner)
+
+			cachedOwner, ok := c.lookupCache.Get(currentUser.Uid)
+			require.True(t, ok)
+			require.Equal(t, owner, cachedOwner)
+
+			if full {
+				require.Equal(t, maxCachedOwners, c.lookupCache.Len())
+				require.False(t, c.lookupCache.Contains("0"))
+			}
+		})
+	}
+}
+
+func TestProcessOwnerCacheLifecycle(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name  string
+		reset func(*Collector) error
+	}{
+		{
+			name: "Build",
+			reset: func(c *Collector) error {
+				return c.Build(slog.New(slog.DiscardHandler), nil)
+			},
+		},
+		{
+			name:  "Close",
+			reset: (*Collector).Close,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := New(nil)
+			require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+			c.lookupCache.Add("old", "previous owner")
+
+			require.NoError(t, tc.reset(c))
+
+			if tc.name == "Close" {
+				require.Nil(t, c.lookupCache)
+			} else {
+				require.NotNil(t, c.lookupCache)
+				require.Zero(t, c.lookupCache.Len())
+			}
+		})
+	}
 }

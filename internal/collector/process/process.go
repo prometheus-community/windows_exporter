@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
@@ -40,6 +41,8 @@ import (
 const Name = "process"
 
 const (
+	maxCachedOwners = 1024
+
 	// windowsEpoch is the FILETIME of the Unix epoch, in 100ns intervals since 1601.
 	windowsEpoch int64 = 116444736000000000
 	// ticksPerSecond is the number of 100ns intervals per second. Dividing by it,
@@ -82,7 +85,7 @@ type Collector struct {
 	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
 	infoCache map[uint32]processInfo
 
-	lookupCache sync.Map
+	lookupCache *lru.Cache[string, string]
 
 	mu sync.RWMutex
 
@@ -170,6 +173,7 @@ func (c *Collector) Close() error {
 	c.snapshot = snapshotBuffer{}
 	c.processes = nil
 	c.infoCache = nil
+	c.lookupCache = nil
 
 	// The session belongs to the caller of Build.
 	c.miSession = nil
@@ -180,8 +184,13 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	lookupCache, err := lru.New[string, string](maxCachedOwners)
+	if err != nil {
+		return fmt.Errorf("failed to create process owner cache: %w", err)
+	}
+
 	c.infoCache = nil
-	c.lookupCache = sync.Map{}
+	c.lookupCache = lookupCache
 
 	if utils.IsMatchAll(c.config.ProcessInclude) && utils.IsMatchNone(c.config.ProcessExclude) {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")

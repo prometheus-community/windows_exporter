@@ -124,7 +124,7 @@ func TestResolveProcessInfoCache(t *testing.T) {
 	t.Parallel()
 
 	c := New(nil)
-	c.logger = slog.New(slog.DiscardHandler)
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	var s snapshotBuffer
 
@@ -159,7 +159,7 @@ func TestGetProcessInformationDetectsReusedPID(t *testing.T) {
 	t.Parallel()
 
 	c := New(nil)
-	c.logger = slog.New(slog.DiscardHandler)
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	_, _, _, err := c.getProcessInformation(uint32(os.Getpid()), currentProcessCreateTime(t)+1)
 	require.ErrorIs(t, err, errProcessGone)
