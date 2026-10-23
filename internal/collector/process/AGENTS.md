@@ -16,6 +16,12 @@ and `Config.CounterVersion` were removed.
   so a PID reused between the snapshot and the lookup is not attributed to the
   old process. Failed lookups are not cached and retry on the next scrape;
   access-denied results are cached as empty labels.
+- Owner SIDs are resolved once per scrape (`lookupCache`); resolved owners are
+  removed after the scrape, so the cache stays bounded. If `LookupAccountSid`
+  fails, the SID is published as the owner but the process info isn't cached,
+  and the SID is looked up again after `ownerRetryInterval`. No error is final:
+  `ERROR_NONE_MAPPED` also comes from network time-outs, not only from deleted
+  accounts.
 - Read the snapshot buffer with bounds checks against the returned length, and
   keep it 8-byte aligned (`[]uint64` backing array).
 

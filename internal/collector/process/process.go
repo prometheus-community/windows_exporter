@@ -82,6 +82,9 @@ type Collector struct {
 	// infoCache holds the windows_process_info values of the processes of the last scrape, keyed by PID.
 	infoCache map[uint32]processInfo
 
+	// lookupCache holds the owner of each SID looked up during the current scrape, keyed by SID.
+	// Resolved owners are removed after each scrape. Failed lookups are kept until ownerRetryInterval
+	// has passed, so an unreachable domain controller is not asked again on every scrape.
 	lookupCache sync.Map
 
 	mu sync.RWMutex
@@ -181,7 +184,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
 	c.infoCache = nil
-	c.lookupCache = sync.Map{}
+	c.lookupCache.Clear()
 
 	if utils.IsMatchAll(c.config.ProcessInclude) && utils.IsMatchNone(c.config.ProcessExclude) {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
