@@ -196,6 +196,8 @@ jobs:
             Write-Host "::group::$($_.Name)"
             Select-String -Path $_.FullName -Pattern 'Return value 3', 'Error \d', 'Component: (windows_exporter|C_Firewall)', 'Feature: ', 'Disallowing installation', 'Won''t Overwrite', 'InstallServices', 'MsiConfigureServices', 'RemoveExistingProducts', 'Firewall', 'CreateConfigFile', 'ServiceInstall' |
               Select-Object -First 120 | ForEach-Object { $_.Line }
+            Select-String -Path $_.FullName -Pattern 'Error 19\d\d', 'Return value 3' -Context 25, 2 |
+              Select-Object -First 2 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
             Write-Host '::endgroup::'
           }
 
