@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
 	"github.com/prometheus-community/windows_exporter/internal/multiplier"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -46,6 +47,11 @@ type Counter struct {
 
 	// Resolved at Build time.
 	multiplier multiplier.Multiplier
+	// desc describes the series without an instance label. instanceDesc
+	// adds the instance label as variable label; it is nil if the object
+	// has no instances or the counter sets the instance label itself.
+	desc         *prometheus.Desc
+	instanceDesc *prometheus.Desc
 }
 
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150
