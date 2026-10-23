@@ -78,10 +78,10 @@
                         Execute="deferred" Impersonate="no" Return="ignore" />
 
         <!-- util:ServiceConfig. MsiServiceConfigFailureActions cannot be used: Windows Installer fails
-             with error 5 (access denied) when it sets a restart action, which fails the install. -->
+            with error 5 (access denied) when it sets a restart action, which fails the install. -->
         <CustomAction Id="ConfigureServiceFailureActions" Property="SC_EXE"
-                      ExeCommand="failure windows_exporter reset= 0 actions= restart/60000/restart/60000/restart/60000"
-                      Execute="deferred" Impersonate="no" Return="ignore" />
+                        ExeCommand="failure windows_exporter reset= 0 actions= restart/60000/restart/60000/restart/60000"
+                        Execute="deferred" Impersonate="no" Return="ignore" />
 
         <CustomAction Id="FirewallRemoveBeforeAdd" Property="NETSH_EXE"
                         ExeCommand="advfirewall firewall delete rule name=&quot;$(var.ProductName)&quot;"
