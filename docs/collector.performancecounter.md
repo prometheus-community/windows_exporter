@@ -179,7 +179,8 @@ Some Objects like `Memory` do not have instances to select from at all. In this 
 
 The name of the label that holds the instance name. Optional and defaults to `object_instance`. Do not use `instance`: it collides with the target label that Prometheus adds.
 
-The label is only added if `instances` is set.
+The label is only added if `instances` is set. It must be a valid label name, otherwise the collector fails to start.
+A counter label with the same name takes precedence over the instance name.
 
 Some objects report the same instance name more than once in a sample, for example `Process` reports every `svchost` process as `svchost`.
 The first instance keeps its name, later ones get the suffix `#1`, `#2` and so on, skipping names that Windows reported itself, such as a network adapter `Ethernet#2`.
@@ -242,6 +243,7 @@ This key is optional.
 ##### labels
 
 Labels is a map of key-value pairs that will be added as labels to the metric.
+If a label or metric name is invalid, the collector fails to start.
 
 Counters of the same object that share a metric name must differ in their labels, like `state` in the schema example above.
 Otherwise, they would produce identical series and the collector fails to start.

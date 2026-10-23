@@ -355,7 +355,7 @@ func TestBuildInvalidConfig(t *testing.T) {
 					{Name: "% Processor Time"},
 				}},
 			},
-			buildErr: `object processor: counter % Processor Time: "__core" is not a valid label name`,
+			buildErr: `object processor: "__core" is not a valid instance label`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
