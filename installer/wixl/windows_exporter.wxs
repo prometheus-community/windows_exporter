@@ -141,7 +141,7 @@
                                         Account="[SERVICE_ACCOUNT]"
                                         Password="[SERVICE_PASSWORD]"
                                         Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
-                            <ServiceConfig DelayedAutoStart="yes" FailureActionsWhenNonFatal="yes" OnInstall="yes" OnReinstall="yes" />
+                            <ServiceConfig DelayedAutoStart="yes" FailureActionsWhen="failedToStopOrReturnedError" OnInstall="yes" OnReinstall="yes" />
                             <util:ServiceConfig ResetPeriodInDays="0"
                                                 FirstFailureActionType="restart"
                                                 SecondFailureActionType="restart"
