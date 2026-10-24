@@ -144,7 +144,7 @@
                                                 Program="[#windows_exporter.exe]"
                                                 Port="[LISTEN_PORT]"
                                                 Protocol="tcp">
-                            <fw:RemoteAddress Value="[FW_REMOTEIP]" />
+                            <fw:RemoteAddress>[FW_REMOTEIP]</fw:RemoteAddress>
                         </fw:FirewallException>
                     </Component>
                 </Directory>
