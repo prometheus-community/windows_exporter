@@ -97,10 +97,8 @@
                         Execute="deferred" Impersonate="no" Return="ignore" />
 
         <InstallExecuteSequence>
-            <!-- wixl does not resolve Before/After across standard actions reliably: it numbers custom
-                    actions right after the previous entry, which put deferred actions before InstallInitialize.
-                    Pin every action that must sit at a specific place. -->
-            <RemoveExistingProducts Sequence="1501" />
+            <!-- MajorUpgrade Schedule="afterInstallInitialize", as in the WiX installer -->
+            <RemoveExistingProducts After="InstallInitialize" />
             <Custom Action="set_maintenance" Before="set_reinstall_all_property" Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)" />
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE" />
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE" />
@@ -111,30 +109,31 @@
             <Custom Action="Set_SC_EXE" After="Set_NETSH_EXE" />
             <Custom Action="Set_FW_REMOTEIP" After="Set_SC_EXE" Condition="REMOTE_ADDR" />
 
-            <Custom Action="Set_CollectorsFlag" Sequence="4001" Condition="ENABLED_COLLECTORS" />
-            <Custom Action="Set_ExtraFlags" Sequence="4002" Condition="EXTRA_FLAGS" />
-            <Custom Action="Set_ConfigFile_NonDefault" Sequence="4003" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
-            <Custom Action="Set_ConfigFile_Default" Sequence="4004" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
-            <Custom Action="Set_ConfigFileFlag" Sequence="4005" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
-            <Custom Action="Set_ListenFlag" Sequence="4006" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
-            <Custom Action="Set_MetricsPathFlag" Sequence="4007" Condition="METRICS_PATH" />
-            <Custom Action="Set_TextfileDirsFlag" Sequence="4008" Condition="TEXTFILE_DIRS" />
+            <Custom Action="Set_CollectorsFlag" After="InstallFiles" Condition="ENABLED_COLLECTORS" />
+            <Custom Action="Set_ExtraFlags" After="InstallFiles" Condition="EXTRA_FLAGS" />
+            <Custom Action="Set_ConfigFile_NonDefault" After="InstallFiles" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
+            <Custom Action="Set_ConfigFile_Default" After="InstallFiles" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
+            <Custom Action="Set_ConfigFileFlag" After="InstallFiles" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
+            <Custom Action="Set_ListenFlag" After="InstallFiles" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
+            <Custom Action="Set_MetricsPathFlag" After="InstallFiles" Condition="METRICS_PATH" />
+            <Custom Action="Set_TextfileDirsFlag" After="InstallFiles" Condition="TEXTFILE_DIRS" />
 
-            <Custom Action="CreateConfigFile" Sequence="5799" Condition="ConfigFile_Default" />
-            <Custom Action="KillProcess" Sequence="3499" />
+            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
+            <Custom Action="KillProcess" Before="RemoveFiles" />
 
-            <Custom Action="FirewallRemove" Sequence="3498" Condition="(&amp;FirewallException=2) AND (!FirewallException=3)" />
+            <Custom Action="FirewallRemove" Before="KillProcess" Condition="(&amp;FirewallException=2) AND (!FirewallException=3)" />
+            <!-- after MsiConfigureServices (5850), which build.sh adds after wixl ran -->
             <Custom Action="ConfigureServiceFailureActions" Sequence="5860" Condition="NOT REMOVE" />
-            <Custom Action="FirewallRemoveBeforeAdd" Sequence="5801" Condition="&amp;FirewallException=3" />
-            <Custom Action="FirewallAddRollback" Sequence="5802" Condition="&amp;FirewallException=3" />
-            <Custom Action="FirewallAdd" Sequence="5803" Condition="&amp;FirewallException=3" />
+            <Custom Action="FirewallRemoveBeforeAdd" After="InstallServices" Condition="&amp;FirewallException=3" />
+            <Custom Action="FirewallAddRollback" After="FirewallRemoveBeforeAdd" Condition="&amp;FirewallException=3" />
+            <Custom Action="FirewallAdd" After="FirewallAddRollback" Condition="&amp;FirewallException=3" />
         </InstallExecuteSequence>
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
                 <Directory Id="APPLICATIONFOLDER" Name="windows_exporter">
                     <Component Id="windows_exporter.exe" Guid="*" Win64="yes">
-                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" DefaultVersion="$(var.FileVersion)" />
+                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" />
 
                         <!-- util:EventSource; the Name must match the argument to eventlog.Open() -->
                         <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter"

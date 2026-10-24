@@ -13,8 +13,11 @@ on:
 permissions: {}
 
 env:
-  # msitools master: arm64 support is not in a release yet (v0.106 has none).
-  MSITOOLS_COMMIT: 452f9b6a9d734a370429cf406bd92108dce9422b
+  # msitools master plus the not yet merged PE file version fix (GNOME/msitools#42), from the
+  # windows_exporter branch of jkroepke/msitools. arm64 support is not in a release yet
+  # (v0.106 has none).
+  MSITOOLS_REPO: https://gitlab.gnome.org/jkroepke/msitools.git
+  MSITOOLS_COMMIT: eeb6e3bbe92ad0a45f2ffbbf0247582e6b01de5b
   JSIGN_VERSION: '7.6'
   JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
 
@@ -39,7 +42,7 @@ jobs:
           pipx install 'meson>=1.4'
           git init -q "$RUNNER_TEMP/msitools"
           cd "$RUNNER_TEMP/msitools"
-          git fetch -q --depth 1 https://gitlab.gnome.org/GNOME/msitools.git "$MSITOOLS_COMMIT"
+          git fetch -q --depth 1 "$MSITOOLS_REPO" "$MSITOOLS_COMMIT"
           git checkout -q FETCH_HEAD
           # meson.build requires the bats submodule even when the tests are not run.
           git submodule update -q --init --depth 1
@@ -85,11 +88,11 @@ jobs:
           for arch in amd64 arm64; do
             GOOS=windows GOARCH=$arch CGO_ENABLED=0 go build -o "output/windows_exporter-$arch.exe" ./cmd/windows_exporter
             sign "output/windows_exporter-$arch.exe"
-            installer/wixl/build.sh "output/windows_exporter-$arch.exe" 98.0.0 "$arch" "output/windows_exporter-98.0.0-$arch.msi" 98.0.0.0
+            installer/wixl/build.sh "output/windows_exporter-$arch.exe" 98.0.0 "$arch" "output/windows_exporter-98.0.0-$arch.msi"
             sign "output/windows_exporter-98.0.0-$arch.msi"
           done
           # Same executable with a higher version for the upgrade test.
-          installer/wixl/build.sh output/windows_exporter-amd64.exe 99.0.0 amd64 output/windows_exporter-99.0.0-amd64.msi 98.0.0.0
+          installer/wixl/build.sh output/windows_exporter-amd64.exe 99.0.0 amd64 output/windows_exporter-99.0.0-amd64.msi
           sign output/windows_exporter-99.0.0-amd64.msi
           cp "$RUNNER_TEMP/cert.pem" output/probe-cert.pem
           ls -la output

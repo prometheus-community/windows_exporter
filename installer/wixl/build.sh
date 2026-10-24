@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # Probe: build the windows_exporter MSI on Linux with wixl, then add what wixl cannot express.
-# Usage: build.sh <windows_exporter.exe> <msi-version> <amd64|arm64> <out.msi> [file-version]
-# file-version is the version resource of the executable and defaults to msi-version: wixl
-# does not read it from the PE file, and Windows Installer never replaces a versioned file
-# with an unversioned one.
+# Usage: build.sh <windows_exporter.exe> <msi-version> <amd64|arm64> <out.msi>
 set -euo pipefail
 
-exe=$(realpath "$1") version=$2 arch=$3 out=$(realpath -m "$4") file_version=${5:-$2}
+exe=$(realpath "$1") version=$2 arch=$3 out=$(realpath -m "$4")
 WIXL=${WIXL:-wixl}
 MSIBUILD=${MSIBUILD:-msibuild}
 
@@ -16,7 +13,7 @@ cp -f "$exe" Work/windows_exporter.exe
 
 wixl_arch=$([[ $arch == amd64 ]] && echo x64 || echo arm64)
 rm -f "$out"
-"$WIXL" --ext ui ${WIXL_EXTDIR:+--extdir "$WIXL_EXTDIR"} -a "$wixl_arch" -D Version="$version" -D FileVersion="$file_version" -o "$out" windows_exporter.wxs
+"$WIXL" --ext ui ${WIXL_EXTDIR:+--extdir "$WIXL_EXTDIR"} -a "$wixl_arch" -D Version="$version" -o "$out" windows_exporter.wxs
 
 # wixl ignores Property/@Secure, ServiceInstall/@Vital and has no ServiceConfig element.
 secure="ENABLED_COLLECTORS;EXTRA_FLAGS;CONFIG_FILE;LISTEN_ADDR;LISTEN_PORT;METRICS_PATH;REMOTE_ADDR;TEXTFILE_DIRS;SERVICE_ACCOUNT;SERVICE_PASSWORD"
