@@ -5,9 +5,8 @@
 
     wixl has no WixQuietExec, so:
         * WixQuietExec actions      -> type 50 exe custom actions (deferred, no impersonation)
-        * CheckExtraFlags (error CA)-> LaunchCondition
-    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig, util:EventSource and
-    fw:FirewallException need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
+    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig, util:EventSource,
+    fw:FirewallException and CustomAction/@Error need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
 -->
 <?define ProductName = "windows_exporter" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension" xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
@@ -18,8 +17,6 @@
 
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes" />
         <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
-
-        <Condition Message="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again.">NOT (EXTRA_FLAGS &gt;&lt; "--config.file")</Condition>
 
         <Property Id="ENABLED_COLLECTORS" Secure="yes" />
         <Property Id="EXTRA_FLAGS" Secure="yes" />
@@ -54,6 +51,9 @@
         <CustomAction Id="Set_MetricsPathFlag" Property="MetricsPathFlag" Value="--telemetry.path=&quot;[METRICS_PATH]&quot;" />
         <CustomAction Id="Set_TextfileDirsFlag" Property="TextfileDirsFlag" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" />
         <CustomAction Id="Set_FW_REMOTEIP" Property="FW_REMOTEIP" Value="[REMOTE_ADDR]" />
+
+        <CustomAction Id="CheckExtraFlags"
+                        Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
 
         <CustomAction Id="set_maintenance" Property="MAINTENANCE" Value="true" />
         <CustomAction Id="set_reinstall_all_property" Property="REINSTALL" Value="ALL" />
@@ -93,6 +93,9 @@
 
             <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
+
+            <Custom Action="CheckExtraFlags" Before="InstallInitialize"
+                    Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
         </InstallExecuteSequence>
 
         <Directory Id="TARGETDIR" Name="SourceDir">

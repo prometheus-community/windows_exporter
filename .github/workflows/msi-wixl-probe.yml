@@ -17,7 +17,7 @@ env:
   # util:ServiceConfig, util:EventSource, fw:FirewallException, PE file version, ...),
   # from the windows_exporter branch of jkroepke/msitools. arm64 support is not in a release yet (v0.106 has none).
   MSITOOLS_REPO: https://gitlab.gnome.org/jkroepke/msitools.git
-  MSITOOLS_COMMIT: f0f4ff2aa12672e9bd92e2c4a89b6876ea443f4d
+  MSITOOLS_COMMIT: 963a067e0cdd6be38bbaa2a4d243235c22894f4e
   JSIGN_VERSION: '7.6'
   JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
 
@@ -145,7 +145,7 @@ jobs:
           $msi = (Resolve-Path output\windows_exporter-98.0.0-amd64.msi).Path
           $log = Join-Path $env:RUNNER_TEMP 'installer-test\wixl-extra-install.log'
 
-          # The EXTRA_FLAGS launch condition must refuse --config.file.
+          # The CheckExtraFlags error action must refuse --config.file.
           $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$msi`"", '/qn', 'EXTRA_FLAGS="--config.file=x"', '/l*v', "`"$log.reject`"") -Wait -PassThru
           if ($p.ExitCode -ne 1603) { throw "EXTRA_FLAGS with --config.file: expected 1603, got $($p.ExitCode)" }
           if (Get-Service windows_exporter -ErrorAction SilentlyContinue) { throw 'service exists after a refused install' }
