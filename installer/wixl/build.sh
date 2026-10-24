@@ -12,9 +12,10 @@ cp -f "$exe" Work/windows_exporter.exe
 
 wixl_arch=$([[ $arch == amd64 ]] && echo x64 || echo arm64)
 rm -f "$out"
-"$WIXL" --ext ui ${WIXL_EXTDIR:+--extdir "$WIXL_EXTDIR"} -a "$wixl_arch" -D Version="$version" -o "$out" windows_exporter.wxs 2>Work/wixl.log || { cat Work/wixl.log >&2; exit 1; }
+status=0
+"$WIXL" --ext ui ${WIXL_EXTDIR:+--extdir "$WIXL_EXTDIR"} -a "$wixl_arch" -D Version="$version" -o "$out" windows_exporter.wxs 2>Work/wixl.log || status=$?
 # wixl only warns about attributes it does not support, which then silently go missing.
-if [[ -s Work/wixl.log ]]; then
+if [[ $status -ne 0 || -s Work/wixl.log ]]; then
 	cat Work/wixl.log >&2
 	exit 1
 fi
