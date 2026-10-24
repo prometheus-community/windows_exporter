@@ -10,8 +10,7 @@
     fw:FirewallException need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
 -->
 <?define ProductName = "windows_exporter" ?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
-     xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension" xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
     <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
                 Manufacturer="prometheus-community" Language="1033" Codepage="1252">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
