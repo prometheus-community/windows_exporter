@@ -3,15 +3,15 @@
     Probe: windows_exporter MSI for msitools' wixl (WiX v3 dialect, subset).
     Port of installer/main.wxs + installer/files.wxs (WiX v4/v5).
 
-    wixl has no firewall extension and no WixQuietExec, so:
-        * fw:FirewallException      -> netsh exe custom actions (deferred, with rollback)
+    wixl has no WixQuietExec, so:
         * WixQuietExec actions      -> type 50 exe custom actions (deferred, no impersonation)
         * CheckExtraFlags (error CA)-> LaunchCondition
-    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig and util:EventSource
-    need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
+    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig, util:EventSource and
+    fw:FirewallException need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
 -->
 <?define ProductName = "windows_exporter" ?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
+     xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
     <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
                 Manufacturer="prometheus-community" Language="1033" Codepage="1252">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
@@ -63,7 +63,6 @@
         <!-- Executables for the type 50 exe custom actions. -->
         <CustomAction Id="Set_CMD_EXE" Property="CMD_EXE" Value="[System64Folder]cmd.exe" />
         <CustomAction Id="Set_POWERSHELL_EXE" Property="POWERSHELL_EXE" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
-        <CustomAction Id="Set_NETSH_EXE" Property="NETSH_EXE" Value="[System64Folder]netsh.exe" />
 
         <!-- Deferred exe custom actions. Their command line is formatted when the script is written. -->
         <CustomAction Id="CreateConfigFile" Property="CMD_EXE"
@@ -71,19 +70,6 @@
                         Execute="deferred" Impersonate="no" Return="check" />
         <CustomAction Id="KillProcess" Property="POWERSHELL_EXE"
                         ExeCommand="-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
-                        Execute="deferred" Impersonate="no" Return="ignore" />
-
-        <CustomAction Id="FirewallRemoveBeforeAdd" Property="NETSH_EXE"
-                        ExeCommand="advfirewall firewall delete rule name=&quot;$(var.ProductName)&quot;"
-                        Execute="deferred" Impersonate="no" Return="ignore" />
-        <CustomAction Id="FirewallAddRollback" Property="NETSH_EXE"
-                        ExeCommand="advfirewall firewall delete rule name=&quot;$(var.ProductName)&quot;"
-                        Execute="rollback" Impersonate="no" Return="ignore" />
-        <CustomAction Id="FirewallAdd" Property="NETSH_EXE"
-                        ExeCommand="advfirewall firewall add rule name=&quot;$(var.ProductName)&quot; description=&quot;$(var.ProductName) HTTP endpoint&quot; dir=in action=allow enable=yes profile=any protocol=TCP localport=[LISTEN_PORT] remoteip=[FW_REMOTEIP] program=&quot;[#windows_exporter.exe]&quot;"
-                        Execute="deferred" Impersonate="no" Return="check" />
-        <CustomAction Id="FirewallRemove" Property="NETSH_EXE"
-                        ExeCommand="advfirewall firewall delete rule name=&quot;$(var.ProductName)&quot;"
                         Execute="deferred" Impersonate="no" Return="ignore" />
 
         <InstallExecuteSequence>
@@ -95,8 +81,7 @@
 
             <Custom Action="Set_CMD_EXE" After="CostFinalize" />
             <Custom Action="Set_POWERSHELL_EXE" After="Set_CMD_EXE" />
-            <Custom Action="Set_NETSH_EXE" After="Set_POWERSHELL_EXE" />
-            <Custom Action="Set_FW_REMOTEIP" After="Set_NETSH_EXE" Condition="REMOTE_ADDR" />
+            <Custom Action="Set_FW_REMOTEIP" After="Set_POWERSHELL_EXE" Condition="REMOTE_ADDR" />
 
             <Custom Action="Set_CollectorsFlag" After="InstallFiles" Condition="ENABLED_COLLECTORS" />
             <Custom Action="Set_ExtraFlags" After="InstallFiles" Condition="EXTRA_FLAGS" />
@@ -109,11 +94,6 @@
 
             <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
-
-            <Custom Action="FirewallRemove" Before="KillProcess" Condition="(&amp;FirewallException=2) AND (!FirewallException=3)" />
-            <Custom Action="FirewallRemoveBeforeAdd" After="InstallServices" Condition="&amp;FirewallException=3" />
-            <Custom Action="FirewallAddRollback" After="FirewallRemoveBeforeAdd" Condition="&amp;FirewallException=3" />
-            <Custom Action="FirewallAdd" After="FirewallAddRollback" Condition="&amp;FirewallException=3" />
         </InstallExecuteSequence>
 
         <Directory Id="TARGETDIR" Name="SourceDir">
@@ -157,9 +137,16 @@
                             <CreateFolder />
                         </Component>
                     </Directory>
-                    <!-- The firewall rule is created by custom actions; the feature needs a component to be selectable. -->
                     <Component Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">
                         <RegistryValue Root="HKLM" Key="SOFTWARE\prometheus-community\windows_exporter" Name="FirewallException" Type="integer" Value="1" KeyPath="yes" />
+                        <fw:FirewallException Id="MetricsEndpoint"
+                                                Name="$(var.ProductName)"
+                                                Description="$(var.ProductName) HTTP endpoint"
+                                                Program="[#windows_exporter.exe]"
+                                                Port="[LISTEN_PORT]"
+                                                Protocol="tcp">
+                            <fw:RemoteAddress Value="[FW_REMOTEIP]" />
+                        </fw:FirewallException>
                     </Component>
                 </Directory>
             </Directory>
