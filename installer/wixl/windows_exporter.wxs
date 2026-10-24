@@ -3,17 +3,15 @@
     Probe: windows_exporter MSI for msitools' wixl (WiX v3 dialect, subset).
     Port of installer/main.wxs + installer/files.wxs (WiX v4/v5).
 
-    wixl has no util/firewall extensions and no WixQuietExec, so:
-        * util:EventSource          -> plain RegistryValue entries
+    wixl has no firewall extension and no WixQuietExec, so:
         * fw:FirewallException      -> netsh exe custom actions (deferred, with rollback)
         * WixQuietExec actions      -> type 50 exe custom actions (deferred, no impersonation)
-        * ServiceConfig / util:ServiceConfig / sc.exe failureflag
-                                    -> MsiServiceConfig* tables, added after wixl by build.sh
         * CheckExtraFlags (error CA)-> LaunchCondition
-        * Property Hidden="yes"     -> MsiHiddenProperties
+    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig and util:EventSource
+    need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
 -->
 <?define ProductName = "windows_exporter" ?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
                 Manufacturer="prometheus-community" Language="1033" Codepage="1252">
         <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
@@ -33,8 +31,7 @@
         <Property Id="REMOTE_ADDR" Secure="yes" />
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
         <Property Id="SERVICE_ACCOUNT" Secure="yes" />
-        <Property Id="SERVICE_PASSWORD" Secure="yes" />
-        <Property Id="MsiHiddenProperties" Value="SERVICE_PASSWORD" />
+        <Property Id="SERVICE_PASSWORD" Secure="yes" Hidden="yes" />
 
         <Icon Id="icon.ico" SourceFile="../icon.ico" />
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />
@@ -67,7 +64,6 @@
         <CustomAction Id="Set_CMD_EXE" Property="CMD_EXE" Value="[System64Folder]cmd.exe" />
         <CustomAction Id="Set_POWERSHELL_EXE" Property="POWERSHELL_EXE" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
         <CustomAction Id="Set_NETSH_EXE" Property="NETSH_EXE" Value="[System64Folder]netsh.exe" />
-        <CustomAction Id="Set_SC_EXE" Property="SC_EXE" Value="[System64Folder]sc.exe" />
 
         <!-- Deferred exe custom actions. Their command line is formatted when the script is written. -->
         <CustomAction Id="CreateConfigFile" Property="CMD_EXE"
@@ -75,12 +71,6 @@
                         Execute="deferred" Impersonate="no" Return="check" />
         <CustomAction Id="KillProcess" Property="POWERSHELL_EXE"
                         ExeCommand="-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
-                        Execute="deferred" Impersonate="no" Return="ignore" />
-
-        <!-- util:ServiceConfig. MsiServiceConfigFailureActions cannot be used: Windows Installer fails
-            with error 5 (access denied) when it sets a restart action, which fails the install. -->
-        <CustomAction Id="ConfigureServiceFailureActions" Property="SC_EXE"
-                        ExeCommand="failure windows_exporter reset= 0 actions= restart/60000/restart/60000/restart/60000"
                         Execute="deferred" Impersonate="no" Return="ignore" />
 
         <CustomAction Id="FirewallRemoveBeforeAdd" Property="NETSH_EXE"
@@ -106,8 +96,7 @@
             <Custom Action="Set_CMD_EXE" After="CostFinalize" />
             <Custom Action="Set_POWERSHELL_EXE" After="Set_CMD_EXE" />
             <Custom Action="Set_NETSH_EXE" After="Set_POWERSHELL_EXE" />
-            <Custom Action="Set_SC_EXE" After="Set_NETSH_EXE" />
-            <Custom Action="Set_FW_REMOTEIP" After="Set_SC_EXE" Condition="REMOTE_ADDR" />
+            <Custom Action="Set_FW_REMOTEIP" After="Set_NETSH_EXE" Condition="REMOTE_ADDR" />
 
             <Custom Action="Set_CollectorsFlag" After="InstallFiles" Condition="ENABLED_COLLECTORS" />
             <Custom Action="Set_ExtraFlags" After="InstallFiles" Condition="EXTRA_FLAGS" />
@@ -122,8 +111,6 @@
             <Custom Action="KillProcess" Before="RemoveFiles" />
 
             <Custom Action="FirewallRemove" Before="KillProcess" Condition="(&amp;FirewallException=2) AND (!FirewallException=3)" />
-            <!-- after MsiConfigureServices (5850), which build.sh adds after wixl ran -->
-            <Custom Action="ConfigureServiceFailureActions" Sequence="5860" Condition="NOT REMOVE" />
             <Custom Action="FirewallRemoveBeforeAdd" After="InstallServices" Condition="&amp;FirewallException=3" />
             <Custom Action="FirewallAddRollback" After="FirewallRemoveBeforeAdd" Condition="&amp;FirewallException=3" />
             <Custom Action="FirewallAdd" After="FirewallAddRollback" Condition="&amp;FirewallException=3" />
@@ -132,14 +119,15 @@
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
                 <Directory Id="APPLICATIONFOLDER" Name="windows_exporter">
-                    <Component Id="windows_exporter.exe" Guid="*" Win64="yes">
-                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" />
+                    <Component Id="windows_exporter.exe" Guid="*">
+                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" Vital="yes" />
 
-                        <!-- util:EventSource; the Name must match the argument to eventlog.Open() -->
-                        <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter"
-                                        Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-                        <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter"
-                                        Name="TypesSupported" Type="integer" Value="7" />
+                        <!-- The "Name" field must match the argument to eventlog.Open() -->
+                        <util:EventSource Log="Application" Name="windows_exporter"
+                                        EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
+                                        SupportsErrors="yes"
+                                        SupportsInformationals="yes"
+                                        SupportsWarnings="yes" />
 
                         <ServiceInstall Id="InstallExporterService"
                                         Name="windows_exporter"
@@ -153,18 +141,24 @@
                                         Account="[SERVICE_ACCOUNT]"
                                         Password="[SERVICE_PASSWORD]"
                                         Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                            <ServiceConfig DelayedAutoStart="yes" FailureActionsWhenNonFatal="yes" OnInstall="yes" OnReinstall="yes" />
+                            <util:ServiceConfig ResetPeriodInDays="0"
+                                                FirstFailureActionType="restart"
+                                                SecondFailureActionType="restart"
+                                                ThirdFailureActionType="restart"
+                                                RestartServiceDelayInSeconds="60" />
                             <ServiceDependency Id="wmiApSrv" />
                         </ServiceInstall>
                         <ServiceControl Id="StartService" Name="windows_exporter" Start="install" Wait="no" />
                         <ServiceControl Id="StopService" Name="windows_exporter" Remove="uninstall" Stop="both" Wait="yes" />
                     </Component>
                     <Directory Id="textfile_inputs" Name="textfile_inputs">
-                        <Component Id="CreateTextfileDirectory" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14" Win64="yes">
+                        <Component Id="CreateTextfileDirectory" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
                             <CreateFolder />
                         </Component>
                     </Directory>
                     <!-- The firewall rule is created by custom actions; the feature needs a component to be selectable. -->
-                    <Component Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7" Win64="yes">
+                    <Component Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">
                         <RegistryValue Root="HKLM" Key="SOFTWARE\prometheus-community\windows_exporter" Name="FirewallException" Type="integer" Value="1" KeyPath="yes" />
                     </Component>
                 </Directory>

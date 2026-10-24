@@ -13,11 +13,11 @@ on:
 permissions: {}
 
 env:
-  # msitools master plus the not yet merged PE file version fix (GNOME/msitools#42), from the
-  # windows_exporter branch of jkroepke/msitools. arm64 support is not in a release yet
-  # (v0.106 has none).
+  # msitools master plus all open msitools MRs (Secure, Hidden, Vital, ServiceConfig,
+  # util:ServiceConfig, util:EventSource, PE file version, ...), from the windows_exporter
+  # branch of jkroepke/msitools. arm64 support is not in a release yet (v0.106 has none).
   MSITOOLS_REPO: https://gitlab.gnome.org/jkroepke/msitools.git
-  MSITOOLS_COMMIT: eeb6e3bbe92ad0a45f2ffbbf0247582e6b01de5b
+  MSITOOLS_COMMIT: cccc6d98e913dd88e813884ded872a17df321f92
   JSIGN_VERSION: '7.6'
   JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
 
@@ -50,7 +50,6 @@ jobs:
           ninja -C build install
           {
             echo "WIXL=$RUNNER_TEMP/msitools/build/tools/wixl/wixl"
-            echo "MSIBUILD=$RUNNER_TEMP/msitools/build/tools/msibuild"
             echo "WIXL_EXTDIR=$(echo "$RUNNER_TEMP"/msitools-install/share/wixl-*/ext)"
           } >> "$GITHUB_ENV"
           "$RUNNER_TEMP/msitools/build/tools/wixl/wixl" --version
