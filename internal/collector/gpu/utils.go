@@ -130,6 +130,7 @@ func (c *instanceCache) begin() *instanceScrape {
 func (c *instanceCache) reset() {
 	c.mu.Lock()
 	c.entries = nil
+	c.spare = nil
 	c.mu.Unlock()
 }
 

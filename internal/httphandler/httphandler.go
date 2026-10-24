@@ -56,9 +56,10 @@ type MetricsHTTPHandler struct {
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
-	// registries holds idle registries for scrapes of all collectors. A registry sizes the
-	// buffers of a Gather by the number of metrics of its previous Gather, so reusing it
-	// saves growing them on every scrape. Filtered scrapes use a new registry each.
+	// registries holds idle registries for scrapes of all collectors. Since
+	// prometheus/client_golang#2170 (not in v1.25.0), a registry sizes the buffers of a
+	// Gather by the number of metrics of its previous Gather, so reusing it saves growing
+	// them on every scrape. Filtered scrapes use a new registry each.
 	registries chan *scrapeRegistry
 
 	logger        *slog.Logger
