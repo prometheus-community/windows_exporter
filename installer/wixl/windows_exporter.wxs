@@ -164,29 +164,11 @@
                 <ComponentRef Id="C_FirewallException" />
             </Feature>
         </Feature>
-        <!-- WixUI_FeatureTree is not available in wixl (no CustomizeDlg); Welcome -> configuration -> VerifyReady.
-                The firewall feature can still be chosen with ADDLOCAL=FirewallException. -->
         <UIRef Id="ExporterUI" />
-        <UIRef Id="WixUI_Common" />
     </Product>
     <Fragment>
         <UI Id="ExporterUI">
-            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
-            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
-            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
-            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
-            <DialogRef Id="ErrorDlg" />
-            <DialogRef Id="FatalError" />
-            <DialogRef Id="FilesInUse" />
-            <DialogRef Id="MsiRMFilesInUse" />
-            <DialogRef Id="PrepareDlg" />
-            <DialogRef Id="ProgressDlg" />
-            <DialogRef Id="ResumeDlg" />
-            <DialogRef Id="UserExit" />
-            <DialogRef Id="WelcomeDlg" />
-            <DialogRef Id="VerifyReadyDlg" />
-            <DialogRef Id="MaintenanceWelcomeDlg" />
-            <DialogRef Id="MaintenanceTypeDlg" />
+            <UIRef Id="WixUI_FeatureTree" />
 
             <Dialog Id="CustomPropertiesDlg" Width="370" Height="270" Title="windows_exporter configuration">
                 <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
@@ -208,22 +190,19 @@
                     <Publish Event="NewDialog" Value="VerifyReadyDlg" />
                 </Control>
                 <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="Back">
-                    <Publish Event="NewDialog" Value="WelcomeDlg" />
+                    <Publish Event="NewDialog" Value="CustomizeDlg" />
                 </Control>
                 <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
                     <Publish Event="SpawnDialog" Value="CancelDlg" />
                 </Control>
             </Dialog>
 
-            <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
-            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomPropertiesDlg" Condition="NOT Installed" />
-            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CustomPropertiesDlg" Order="1" Condition="NOT Installed" />
-            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2" Condition="Installed" />
-            <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
-            <Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Event="NewDialog" Value="VerifyReadyDlg" />
-            <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
-            <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
-            <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+            <!-- As in installer/main.wxs: skip the license agreement and show the
+                configuration dialog between the feature tree and VerifyReady. -->
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="10" Condition="NOT Installed" />
+            <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="10" Condition="NOT Installed" />
+            <Publish Dialog="CustomizeDlg" Control="Next" Event="NewDialog" Value="CustomPropertiesDlg" Order="10" />
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CustomPropertiesDlg" Order="10" />
         </UI>
     </Fragment>
 </Wix>
