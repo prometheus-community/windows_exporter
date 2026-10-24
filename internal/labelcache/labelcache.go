@@ -143,6 +143,11 @@ type Scrape struct {
 	committed bool
 	// used is set by the first MustNewConstMetric call.
 	used atomic.Bool
+
+	// counters and gauges hold the metrics the scrape hands out. They are
+	// guarded by the lock of the cache.
+	counters chunk[counterMetric]
+	gauges   chunk[gaugeMetric]
 }
 
 // Begin starts a scrape. Call Commit when it is done.
@@ -343,9 +348,10 @@ func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *pro
 	c.mu.Lock()
 	if c.resets == s.resets && !s.committed {
 		if labels, ok := m.get(k, s.generation); ok {
+			metric := s.newConstMetric(desc, valueType, value, labels)
 			c.mu.Unlock()
 
-			return newConstMetric(desc, valueType, value, labels)
+			return metric
 		}
 	}
 	c.mu.Unlock()
@@ -368,7 +374,7 @@ func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *pro
 
 	// Another goroutine of the scrape may have added the series meanwhile.
 	if labels, ok := m.get(k, s.generation); ok {
-		return newConstMetric(desc, valueType, value, labels)
+		return s.newConstMetric(desc, valueType, value, labels)
 	}
 
 	if *m == nil {
@@ -378,7 +384,7 @@ func mustNewConstMetric[K comparable](s *Scrape, m *seriesMap[K], k K, desc *pro
 	labels := c.intern(out.GetLabel())
 	(*m)[k] = series{labels: labels, seen: s.generation}
 
-	return newConstMetric(desc, valueType, value, labels)
+	return s.newConstMetric(desc, valueType, value, labels)
 }
 
 func knownValueType(valueType prometheus.ValueType) bool {
@@ -390,20 +396,50 @@ func knownValueType(valueType prometheus.ValueType) bool {
 	}
 }
 
+// Metrics of a scrape are allocated in chunks, which grow from minChunk to
+// maxChunk metrics, so a collector with few series doesn't allocate more
+// than it needs. A metric that is kept keeps its chunk alive, which is why
+// chunks stay small.
+const (
+	minChunk = 8
+	maxChunk = 128
+)
+
+// chunk hands out the metrics of one type of a scrape.
+type chunk[T any] struct {
+	free []T
+	size int
+}
+
+func (c *chunk[T]) next() *T {
+	if len(c.free) == 0 {
+		c.size = min(max(2*c.size, minChunk), maxChunk)
+		c.free = make([]T, c.size)
+	}
+
+	m := &c.free[0]
+	c.free = c.free[1:]
+
+	return m
+}
+
 // newConstMetric returns a const metric with shared label pairs. The value
 // message lives in the metric, so Write doesn't allocate. Label pairs are
 // immutable once written, like those of prometheus.NewConstMetric.
+// The caller holds the lock of the cache, which guards the chunks.
 //
 //nolint:ireturn // Const metrics have no exported type.
-func newConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labels []*dto.LabelPair) prometheus.Metric {
+func (s *Scrape) newConstMetric(desc *prometheus.Desc, valueType prometheus.ValueType, value float64, labels []*dto.LabelPair) prometheus.Metric {
 	switch valueType {
 	case prometheus.CounterValue:
-		m := &counterMetric{desc: desc, labels: labels, value: value}
+		m := s.counters.next()
+		*m = counterMetric{desc: desc, labels: labels, value: value}
 		m.counter.Value = &m.value
 
 		return m
 	case prometheus.GaugeValue:
-		m := &gaugeMetric{desc: desc, labels: labels, value: value}
+		m := s.gauges.next()
+		*m = gaugeMetric{desc: desc, labels: labels, value: value}
 		m.gauge.Value = &m.value
 
 		return m

@@ -82,6 +82,38 @@ func TestMustNewConstMetric(t *testing.T) {
 	}
 }
 
+// Metrics share chunks, so each must keep its own value, also across chunks
+// and after the next scrape reuses the series.
+func TestChunkedMetricsKeepTheirValues(t *testing.T) {
+	t.Parallel()
+
+	var cache labelcache.Cache
+
+	const n = 300
+
+	for scrapeNumber := range 2 {
+		scrape := cache.Begin()
+		metrics := make([]prometheus.Metric, 0, 2*n)
+
+		for i := range n {
+			value := float64(scrapeNumber*1000 + i)
+			metrics = append(metrics,
+				scrape.MustNewConstMetric(counterDesc, prometheus.CounterValue, value, "p", strconv.Itoa(i), "user"),
+				scrape.MustNewConstMetric(gaugeDesc, prometheus.GaugeValue, -value, "p", strconv.Itoa(i)),
+			)
+		}
+
+		scrape.Commit()
+
+		for i := range n {
+			value := float64(scrapeNumber*1000 + i)
+			require.InDelta(t, value, write(t, metrics[2*i]).GetCounter().GetValue(), 0)
+			require.InDelta(t, -value, write(t, metrics[2*i+1]).GetGauge().GetValue(), 0)
+			require.Equal(t, strconv.Itoa(i), write(t, metrics[2*i+1]).GetLabel()[1].GetValue())
+		}
+	}
+}
+
 // From the second scrape on, a series reuses the label pairs of the previous
 // one; series that a scrape didn't report get new pairs.
 func TestLabelReuse(t *testing.T) {
