@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Probe: windows_exporter MSI for msitools' wixl (WiX v3 dialect, subset).
+    Port of installer/main.wxs + installer/files.wxs (WiX v4/v5).
+
+    wixl has no WixQuietExec, so:
+        * WixQuietExec actions      -> type 50 exe custom actions (deferred, no impersonation)
+    Secure, Hidden, Vital, ServiceConfig, util:ServiceConfig, util:EventSource,
+    fw:FirewallException and CustomAction/@Error need the open msitools MRs from the windows_exporter branch of jkroepke/msitools.
+-->
+<?define ProductName = "windows_exporter" ?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension" xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
+    <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
+                Manufacturer="prometheus-community" Language="1033" Codepage="1252">
+        <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
+                    Manufacturer="prometheus-community" Description="$(var.ProductName) $(var.Version) installer" />
+
+        <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes" />
+        <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
+
+        <Property Id="ENABLED_COLLECTORS" Secure="yes" />
+        <Property Id="EXTRA_FLAGS" Secure="yes" />
+        <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
+        <Property Id="LISTEN_ADDR" Secure="yes" />
+        <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
+        <Property Id="METRICS_PATH" Secure="yes" />
+        <Property Id="REMOTE_ADDR" Secure="yes" />
+        <Property Id="TEXTFILE_DIRS" Secure="yes" />
+        <Property Id="SERVICE_ACCOUNT" Secure="yes" />
+        <Property Id="SERVICE_PASSWORD" Secure="yes" Hidden="yes" />
+
+        <Icon Id="icon.ico" SourceFile="../icon.ico" />
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
+        <Property Id="ARPCOMMENTS" Value="Prometheus exporter for Windows machines" />
+        <Property Id="ARPNOREPAIR" Value="1" />
+        <Property Id="ARPSIZE" Value="10000" />
+        <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+        <Property Id="START_MENU_FOLDER" Value="0" />
+        <Property Id="NOSTART" Value="0" />
+        <Property Id="FW_REMOTEIP" Value="any" />
+
+        <!-- SetProperty equivalents (type 51). -->
+        <CustomAction Id="Set_CollectorsFlag" Property="CollectorsFlag" Value="--collectors.enabled [ENABLED_COLLECTORS]" />
+        <CustomAction Id="Set_ExtraFlags" Property="ExtraFlags" Value="[EXTRA_FLAGS]" />
+        <CustomAction Id="Set_ConfigFile_NonDefault" Property="ConfigFile_NonDefault" Value="[CONFIG_FILE]" />
+        <CustomAction Id="Set_ConfigFile_Default" Property="ConfigFile_Default" Value="[APPLICATIONFOLDER]config.yaml" />
+        <CustomAction Id="Set_ConfigFileFlag" Property="ConfigFileFlag" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" />
+        <CustomAction Id="Set_ListenFlag" Property="ListenFlag" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" />
+        <CustomAction Id="Set_MetricsPathFlag" Property="MetricsPathFlag" Value="--telemetry.path=&quot;[METRICS_PATH]&quot;" />
+        <CustomAction Id="Set_TextfileDirsFlag" Property="TextfileDirsFlag" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" />
+        <CustomAction Id="Set_FW_REMOTEIP" Property="FW_REMOTEIP" Value="[REMOTE_ADDR]" />
+
+        <CustomAction Id="CheckExtraFlags"
+                        Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
+
+        <CustomAction Id="set_maintenance" Property="MAINTENANCE" Value="true" />
+        <CustomAction Id="set_reinstall_all_property" Property="REINSTALL" Value="ALL" />
+        <CustomAction Id="set_reinstallmode_property" Property="REINSTALLMODE" Value="amus" />
+
+        <!-- Executables for the type 50 exe custom actions. -->
+        <CustomAction Id="Set_CMD_EXE" Property="CMD_EXE" Value="[System64Folder]cmd.exe" />
+        <CustomAction Id="Set_POWERSHELL_EXE" Property="POWERSHELL_EXE" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
+
+        <!-- Deferred exe custom actions. Their command line is formatted when the script is written. -->
+        <CustomAction Id="CreateConfigFile" Property="CMD_EXE"
+                        ExeCommand="/c TYPE NUL &gt;&gt;&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;"
+                        Execute="deferred" Impersonate="no" Return="check" />
+        <CustomAction Id="KillProcess" Property="POWERSHELL_EXE"
+                        ExeCommand="-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
+                        Execute="deferred" Impersonate="no" Return="ignore" />
+
+        <InstallExecuteSequence>
+            <!-- MajorUpgrade Schedule="afterInstallInitialize", as in the WiX installer -->
+            <RemoveExistingProducts After="InstallInitialize" />
+            <Custom Action="set_maintenance" Before="set_reinstall_all_property" Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)" />
+            <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE" />
+            <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE" />
+
+            <Custom Action="Set_CMD_EXE" After="CostFinalize" />
+            <Custom Action="Set_POWERSHELL_EXE" After="Set_CMD_EXE" />
+            <Custom Action="Set_FW_REMOTEIP" After="Set_POWERSHELL_EXE" Condition="REMOTE_ADDR" />
+
+            <Custom Action="Set_CollectorsFlag" After="InstallFiles" Condition="ENABLED_COLLECTORS" />
+            <Custom Action="Set_ExtraFlags" After="InstallFiles" Condition="EXTRA_FLAGS" />
+            <Custom Action="Set_ConfigFile_NonDefault" After="InstallFiles" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
+            <Custom Action="Set_ConfigFile_Default" After="InstallFiles" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
+            <Custom Action="Set_ConfigFileFlag" After="InstallFiles" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
+            <Custom Action="Set_ListenFlag" After="InstallFiles" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
+            <Custom Action="Set_MetricsPathFlag" After="InstallFiles" Condition="METRICS_PATH" />
+            <Custom Action="Set_TextfileDirsFlag" After="InstallFiles" Condition="TEXTFILE_DIRS" />
+
+            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
+            <Custom Action="KillProcess" Before="RemoveFiles" />
+
+            <Custom Action="CheckExtraFlags" Before="InstallInitialize"
+                    Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
+        </InstallExecuteSequence>
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="APPLICATIONFOLDER" Name="windows_exporter">
+                    <Component Id="windows_exporter.exe" Guid="*">
+                        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work/windows_exporter.exe" Vital="yes" />
+
+                        <!-- The "Name" field must match the argument to eventlog.Open() -->
+                        <util:EventSource Log="Application" Name="windows_exporter"
+                                        EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
+                                        SupportsErrors="yes"
+                                        SupportsInformationals="yes"
+                                        SupportsWarnings="yes" />
+
+                        <ServiceInstall Id="InstallExporterService"
+                                        Name="windows_exporter"
+                                        DisplayName="windows_exporter"
+                                        Description="Exports Prometheus metrics about the system"
+                                        ErrorControl="normal"
+                                        Start="auto"
+                                        Type="ownProcess"
+                                        Interactive="no"
+                                        Vital="yes"
+                                        Account="[SERVICE_ACCOUNT]"
+                                        Password="[SERVICE_PASSWORD]"
+                                        Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                            <ServiceConfig DelayedAutoStart="yes" FailureActionsWhen="failedToStopOrReturnedError" OnInstall="yes" OnReinstall="yes" />
+                            <util:ServiceConfig ResetPeriodInDays="0"
+                                                FirstFailureActionType="restart"
+                                                SecondFailureActionType="restart"
+                                                ThirdFailureActionType="restart"
+                                                RestartServiceDelayInSeconds="60" />
+                            <ServiceDependency Id="wmiApSrv" />
+                        </ServiceInstall>
+                        <ServiceControl Id="StartService" Name="windows_exporter" Start="install" Wait="no" />
+                        <ServiceControl Id="StopService" Name="windows_exporter" Remove="uninstall" Stop="both" Wait="yes" />
+                    </Component>
+                    <Directory Id="textfile_inputs" Name="textfile_inputs">
+                        <Component Id="CreateTextfileDirectory" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
+                            <CreateFolder />
+                        </Component>
+                    </Directory>
+                    <Component Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">
+                        <RegistryValue Root="HKLM" Key="SOFTWARE\prometheus-community\windows_exporter" Name="FirewallException" Type="integer" Value="1" KeyPath="yes" />
+                        <fw:FirewallException Id="MetricsEndpoint"
+                                                Name="$(var.ProductName)"
+                                                Description="$(var.ProductName) HTTP endpoint"
+                                                Program="[#windows_exporter.exe]"
+                                                Port="[LISTEN_PORT]"
+                                                Protocol="tcp">
+                            <fw:RemoteAddress>[FW_REMOTEIP]</fw:RemoteAddress>
+                        </fw:FirewallException>
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <Feature Id="DefaultFeature" Level="1" Title="$(var.ProductName) $(var.Version)"
+                    Description="The binary and configuration files for $(var.ProductName)"
+                    Display="expand" ConfigurableDirectory="APPLICATIONFOLDER" AllowAdvertise="no" InstallDefault="local" Absent="disallow">
+            <ComponentRef Id="windows_exporter.exe" />
+            <ComponentRef Id="CreateTextfileDirectory" />
+            <Feature Id="FirewallException" Level="2" Title="Firewall Exception"
+                        Description="Allow $(var.ProductName) to listen on a port" Display="expand" AllowAdvertise="no" Absent="allow">
+                <ComponentRef Id="C_FirewallException" />
+            </Feature>
+        </Feature>
+        <!-- WixUI_FeatureTree is not available in wixl (no CustomizeDlg); Welcome -> configuration -> VerifyReady.
+                The firewall feature can still be chosen with ADDLOCAL=FirewallException. -->
+        <UIRef Id="ExporterUI" />
+        <UIRef Id="WixUI_Common" />
+    </Product>
+    <Fragment>
+        <UI Id="ExporterUI">
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+            <DialogRef Id="ErrorDlg" />
+            <DialogRef Id="FatalError" />
+            <DialogRef Id="FilesInUse" />
+            <DialogRef Id="MsiRMFilesInUse" />
+            <DialogRef Id="PrepareDlg" />
+            <DialogRef Id="ProgressDlg" />
+            <DialogRef Id="ResumeDlg" />
+            <DialogRef Id="UserExit" />
+            <DialogRef Id="WelcomeDlg" />
+            <DialogRef Id="VerifyReadyDlg" />
+            <DialogRef Id="MaintenanceWelcomeDlg" />
+            <DialogRef Id="MaintenanceTypeDlg" />
+
+            <Dialog Id="CustomPropertiesDlg" Width="370" Height="270" Title="windows_exporter configuration">
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="This pages contains configuration related to windows_exporter" />
+                <Control Id="Title" Type="Text" X="15" Y="6" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}windows_exporter configuration" />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title1" Type="Text" X="25" Y="55" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Comma-separated list of collectors to use. Use '[\[]defaults[\]]' as a placeholder for all" />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title2" Type="Text" X="25" Y="65" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="the collectors enabled by default. If value is empty, the exporter default will be used." />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS" Type="Edit" X="24" Y="77" Width="300" Height="18" Property="ENABLED_COLLECTORS" Text="[ENABLED_COLLECTORS]" />
+                <Control Id="PropertyEdit_EXTRA_FLAGS_Title" Type="Text" X="25" Y="100" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Additional command line flags" />
+                <Control Id="PropertyEdit_EXTRA_FLAGS" Type="Edit" X="24" Y="112" Width="300" Height="18" Property="EXTRA_FLAGS" Text="[EXTRA_FLAGS]" />
+                <Control Id="PropertyEdit_LISTEN_PORT_Title" Type="Text" X="25" Y="135" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Port to listen" />
+                <Control Id="PropertyEdit_LISTEN_PORT" Type="Edit" X="24" Y="147" Width="300" Height="18" Property="LISTEN_PORT" Text="[LISTEN_PORT]" />
+                <Control Id="PropertyEdit_CONFIG_FILE_Title1" Type="Text" X="25" Y="170" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Path to config file. If empty, no config will be used. If set to 'config.yaml', " />
+                <Control Id="PropertyEdit_CONFIG_FILE_Title2" Type="Text" X="25" Y="180" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="then the config.yaml at the install path will be used." />
+                <Control Id="PropertyEdit_CONFIG_FILE" Type="Edit" X="24" Y="192" Width="300" Height="18" Property="CONFIG_FILE" Text="[CONFIG_FILE]" />
+                <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="Next">
+                    <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+                </Control>
+                <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="Back">
+                    <Publish Event="NewDialog" Value="WelcomeDlg" />
+                </Control>
+                <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+                    <Publish Event="SpawnDialog" Value="CancelDlg" />
+                </Control>
+            </Dialog>
+
+            <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomPropertiesDlg" Condition="NOT Installed" />
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CustomPropertiesDlg" Order="1" Condition="NOT Installed" />
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2" Condition="Installed" />
+            <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+            <Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Event="NewDialog" Value="VerifyReadyDlg" />
+            <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+            <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+            <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+        </UI>
+    </Fragment>
+</Wix>
