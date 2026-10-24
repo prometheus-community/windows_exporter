@@ -176,6 +176,9 @@ exercised a live Windows role.
   the original `Collection` owns collectors and MI resources. A timed-out call
   may still be running: prevent overlap, drain late metrics and do not free its
   resources while it runs. Honor the supplied scrape budget in blocking APIs.
+  The collection reuses a collector's metrics channel for every call, so
+  `Collect` must not send after it returned, for example from a goroutine it
+  doesn't wait for: the metric would show up in the next scrape.
   `Build` has no budget: bound its MI probe queries with `mi.BuildQueryTimeout`.
   A non-positive MI query timeout selects `mi.DefaultQueryTimeout` (5s), which
   is too short for slow providers.
