@@ -56,8 +56,34 @@ type MetricsHTTPHandler struct {
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
+	// registries holds idle registries for scrapes of all collectors. A registry sizes the
+	// buffers of a Gather by the number of metrics of its previous Gather, so reusing it
+	// saves growing them on every scrape. Filtered scrapes use a new registry each.
+	registries chan *scrapeRegistry
+
 	logger        *slog.Logger
 	timeoutMargin time.Duration
+}
+
+// maxIdleRegistries is the number of idle registries kept for reuse. More are only needed
+// while scrapes overlap.
+const maxIdleRegistries = 4
+
+// scrapeRegistry is a registry that serves one scrape at a time.
+type scrapeRegistry struct {
+	reg       *prometheus.Registry
+	collector scrapeCollector
+}
+
+// scrapeCollector collects the metrics of the scrape that currently uses its registry.
+type scrapeCollector struct {
+	handler *collector.Handler
+}
+
+func (c *scrapeCollector) Describe(_ chan<- *prometheus.Desc) {}
+
+func (c *scrapeCollector) Collect(ch chan<- prometheus.Metric) {
+	c.handler.Collect(ch)
 }
 
 type Options struct {
@@ -75,6 +101,7 @@ func New(logger *slog.Logger, metricCollectors *collector.Collection, options *O
 
 	handler := &MetricsHTTPHandler{
 		metricCollectors: metricCollectors,
+		registries:       make(chan *scrapeRegistry, maxIdleRegistries),
 		logger:           logger,
 		timeoutMargin:    toDuration(options.TimeoutMargin),
 	}
@@ -105,7 +132,27 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The scrape's deadline starts now, so time spent waiting for an earlier scrape counts against it.
 	scrapeTimeout := c.getScrapeTimeout(logger, r)
 
-	handler, err := c.handlerFactory(r.Context(), logger, scrapeTimeout, r.URL.Query()["collect[]"])
+	requestedCollectors := r.URL.Query()["collect[]"]
+
+	collectionHandler, err := c.metricCollectors.NewHandlerWithContext(r.Context(), scrapeTimeout, logger, requestedCollectors)
+	if err != nil {
+		err = fmt.Errorf("couldn't create collector handler: %w", err)
+	} else if len(requestedCollectors) == 0 {
+		sr := c.getRegistry()
+		defer c.putRegistry(sr)
+
+		sr.collector.handler = collectionHandler
+
+		c.newHTTPHandler(logger, sr.reg).ServeHTTP(w, r)
+
+		return
+	}
+
+	var handler http.Handler
+	if err == nil {
+		handler, err = c.handlerFactory(logger, collectionHandler)
+	}
+
 	if err != nil {
 		logger.WarnContext(r.Context(), "Couldn't create filtered metrics handler",
 			slog.Any("err", err),
@@ -163,19 +210,44 @@ func toDuration(seconds float64) time.Duration {
 	return time.Duration(seconds * float64(time.Second))
 }
 
-func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
+// getRegistry returns an idle registry for a scrape of all collectors, or a new one.
+func (c *MetricsHTTPHandler) getRegistry() *scrapeRegistry {
+	select {
+	case sr := <-c.registries:
+		return sr
+	default:
+	}
+
+	sr := &scrapeRegistry{reg: prometheus.NewRegistry()}
+	sr.reg.MustRegister(version.NewCollector("windows_exporter"), &sr.collector)
+
+	return sr
+}
+
+// putRegistry keeps a registry whose scrape is done for reuse.
+func (c *MetricsHTTPHandler) putRegistry(sr *scrapeRegistry) {
+	sr.collector.handler = nil
+
+	select {
+	case c.registries <- sr:
+	default:
+	}
+}
+
+// handlerFactory returns the handler of a filtered scrape, which uses a new registry.
+func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, collectionHandler *collector.Handler) (http.Handler, error) {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(version.NewCollector("windows_exporter"))
-
-	collectionHandler, err := c.metricCollectors.NewHandlerWithContext(ctx, scrapeTimeout, logger, requestedCollectors)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't create collector handler: %w", err)
-	}
 
 	if err := reg.Register(collectionHandler); err != nil {
 		return nil, fmt.Errorf("couldn't register Prometheus collector: %w", err)
 	}
 
+	return c.newHTTPHandler(logger, reg), nil
+}
+
+// newHTTPHandler returns the handler that serves the metrics of reg and of the exporter itself.
+func (c *MetricsHTTPHandler) newHTTPHandler(logger *slog.Logger, reg *prometheus.Registry) http.Handler {
 	// Scrapes are serialized by the collection, so the handler doesn't limit requests in flight.
 	opts := promhttp.HandlerOpts{
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
@@ -185,7 +257,7 @@ func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Lo
 	}
 
 	if c.exporterMetricsRegistry == nil {
-		return canceledScrapeHandler(logger, reg, opts), nil
+		return canceledScrapeHandler(logger, reg, opts)
 	}
 
 	// Note that we have to use h.exporterMetricsRegistry here to
@@ -195,7 +267,7 @@ func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Lo
 	return promhttp.InstrumentMetricHandler(
 		c.exporterMetricsRegistry,
 		canceledScrapeHandler(logger, mergedGatherer{first: c.exporterMetricsRegistry, second: reg}, opts),
-	), nil
+	)
 }
 
 // canceledScrapeHandler serves the metrics of gatherer like [promhttp.HandlerFor], but fails the
