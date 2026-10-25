@@ -14,10 +14,10 @@ permissions: {}
 
 env:
   # msitools master plus all open msitools MRs (Secure, Hidden, Vital, ServiceConfig,
-  # util:ServiceConfig, util:EventSource, fw:FirewallException, PE file version, ...),
+  # util:ServiceConfig, util:EventSource, fw:FirewallException, PE file version, Publish order, ...),
   # from the windows_exporter branch of jkroepke/msitools. arm64 support is not in a release yet (v0.106 has none).
   MSITOOLS_REPO: https://gitlab.gnome.org/jkroepke/msitools.git
-  MSITOOLS_COMMIT: d72f369e7c493972c3ab1e27ec5c4ef3d5436014
+  MSITOOLS_COMMIT: dd5844cf921ff96c37df1b1ca4eb929bb15c2b0b
   JSIGN_VERSION: '7.6'
   JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
 
