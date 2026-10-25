@@ -176,7 +176,9 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 
 	state := c.state.collector(name)
 
-	switch state.tryCollect() {
+	result, bufCh, doneCh := state.tryCollect()
+
+	switch result {
 	case started:
 	case notAvailable:
 		logger.LogAttrs(ctx, slog.LevelDebug, "collector skipped, because it isn't initialized",
@@ -197,20 +199,12 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 		return pending
 	}
 
-	// bufCh is a buffer channel to store the metrics
-	// This is needed because once timeout is reached, the prometheus registry channel is closed.
-	bufCh := make(chan prometheus.Metric, 1000)
-	errCh := make(chan error, 1)
-
+	// bufCh buffers the metrics, because the prometheus registry closes ch once the scrape ends,
+	// while the collector may still send. The collector state reuses bufCh and doneCh for every call.
 	t := time.Now()
 
-	// execute the collector. The goroutine owns the collector's slot until Collect returns.
 	go func() {
-		// Release the slot before closing bufCh, so the next scrape never sees this call as running.
-		defer close(bufCh)
-		defer state.release()
-
-		errCh <- collect(name, collector, bufCh, maxScrapeDuration)
+		doneCh <- collect(name, collector, bufCh, maxScrapeDuration)
 	}()
 
 	numMetrics := 0
@@ -219,25 +213,29 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 	// This is the only goroutine that writes to ch, and it stops before collectCollector returns.
 	for {
 		select {
-		case m, ok := <-bufCh:
-			if ok {
-				ch <- m
+		case m := <-bufCh:
+			ch <- m
+
+			numMetrics++
+		case err := <-doneCh:
+			// Collect sent its metrics before its result, so the rest is buffered.
+			for len(bufCh) > 0 {
+				ch <- <-bufCh
 
 				numMetrics++
-
-				continue
 			}
+
+			// Release the slot only once bufCh is empty, so the next call starts with an empty buffer.
+			state.release()
 
 			duration := time.Since(t)
 			c.sendCollectorDuration(ch, name, duration)
 
-			return logCollectorResult(ctx, logger, name, <-errCh, duration, numMetrics)
+			return logCollectorResult(ctx, logger, name, err, duration, numMetrics)
 		case <-ctx.Done():
-			// Drain late metrics, so that Collect doesn't block on a full buffer.
-			go func() {
-				for range bufCh {
-				}
-			}()
+			// Drain late metrics, so that Collect doesn't block on a full buffer,
+			// and release the slot once the call returned and bufCh is empty.
+			go drainCollect(state, bufCh, doneCh)
 
 			duration := time.Since(t)
 			c.sendCollectorDuration(ch, name, duration)
@@ -258,6 +256,24 @@ func (c *Collection) collectCollector(ctx context.Context, ch chan<- prometheus.
 			}
 
 			return pending
+		}
+	}
+}
+
+// drainCollect drops the metrics of a Collect call that outlived its scrape. Once the call returned
+// and the buffer is empty, it releases the slot of the collector.
+func drainCollect(state *collectorState, bufCh <-chan prometheus.Metric, doneCh <-chan error) {
+	for {
+		select {
+		case <-bufCh:
+		case <-doneCh: //nolint:errcheck // The scrape already reported the call as timed out.
+			for len(bufCh) > 0 {
+				<-bufCh
+			}
+
+			state.release()
+
+			return
 		}
 	}
 }

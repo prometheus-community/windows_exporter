@@ -18,6 +18,7 @@
 package gpu
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -108,4 +109,62 @@ func TestInstanceCache(t *testing.T) {
 
 	cache.reset()
 	require.Empty(t, cache.entries)
+}
+
+func TestInstanceCacheReusesMaps(t *testing.T) {
+	t.Parallel()
+
+	var cache instanceCache
+
+	name := "pid_1234_luid_0x00000000_0x00005678_phys_0_eng_0_engtype_3D"
+	want := parseGPUCounterInstanceString(name)
+
+	scrape := cache.begin()
+	scrape.parse(name)
+	scrape.commit()
+
+	first := cache.entries
+
+	scrape = cache.begin()
+	require.Equal(t, want, scrape.parse(name))
+	scrape.commit()
+
+	// The map of the first scrape is kept for the next one.
+	require.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(cache.spare).Pointer())
+
+	scrape = cache.begin()
+	require.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(scrape.next).Pointer())
+	require.Empty(t, scrape.next)
+	require.Equal(t, want, scrape.parse(name))
+	scrape.commit()
+
+	require.Equal(t, map[string]Instance{name: want}, cache.entries)
+}
+
+func TestInstanceCacheOverlappingScrapes(t *testing.T) {
+	t.Parallel()
+
+	var cache instanceCache
+
+	name := "luid_0x00000000_0x00005678_phys_0"
+
+	scrape := cache.begin()
+	scrape.parse(name)
+	scrape.commit()
+
+	// a still reads the map that b's commit replaces, so the map must not be reused.
+	a := cache.begin()
+	b := cache.begin()
+	b.parse(name)
+	b.commit()
+
+	require.Nil(t, cache.spare)
+
+	c := cache.begin()
+
+	require.Equal(t, parseGPUCounterInstanceString(name), a.parse(name))
+	require.Equal(t, map[string]Instance{name: parseGPUCounterInstanceString(name)}, a.prev)
+
+	a.commit()
+	c.commit()
 }

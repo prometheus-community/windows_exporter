@@ -24,6 +24,8 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -84,6 +87,46 @@ func TestMetricsHTTPHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Scrapes of all collectors reuse registries. Repeated and overlapping scrapes,
+// mixed with filtered ones, must each serve the metrics once.
+func TestMetricsHTTPHandlerReusesRegistries(t *testing.T) {
+	t.Parallel()
+
+	collection := collector.New(collector.Map{
+		"first":  &testCollector{name: "first"},
+		"second": &testCollector{name: "second"},
+	})
+	handler := httphandler.New(slog.New(slog.DiscardHandler), collection, nil)
+
+	var wg sync.WaitGroup
+
+	for i := range 20 {
+		wg.Go(func() {
+			query := ""
+			if i%5 == 0 {
+				query = "?collect[]=first"
+			}
+
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics"+query, nil))
+
+			body := response.Body.String()
+
+			assert.Equal(t, http.StatusOK, response.Code)
+			assert.Equal(t, 1, strings.Count(body, "\nwindows_test_first 42\n"))
+			assert.Equal(t, 1, strings.Count(body, "\nwindows_exporter_build_info{"))
+
+			if query == "" {
+				assert.Equal(t, 1, strings.Count(body, "\nwindows_test_second 42\n"))
+			} else {
+				assert.NotContains(t, body, "windows_test_second")
+			}
+		})
+	}
+
+	wg.Wait()
 }
 
 func TestMetricsHTTPHandlerCollectorStatus(t *testing.T) {

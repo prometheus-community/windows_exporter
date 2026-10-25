@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -190,6 +191,59 @@ func TestCollectTimedOutCollectorDoesNotOverlap(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		synctest.Wait()
 	})
+}
+
+// The metrics buffer of a collector is reused, so the late metrics of a timed-out call must not reach
+// the next scrape.
+func TestCollectLateMetricsDoNotLeak(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		// More metrics than the buffer holds, so the late call blocks until they are drained.
+		late := &countingCollector{fakeCollector: &fakeCollector{name: "late"}, metrics: 1500, firstDelay: 2 * time.Second}
+		collection := collector.New(collector.Map{"late": late})
+
+		handler, err := collection.NewHandler(300*time.Millisecond, slog.New(slog.DiscardHandler), nil)
+		require.NoError(t, err)
+
+		out := scrape(t, handler)
+		require.Contains(t, out, `windows_exporter_collector_timeout{collector="late"} 1`)
+		require.NotContains(t, out, "windows_test_late")
+
+		// The first call sends its metrics into the buffer after the scrape ended.
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+
+		for call := 2; call <= 3; call++ {
+			out = scrape(t, handler)
+			require.Contains(t, out, `windows_exporter_collector_success{collector="late"} 1`)
+			require.Equal(t, late.metrics, strings.Count(out, "windows_test_late{"))
+			require.Equal(t, late.metrics, strings.Count(out, "} "+strconv.Itoa(call)+"\n"), "scrape %d got metrics of another call", call)
+		}
+	})
+}
+
+// countingCollector sends metrics whose value is the number of the call. Only the first call waits for firstDelay.
+type countingCollector struct {
+	*fakeCollector
+
+	metrics    int
+	firstDelay time.Duration
+}
+
+func (c *countingCollector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	call := c.calls.Add(1)
+	if call == 1 {
+		time.Sleep(c.firstDelay)
+	}
+
+	desc := prometheus.NewDesc("windows_test_"+c.name, "Test metric", []string{"i"}, nil)
+
+	for i := range c.metrics {
+		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(call), strconv.Itoa(i))
+	}
+
+	return nil
 }
 
 func TestCollectAdmission(t *testing.T) {

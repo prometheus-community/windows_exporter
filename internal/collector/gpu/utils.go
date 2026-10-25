@@ -92,6 +92,12 @@ func parseGPUCounterInstanceString(s string) Instance {
 type instanceCache struct {
 	mu      sync.Mutex
 	entries map[string]Instance
+	// spare is the map that commit replaced. The next scrape reuses it, so that
+	// the two maps alternate instead of one being allocated per scrape.
+	spare map[string]Instance
+	// active counts the scrapes between begin and commit. A replaced map is
+	// only kept as spare if no scrape may still read it.
+	active int
 }
 
 // instanceScrape parses the instance names of one scrape.
@@ -107,15 +113,24 @@ type instanceScrape struct {
 
 func (c *instanceCache) begin() *instanceScrape {
 	c.mu.Lock()
-	prev := c.entries
+	prev, next := c.entries, c.spare
+	c.spare = nil
+	c.active++
 	c.mu.Unlock()
 
-	return &instanceScrape{cache: c, prev: prev, next: make(map[string]Instance, len(prev))}
+	if next == nil {
+		next = make(map[string]Instance, len(prev))
+	} else {
+		clear(next)
+	}
+
+	return &instanceScrape{cache: c, prev: prev, next: next}
 }
 
 func (c *instanceCache) reset() {
 	c.mu.Lock()
 	c.entries = nil
+	c.spare = nil
 	c.mu.Unlock()
 }
 
@@ -154,7 +169,16 @@ func (s *instanceScrape) commit() {
 		return
 	}
 
-	s.cache.mu.Lock()
-	s.cache.entries = next
-	s.cache.mu.Unlock()
+	c := s.cache
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.active--
+
+	if c.active == 0 {
+		c.spare = c.entries
+	}
+
+	c.entries = next
 }

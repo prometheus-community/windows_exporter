@@ -27,6 +27,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -162,23 +163,39 @@ type collectorState struct {
 	closed bool
 	// busyLogged is true once a scrape logged that it skipped the current run.
 	busyLogged bool
+
+	// metrics buffers the metrics of a Collect call, and done receives its result.
+	// Only the holder of the slot uses them, so every call reuses them.
+	// The holder releases the slot once done was received and metrics is empty.
+	metrics chan prometheus.Metric
+	done    chan error
 }
 
+// metricsBufferSize is the capacity of collectorState.metrics.
+const metricsBufferSize = 1000
+
 // tryCollect acquires the slot for a Collect call without waiting.
-func (s *collectorState) tryCollect() startResult {
+// On success, it returns the buffers of the call.
+func (s *collectorState) tryCollect() (startResult, chan prometheus.Metric, chan error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.closing || s.buildErr != nil {
-		return notAvailable
+		return notAvailable, nil, nil
 	}
 
 	select {
 	case s.slot <- struct{}{}:
-		return started
 	default:
-		return busy
+		return busy, nil, nil
 	}
+
+	if s.metrics == nil {
+		s.metrics = make(chan prometheus.Metric, metricsBufferSize)
+		s.done = make(chan error, 1)
+	}
+
+	return started, s.metrics, s.done
 }
 
 // release releases the slot acquired by tryCollect.
