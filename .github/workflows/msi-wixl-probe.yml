@@ -17,7 +17,7 @@ env:
   # util:ServiceConfig, util:EventSource, fw:FirewallException, PE file version, Publish order, File Id default, ...),
   # from the windows_exporter branch of jkroepke/msitools. arm64 support is not in a release yet (v0.106 has none).
   MSITOOLS_REPO: https://gitlab.gnome.org/jkroepke/msitools.git
-  MSITOOLS_COMMIT: 73692b810b3ebff2b3567699b067c2311d6c360a
+  MSITOOLS_COMMIT: 707db1787a017f7c1ad65a5f7c13cd3aa0b623ff
   JSIGN_VERSION: '7.6'
   JSIGN_SHA1: 843c90ab50bc0da16fc1aac9e2c6bba986dc4a36
 
