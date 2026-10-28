@@ -281,7 +281,12 @@ func TestReadSpaceAllVolumes(t *testing.T) {
 
 		require.NoError(t, readSpace(rootPathPtr, &info), "%s (%s)", rootPath, windows.UTF16ToString(fsName))
 		require.True(t, info.hasFreeBytes, rootPath)
-		require.LessOrEqual(t, info.freeBytes, info.sizeBytes, rootPath)
+
+		// Without GetDiskSpaceInformationW, a disk quota hides the size of the volume.
+		if info.hasSizeBytes {
+			require.LessOrEqual(t, info.freeBytes, info.sizeBytes, rootPath)
+		}
+
 		t.Logf("%s (%s): %.0f of %.0f bytes free", rootPath, windows.UTF16ToString(fsName), info.freeBytes, info.sizeBytes)
 	}
 
