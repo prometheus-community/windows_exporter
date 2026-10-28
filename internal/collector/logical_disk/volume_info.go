@@ -251,17 +251,17 @@ func readSpace(rootPathPtr *uint16, info *volumeInfo) error {
 		return nil
 	}
 
-	if !errors.Is(err, kernel32.ErrDiskSpaceInformationUnavailable) {
-		return err
-	}
-
-	// Windows Server 2016 lacks GetDiskSpaceInformationW. GetDiskFreeSpaceEx reports the free bytes
+	// Windows Server 2016 lacks GetDiskSpaceInformationW, and FAT volumes such as the EFI system
+	// partition reject it with STATUS_INVALID_PARAMETER. GetDiskFreeSpaceEx reports the free bytes
 	// of the volume, but reduces the total bytes to the quota of the caller, if any.
 	var callerFreeBytes, callerSizeBytes, freeBytes uint64
 
-	err = windows.GetDiskFreeSpaceEx(rootPathPtr, &callerFreeBytes, &callerSizeBytes, &freeBytes)
-	if err != nil {
-		return err
+	if fallbackErr := windows.GetDiskFreeSpaceEx(rootPathPtr, &callerFreeBytes, &callerSizeBytes, &freeBytes); fallbackErr != nil {
+		if errors.Is(err, kernel32.ErrDiskSpaceInformationUnavailable) {
+			return fallbackErr
+		}
+
+		return errors.Join(err, fallbackErr)
 	}
 
 	info.freeBytes = float64(freeBytes)
