@@ -30,6 +30,12 @@ dynamic disk with a checkpoint, so it runs on a differencing `.avhdx`, and a
 fixed disk attached after the checkpoint. The `virtual_hard_disk` tests require
 each of its disks to be reported exactly once.
 
+A second job runs the Go tests and the smoke check on a Windows 11 arm64
+runner (`windows-11-vs2026-arm`) without fixtures and without the race
+detector, which does not support windows/arm64. It covers the native MI, PDH
+and COM bindings on arm64, which the release ships but the main job cannot
+exercise, and requires only collectors that work on a stock Windows 11 client.
+
 `WINDOWS_EXPORTER_TEST_COLLECTORS` lists required collectors. Their tests fail
 when setup is missing or collection fails instead of skipping. Fixture assertions
 check known instances, including the active RDP user's session and SQL database.

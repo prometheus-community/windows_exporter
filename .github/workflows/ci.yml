@@ -1841,6 +1841,56 @@ jobs:
             ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
 
+  # The release ships arm64 binaries, but the main Windows job runs only on
+  # amd64. This job runs the Go tests natively on a Windows 11 arm64 client
+  # without fixtures, covering the native bindings and the collectors that
+  # every desktop has. The race detector does not support windows/arm64.
+  windows-arm64-test:
+    name: Windows tests (windows-11-vs2026-arm)
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.changed == 'true' }}
+    runs-on: windows-11-vs2026-arm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      CGO_ENABLED: "0"
+      # These collectors must work on a stock Windows 11 client.
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,cpu,cpu_info,diskdrive,dmi,license,logical_disk,memory,net,os,pagefile,physical_disk,process,scheduled_task,service,system,tcp,time,udp"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.3'
+
+      - name: Go tests
+        shell: pwsh
+        run: |
+          go test -v -count=1 -timeout 10m ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build exporter
+        shell: pwsh
+        run: |
+          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke test exporter
+        shell: pwsh
+        run: ./tools/end-to-end-test.ps1
+
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-test-results-windows-11-vs2026-arm
+          path: ${{ runner.temp }}/windows_exporter.*.log
+          if-no-files-found: ignore
+
   # Linting type-checks the Windows build from Linux: GOOS=windows selects the
   # same files, the code uses no cgo, and Linux checkouts keep LF line endings.
   lint:
@@ -1927,6 +1977,7 @@ jobs:
       - docker
       - publish
       - windows-test
+      - windows-arm64-test
       - lint
       - super-linter
     runs-on: ubuntu-26.04
