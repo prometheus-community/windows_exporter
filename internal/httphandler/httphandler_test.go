@@ -173,12 +173,12 @@ func TestMetricsHTTPHandlerNameCollision(t *testing.T) {
 			name: "exporter metrics",
 			// The collector metric has another help text, so it is dropped and the other metrics are kept.
 			included: []string{"# HELP go_goroutines Number of goroutines that currently exist.", "windows_test_first 42", "windows_exporter_build_info"},
-			excluded: []string{"go_goroutines 7", "Collector goroutines"},
+			excluded: []string{"go_goroutines 0.5", "Collector goroutines"},
 		},
 		{
 			name:     "disable exporter metrics",
 			options:  &httphandler.Options{DisableExporterMetrics: true, TimeoutMargin: 0.5},
-			included: []string{"# HELP go_goroutines Collector goroutines", "go_goroutines 7", "windows_test_first 42", "windows_exporter_build_info"},
+			included: []string{"# HELP go_goroutines Collector goroutines", "go_goroutines 0.5", "windows_test_first 42", "windows_exporter_build_info"},
 			excluded: []string{"Number of goroutines that currently exist."},
 		},
 	} {
@@ -407,7 +407,7 @@ func (c *collisionCollector) GetName() string                           { return
 func (c *collisionCollector) Build(_ *slog.Logger, _ *mi.Session) error { return nil }
 func (c *collisionCollector) Close() error                              { return nil }
 func (c *collisionCollector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	ch <- prometheus.MustNewConstMetric(prometheus.NewDesc("go_goroutines", "Collector goroutines", nil, nil), prometheus.GaugeValue, 7)
+	ch <- prometheus.MustNewConstMetric(prometheus.NewDesc("go_goroutines", "Collector goroutines", nil, nil), prometheus.GaugeValue, 0.5)
 
 	return nil
 }
