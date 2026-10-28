@@ -1846,10 +1846,10 @@ jobs:
   # without fixtures, covering the native bindings and the collectors that
   # every desktop has. The race detector does not support windows/arm64.
   windows-arm64-test:
-    name: Windows tests (windows-11-vs2026-arm)
+    name: Windows tests (windows-11-arm)
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed == 'true' }}
-    runs-on: windows-11-vs2026-arm
+    runs-on: windows-11-arm
     timeout-minutes: 20
     permissions:
       contents: read
@@ -1887,7 +1887,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: windows-test-results-windows-11-vs2026-arm
+          name: windows-test-results-windows-11-arm
           path: ${{ runner.temp }}/windows_exporter.*.log
           if-no-files-found: ignore
 
