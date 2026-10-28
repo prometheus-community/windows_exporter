@@ -42,5 +42,5 @@ check known instances, including the active RDP user's session and SQL database.
 RemoteFX is required when both network and graphics instances are available.
 
 Each Windows job uploads a `windows-test-results-<OS>` artifact containing
-setup diagnostics. Unavailable optional collectors show up in the Go tests log
+setup diagnostics, or only the exporter logs for the arm64 job. Unavailable optional collectors show up in the Go tests log
 as skipped `TestCollector` tests with the reason in their output.

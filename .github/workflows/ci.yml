@@ -480,6 +480,7 @@ jobs:
     needs:
       - package
       - windows-test
+      - windows-arm64-test
       - docker
     permissions:
       contents: write
@@ -1866,6 +1867,11 @@ jobs:
         with:
           # renovate: golang=go
           go-version: '1.27.3'
+
+      # W32Time is trigger-started on a workgroup client; the time collector needs it running.
+      - name: Start Windows Time service
+        shell: pwsh
+        run: Start-Service w32time
 
       - name: Go tests
         shell: pwsh
