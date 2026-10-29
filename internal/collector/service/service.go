@@ -623,7 +623,8 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 			return nil, fmt.Errorf("EnumServicesStatusEx returned no service in a %d byte buffer: %w", currentBufferSize, err)
 		}
 
-		c.queryAllServicesBuffer = make([]byte, min(uint64(currentBufferSize)+uint64(additionalBytesNeeded), enumServicesMaxBufferSize))
+		// Grow at least twofold, so a missing size hint cannot repeat the same call.
+		c.queryAllServicesBuffer = make([]byte, min(max(2*uint64(currentBufferSize), uint64(currentBufferSize)+uint64(additionalBytesNeeded)), enumServicesMaxBufferSize))
 	}
 
 	c.lastServices = len(entries)

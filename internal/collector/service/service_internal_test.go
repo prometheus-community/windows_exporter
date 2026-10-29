@@ -355,10 +355,14 @@ func TestCollectorPublishesServiceWithDeniedConfig(t *testing.T) {
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 	t.Cleanup(func() { assert.NoError(t, c.Close()) })
 
-	_, _, err = c.queryServiceConfig(name)
+	_, available, err := c.queryServiceConfig(name)
 	require.NoError(t, err)
+	require.False(t, available, "the configuration cannot be read")
 
 	metrics := serviceMetrics(t, c, name)
 	assert.InDelta(t, 1.0, metrics["windows_service_state{state=stopped}"], 0)
-	assert.NotContains(t, metrics, "windows_service_start_mode{start_mode=manual}", "the start mode is part of the configuration")
+
+	for series := range metrics {
+		assert.NotContains(t, series, "windows_service_start_mode", "the start mode is part of the configuration")
+	}
 }
