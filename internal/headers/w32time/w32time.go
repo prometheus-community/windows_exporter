@@ -25,6 +25,7 @@
 package w32time
 
 import (
+	"errors"
 	"fmt"
 	"syscall"
 	"time"
@@ -52,7 +53,8 @@ var (
 func Load() error { return load() }
 
 // statusInfo is W32TIME_STATUS_INFO ([MS-W32T] 2.2.17). The layout matches
-// the C structure on 64-bit Windows only; QueryStatus checks ulSize.
+// the C structure on amd64 and arm64 only: on 386, Go aligns the 64-bit
+// fields to 4 bytes instead of 8, so parseStatus rejects that layout.
 type statusInfo struct {
 	ulSize                uint32
 	eLeapIndicator        uint32
@@ -135,6 +137,11 @@ func QueryStatus() (Status, error) {
 }
 
 func parseStatus(info *statusInfo) (Status, error) {
+	// The size is the same on 386, but the fields are shifted.
+	if unsafe.Offsetof(info.qwLastSyncTicks) != 24 {
+		return Status{}, fmt.Errorf("W32TimeQueryStatus: %w: W32TIME_STATUS_INFO layout of this architecture", errors.ErrUnsupported)
+	}
+
 	if uintptr(info.ulSize) < unsafe.Sizeof(*info) {
 		return Status{}, fmt.Errorf("W32TimeQueryStatus: unexpected W32TIME_STATUS_INFO size %d, want %d", info.ulSize, unsafe.Sizeof(*info))
 	}

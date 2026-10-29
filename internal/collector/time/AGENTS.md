@@ -34,6 +34,11 @@ Server 2025 (Hyper-V guest, stratum 1 from the VM IC provider):
 - `refidSource` is in network byte order: w32tm prints it byte-swapped.
 - The source string lives in the same buffer; free only the outer buffer with
   `W32TimeBufferFree`.
+- With W32Time stopped the call fails with `RPC_S_SERVER_UNAVAILABLE` (1722).
+  The `ntp` PDH object fails at the same time, so the collector reports
+  failure for both, as before.
+- The direction of the phase offset sign is not documented and was not
+  checked; the help text does not claim one.
 
 ## Counter reference
 

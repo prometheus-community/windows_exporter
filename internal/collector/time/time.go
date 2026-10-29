@@ -224,7 +224,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.syncPhaseOffset = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sync_phase_offset_seconds"),
-		"Signed time difference between the local clock and the time source of W32Time, in seconds. Positive values mean the local clock is ahead.",
+		"Signed time difference between the local clock and the time source of W32Time, in seconds.",
 		nil,
 		nil,
 	)
