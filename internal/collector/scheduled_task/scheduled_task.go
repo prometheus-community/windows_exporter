@@ -296,6 +296,7 @@ func (c *Collector) taskReader() taskReader {
 		includeTask:   c.includeTask,
 		includeFolder: c.folderFilter.includeFolder,
 		missedRuns:    c.config.MissedRuns,
+		logger:        c.logger,
 	}
 }
 
@@ -382,6 +383,8 @@ type taskReader struct {
 	includeTask   func(path string) bool
 	includeFolder func(path string) bool
 	missedRuns    bool
+	// logger receives the skipped deleted tasks and folders; nil discards them.
+	logger *slog.Logger
 }
 
 // getScheduledTasks returns the tasks that pass includeTask. It does not walk
@@ -419,11 +422,18 @@ func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTas
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
+
 	defer tasks.Release()
 
 	errs := []error{}
 
 	for task, err := range tasks.All() {
+		if isDeleted(err) {
+			r.skipDeleted("task", err)
+
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("enumerate tasks: %w", err))
 
@@ -431,6 +441,12 @@ func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTas
 		}
 
 		parsedTask, ok, err := r.parseTask(task)
+		if isDeleted(err) {
+			r.skipDeleted("task", err)
+
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parse task: %w", err))
 
@@ -451,18 +467,46 @@ func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTas
 // Subfolders that fail includeFolder are not walked, which saves two round trips
 // to the Task Scheduler service per folder.
 func (r taskReader) fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, scheduledTasks *ScheduledTasks) error {
+	// The root folder always exists, so an error there is never a deletion.
+	deleted := func(err error) bool {
+		if folderPath == `\` || !isDeleted(err) {
+			return false
+		}
+
+		r.skipDeleted("folder "+folderPath, err)
+
+		return true
+	}
+
 	errs := []error{}
+
 	if err := r.fetchTasksInFolder(folder, scheduledTasks); err != nil {
+		// Deleted tasks are skipped, so only a deleted folder reports a deletion.
+		if deleted(err) {
+			return nil
+		}
+
 		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
 	}
 
 	folders, err := folder.Folders()
+	if deleted(err) {
+		return errors.Join(errs...)
+	}
+
 	if err != nil {
 		return errors.Join(append(errs, fmt.Errorf("folder %s: get sub folders: %w", folderPath, err))...)
 	}
+
 	defer folders.Release()
 
 	for subfolder, err := range folders.All() {
+		if isDeleted(err) {
+			r.skipDeleted("sub folder of "+folderPath, err)
+
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
 
@@ -482,6 +526,26 @@ func (r taskReader) fetchTasksRecursively(folder *taskschd.TaskFolder, folderPat
 	}
 
 	return errors.Join(errs...)
+}
+
+// isDeleted reports the errors Task Scheduler returns for a task or folder
+// that was deleted between its enumeration and a read. Such an item is no
+// longer registered, so it is skipped instead of reported as unreadable.
+func isDeleted(err error) bool {
+	return errors.Is(err, ole.HRESULT(0x80070002)) || // HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)
+		errors.Is(err, ole.HRESULT(0x80070003)) // HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)
+}
+
+// skipDeleted logs a task or folder that isDeleted skips. A task file that is
+// missing on every scrape, e.g. after a broken uninstall, shows up here.
+func (r taskReader) skipDeleted(item string, err error) {
+	if r.logger == nil {
+		return
+	}
+
+	r.logger.Debug("skipped deleted scheduled "+item,
+		slog.Any("err", err),
+	)
 }
 
 // parseTask reads a task that passes includeTask and reports false for filtered
