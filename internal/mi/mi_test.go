@@ -1114,6 +1114,7 @@ func Test_MI_QueryUnmarshal_InvalidClass(t *testing.T) {
 
 		err = session.Query(&processes, mi.NamespaceRootCIMv2, invalidQuery, 5*time.Second)
 		require.ErrorIs(t, err, mi.MI_RESULT_INVALID_CLASS)
+		require.ErrorContains(t, err, "(HRESULT 0x80041010)", "the WBEM code is language neutral")
 		require.Empty(t, processes)
 
 		require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, validQuery, 5*time.Second))

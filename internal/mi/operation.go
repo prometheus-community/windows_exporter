@@ -185,34 +185,67 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 }
 
 // instanceResultError returns the error for a failed instance result.
+// The native error code from the error details is added to the message, as
+// the error message is localized and the code reads the same in any language.
 func instanceResultError(instanceResult ResultError, errorMessageUTF16 *uint16, errorDetails *Instance) error {
 	errorMessage := strings.TrimSpace(windows.UTF16PtrToString(errorMessageUTF16))
+	errorCode, errorType, ok := errorDetailsCode(errorDetails)
 
 	// We need a language neutral way to detect an operation timeout, because MI_RESULT_OPERATION_TIMED_OUT
 	// is not returned by the API, but instead we get MI_RESULT_INVALID_OPERATION_TIMEOUT with a specific error code
 	// in the error details.
-	//nolint:nestif
-	if errorDetails != nil {
-		count, _ := errorDetails.GetElementCount()
-		if count != 0 {
-			errorCodeRaw, err := errorDetails.GetElement("error_Code")
-			if err == nil {
-				errorCodeValue, _ := errorCodeRaw.GetValue()
-
-				errorCode, ok := errorCodeValue.(uint32)
-				if ok && errorCode == 262148 {
-					instanceResult = MI_RESULT_INVALID_OPERATION_TIMEOUT
-					errorMessage = ""
-				}
-			}
-		}
+	if ok && errorCode == 262148 {
+		return fmt.Errorf("instance result: %w", MI_RESULT_INVALID_OPERATION_TIMEOUT)
 	}
 
 	if errorMessage != "" {
 		errorMessage = fmt.Sprintf(" (%s)", errorMessage)
 	}
 
+	// An MI error code repeats the result, which the message names already.
+	if ok && errorType != "MI" {
+		if errorType == "" {
+			errorType = "error code"
+		}
+
+		errorMessage = fmt.Sprintf(" (%s 0x%08X)%s", errorType, errorCode, errorMessage)
+	}
+
 	return fmt.Errorf("instance result: %w%s", instanceResult, errorMessage)
+}
+
+// errorDetailsCode returns the error_Code and error_Type of an
+// MSFT_WmiError or CIM_Error instance. error_Type names the domain of the
+// code, such as HRESULT, Win32 or MI.
+func errorDetailsCode(errorDetails *Instance) (uint32, string, bool) {
+	if errorDetails == nil {
+		return 0, "", false
+	}
+
+	if count, _ := errorDetails.GetElementCount(); count == 0 {
+		return 0, "", false
+	}
+
+	errorCodeRaw, err := errorDetails.GetElement("error_Code")
+	if err != nil {
+		return 0, "", false
+	}
+
+	errorCodeValue, _ := errorCodeRaw.GetValue()
+
+	errorCode, ok := errorCodeValue.(uint32)
+	if !ok {
+		return 0, "", false
+	}
+
+	var errorType string
+
+	if errorTypeRaw, err := errorDetails.GetElement("error_Type"); err == nil {
+		errorTypeValue, _ := errorTypeRaw.GetValue()
+		errorType, _ = errorTypeValue.(string)
+	}
+
+	return errorCode, errorType, true
 }
 
 func (o *Operation) Unmarshal[T any](dst *[]T) error {
