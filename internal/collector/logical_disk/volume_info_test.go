@@ -249,3 +249,46 @@ func TestVolumeInfoReaderSystemDrive(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, "cached", info.diskIDs)
 }
+
+// TestReadSpaceAllVolumes reads the space of every fixed volume whose information can be read,
+// including volumes without a mount point and FAT volumes such as the EFI system partition.
+func TestReadSpaceAllVolumes(t *testing.T) {
+	t.Parallel()
+
+	guid := make([]uint16, windows.MAX_PATH+1)
+
+	find, err := windows.FindFirstVolume(&guid[0], uint32(len(guid)))
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, windows.FindVolumeClose(find))
+	}()
+
+	for ; err == nil; err = windows.FindNextVolume(find, &guid[0], uint32(len(guid))) {
+		rootPath := windows.UTF16ToString(guid)
+		rootPathPtr := windows.StringToUTF16Ptr(rootPath)
+
+		if windows.GetDriveType(rootPathPtr) != windows.DRIVE_FIXED {
+			continue
+		}
+
+		fsName := make([]uint16, windows.MAX_PATH+1)
+		if windows.GetVolumeInformation(rootPathPtr, nil, 0, nil, nil, nil, &fsName[0], uint32(len(fsName))) != nil {
+			continue
+		}
+
+		var info volumeInfo
+
+		require.NoError(t, readSpace(rootPathPtr, &info), "%s (%s)", rootPath, windows.UTF16ToString(fsName))
+		require.True(t, info.hasFreeBytes, rootPath)
+
+		// Without GetDiskSpaceInformationW, a disk quota hides the size of the volume.
+		if info.hasSizeBytes {
+			require.LessOrEqual(t, info.freeBytes, info.sizeBytes, rootPath)
+		}
+
+		t.Logf("%s (%s): %.0f of %.0f bytes free", rootPath, windows.UTF16ToString(fsName), info.freeBytes, info.sizeBytes)
+	}
+
+	require.ErrorIs(t, err, windows.ERROR_NO_MORE_FILES)
+}
