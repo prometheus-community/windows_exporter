@@ -46,6 +46,10 @@ import (
 
 const Name = "service"
 
+// enumServicesMaxBufferSize is the largest buffer the SCM fills in one
+// EnumServicesStatusEx call ([MS-SCMR] 2.2.9 BOUNDED_DWORD_256K).
+const enumServicesMaxBufferSize = 256 * 1024
+
 type Config struct {
 	ServiceInclude          *regexp.Regexp `yaml:"include"`
 	ServiceExclude          *regexp.Regexp `yaml:"exclude"`
@@ -80,6 +84,8 @@ type Collector struct {
 	serviceManagerHandle   *mgr.Mgr
 	queryAllServicesMu     sync.Mutex
 	queryAllServicesBuffer []byte
+	// lastServices is the number of services of the last enumeration, which sizes the next one.
+	lastServices int
 
 	// configCache caches the service configurations between scrapes.
 	configCache serviceConfigCache
@@ -381,6 +387,14 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, scrape *metriccac
 	}
 
 	if err := c.collectService(ch, scrape, service); err != nil {
+		if errors.Is(err, errServiceDeleted) {
+			c.logger.Log(context.Background(), slog.LevelDebug, "service deleted during the scrape",
+				slog.String("service", service.name),
+			)
+
+			return
+		}
+
 		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
 			slog.Any("err", err),
 			slog.String("service", service.name),
@@ -565,10 +579,17 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 	c.queryAllServicesMu.Lock()
 	defer c.queryAllServicesMu.Unlock()
 
-	clear(c.queryAllServicesBuffer)
+	entries := make([]serviceEntry, 0, c.lastServices)
+
+	// The SCM returns at most enumServicesMaxBufferSize bytes per call ([MS-SCMR]
+	// 2.2.9, 3.1.4.40). With a resume index it returns the services that fit
+	// together with ERROR_MORE_DATA, and the next call continues after them.
+	var resumeIndex uint32
 
 	for {
-		currentBufferSize := uint32(cap(c.queryAllServicesBuffer))
+		clear(c.queryAllServicesBuffer)
+
+		currentBufferSize := uint32(len(c.queryAllServicesBuffer))
 
 		err = windows.EnumServicesStatusEx(
 			c.serviceManagerHandle.Handle,
@@ -579,33 +600,44 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 			currentBufferSize,
 			&additionalBytesNeeded,
 			&servicesReturned,
-			nil,
+			&resumeIndex,
 			nil,
 		)
+		if err != nil && !errors.Is(err, windows.ERROR_MORE_DATA) {
+			return nil, err
+		}
+
+		entries = c.appendServiceEntries(entries, servicesReturned)
+
 		if err == nil {
 			break
 		}
 
-		if !errors.Is(err, windows.ERROR_MORE_DATA) {
-			return nil, err
+		if servicesReturned != 0 {
+			continue
 		}
 
-		/*
-			Unlike other WIN32 API calls, additionalBytesNeeded is not returning the absolute amount bytes needed,
-			but the additional bytes needed relative to the cbBufSize parameter.
-			ref:
-			https://stackoverflow.com/questions/14756347/when-calling-enumservicesstatusex-twice-i-still-get-eror-more-data-in-c
-		*/
+		// Not even one service fits. bytesNeeded is relative to the buffer size:
+		// https://stackoverflow.com/questions/14756347/when-calling-enumservicesstatusex-twice-i-still-get-eror-more-data-in-c
+		if currentBufferSize >= enumServicesMaxBufferSize {
+			return nil, fmt.Errorf("EnumServicesStatusEx returned no service in a %d byte buffer: %w", currentBufferSize, err)
+		}
 
-		c.queryAllServicesBuffer = make([]byte, currentBufferSize+additionalBytesNeeded)
+		c.queryAllServicesBuffer = make([]byte, min(uint64(currentBufferSize)+uint64(additionalBytesNeeded), enumServicesMaxBufferSize))
 	}
 
+	c.lastServices = len(entries)
+
+	return entries, nil
+}
+
+// appendServiceEntries copies servicesReturned services out of the enumeration buffer.
+func (c *Collector) appendServiceEntries(entries []serviceEntry, servicesReturned uint32) []serviceEntry {
 	if servicesReturned == 0 {
-		return []serviceEntry{}, nil
+		return entries
 	}
 
 	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&c.queryAllServicesBuffer[0])), int(servicesReturned))
-	entries := make([]serviceEntry, 0, len(services))
 
 	for _, service := range services {
 		if uintptr(unsafe.Pointer(service.ServiceName)) == uintptr(windows.InvalidHandle) {
@@ -623,8 +655,11 @@ func (c *Collector) queryAllServices() ([]serviceEntry, error) {
 		})
 	}
 
-	return entries, nil
+	return entries
 }
+
+// errServiceDeleted reports a service that was deleted after the enumeration.
+var errServiceDeleted = errors.New("service deleted")
 
 // queryServiceConfig opens the service and queries its configuration.
 // configAvailable is false if the service has no readable configuration.
@@ -637,6 +672,22 @@ func (c *Collector) queryServiceConfig(serviceName string) (serviceConfig, bool,
 	// Open connection for service handler.
 	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, serviceNamePtr, windows.SERVICE_QUERY_CONFIG)
 	if err != nil {
+		// The DACL of a service can deny SERVICE_QUERY_CONFIG to the exporter's
+		// account ([MS-SCMR] 3.1.4.16). Its state from the enumeration is still
+		// published, without the configuration.
+		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			c.logger.Log(context.Background(), slog.LevelDebug, "access to the service configuration denied",
+				slog.String("service", serviceName),
+			)
+
+			return serviceConfig{}, false, nil
+		}
+
+		// The service was deleted after the enumeration.
+		if errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+			return serviceConfig{}, false, errServiceDeleted
+		}
+
 		return serviceConfig{}, false, fmt.Errorf("failed to open service: %w", err)
 	}
 
@@ -654,7 +705,8 @@ func (c *Collector) queryServiceConfig(serviceName string) (serviceConfig, bool,
 	// Get Service Configuration.
 	config, err := c.getServiceConfig(serviceManager)
 	if err != nil {
-		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
+		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) &&
+			!errors.Is(err, windows.ERROR_ACCESS_DENIED) {
 			return serviceConfig{}, false, fmt.Errorf("failed to get service configuration: %w", err)
 		}
 
