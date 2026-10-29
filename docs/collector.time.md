@@ -42,7 +42,7 @@ Matching is case-sensitive.
 | `windows_time_sync_root_dispersion_seconds` | Root dispersion of W32Time: the maximum error relative to the primary time source, in seconds. Collector `sync_status`. | gauge | None |
 | `windows_time_sync_state` | State of the W32Time clock discipline (`unset`, `hold`, `sync`, `spike`), 1 if the current state, 0 otherwise. Collector `sync_status`. | gauge | `state` |
 | `windows_time_sync_last_result` | Result of the last synchronization attempt of W32Time (`success`, `no_data`, `stale_data`, `change_too_big`, `shutdown`), 1 if the current result, 0 otherwise. Collector `sync_status`. | gauge | `result` |
-| `windows_time_sync_last_success_timestamp_seconds` | Time of the last successful synchronization of W32Time, in unix time. Omitted until the first synchronization. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_last_success_timestamp_seconds` | Time of the last successful synchronization of W32Time, in Unix time. Omitted until the first synchronization. Collector `sync_status`. | gauge | None |
 | `windows_time_sync_source_info` | Time source that W32Time synchronizes with, as `w32tm /query /status` shows it. The value is always 1. Collector `sync_status`. | gauge | `source` |
 
 ### Example metric

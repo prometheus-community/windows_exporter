@@ -272,7 +272,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.syncLastSuccessfulSync = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sync_last_success_timestamp_seconds"),
-		"Time of the last successful synchronization of W32Time, in unix time. Omitted until the first synchronization.",
+		"Time of the last successful synchronization of W32Time, in Unix time. Omitted until the first synchronization.",
 		nil,
 		nil,
 	)
