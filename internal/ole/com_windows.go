@@ -20,6 +20,7 @@ package ole
 import (
 	"errors"
 	"fmt"
+	"math"
 	"runtime"
 	"strings"
 	"syscall"
@@ -41,9 +42,10 @@ var (
 	sysAllocStringLen = oleaut32.NewProc("SysAllocStringLen")
 	sysFreeString     = oleaut32.NewProc("SysFreeString")
 	sysStringLen      = oleaut32.NewProc("SysStringLen")
+	variantClear      = oleaut32.NewProc("VariantClear")
 
 	loadOle32    = lazyproc.Once(ole32, coInitializeEx, coUninitialize, coCreateInstance)
-	loadOleaut32 = lazyproc.Once(oleaut32, sysAllocStringLen, sysFreeString, sysStringLen)
+	loadOleaut32 = lazyproc.Once(oleaut32, sysAllocStringLen, sysFreeString, sysStringLen, variantClear)
 )
 
 // Initialize initializes the MTA and disables legacy OLE 1.0 DDE. The caller
@@ -327,7 +329,8 @@ func (o *Object) String(slot uintptr) (string, error) {
 
 // Variant is the 24-byte VARIANT layout on both supported Windows architectures.
 // Native 64-bit ABIs pass this aggregate by address. Only VT_EMPTY and VT_I4
-// are needed for local Connect and one-based Task Scheduler collection indices.
+// are needed for local Connect and one-based Task Scheduler collection indices;
+// GetDate reads VT_DATE outputs.
 type Variant struct {
 	Type     uint16
 	reserved [3]uint16
@@ -367,6 +370,46 @@ func (o *Object) PutString(slot uintptr, input string) error {
 	defer value.free()
 
 	return o.Put(slot, uintptr(unsafe.Pointer(value.ptr)))
+}
+
+// Variant types read by GetDate.
+const (
+	vtEmpty = 0
+	vtNull  = 1
+	vtDate  = 7
+)
+
+// GetDate calls a native getter with a VARIANT output that holds a VT_DATE.
+// ok is false for VT_EMPTY and VT_NULL, which WUA returns for a date that has
+// never been set. Any other type is an error. The VARIANT is cleared before
+// returning.
+func (o *Object) GetDate(slot uintptr) (DATE, bool, error) {
+	fn, err := o.Method(slot)
+	if err != nil {
+		return 0, false, err
+	}
+
+	v := NewEmptyVariant()
+
+	hr := Call(fn, uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(v)))
+	runtime.KeepAlive(o)
+
+	if err := ResultError(hr); err != nil {
+		return 0, false, err
+	}
+
+	defer func() {
+		_ = Call(variantClear.Addr(), uintptr(unsafe.Pointer(v)))
+	}()
+
+	switch v.Type {
+	case vtEmpty, vtNull:
+		return 0, false, nil
+	case vtDate:
+		return DATE(math.Float64frombits(uint64(v.Value))), true, nil
+	default:
+		return 0, false, fmt.Errorf("unexpected VARIANT type %d, want VT_DATE", v.Type)
+	}
 }
 
 // NewEmptyVariant returns caller-owned, 16-byte-aligned VT_EMPTY storage.

@@ -73,11 +73,15 @@ type Collector struct {
 	logger *slog.Logger
 
 	metricsBuf []prometheus.Metric
+	// searchErr is the error of the last search, reported while metricsBuf is nil.
+	searchErr error
 
 	pendingUpdate              *prometheus.Desc
 	pendingUpdateLastPublished *prometheus.Desc
 	queryDurationSeconds       *prometheus.Desc
 	lastScrapeMetric           *prometheus.Desc
+	lastSearchSuccess          *prometheus.Desc
+	lastInstallationSuccess    *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -187,6 +191,20 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.lastSearchSuccess = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "last_search_success_timestamp_seconds"),
+		"Time of the last successful update search of Windows Automatic Updates. Searches of the update collector do not change it.",
+		nil,
+		nil,
+	)
+
+	c.lastInstallationSuccess = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "last_installation_success_timestamp_seconds"),
+		"Time of the last successful update installation of Windows Automatic Updates",
+		nil,
+		nil,
+	)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// scheduleUpdateStatus sends exactly one value to initErrCh, nil after a successful initialization.
@@ -231,6 +249,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	defer c.mu.RUnlock()
 
 	if c.metricsBuf == nil {
+		// ErrNoUpdates stays in the chain, so callers can still tell that
+		// no search result is available yet.
+		if c.searchErr != nil {
+			return fmt.Errorf("%w: last Windows Update search failed: %w", ErrNoUpdates, c.searchErr)
+		}
+
 		return ErrNoUpdates
 	}
 
@@ -296,6 +320,18 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		return
 	}
 
+	// Automatic Updates is optional: without it the success timestamps are omitted.
+	autoUpdates, err := wuapi.NewAutomaticUpdates()
+	if err != nil {
+		logger.WarnContext(ctx, "failed to create Microsoft.Update.AutoUpdate, the last search and installation times are not published",
+			slog.Any("err", err),
+		)
+
+		autoUpdates = nil
+	} else {
+		defer autoUpdates.Release()
+	}
+
 	initErrCh <- nil
 
 	var metricsBuf []prometheus.Metric
@@ -310,6 +346,19 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 			return err
 		})
 
+		// The success times are optional; a panic reading them keeps the search metrics.
+		if err == nil && autoUpdates != nil {
+			if auErr := recovery.Run(func() error {
+				metricsBuf = c.appendAutomaticUpdatesResults(logger, autoUpdates, metricsBuf)
+
+				return nil
+			}); auErr != nil {
+				logger.WarnContext(ctx, "failed to read Automatic Updates results",
+					slog.Any("err", auErr),
+				)
+			}
+		}
+
 		// A search that outlived Close publishes nothing.
 		if ctx.Err() != nil {
 			return
@@ -322,10 +371,12 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 			c.mu.Lock()
 			c.metricsBuf = nil
+			c.searchErr = err
 			c.mu.Unlock()
 		} else {
 			c.mu.Lock()
 			c.metricsBuf = metricsBuf
+			c.searchErr = nil
 			c.mu.Unlock()
 		}
 
@@ -353,9 +404,19 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 	defer result.Release()
 
+	resultCode, err := result.ResultCode()
+	if err != nil {
+		return nil, fmt.Errorf("get search result code: %w", err)
+	}
+
 	logger.Debug("search for updates finished",
 		slog.Duration("duration", time.Since(timeStart)),
+		slog.String("result", resultCode.String()),
 	)
+
+	if err := checkSearchResult(logger, resultCode); err != nil {
+		return nil, err
+	}
 
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 		c.queryDurationSeconds,
@@ -506,6 +567,78 @@ func (c *Collector) getUpdateStatus(item *wuapi.Update) (windowsUpdate, error) {
 		deploymentAction: deploymentActionLabel(deploymentAction),
 		lastPublished:    lastPublishedDate,
 	}, nil
+}
+
+// errSearchFailed reports a search that returned no usable result. Search
+// itself still succeeds in that case ([MS-UAMG] 2.2.9).
+var errSearchFailed = errors.New("windows update search did not succeed")
+
+// checkSearchResult fails a search whose result code is not a success. A
+// search that succeeded with errors keeps its results, which may be incomplete.
+func checkSearchResult(logger *slog.Logger, resultCode wuapi.OperationResultCode) error {
+	switch resultCode {
+	case wuapi.OperationResultSucceeded:
+		return nil
+	case wuapi.OperationResultSucceededWithErrors:
+		logger.Warn("Windows Update search succeeded with errors, the pending updates may be incomplete")
+
+		return nil
+	default:
+		return fmt.Errorf("%w: %s", errSearchFailed, resultCode)
+	}
+}
+
+// appendAutomaticUpdatesResults appends the last search and installation
+// success times of Automatic Updates. A time that is not known is omitted.
+func (c *Collector) appendAutomaticUpdatesResults(logger *slog.Logger, autoUpdates *wuapi.AutomaticUpdates, metrics []prometheus.Metric) []prometheus.Metric {
+	results, err := autoUpdates.Results()
+	if err != nil {
+		logger.Warn("failed to get Automatic Updates results",
+			slog.Any("err", err),
+		)
+
+		return metrics
+	}
+	defer results.Release()
+
+	for _, value := range []struct {
+		desc *prometheus.Desc
+		name string
+		read func() (ole.DATE, bool, error)
+	}{
+		{c.lastSearchSuccess, "last search success date", results.LastSearchSuccessDate},
+		{c.lastInstallationSuccess, "last installation success date", results.LastInstallationSuccessDate},
+	} {
+		date, ok, err := value.read()
+		if err != nil {
+			logger.Warn("failed to get Automatic Updates "+value.name,
+				slog.Any("err", err),
+			)
+
+			continue
+		}
+
+		if !ok {
+			continue
+		}
+
+		t, err := date.Time()
+		if err != nil {
+			logger.Warn("invalid Automatic Updates "+value.name,
+				slog.Any("err", err),
+			)
+
+			continue
+		}
+
+		metrics = append(metrics, prometheus.MustNewConstMetric(
+			value.desc,
+			prometheus.GaugeValue,
+			float64(t.UnixMilli())/1e3,
+		))
+	}
+
+	return metrics
 }
 
 func deploymentActionLabel(action wuapi.DeploymentAction) string {
