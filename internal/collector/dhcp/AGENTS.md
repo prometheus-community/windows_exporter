@@ -26,10 +26,14 @@ The scope metrics come from the DHCP Server Management API in
 [`internal/headers/dhcpsapi`](../../headers/dhcpsapi), the local form of
 [MS-DHCPM](https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/MS-DHCPM/%5bMS-DHCPM%5d.pdf).
 
-- Free each result with one `DhcpRpcFreeMemory` call on the outer structure.
-  Although MS-DHCPM allocates every pointer separately on the wire, the local
-  client returns the result as a single block: freeing the embedded arrays or
-  strings too crashed the tests with `STATUS_HEAP_CORRUPTION` (0xC0000374).
+- The client's memory layout differs per result, whatever MS-DHCPM says
+  about the wire. `DHCP_MIB_INFO_V5` and `DHCP_SUPER_SCOPE_TABLE` hold
+  separately allocated arrays and names that leak unless freed (UMDH showed
+  ~480 bytes per scrape with one scope). `DHCP_SUBNET_INFO` packs its strings
+  behind the structure; freeing them crashed the tests with
+  `STATUS_HEAP_CORRUPTION` (0xC0000374). Check a new result type with UMDH
+  and full page heap (`gflags /p /enable <exe> /full`) before freeing its
+  embedded pointers.
 - `DhcpGetSuperScopeInfoV4` returns `ERROR_SUCCESS` without a table on a
   server that has no scopes yet.
 - A scope can be deleted while the scopes are read; its calls then fail with
