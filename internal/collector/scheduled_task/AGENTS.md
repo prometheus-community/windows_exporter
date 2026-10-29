@@ -41,9 +41,10 @@ which an unprivileged user can read.
   and missed runs are unchanged. Add new inputs of a task's metrics to
   `taskValues`, or the cache returns stale series.
 - A task or folder deleted between enumeration and a read returns
-  `0x80070002` or `0x80070003` (`isDeleted`). Skip it silently: it is no longer
-  registered, and reporting it would make every scrape during a software
-  install or update look partial.
+  `0x80070002` or `0x80070003` (`isDeleted`). Skip it with a debug log
+  (`skipDeleted`): it is no longer registered, and reporting it would make
+  every scrape during a software install or update look partial. Never skip
+  errors of the root folder, which always exists.
 
 ## Measured costs and rejected approaches
 

@@ -41,7 +41,8 @@ the default. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
 alternatives) are recognized for exclude, and a literal folder prefix for include.
 Errors reading folders that are not walked are not reported. A task or folder
 that is deleted while the collector reads it (`0x80070002` or `0x80070003`) is
-skipped without an error.
+skipped without an error and logged at debug level. A task whose file is
+missing on every scrape, for example after a broken uninstall, shows up there.
 
 ### `--collector.scheduled_task.missed-runs`
 

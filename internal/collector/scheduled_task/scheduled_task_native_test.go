@@ -99,8 +99,35 @@ func TestFetchTasksSkipsDeletedItems(t *testing.T) {
 			require.Equal(t, TaskState(3), tasks[1].State)
 			require.Equal(t, 2, released)
 			require.Equal(t, 1, foldersReleased)
+			require.Equal(t, 4, collectionsReleased)
 		})
 	}
+}
+
+// TestFetchTasksSkipsDeletedReads checks the reads that make a round trip to
+// the Task Scheduler service: a subfolder that is gone when its tasks are
+// listed and a task that is gone when its state is read. The root folder
+// always exists, so its errors are reported.
+func TestFetchTasksSkipsDeletedReads(t *testing.T) {
+	var released, foldersReleased, collectionsReleased int
+
+	gone := &fakeTask{failSlot: taskSlotState, failHRESULT: 0x80070002}
+	child := fakeDeletedTaskFolder(`\Gone`, &foldersReleased)
+	rootTasks, _ := fakeTaskCollection([]*ole.Object{gone.object(&released), fakeScheduledTask(3, &released)}, false, &collectionsReleased)
+	rootFolders, _ := fakeTaskCollection([]*ole.Object{&child.Object}, false, &collectionsReleased)
+	root := fakeTaskFolder(rootTasks, rootFolders, nil)
+	tasks := ScheduledTasks{}
+
+	require.NoError(t, readAllTasks.fetchTasksRecursively(root, `\`, &tasks))
+	require.Len(t, tasks, 1)
+	require.Equal(t, TaskState(3), tasks[0].State)
+	require.Equal(t, 1, gone.reads[taskSlotState])
+	require.Equal(t, 2, released)
+	require.Equal(t, 1, foldersReleased)
+	require.Equal(t, 2, collectionsReleased)
+
+	err := readAllTasks.fetchTasksRecursively(fakeDeletedTaskFolder(`\`, nil), `\`, &tasks)
+	require.ErrorIs(t, err, ole.HRESULT(0x80070002), "the root folder is never skipped")
 }
 
 func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
@@ -441,6 +468,26 @@ func fakeTaskFolderAt(path string, tasks, folders *ole.Object, released, listed 
 	return &taskschd.TaskFolder{VTable: &methods[0]}
 }
 
+// fakeDeletedTaskFolder returns a folder at path whose task and subfolder
+// listings fail as for a folder deleted after it was enumerated.
+func fakeDeletedTaskFolder(path string, released *int) *taskschd.TaskFolder {
+	var methods [15]uintptr
+
+	methods[2] = windows.NewCallback(func(uintptr) uintptr {
+		if released != nil {
+			*released++
+		}
+
+		return 0
+	})
+	methods[8] = (&fakeTask{}).stringGetter(8, &path)
+	deleted := windows.NewCallback(func(uintptr, uintptr, uintptr) uintptr { return 0x80070002 })
+	methods[10] = deleted
+	methods[14] = deleted
+
+	return &taskschd.TaskFolder{VTable: &methods[0]}
+}
+
 func fakeScheduledTask(state int32, released *int) *ole.Object {
 	return (&fakeTask{state: state}).object(released)
 }
@@ -452,6 +499,9 @@ type fakeTask struct {
 	enabled        int16
 	result, missed int32
 	reads          [18]int
+	// failSlot, when not zero, fails with failHRESULT.
+	failSlot    int
+	failHRESULT uintptr
 }
 
 func (f *fakeTask) object(released *int) *ole.Object {
@@ -473,6 +523,14 @@ func (f *fakeTask) object(released *int) *ole.Object {
 	})
 	methods[taskSlotLastResult] = f.int32Getter(taskSlotLastResult, &f.result)
 	methods[taskSlotMissedRuns] = f.int32Getter(taskSlotMissedRuns, &f.missed)
+
+	if f.failSlot != 0 {
+		methods[f.failSlot] = windows.NewCallback(func(uintptr, uintptr) uintptr {
+			f.reads[f.failSlot]++
+
+			return f.failHRESULT
+		})
+	}
 
 	return &ole.Object{VTable: &methods[0]}
 }
