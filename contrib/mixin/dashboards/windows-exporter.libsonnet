@@ -17,7 +17,7 @@ local descriptions = {
   GPU: 'GPU utilization, memory, sensors and top processes of one Windows host.',
   'Hyper-V': 'Hyper-V virtual machines, virtual disks, switches and network adapters of one Windows host.',
   'Failover Cluster': 'Nodes, resource groups, resources, networks and Cluster Shared Volumes of the failover cluster of one Windows host.',
-  Time: 'Clock synchronization, NTP sources and clock offset of one Windows host.',
+  Time: 'Clock synchronization, NTP sources, clock offset and Windows Time sync status of one Windows host.',
   MSSQL: 'Activity, waits, locks, memory, databases and availability replicas of one SQL Server instance on a Windows host.',
   Exporter: 'Scrape status, collector health and resource usage of windows_exporter on one host.',
 };

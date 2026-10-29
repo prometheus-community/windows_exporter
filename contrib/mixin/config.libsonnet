@@ -64,7 +64,7 @@
       storage_spaces: false,
       system: true,
       tcp: false,
-      // Needs the time collector with its ntp and clock_source subcollectors.
+      // Needs the time collector with its ntp, clock_source and sync_status subcollectors.
       time: false,
       udp: false,
       update: false,
@@ -100,6 +100,7 @@
       WindowsClockNotSynchronising: true,
       WindowsClockSkewDetected: true,
       WindowsClockSourceLocal: true,
+      WindowsClockSyncFailing: true,
       WindowsDiskDriveNotOK: true,
       WindowsPagefileAlmostFull: true,
       WindowsLicenseNotGenuine: true,

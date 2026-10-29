@@ -51,6 +51,7 @@ local stateAlerts = [
   'WindowsHostRebooted',
   'WindowsClockNotSynchronising',
   'WindowsClockSourceLocal',
+  'WindowsClockSyncFailing',
   'WindowsDiskDriveNotOK',
   'WindowsLicenseNotGenuine',
   'WindowsScheduledTaskFailed',

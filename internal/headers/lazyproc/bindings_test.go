@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/slc"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/w32time"
 	"github.com/prometheus-community/windows_exporter/internal/headers/winspool"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -63,6 +64,7 @@ func TestBindingsLoad(t *testing.T) {
 		{name: "psapi", load: psapi.Load},
 		{name: "slc", load: slc.Load},
 		{name: "sysinfoapi", load: sysinfoapi.Load},
+		{name: "w32time", load: w32time.Load},
 		{name: "winspool", load: winspool.Load},
 		{name: "wtsapi32", load: wtsapi32.Load},
 		{name: "pdh", load: pdh.Load},

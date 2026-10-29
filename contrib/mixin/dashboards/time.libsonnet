@@ -6,6 +6,7 @@ function(on)
     b.rows([
       if on('time') then b.summary([84, 85, 86, 87]),
       if on('time') then b.row('Clock', b.flow([[88, 24, 8]])),
+      if on('time') then b.row('Synchronization', b.flow([[345, 6, 4], [346, 6, 4], [347, 6, 4], [348, 6, 4], [349, 12, 8], [350, 12, 8]])),
     ]),
     [
       b.panel.new(84, 'Time zone', 'stat')
@@ -85,5 +86,29 @@ function(on)
       + b.panel.withDefaults({
         unit: 's',
       }),
+
+      b.labelStat(345, 'Sync state', 'State of the Windows Time clock discipline: sync when the clock follows its source, hold while it settles after a start or resync and accepts samples without spike detection, spike while it holds off a sample with a large offset, unset before the first sample. Needs the sync_status subcollector of the time collector.', 'windows_time_sync_state{job=~"$job", instance="$instance"} == 1', 'state'),
+
+      b.labelStat(346, 'Last sync result', 'Result of the last synchronization attempt of Windows Time.', 'windows_time_sync_last_result{job=~"$job", instance="$instance"} == 1', 'result'),
+
+      b.stat(347, 'Since last successful sync', 'Time since Windows Time last synchronized with its source. Domain members poll every 1 to 17 minutes by default; stand-alone hosts with the default time.windows.com peer poll once a week.', 'time() - windows_time_sync_last_success_timestamp_seconds{job=~"$job", instance="$instance"}', unit='s'),
+
+      b.labelStat(348, 'Time source', 'Time source that Windows Time synchronizes with, as w32tm /query /status shows it.', 'windows_time_sync_source_info{job=~"$job", instance="$instance"}', 'source'),
+
+      // The phase offset is signed, so the axis has no minimum.
+      b.panel.new(349, 'Sync phase offset', 'timeseries')
+      + b.panel.withDescription('Signed time difference between the local clock and the time source of Windows Time.')
+      + b.panel.withQueries([
+        b.query.new('windows_time_sync_phase_offset_seconds{job=~"$job", instance="$instance"}', 'A')
+        + b.query.withLegendFormat('phase offset'),
+      ])
+      + b.panel.withDefaults({
+        unit: 's',
+      }),
+
+      b.graph(350, 'Root delay and dispersion', 'Round-trip delay to the primary time source and the maximum error relative to it, as Windows Time reports them.', 's', [
+        ['windows_time_sync_root_delay_seconds{job=~"$job", instance="$instance"}', 'root delay'],
+        ['windows_time_sync_root_dispersion_seconds{job=~"$job", instance="$instance"}', 'root dispersion'],
+      ]),
     ]
   )
