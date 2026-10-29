@@ -35,6 +35,10 @@ The scope metrics come from the DHCP Server Management API in
 - A scope can be deleted while the scopes are read; its calls then fail with
   `ERROR_DHCP_SUBNET_NOT_PRESENT` (20005). It is skipped. Other per-scope
   errors are joined, and the scopes that were read are still published.
+- The reservation count calls `DhcpV4EnumSubnetReservations` once with
+  `PreferredMaximum = 0` and adds `ElementsRead` and `ElementsTotal`, where the
+  total counts the reservations not yet returned. Loop over `ERROR_MORE_DATA`
+  instead if a server is seen to report the grand total there.
 
 ## Counter reference
 

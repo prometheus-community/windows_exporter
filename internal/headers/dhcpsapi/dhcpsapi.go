@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -337,6 +338,5 @@ func dhcpRpcFreeMemory(pointer uintptr) {
 		return
 	}
 
-	//nolint:dogsled
-	_, _, _ = procDhcpRpcFreeMemory.Call(pointer)
+	_, _, _ = syscall.SyscallN(procDhcpRpcFreeMemory.Addr(), pointer)
 }
