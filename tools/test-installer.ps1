@@ -157,9 +157,10 @@ function Assert-ServiceRemoved {
 
 # Add/Remove Programs shows where the package is installed.
 function Assert-InstallLocation {
-    $key = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
-        Where-Object { (Get-ItemProperty $_.PSPath).PSObject.Properties['DisplayName'] -and (Get-ItemProperty $_.PSPath).DisplayName -eq $serviceName }
-    $location = @($key | ForEach-Object { (Get-ItemProperty $_.PSPath).PSObject.Properties['InstallLocation'] } | Where-Object { $_ } | ForEach-Object Value)
+    $location = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+            ForEach-Object { Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue } |
+            Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq $serviceName } |
+            ForEach-Object { $_.PSObject.Properties['InstallLocation'] } | Where-Object { $_ } | ForEach-Object Value)
     if ($location.Count -ne 1 -or $location[0].TrimEnd('\') -ne $installDir) {
         throw "InstallLocation in Add/Remove Programs is '$($location -join "', '")', expected $installDir"
     }

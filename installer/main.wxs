@@ -140,6 +140,21 @@
             Return="ignore"
             Impersonate="no"
         />
+        <!-- If the uninstall fails, rollback restores the service, which still reads config.yaml. -->
+        <SetProperty
+            Id="RestoreEmptyConfigFile"
+            Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[APPLICATIONFOLDER]config.yaml&quot;"
+            Before="RestoreEmptyConfigFile"
+            Sequence="execute"
+        />
+        <CustomAction
+            Id="RestoreEmptyConfigFile"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixQuietExec"
+            Execute="rollback"
+            Return="ignore"
+            Impersonate="no"
+        />
         <!-- END CUSTOM ACTION FOR CONFIG FILE REMOVAL -->
 
         <!-- START CUSTOM ACTION FOR KILLING THE PROCESS -->
@@ -190,7 +205,8 @@
             <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default AND NOT REMOVE~=&quot;ALL&quot;" />
             <Custom Action="ConfigureServiceRecovery" After="InstallServices" Condition="NOT REMOVE" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
-            <Custom Action="RemoveEmptyConfigFile" After="KillProcess" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+            <Custom Action="RestoreEmptyConfigFile" After="KillProcess" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+            <Custom Action="RemoveEmptyConfigFile" After="RestoreEmptyConfigFile" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
             <Custom Action="SetInstallLocation" After="CostFinalize" />
 
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"
