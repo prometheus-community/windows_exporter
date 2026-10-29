@@ -602,9 +602,10 @@ func (c *Collector) collectServerMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectScopeMetrics(ch chan<- prometheus.Metric) error {
-	dhcpScopes, err := dhcpsapi.GetDHCPV4ScopeStatistics()
-	if err != nil {
-		return fmt.Errorf("failed to get DHCP scopes: %w", err)
+	// The scopes that were read are published even if others failed.
+	dhcpScopes, scopesErr := dhcpsapi.GetDHCPV4ScopeStatistics()
+	if scopesErr != nil {
+		scopesErr = fmt.Errorf("failed to get DHCP scopes: %w", scopesErr)
 	}
 
 	for _, scope := range dhcpScopes {
@@ -708,5 +709,5 @@ func (c *Collector) collectScopeMetrics(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	return nil
+	return scopesErr
 }

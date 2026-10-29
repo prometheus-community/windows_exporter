@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/lazyproc"
@@ -51,6 +52,10 @@ var (
 // it in Build: a missing export panics on the first call otherwise.
 func Load() error { return load() }
 
+// GetDHCPV4ScopeStatistics returns the IPv4 scopes of the local DHCP server.
+// A scope that fails is skipped and its error joined to the result, so the
+// other scopes are still returned. A scope removed while the scopes are read
+// is skipped without an error.
 func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var mibInfo *DHCP_MIB_INFO_V5
 
@@ -58,24 +63,28 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 		return nil, fmt.Errorf("dhcpGetMibInfoV5: %w", err)
 	}
 
-	defer dhcpRpcFreeMemory(unsafe.Pointer(mibInfo))
+	defer freeMibInfo(mibInfo, dhcpRpcFreeMemory)
 
-	subnetScopeInfos := make(map[DHCP_IP_ADDRESS]DHCP_SUBNET_MIB_INFO_V5, mibInfo.Scopes)
-	subnetMIBScopeInfos := unsafe.Slice(mibInfo.ScopeInfo, mibInfo.Scopes)
+	subnetScopeInfos := make(map[DHCP_IP_ADDRESS]DHCP_SUBNET_MIB_INFO_V5)
 
-	for _, subnetMIBScopeInfo := range subnetMIBScopeInfos {
-		subnetScopeInfos[subnetMIBScopeInfo.Subnet] = subnetMIBScopeInfo
+	if mibInfo != nil && mibInfo.ScopeInfo != nil {
+		for _, subnetMIBScopeInfo := range unsafe.Slice(mibInfo.ScopeInfo, mibInfo.Scopes) {
+			subnetScopeInfos[subnetMIBScopeInfo.Subnet] = subnetMIBScopeInfo
+		}
 	}
 
 	var superScopeTable *DHCP_SUPER_SCOPE_TABLE
 
 	if err := dhcpGetSuperScopeInfoV4(&superScopeTable); err != nil {
 		return nil, fmt.Errorf("dhcpGetSuperScopeInfoV4: %w", err)
-	} else if superScopeTable == nil {
-		return nil, errors.New("dhcpGetSuperScopeInfoV4 returned nil")
 	}
 
-	defer dhcpRpcFreeMemory(unsafe.Pointer(superScopeTable))
+	defer freeSuperScopeTable(superScopeTable, dhcpRpcFreeMemory)
+
+	// A server without scopes returns ERROR_SUCCESS without a table ([MS-DHCPM] 3.1.4.38).
+	if superScopeTable == nil || superScopeTable.Entries == nil {
+		return []DHCPV4Scope{}, nil
+	}
 
 	scopes := make([]DHCPV4Scope, 0, superScopeTable.Count)
 	subnets := unsafe.Slice(superScopeTable.Entries, superScopeTable.Count)
@@ -83,72 +92,130 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var errs []error
 
 	for _, subnet := range subnets {
-		if err := func() error {
-			var subnetInfo *DHCP_SUBNET_INFO
+		scope, err := getDHCPV4Scope(subnet, subnetScopeInfos)
 
-			err := dhcpGetSubnetInfo(subnet.SubnetAddress, &subnetInfo)
-			if err != nil {
-				return fmt.Errorf("failed to get subnet info: %w", err)
-			}
-
-			defer dhcpRpcFreeMemory(unsafe.Pointer(subnetInfo))
-
-			scope := DHCPV4Scope{
-				Name:             subnetInfo.SubnetName.String(),
-				SuperScopeName:   subnet.SuperScopeName.String(),
-				ScopeIPAddress:   net.IPNet{IP: subnetInfo.SubnetAddress.IPv4(), Mask: subnetInfo.SubnetMask.IPv4Mask()},
-				SuperScopeNumber: subnet.SuperScopeNumber,
-				State:            subnetInfo.SubnetState,
-
-				AddressesFree:                 -1,
-				AddressesFreeOnPartnerServer:  -1,
-				AddressesFreeOnThisServer:     -1,
-				AddressesInUse:                -1,
-				AddressesInUseOnPartnerServer: -1,
-				AddressesInUseOnThisServer:    -1,
-				PendingOffers:                 -1,
-				ReservedAddress:               -1,
-			}
-
-			if subnetScopeInfo, ok := subnetScopeInfos[subnetInfo.SubnetAddress]; ok {
-				scope.AddressesInUse = float64(subnetScopeInfo.NumAddressesInUse)
-				scope.AddressesFree = float64(subnetScopeInfo.NumAddressesFree)
-				scope.PendingOffers = float64(subnetScopeInfo.NumPendingOffers)
-			}
-
-			subnetReservationCount, err := dhcpV4EnumSubnetReservations(subnet.SubnetAddress)
-			if err != nil {
-				return fmt.Errorf("failed to get subnet reservation count: %w", err)
-			} else {
-				scope.ReservedAddress = float64(subnetReservationCount)
-			}
-
-			var subnetStatistics *DHCP_FAILOVER_STATISTICS
-
-			err = dhcpV4FailoverGetScopeStatistics(subnet.SubnetAddress, &subnetStatistics)
-
-			defer dhcpRpcFreeMemory(unsafe.Pointer(subnetStatistics))
-
-			if err == nil {
-				scope.AddressesFree = float64(subnetStatistics.AddrFree)
-				scope.AddressesInUse = float64(subnetStatistics.AddrInUse)
-				scope.AddressesFreeOnPartnerServer = float64(subnetStatistics.PartnerAddrFree)
-				scope.AddressesInUseOnPartnerServer = float64(subnetStatistics.PartnerAddrInUse)
-				scope.AddressesFreeOnThisServer = float64(subnetStatistics.ThisAddrFree)
-				scope.AddressesInUseOnThisServer = float64(subnetStatistics.ThisAddrInUse)
-			} else if !errors.Is(err, ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP) {
-				return fmt.Errorf("failed to get subnet statistics: %w", err)
-			}
-
+		switch {
+		case err == nil:
 			scopes = append(scopes, scope)
-
-			return nil
-		}(); err != nil {
-			errs = append(errs, err)
+		case errors.Is(err, ERROR_DHCP_SUBNET_NOT_PRESENT):
+			// The scope was deleted after the superscope table was read.
+		default:
+			errs = append(errs, fmt.Errorf("scope %s: %w", subnet.SubnetAddress.IPv4(), err))
 		}
 	}
 
 	return scopes, errors.Join(errs...)
+}
+
+// getDHCPV4Scope reads the information and statistics of one IPv4 scope.
+func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DHCP_IP_ADDRESS]DHCP_SUBNET_MIB_INFO_V5) (DHCPV4Scope, error) {
+	var subnetInfo *DHCP_SUBNET_INFO
+
+	if err := dhcpGetSubnetInfo(subnet.SubnetAddress, &subnetInfo); err != nil {
+		return DHCPV4Scope{}, fmt.Errorf("failed to get subnet info: %w", err)
+	}
+
+	defer dhcpRpcFreeMemory(uintptr(unsafe.Pointer(subnetInfo)))
+
+	if subnetInfo == nil {
+		return DHCPV4Scope{}, errors.New("failed to get subnet info: no subnet info returned")
+	}
+
+	scope := DHCPV4Scope{
+		Name:             subnetInfo.SubnetName.String(),
+		SuperScopeName:   subnet.SuperScopeName.String(),
+		ScopeIPAddress:   net.IPNet{IP: subnetInfo.SubnetAddress.IPv4(), Mask: subnetInfo.SubnetMask.IPv4Mask()},
+		SuperScopeNumber: subnet.SuperScopeNumber,
+		State:            subnetInfo.SubnetState,
+
+		AddressesFree:                 -1,
+		AddressesFreeOnPartnerServer:  -1,
+		AddressesFreeOnThisServer:     -1,
+		AddressesInUse:                -1,
+		AddressesInUseOnPartnerServer: -1,
+		AddressesInUseOnThisServer:    -1,
+		PendingOffers:                 -1,
+		ReservedAddress:               -1,
+	}
+
+	if subnetScopeInfo, ok := subnetScopeInfos[subnetInfo.SubnetAddress]; ok {
+		scope.AddressesInUse = float64(subnetScopeInfo.NumAddressesInUse)
+		scope.AddressesFree = float64(subnetScopeInfo.NumAddressesFree)
+		scope.PendingOffers = float64(subnetScopeInfo.NumPendingOffers)
+	}
+
+	subnetReservationCount, err := dhcpV4EnumSubnetReservations(subnet.SubnetAddress)
+	if err != nil {
+		return DHCPV4Scope{}, fmt.Errorf("failed to get subnet reservation count: %w", err)
+	}
+
+	scope.ReservedAddress = float64(subnetReservationCount)
+
+	var subnetStatistics *DHCP_FAILOVER_STATISTICS
+
+	err = dhcpV4FailoverGetScopeStatistics(subnet.SubnetAddress, &subnetStatistics)
+
+	defer dhcpRpcFreeMemory(uintptr(unsafe.Pointer(subnetStatistics)))
+
+	switch {
+	case err == nil && subnetStatistics != nil:
+		scope.AddressesFree = float64(subnetStatistics.AddrFree)
+		scope.AddressesInUse = float64(subnetStatistics.AddrInUse)
+		scope.AddressesFreeOnPartnerServer = float64(subnetStatistics.PartnerAddrFree)
+		scope.AddressesInUseOnPartnerServer = float64(subnetStatistics.PartnerAddrInUse)
+		scope.AddressesFreeOnThisServer = float64(subnetStatistics.ThisAddrFree)
+		scope.AddressesInUseOnThisServer = float64(subnetStatistics.ThisAddrInUse)
+	case err == nil, errors.Is(err, ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP):
+	default:
+		return DHCPV4Scope{}, fmt.Errorf("failed to get subnet statistics: %w", err)
+	}
+
+	return scope, nil
+}
+
+// The client allocates the embedded arrays and strings of some results
+// separately and packs them into the result for others. Measured with UMDH and
+// a debug heap: DHCP_MIB_INFO_V5 and DHCP_SUPER_SCOPE_TABLE hold separate
+// allocations, which leak unless freed (about 480 bytes per scrape with one
+// scope). DHCP_SUBNET_INFO packs its strings behind the structure, and freeing
+// them corrupts the heap (STATUS_HEAP_CORRUPTION). Free a new result type's
+// embedded pointers only after checking it the same way. free is
+// dhcpRpcFreeMemory outside of tests.
+
+func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, free func(uintptr)) {
+	if mibInfo == nil {
+		return
+	}
+
+	free(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
+	free(uintptr(unsafe.Pointer(mibInfo)))
+}
+
+func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
+	if table == nil {
+		return
+	}
+
+	if table.Entries != nil {
+		// Each entry has its own copy of the superscope name. Skip repeated
+		// pointers anyway, so a shared name can never be freed twice.
+		freed := make(map[uintptr]struct{}, table.Count)
+
+		for _, entry := range unsafe.Slice(table.Entries, table.Count) {
+			name := entry.SuperScopeName.Pointer()
+			if _, ok := freed[name]; ok || name == 0 {
+				continue
+			}
+
+			freed[name] = struct{}{}
+
+			free(name)
+		}
+
+		free(uintptr(unsafe.Pointer(table.Entries)))
+	}
+
+	free(uintptr(unsafe.Pointer(table)))
 }
 
 // dhcpGetSubnetInfo https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpgetsubnetinfo
@@ -210,12 +277,15 @@ func dhcpGetMibInfoV5(mibInfo **DHCP_MIB_INFO_V5) error {
 }
 
 // dhcpV4EnumSubnetReservations https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpv4enumsubnetreservations
+// It returns the number of reservations of the subnet. With a PreferredMaximum
+// of 0 the server returns no elements and the number of reservations left to
+// enumerate in ElementsTotal ([MS-DHCPM] 3.2.4.120).
 func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error) {
 	var (
 		elementsRead  uint32
 		elementsTotal uint32
 		elementsInfo  uintptr
-		resumeHandle  *windows.Handle
+		resumeHandle  uint32
 	)
 
 	ret, _, _ := procDhcpV4EnumSubnetReservations.Call(
@@ -228,20 +298,25 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 		uintptr(unsafe.Pointer(&elementsTotal)),
 	)
 
-	dhcpRpcFreeMemory(unsafe.Pointer(elementsInfo))
+	dhcpRpcFreeMemory(elementsInfo)
 
-	if !errors.Is(windows.Errno(ret), windows.ERROR_MORE_DATA) && !errors.Is(windows.Errno(ret), windows.ERROR_NO_MORE_ITEMS) {
+	switch windows.Errno(ret) {
+	case windows.ERROR_SUCCESS, windows.ERROR_MORE_DATA:
+		return elementsRead + elementsTotal, nil
+	case windows.ERROR_NO_MORE_ITEMS:
+		// The subnet has no reservations.
+		return 0, nil
+	default:
 		return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", windows.Errno(ret))
 	}
-
-	return elementsRead + elementsTotal, nil
 }
 
-func dhcpRpcFreeMemory(pointer unsafe.Pointer) {
-	if uintptr(pointer) == 0 {
+// dhcpRpcFreeMemory frees one allocation of the DHCP server API. pointer is a
+// uintptr because the memory is not managed by Go.
+func dhcpRpcFreeMemory(pointer uintptr) {
+	if pointer == 0 {
 		return
 	}
 
-	//nolint:dogsled
-	_, _, _ = procDhcpRpcFreeMemory.Call(uintptr(pointer))
+	_, _, _ = syscall.SyscallN(procDhcpRpcFreeMemory.Addr(), pointer)
 }
