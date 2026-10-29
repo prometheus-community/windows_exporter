@@ -20,6 +20,7 @@ package wuapi
 
 import (
 	"iter"
+	"strconv"
 
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"golang.org/x/sys/windows"
@@ -34,7 +35,11 @@ const (
 	updateSearcherSearch          = 19
 	updateSearcherPutOnline       = 21
 	updateSearcherHistoryCount    = 22
+	searchResultResultCode        = 7
 	searchResultUpdates           = 9
+	automaticUpdatesResults       = 14 // IAutomaticUpdates2
+	resultsLastSearchSuccess      = 7
+	resultsLastInstallSuccess     = 8
 	updateCollectionItem          = 7
 	updateCollectionCount         = 10
 	updateTitle                   = 7
@@ -58,6 +63,9 @@ type (
 	Update         struct{ ole.Object }
 	UpdateIdentity struct{ ole.Object }
 	Category       struct{ ole.Object }
+
+	AutomaticUpdates        struct{ ole.Object } // IAutomaticUpdates2
+	AutomaticUpdatesResults struct{ ole.Object }
 )
 
 func NewUpdateSession() (*UpdateSession, error) {
@@ -97,8 +105,71 @@ func (s *UpdateSearcher) Search(criteria string) (*SearchResult, error) {
 	return s.GetObjectStringArg[SearchResult](updateSearcherSearch, criteria)
 }
 
+// OperationResultCode is the WUA OperationResultCode enumeration.
+// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/ne-wuapi-operationresultcode
+type OperationResultCode int32
+
+const (
+	OperationResultNotStarted          OperationResultCode = 0
+	OperationResultInProgress          OperationResultCode = 1
+	OperationResultSucceeded           OperationResultCode = 2
+	OperationResultSucceededWithErrors OperationResultCode = 3
+	OperationResultFailed              OperationResultCode = 4
+	OperationResultAborted             OperationResultCode = 5
+)
+
+func (c OperationResultCode) String() string {
+	switch c {
+	case OperationResultNotStarted:
+		return "not started"
+	case OperationResultInProgress:
+		return "in progress"
+	case OperationResultSucceeded:
+		return "succeeded"
+	case OperationResultSucceededWithErrors:
+		return "succeeded with errors"
+	case OperationResultFailed:
+		return "failed"
+	case OperationResultAborted:
+		return "aborted"
+	default:
+		return "unknown result code " + strconv.Itoa(int(c))
+	}
+}
+
+// ResultCode is the overall result of the search. Search can succeed with a
+// result that failed or is incomplete ([MS-UAMG] 2.2.9).
+func (s *SearchResult) ResultCode() (OperationResultCode, error) {
+	return s.Get[OperationResultCode](searchResultResultCode)
+}
+
 func (s *SearchResult) Updates() (*UpdateCollection, error) {
 	return s.GetObject[UpdateCollection](searchResultUpdates)
+}
+
+// NewAutomaticUpdates creates the Microsoft.Update.AutoUpdate object.
+func NewAutomaticUpdates() (*AutomaticUpdates, error) {
+	return ole.Create[AutomaticUpdates](
+		windows.GUID{Data1: 0xbfe18e9c, Data2: 0x6d87, Data3: 0x4450, Data4: [8]byte{0xb3, 0x7c, 0xe0, 0x2f, 0x0b, 0x37, 0x38, 0x03}},
+		windows.GUID{Data1: 0x4a2f5c31, Data2: 0xcfd9, Data3: 0x410e, Data4: [8]byte{0xb7, 0xfb, 0x29, 0xa6, 0x53, 0x97, 0x3a, 0x0f}},
+	)
+}
+
+func (a *AutomaticUpdates) Results() (*AutomaticUpdatesResults, error) {
+	return a.GetObject[AutomaticUpdatesResults](automaticUpdatesResults)
+}
+
+// LastSearchSuccessDate is the UTC time of the last successful search of
+// Automatic Updates. ok is false if it never searched. Searches of other
+// clients, including this exporter, do not change it.
+func (r *AutomaticUpdatesResults) LastSearchSuccessDate() (ole.DATE, bool, error) {
+	return r.GetDate(resultsLastSearchSuccess)
+}
+
+// LastInstallationSuccessDate is the UTC time of the last successful
+// installation of Automatic Updates. ok is false if it never installed.
+func (r *AutomaticUpdatesResults) LastInstallationSuccessDate() (ole.DATE, bool, error) {
+	return r.GetDate(resultsLastInstallSuccess)
 }
 
 func (u *Update) Title() (string, error)        { return u.String(updateTitle) }

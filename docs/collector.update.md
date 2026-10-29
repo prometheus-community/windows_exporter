@@ -29,12 +29,24 @@ Default: `6h0m0s`
 
 Pending updates include optional updates, such as the monthly non-security preview update. The `deployment_action` label is `installation` for regular updates and `optional_installation` for optional ones. Filter with `deployment_action="installation"` to ignore optional updates.
 
-| Name                                           | Description                                                      | Type  | Labels                                                            |
-|------------------------------------------------|------------------------------------------------------------------|-------|-------------------------------------------------------------------|
-| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `id`,`revision`,`category`,`severity`,`title`,`deployment_action` |
-| `windows_update_pending_published_timestamp`   | Expose last published timestamp for a single pending update item | gauge | `id`,`revision`                                                   |
-| `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API      | gauge |                                                                   |
-| `windows_update_scrape_timestamp_seconds`      | Timestamp of the last scrape                                     | gauge |                                                                   |
+A search that Windows Update reports as failed or aborted fails the collector
+(`windows_exporter_collector_success{collector="update"} 0`) instead of
+publishing an empty list of pending updates. A search that succeeded with
+errors is published and logs a warning, as its list may be incomplete.
+
+The last search and installation success times are those of Windows Automatic
+Updates, read with each search of the collector. The collector's own searches
+do not change them. A time is omitted while Automatic Updates has never
+searched or installed.
+
+| Name                                                         | Description                                                                  | Type  | Labels                                                            |
+|--------------------------------------------------------------|------------------------------------------------------------------------------|-------|-------------------------------------------------------------------|
+| `windows_update_pending_info`                                | Expose information for a single pending update item                          | gauge | `id`,`revision`,`category`,`severity`,`title`,`deployment_action` |
+| `windows_update_pending_published_timestamp`                 | Expose last published timestamp for a single pending update item             | gauge | `id`,`revision`                                                   |
+| `windows_update_scrape_query_duration_seconds`               | Duration of the last scrape query to the Windows Update API                  | gauge |                                                                   |
+| `windows_update_scrape_timestamp_seconds`                    | Timestamp of the last scrape                                                 | gauge |                                                                   |
+| `windows_update_last_search_success_timestamp_seconds`       | Time of the last successful update search of Windows Automatic Updates       | gauge |                                                                   |
+| `windows_update_last_installation_success_timestamp_seconds` | Time of the last successful update installation of Windows Automatic Updates | gauge |                                                                   |
 
 ### Example metrics
 ```

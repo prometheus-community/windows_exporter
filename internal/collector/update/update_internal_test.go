@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"testing"
 	"time"
 	"unicode/utf16"
@@ -119,9 +120,13 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		countError bool
+		resultCode wuapi.OperationResultCode
 	}{
-		{name: "skip unreadable and duplicate items"},
-		{name: "count failure", countError: true},
+		{name: "skip unreadable and duplicate items", resultCode: wuapi.OperationResultSucceeded},
+		{name: "succeeded with errors keeps results", resultCode: wuapi.OperationResultSucceededWithErrors},
+		{name: "count failure", countError: true, resultCode: wuapi.OperationResultSucceeded},
+		{name: "failed search", resultCode: wuapi.OperationResultFailed},
+		{name: "aborted search", resultCode: wuapi.OperationResultAborted},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var logs bytes.Buffer
@@ -135,9 +140,19 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 				lastScrapeMetric:           prometheus.NewDesc("test_timestamp", "", nil, nil),
 			}
 
-			searcher, attempted, criteria := fakeUpdateSearch(tc.countError)
+			searcher, attempted, criteria := fakeUpdateSearch(tc.countError, tc.resultCode)
 
 			metrics, err := c.fetchUpdates(logger, searcher, 0)
+			if tc.resultCode == wuapi.OperationResultFailed || tc.resultCode == wuapi.OperationResultAborted {
+				// A search that did not succeed must not publish an empty pending list.
+				require.ErrorIs(t, err, errSearchFailed)
+				require.ErrorContains(t, err, tc.resultCode.String())
+				require.Nil(t, metrics)
+				require.Empty(t, *attempted)
+
+				return
+			}
+
 			if tc.countError {
 				require.ErrorIs(t, err, ole.HRESULT(0x80070005))
 				require.Nil(t, metrics)
@@ -176,15 +191,68 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 			require.Equal(t, []string{"installation", "optional_installation"}, actions)
 			require.Contains(t, logs.String(), "failed to fetch Windows Update history item")
 			require.Contains(t, logs.String(), "get collection item 1")
+
+			if tc.resultCode == wuapi.OperationResultSucceededWithErrors {
+				require.Contains(t, logs.String(), "succeeded with errors")
+			}
 		})
 	}
+}
+
+func TestAppendAutomaticUpdatesResults(t *testing.T) {
+	var logs bytes.Buffer
+
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+	c := &Collector{
+		lastSearchSuccess:       prometheus.NewDesc("test_last_search", "", nil, nil),
+		lastInstallationSuccess: prometheus.NewDesc("test_last_installation", "", nil, nil),
+	}
+
+	release := windows.NewCallback(func(uintptr) uintptr { return 0 })
+
+	var resultsMethods [9]uintptr
+
+	resultsMethods[2] = release
+	// LastSearchSuccessDate is 1970-01-02 UTC.
+	resultsMethods[7] = windows.NewCallback(func(_ uintptr, out *ole.Variant) uintptr {
+		out.Type = 7 // VT_DATE
+		out.Value = int64(math.Float64bits(25570))
+
+		return 0
+	})
+	// Automatic Updates never installed an update: VT_EMPTY.
+	resultsMethods[8] = windows.NewCallback(func(_ uintptr, out *ole.Variant) uintptr {
+		out.Type = 0
+
+		return 0
+	})
+	results := &wuapi.AutomaticUpdatesResults{VTable: &resultsMethods[0]}
+
+	var autoUpdatesMethods [15]uintptr
+
+	autoUpdatesMethods[2] = release
+	autoUpdatesMethods[14] = windows.NewCallback(func(_ uintptr, out **wuapi.AutomaticUpdatesResults) uintptr {
+		*out = results
+
+		return 0
+	})
+	autoUpdates := &wuapi.AutomaticUpdates{VTable: &autoUpdatesMethods[0]}
+
+	metrics := c.appendAutomaticUpdatesResults(logger, autoUpdates, nil)
+	require.Len(t, metrics, 1, "a date that is not known is omitted")
+	require.Equal(t, c.lastSearchSuccess, metrics[0].Desc())
+
+	var sample dto.Metric
+	require.NoError(t, metrics[0].Write(&sample))
+	require.InDelta(t, 86400, sample.GetGauge().GetValue(), 0)
+	require.Empty(t, logs.String())
 }
 
 // fakeUpdateSearch implements only the native slots exercised by a scrape.
 // Item 1 cannot be read; both surrounding items remain available. Item 0 is a
 // regular update and item 2 an optional one. Item 3 repeats the identity of
 // item 0. The search criteria are recorded.
-func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string) {
+func fakeUpdateSearch(countError bool, resultCode wuapi.OperationResultCode) (*wuapi.UpdateSearcher, *[]int32, *string) {
 	release := windows.NewCallback(func(uintptr) uintptr { return 0 })
 	attempted := []int32{}
 
@@ -278,6 +346,11 @@ func fakeUpdateSearch(countError bool) (*wuapi.UpdateSearcher, *[]int32, *string
 	var resultMethods [10]uintptr
 
 	resultMethods[2] = release
+	resultMethods[7] = windows.NewCallback(func(_ uintptr, out *wuapi.OperationResultCode) uintptr {
+		*out = resultCode
+
+		return 0
+	})
 	resultMethods[9] = windows.NewCallback(func(_ uintptr, out **wuapi.UpdateCollection) uintptr {
 		*out = updates
 
