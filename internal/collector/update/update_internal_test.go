@@ -200,32 +200,74 @@ func TestFetchUpdatesPartialCollection(t *testing.T) {
 }
 
 func TestAppendAutomaticUpdatesResults(t *testing.T) {
-	var logs bytes.Buffer
+	const (
+		vtEmpty = 0
+		vtNull  = 1
+		vtI4    = 3
+		vtDate  = 7
+	)
 
-	logger := slog.New(slog.NewTextHandler(&logs, nil))
-	c := &Collector{
-		lastSearchSuccess:       prometheus.NewDesc("test_last_search", "", nil, nil),
-		lastInstallationSuccess: prometheus.NewDesc("test_last_installation", "", nil, nil),
+	for _, tc := range []struct {
+		name                    string
+		searchType, installType uint16
+		wantSearchMetric        bool
+		wantLog                 string
+	}{
+		// LastSearchSuccessDate is 1970-01-02 UTC; Automatic Updates never installed an update.
+		{name: "unknown date is omitted", searchType: vtDate, installType: vtEmpty, wantSearchMetric: true},
+		{name: "null date is omitted", searchType: vtDate, installType: vtNull, wantSearchMetric: true},
+		{name: "unexpected type is skipped", searchType: vtI4, installType: vtEmpty, wantLog: "failed to get Automatic Updates last search success date"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+
+			logger := slog.New(slog.NewTextHandler(&logs, nil))
+			c := &Collector{
+				lastSearchSuccess:       prometheus.NewDesc("test_last_search", "", nil, nil),
+				lastInstallationSuccess: prometheus.NewDesc("test_last_installation", "", nil, nil),
+			}
+
+			metrics := c.appendAutomaticUpdatesResults(logger, fakeAutomaticUpdates(tc.searchType, tc.installType), nil)
+
+			if !tc.wantSearchMetric {
+				require.Empty(t, metrics)
+				require.Contains(t, logs.String(), tc.wantLog)
+
+				return
+			}
+
+			require.Len(t, metrics, 1, "a date that is not known is omitted")
+			require.Equal(t, c.lastSearchSuccess, metrics[0].Desc())
+
+			var sample dto.Metric
+			require.NoError(t, metrics[0].Write(&sample))
+			require.InDelta(t, 86400, sample.GetGauge().GetValue(), 0)
+			require.Empty(t, logs.String())
+		})
 	}
+}
 
+// fakeAutomaticUpdates returns IAutomaticUpdates2 results whose success dates
+// have the given VARIANT types. A VT_DATE or VT_I4 value is 1970-01-02 UTC.
+func fakeAutomaticUpdates(searchType, installType uint16) *wuapi.AutomaticUpdates {
 	release := windows.NewCallback(func(uintptr) uintptr { return 0 })
+
+	getter := func(vt uint16) uintptr {
+		return windows.NewCallback(func(_ uintptr, out *ole.Variant) uintptr {
+			out.Type = vt
+			if vt != 0 && vt != 1 {
+				out.Value = int64(math.Float64bits(25570))
+			}
+
+			return 0
+		})
+	}
 
 	var resultsMethods [9]uintptr
 
 	resultsMethods[2] = release
-	// LastSearchSuccessDate is 1970-01-02 UTC.
-	resultsMethods[7] = windows.NewCallback(func(_ uintptr, out *ole.Variant) uintptr {
-		out.Type = 7 // VT_DATE
-		out.Value = int64(math.Float64bits(25570))
-
-		return 0
-	})
-	// Automatic Updates never installed an update: VT_EMPTY.
-	resultsMethods[8] = windows.NewCallback(func(_ uintptr, out *ole.Variant) uintptr {
-		out.Type = 0
-
-		return 0
-	})
+	resultsMethods[7] = getter(searchType)
+	resultsMethods[8] = getter(installType)
 	results := &wuapi.AutomaticUpdatesResults{VTable: &resultsMethods[0]}
 
 	var autoUpdatesMethods [15]uintptr
@@ -236,16 +278,8 @@ func TestAppendAutomaticUpdatesResults(t *testing.T) {
 
 		return 0
 	})
-	autoUpdates := &wuapi.AutomaticUpdates{VTable: &autoUpdatesMethods[0]}
 
-	metrics := c.appendAutomaticUpdatesResults(logger, autoUpdates, nil)
-	require.Len(t, metrics, 1, "a date that is not known is omitted")
-	require.Equal(t, c.lastSearchSuccess, metrics[0].Desc())
-
-	var sample dto.Metric
-	require.NoError(t, metrics[0].Write(&sample))
-	require.InDelta(t, 86400, sample.GetGauge().GetValue(), 0)
-	require.Empty(t, logs.String())
+	return &wuapi.AutomaticUpdates{VTable: &autoUpdatesMethods[0]}
 }
 
 // fakeUpdateSearch implements only the native slots exercised by a scrape.

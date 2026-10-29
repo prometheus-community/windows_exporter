@@ -73,6 +73,8 @@ type Collector struct {
 	logger *slog.Logger
 
 	metricsBuf []prometheus.Metric
+	// searchErr is the error of the last search, reported while metricsBuf is nil.
+	searchErr error
 
 	pendingUpdate              *prometheus.Desc
 	pendingUpdateLastPublished *prometheus.Desc
@@ -247,6 +249,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	defer c.mu.RUnlock()
 
 	if c.metricsBuf == nil {
+		// ErrNoUpdates stays in the chain, so callers can still tell that
+		// no search result is available yet.
+		if c.searchErr != nil {
+			return fmt.Errorf("%w: last Windows Update search failed: %w", ErrNoUpdates, c.searchErr)
+		}
+
 		return ErrNoUpdates
 	}
 
@@ -334,16 +342,22 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 			var err error
 
 			metricsBuf, err = c.fetchUpdates(logger, searcher, len(metricsBuf))
-			if err != nil {
-				return err
-			}
 
-			if autoUpdates != nil {
-				metricsBuf = c.appendAutomaticUpdatesResults(logger, autoUpdates, metricsBuf)
-			}
-
-			return nil
+			return err
 		})
+
+		// The success times are optional; a panic reading them keeps the search metrics.
+		if err == nil && autoUpdates != nil {
+			if auErr := recovery.Run(func() error {
+				metricsBuf = c.appendAutomaticUpdatesResults(logger, autoUpdates, metricsBuf)
+
+				return nil
+			}); auErr != nil {
+				logger.WarnContext(ctx, "failed to read Automatic Updates results",
+					slog.Any("err", auErr),
+				)
+			}
+		}
 
 		// A search that outlived Close publishes nothing.
 		if ctx.Err() != nil {
@@ -357,10 +371,12 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 			c.mu.Lock()
 			c.metricsBuf = nil
+			c.searchErr = err
 			c.mu.Unlock()
 		} else {
 			c.mu.Lock()
 			c.metricsBuf = metricsBuf
+			c.searchErr = nil
 			c.mu.Unlock()
 		}
 
@@ -618,7 +634,7 @@ func (c *Collector) appendAutomaticUpdatesResults(logger *slog.Logger, autoUpdat
 		metrics = append(metrics, prometheus.MustNewConstMetric(
 			value.desc,
 			prometheus.GaugeValue,
-			float64(t.UnixNano())/1e9,
+			float64(t.UnixMilli())/1e3,
 		))
 	}
 
