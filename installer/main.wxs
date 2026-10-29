@@ -128,6 +128,41 @@
         />
         <!-- END CUSTOM ACTION FOR CONFIG FILE CREATION -->
 
+        <!-- START CUSTOM ACTION FOR CONFIG FILE REMOVAL -->
+        <!-- CreateConfigFile creates config.yaml outside of any component, so Windows Installer does not
+            remove it, and the leftover file keeps the install folder. Remove it on uninstall only while it
+            is still empty: a configuration the user wrote stays, and so does every file during upgrades. -->
+        <SetProperty
+            Id="RemoveEmptyConfigFile"
+            Value="&quot;[%ComSpec]&quot; /c for %I in (&quot;[APPLICATIONFOLDER]config.yaml&quot;) do @if exist &quot;%~fI&quot; if &quot;%~zI&quot;==&quot;0&quot; del /f /q &quot;%~fI&quot;"
+            Before="RemoveEmptyConfigFile"
+            Sequence="execute"
+        />
+        <CustomAction
+            Id="RemoveEmptyConfigFile"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixQuietExec"
+            Execute="deferred"
+            Return="ignore"
+            Impersonate="no"
+        />
+        <!-- If the uninstall fails, rollback restores the service, which still reads config.yaml. -->
+        <SetProperty
+            Id="RestoreEmptyConfigFile"
+            Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[APPLICATIONFOLDER]config.yaml&quot;"
+            Before="RestoreEmptyConfigFile"
+            Sequence="execute"
+        />
+        <CustomAction
+            Id="RestoreEmptyConfigFile"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixQuietExec"
+            Execute="rollback"
+            Return="ignore"
+            Impersonate="no"
+        />
+        <!-- END CUSTOM ACTION FOR CONFIG FILE REMOVAL -->
+
         <!-- START CUSTOM ACTION FOR KILLING THE PROCESS -->
         <!-- ServiceControl stops the service. A service process can keep running for a while after it
             reported STOPPED, and then blocks replacing the binary and re-creating the service. Kill only
@@ -173,9 +208,12 @@
                     Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
-            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
+            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default AND NOT REMOVE~=&quot;ALL&quot;" />
             <Custom Action="ConfigureServiceRecovery" After="InstallServices" Condition="NOT REMOVE" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
+            <Custom Action="RestoreEmptyConfigFile" After="KillProcess" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+            <Custom Action="RemoveEmptyConfigFile" After="RestoreEmptyConfigFile" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+            <Custom Action="SetInstallLocation" After="CostFinalize" />
 
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"
                     Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
