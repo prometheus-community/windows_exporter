@@ -250,8 +250,10 @@ implemented behavior.
 
 Many local APIs that collectors call are served by the same Windows component
 that implements a documented remote protocol, so the protocol specification
-applies to the local call too: its error codes, size limits, enumeration and
-resume rules, and which side frees returned memory. Each specification is a
+applies to the local call too: its error codes, size limits, and enumeration
+and resume rules. The Win32 API documentation defines how returned memory is
+freed; some specifications, e.g. `MS-DHCPM`, add which nested buffers the
+server allocates. Each specification is a
 PDF at
 `https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/<NAME>/%5b<NAME>%5d.pdf`,
 for example
@@ -265,11 +267,12 @@ for example
 | `MS-UAMG` Windows Update Agent | `update` |
 | `MS-DHCPM` DHCP Server Management | `dhcp` (`internal/headers/dhcpsapi`) |
 | `MS-CMRP` Failover Cluster Management | `mscluster` (`internal/headers/clusapi`) |
-| `MS-W32T` W32Time | `time` |
+| `MS-W32T` W32Time | `time` (W32Time configuration and status behind its counters) |
 | `MS-TSTS` Terminal Services | `terminal_services` |
 | `MS-RPRN` Print System | `printer` |
 | `MS-LSAT` LSA name translation | `process` owner lookup |
-| `MS-WMI` WMI | `internal/mi` (WBEM error codes) |
+| `MS-DNSP` DNS Server Management | `dns` (`MicrosoftDNS_Statistic`) |
+| `MS-WMI` WMI | `internal/mi` (WBEM HRESULTs in MI error details) |
 | `MS-ERREF`, `MS-DTYP` | Win32, HRESULT and NTSTATUS codes; common data types |
 
 The specifications describe the server's documented behavior. Windows may
