@@ -127,11 +127,13 @@ tests:
               summary: Windows clock has no external time source
               description: 'Windows Time on host:9182 has used Local CMOS Clock as its clock source for 10 minutes.'
 
-  - name: Clock sync alert names the failed result, ignores successful hosts and recovers
+  - name: Clock sync alert fires while no attempt succeeds, also across changing failure results, and recovers
     interval: 1m
     input_series:
       - series: 'windows_time_sync_last_result{job="windows-custom", instance="host:9182", cluster="test", result="no_data"}'
-        values: '1x60 0x5'
+        values: '1x30 0x35'
+      - series: 'windows_time_sync_last_result{job="windows-custom", instance="host:9182", cluster="test", result="stale_data"}'
+        values: '0x30 1x30 0x5'
       - series: 'windows_time_sync_last_result{job="windows-custom", instance="host:9182", cluster="test", result="success"}'
         values: '0x60 1x5'
       - series: 'windows_time_sync_last_result{job="windows-custom", instance="ok:9182", cluster="test", result="no_data"}'
@@ -143,11 +145,11 @@ tests:
       - alertname: WindowsClockSyncFailing
         eval_time: 60m
         exp_alerts:
-          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, result: no_data, severity: warning}
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
             exp_annotations:
               runbook_url: https://runbooks.example.com/windows/windowsclocksyncfailing/
               summary: Windows clock synchronization fails
-              description: 'The last synchronization attempt of Windows Time on host:9182 has ended with no_data for 1 hour.'
+              description: 'Windows Time on host:9182 has reported a failed last synchronization attempt for 1 hour.'
       - {alertname: WindowsClockSyncFailing, eval_time: 61m, exp_alerts: []}
 
   - name: Scheduled task alert fires for unmapped and terminated results after an hour and skips disabled and deselected tasks

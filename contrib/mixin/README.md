@@ -38,8 +38,8 @@ job before generating rules. The rules read the default `cpu`, `memory`,
 `logical_disk`, `net`, `service` and `system` collectors; `_config.collectors`
 lists which collectors the targets run, and the alerts of a collector that is
 turned off are not generated. Enable `ad` on domain controllers for the Active
-Directory alerts and `time` for the clock alerts, which need the `ntp` and
-`clock_source` subcollectors.
+Directory alerts and `time` for the clock alerts, which need the `ntp`,
+`clock_source` and `sync_status` subcollectors.
 
 Copy both generated files into your Prometheus rule directory and reference
 them in `prometheus.yml`:

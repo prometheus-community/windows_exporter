@@ -44,14 +44,16 @@
       },
       {
         alert: 'WindowsClockSyncFailing',
+        // Keys on the success series, so a change between failure results
+        // does not restart the for timer.
         expr: |||
-          windows_time_sync_last_result{%(windowsExporterSelector)s, result!="success"} == 1
+          max without (result) (windows_time_sync_last_result{%(windowsExporterSelector)s, result="success"}) == 0
         ||| % c,
         'for': '1h',
         labels: { severity: 'warning' },
         annotations: {
           summary: 'Windows clock synchronization fails',
-          description: 'The last synchronization attempt of Windows Time on {{ $labels.instance }} has ended with {{ $labels.result }} for 1 hour.',
+          description: 'Windows Time on {{ $labels.instance }} has reported a failed last synchronization attempt for 1 hour.',
         },
         state:: true,
       },
