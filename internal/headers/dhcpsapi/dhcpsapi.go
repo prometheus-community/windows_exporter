@@ -63,7 +63,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 		return nil, fmt.Errorf("dhcpGetMibInfoV5: %w", err)
 	}
 
-	defer freeMibInfo(mibInfo, dhcpRpcFreeMemory)
+	defer dhcpRpcFreeMemory(uintptr(unsafe.Pointer(mibInfo)))
 
 	subnetScopeInfos := make(map[DHCP_IP_ADDRESS]DHCP_SUBNET_MIB_INFO_V5)
 
@@ -79,7 +79,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 		return nil, fmt.Errorf("dhcpGetSuperScopeInfoV4: %w", err)
 	}
 
-	defer freeSuperScopeTable(superScopeTable, dhcpRpcFreeMemory)
+	defer dhcpRpcFreeMemory(uintptr(unsafe.Pointer(superScopeTable)))
 
 	// A server without scopes returns ERROR_SUCCESS without a table ([MS-DHCPM] 3.1.4.38).
 	if superScopeTable == nil || superScopeTable.Entries == nil {
@@ -115,7 +115,7 @@ func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DH
 		return DHCPV4Scope{}, fmt.Errorf("failed to get subnet info: %w", err)
 	}
 
-	defer freeSubnetInfo(subnetInfo, dhcpRpcFreeMemory)
+	defer dhcpRpcFreeMemory(uintptr(unsafe.Pointer(subnetInfo)))
 
 	if subnetInfo == nil {
 		return DHCPV4Scope{}, errors.New("failed to get subnet info: no subnet info returned")
@@ -171,71 +171,6 @@ func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DH
 	}
 
 	return scope, nil
-}
-
-// The DHCP server allocates every pointer of a returned structure separately,
-// and the caller frees each of them ([MS-DHCPM] 3). DhcpRpcFreeMemory frees
-// one allocation, so the free functions below release the embedded pointers
-// before the structure. free is dhcpRpcFreeMemory outside of tests.
-
-func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, free func(uintptr)) {
-	if mibInfo == nil {
-		return
-	}
-
-	free(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
-	free(uintptr(unsafe.Pointer(mibInfo)))
-}
-
-func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
-	if table == nil {
-		return
-	}
-
-	if table.Entries != nil {
-		for _, entry := range unsafe.Slice(table.Entries, table.Count) {
-			free(entry.SuperScopeName.Pointer())
-		}
-
-		free(uintptr(unsafe.Pointer(table.Entries)))
-	}
-
-	free(uintptr(unsafe.Pointer(table)))
-}
-
-func freeSubnetInfo(subnetInfo *DHCP_SUBNET_INFO, free func(uintptr)) {
-	if subnetInfo == nil {
-		return
-	}
-
-	free(subnetInfo.SubnetName.Pointer())
-	free(subnetInfo.SubnetComment.Pointer())
-	free(subnetInfo.PrimaryHost.NetBiosName.Pointer())
-	free(subnetInfo.PrimaryHost.HostName.Pointer())
-	free(uintptr(unsafe.Pointer(subnetInfo)))
-}
-
-func freeReservationInfoArray(array *DHCP_RESERVATION_INFO_ARRAY, free func(uintptr)) {
-	if array == nil {
-		return
-	}
-
-	if array.Elements != nil {
-		for _, element := range unsafe.Slice(array.Elements, array.NumElements) {
-			if element == nil {
-				continue
-			}
-
-			free(uintptr(unsafe.Pointer(element.ReservedForClient.Data)))
-			free(element.ReservedClientName.Pointer())
-			free(element.ReservedClientDesc.Pointer())
-			free(uintptr(unsafe.Pointer(element)))
-		}
-
-		free(uintptr(unsafe.Pointer(array.Elements)))
-	}
-
-	free(uintptr(unsafe.Pointer(array)))
 }
 
 // dhcpGetSubnetInfo https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpgetsubnetinfo
@@ -304,7 +239,7 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 	var (
 		elementsRead  uint32
 		elementsTotal uint32
-		elementsInfo  *DHCP_RESERVATION_INFO_ARRAY
+		elementsInfo  uintptr
 		resumeHandle  uint32
 	)
 
@@ -318,7 +253,7 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 		uintptr(unsafe.Pointer(&elementsTotal)),
 	)
 
-	freeReservationInfoArray(elementsInfo, dhcpRpcFreeMemory)
+	dhcpRpcFreeMemory(elementsInfo)
 
 	switch windows.Errno(ret) {
 	case windows.ERROR_SUCCESS, windows.ERROR_MORE_DATA:
@@ -331,8 +266,10 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 	}
 }
 
-// dhcpRpcFreeMemory frees one allocation of the DHCP server API. pointer is a
-// uintptr because the memory is not managed by Go.
+// dhcpRpcFreeMemory frees a buffer returned by the DHCP server API. The client
+// returns each result as a single allocation: freeing the embedded pointers
+// as well corrupts the heap (STATUS_HEAP_CORRUPTION). pointer is a uintptr
+// because the memory is not managed by Go.
 func dhcpRpcFreeMemory(pointer uintptr) {
 	if pointer == 0 {
 		return
