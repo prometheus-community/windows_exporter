@@ -66,11 +66,11 @@ func TestParseStatus(t *testing.T) {
 		LeapIndicator:  0,
 		Stratum:        1,
 		PollInterval:   64 * time.Second,
-		RootDelay:      261800 * time.Nanosecond,
+		RootDelay:      176500 * time.Nanosecond,
 		RootDispersion: 10000200 * time.Nanosecond,
 		Precision:      119 * time.Nanosecond, // 2^-23 s.
 		Source:         "VM IC Time Synchronization Provider",
-		PhaseOffset:    -56700 * time.Nanosecond,
+		PhaseOffset:    -57600 * time.Nanosecond,
 		State:          StateSync,
 		LastSyncResult: SyncResultSuccess,
 	}, status)
