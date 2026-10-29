@@ -327,7 +327,7 @@ func TestCollectorPublishesServiceWithDeniedConfig(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, manager.Disconnect()) })
 
-	name := fmt.Sprintf("windows_exporter_test_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("windows_exporter_test_denied_%d", time.Now().UnixNano())
 
 	// The service is never started.
 	service, err := manager.CreateService(name, `C:\Windows\System32\cmd.exe`, mgr.Config{
