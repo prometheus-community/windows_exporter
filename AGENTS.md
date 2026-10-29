@@ -38,6 +38,10 @@ their runtime behavior.
   0.31.x package there: its `taskkill /T` follows stale parent process IDs and
   can kill the runner agent, which fails the job with "The hosted runner lost
   communication with the server" and no logs.
+- The default `config.yaml` is created by the `CreateConfigFile` custom action,
+  not by a component, so Windows Installer never removes it. The package
+  creates it only when not uninstalling and deletes it on a full uninstall
+  (not an upgrade) only while it is still empty, so user configuration stays.
 - Release builds give the executable and the MSI a numeric four-part version
   computed in the CI build job (`output/FILE_VERSION`): the fourth field is N
   for `alpha.N`/`beta.N`, 100+N for `rc.N` and 1000 for the release, so MDM

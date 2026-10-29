@@ -156,6 +156,35 @@ function Assert-ServiceRemoved {
     }
 }
 
+# Add/Remove Programs shows where the package is installed.
+function Assert-InstallLocation {
+    $location = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+            ForEach-Object { Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue } |
+            Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq $serviceName } |
+            ForEach-Object { $_.PSObject.Properties['InstallLocation'] } | Where-Object { $_ } | ForEach-Object Value)
+    if ($location.Count -ne 1 -or $location[0].TrimEnd('\') -ne $installDir) {
+        throw "InstallLocation in Add/Remove Programs is '$($location -join "', '")', expected $installDir"
+    }
+}
+
+# The empty config.yaml of a default install is removed with the rest.
+function Assert-InstallDirRemoved {
+    if (Test-Path $installDir) {
+        throw "$installDir still exists after uninstall: $((Get-ChildItem -Recurse -Force -Name $installDir) -join ', ')"
+    }
+}
+
+# Adds the account to or removes it from the Performance Monitor Users group.
+# The LocalAccounts cmdlets do not load in every PowerShell 7 release, so use
+# net.exe with the name that the well-known group has in this language.
+function Set-PerformanceMonitorUser([String] $Member, [Switch] $Add) {
+    $group = ([Security.Principal.SecurityIdentifier] 'S-1-5-32-558').Translate([Security.Principal.NTAccount]).Value -replace '^.*\\', ''
+    & net.exe localgroup $group $Member $(if ($Add) { '/add' } else { '/delete' })
+    if ($LASTEXITCODE -ne 0) {
+        throw "net localgroup $group $Member failed with exit code $LASTEXITCODE"
+    }
+}
+
 function Assert-InstalledExecutable {
     $expected = (Get-FileHash -Algorithm SHA256 $Executable).Hash
     $actual = (Get-FileHash -Algorithm SHA256 $installedExe).Hash
@@ -258,26 +287,40 @@ try {
     Invoke-Msiexec -Name 'uninstall' -Arguments @('/x', "`"$UpgradeMsi`"")
     Assert-ServiceRemoved
     Assert-ForeignAlive -Operation 'uninstall'
+
+    # The uninstall removes config.yaml only while it is empty; a configuration the user wrote stays.
+    if (-not (Test-Path $configFile) -or (Get-Content -Raw $configFile) -notmatch 'enabled: os,service') {
+        throw "the uninstall did not keep the configured $configFile"
+    }
+
+    Remove-Item -Recurse -Force $installDir
     Write-Host '::endgroup::'
 
     Write-Step 'Fresh install of this build'
     Invoke-Msiexec -Name 'install' -Arguments @('/i', "`"$Msi`"", "LISTEN_PORT=$servicePort")
     Assert-ServiceRunning | Out-Null
     Assert-InstalledExecutable
+    Assert-InstallLocation
     Assert-ForeignAlive -Operation 'install'
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the fresh install'
     Invoke-Msiexec -Name 'uninstall-fresh' -Arguments @('/x', "`"$Msi`"")
     Assert-ServiceRemoved
+    Assert-InstallDirRemoved
     Assert-ForeignAlive -Operation 'uninstall of the fresh install'
     Write-Host '::endgroup::'
 
     Write-Step 'Install this build with a virtual service account'
     # The installer only sets the account. Without the Performance Monitor
-    # Users group, collectors may lose data, but the service must start.
+    # Users group, the default collectors cannot read their counters and the
+    # service exits, so grant the group after the installation and restart
+    # the service, as docs/permissions.md describes. Windows resolves the
+    # virtual account only once the service exists.
     $account = "NT SERVICE\$serviceName"
     Invoke-Msiexec -Name 'install-account' -Arguments @('/i', "`"$Msi`"", "SERVICE_ACCOUNT=`"$account`"")
+    Set-PerformanceMonitorUser -Member $account -Add
+    Restart-Service -Name $serviceName
     Assert-ServiceRunning | Out-Null
     $startName = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").StartName
     if ($startName -ne $account) {
@@ -288,8 +331,10 @@ try {
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the install with a virtual service account'
+    Set-PerformanceMonitorUser -Member $account
     Invoke-Msiexec -Name 'uninstall-account' -Arguments @('/x', "`"$Msi`"")
     Assert-ServiceRemoved
+    Assert-InstallDirRemoved
     Assert-ForeignAlive -Operation 'uninstall of the install with a service account'
     Write-Host '::endgroup::'
 
