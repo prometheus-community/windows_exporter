@@ -246,6 +246,36 @@ and [joined collection errors #2574](https://github.com/prometheus-community/win
 Check the current source and PR status before treating an open proposal as
 implemented behavior.
 
+## Windows protocol specifications
+
+Many local APIs that collectors call are served by the same Windows component
+that implements a documented remote protocol, so the protocol specification
+applies to the local call too: its error codes, size limits, enumeration and
+resume rules, and which side frees returned memory. Each specification is a
+PDF at
+`https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/<NAME>/%5b<NAME>%5d.pdf`,
+for example
+[`MS-UAMG`](https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/MS-UAMG/%5bMS-UAMG%5d.pdf).
+`pdftotext -layout` turns one into searchable text.
+
+| Specification | Used by |
+|---|---|
+| `MS-TSCH` Task Scheduler | `scheduled_task` |
+| `MS-SCMR` Service Control Manager | `service` |
+| `MS-UAMG` Windows Update Agent | `update` |
+| `MS-DHCPM` DHCP Server Management | `dhcp` (`internal/headers/dhcpsapi`) |
+| `MS-CMRP` Failover Cluster Management | `mscluster` (`internal/headers/clusapi`) |
+| `MS-W32T` W32Time | `time` |
+| `MS-TSTS` Terminal Services | `terminal_services` |
+| `MS-RPRN` Print System | `printer` |
+| `MS-LSAT` LSA name translation | `process` owner lookup |
+| `MS-WMI` WMI | `internal/mi` (WBEM error codes) |
+| `MS-ERREF`, `MS-DTYP` | Win32, HRESULT and NTSTATUS codes; common data types |
+
+The specifications describe the server's documented behavior. Windows may
+differ, which the "product behavior" notes at the end of each document list,
+so confirm a finding on a live system before changing a collector.
+
 ## Live exporter validation
 
 The development environment may already have an exporter running at
