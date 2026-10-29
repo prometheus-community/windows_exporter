@@ -20,7 +20,9 @@ package process
 import (
 	"log/slog"
 	"os"
+	"os/user"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
@@ -140,6 +142,12 @@ func TestResolveProcessInfoCache(t *testing.T) {
 	require.Contains(t, c.infoCache, self.pid)
 	require.NotContains(t, c.infoCache, exited.pid, "failed lookups must be retried")
 
+	c.lookupCache.Range(func(sid, _ any) bool {
+		t.Errorf("owner of %v is kept after the scrape", sid)
+
+		return true
+	})
+
 	// A cached entry with the same creation time is reused without opening the process.
 	c.infoCache[self.pid] = processInfo{createTime: self.createTime, owner: "cached"}
 	infos = c.resolveProcessInfo([]*processSnapshot{&self})
@@ -153,6 +161,48 @@ func TestResolveProcessInfoCache(t *testing.T) {
 	// Processes that are gone are evicted.
 	c.resolveProcessInfo(nil)
 	require.Empty(t, c.infoCache)
+}
+
+func TestResolveProcessInfoUnresolvedOwner(t *testing.T) {
+	t.Parallel()
+
+	currentUser, err := user.Current()
+	require.NoError(t, err)
+
+	c := New(nil)
+	c.logger = slog.New(slog.DiscardHandler)
+
+	var s snapshotBuffer
+
+	processes, err := s.query(nil)
+	require.NoError(t, err)
+
+	self := findProcess(t, processes, uint32(os.Getpid()))
+
+	// On Windows, the Uid is the SID string.
+	sid := currentUser.Uid
+	failed := ownerLookup{owner: sid, err: errOwnerUnresolved, retryAt: time.Now().Add(time.Hour)}
+	c.lookupCache.Store(sid, failed)
+
+	// An unresolved owner is published as the SID, but the process is looked up again on the next scrape.
+	infos := c.resolveProcessInfo([]*processSnapshot{&self})
+	require.Equal(t, sid, infos[0].owner)
+	require.NotEmpty(t, infos[0].cmdLine)
+	require.NotContains(t, c.infoCache, self.pid)
+
+	cached, ok := c.lookupCache.Load(sid)
+	require.True(t, ok, "failed lookups are kept until the retry")
+	require.Equal(t, failed, cached)
+
+	// After the retry interval, the SID is resolved again and the process is cached.
+	c.expireOwnerLookups(failed.retryAt)
+
+	infos = c.resolveProcessInfo([]*processSnapshot{&self})
+	require.Equal(t, currentUser.Username, infos[0].owner)
+	require.Contains(t, c.infoCache, self.pid)
+
+	_, ok = c.lookupCache.Load(sid)
+	require.False(t, ok, "resolved owners are removed after the scrape")
 }
 
 func TestGetProcessInformationDetectsReusedPID(t *testing.T) {
