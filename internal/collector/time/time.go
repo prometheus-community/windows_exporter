@@ -27,10 +27,12 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/w32time"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -42,6 +44,7 @@ const (
 	collectorSystemTime  = "system_time"
 	collectorClockSource = "clock_source"
 	collectorNTP         = "ntp"
+	collectorSyncStatus  = "sync_status"
 )
 
 type Config struct {
@@ -54,6 +57,7 @@ var ConfigDefaults = Config{
 		collectorSystemTime,
 		collectorClockSource,
 		collectorNTP,
+		collectorSyncStatus,
 	},
 }
 
@@ -78,6 +82,17 @@ type Collector struct {
 	ntpRoundTripDelay               *prometheus.Desc
 	ntpServerIncomingRequestsTotal  *prometheus.Desc
 	ntpServerOutgoingResponsesTotal *prometheus.Desc
+
+	syncPhaseOffset        *prometheus.Desc
+	syncStratum            *prometheus.Desc
+	syncLeapIndicator      *prometheus.Desc
+	syncPollInterval       *prometheus.Desc
+	syncRootDelay          *prometheus.Desc
+	syncRootDispersion     *prometheus.Desc
+	syncState              *prometheus.Desc
+	syncLastResult         *prometheus.Desc
+	syncLastSuccessfulSync *prometheus.Desc
+	syncSource             *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -106,7 +121,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.time.enabled",
-		"Comma-separated list of collectors to use. Defaults to all, if not specified. ntp may not available on all systems.",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified. ntp and sync_status need the Windows Time service.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.Action(func(*kingpin.ParseContext) error {
@@ -134,7 +149,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
 	for _, collector := range c.config.CollectorsEnabled {
-		if !slices.Contains([]string{collectorSystemTime, collectorClockSource, collectorNTP}, collector) {
+		if !slices.Contains([]string{collectorSystemTime, collectorClockSource, collectorNTP, collectorSyncStatus}, collector) {
 			return fmt.Errorf("unknown collector: %s", collector)
 		}
 	}
@@ -207,6 +222,73 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.syncPhaseOffset = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_phase_offset_seconds"),
+		"Signed time difference between the local clock and the time source of W32Time, in seconds. Positive values mean the local clock is ahead.",
+		nil,
+		nil,
+	)
+	c.syncStratum = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_stratum"),
+		"Stratum of the local clock of W32Time. 0 means unspecified, 16 unsynchronized.",
+		nil,
+		nil,
+	)
+	c.syncLeapIndicator = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_leap_indicator"),
+		"NTP leap indicator of W32Time: 0 no warning, 1 last minute has 61 seconds, 2 last minute has 59 seconds, 3 not synchronized.",
+		nil,
+		nil,
+	)
+	c.syncPollInterval = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_poll_interval_seconds"),
+		"Current poll interval of W32Time, in seconds.",
+		nil,
+		nil,
+	)
+	c.syncRootDelay = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_root_delay_seconds"),
+		"Total round-trip delay of W32Time to the primary time source, in seconds.",
+		nil,
+		nil,
+	)
+	c.syncRootDispersion = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_root_dispersion_seconds"),
+		"Root dispersion of W32Time: the maximum error relative to the primary time source, in seconds.",
+		nil,
+		nil,
+	)
+	c.syncState = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_state"),
+		"State of the W32Time clock discipline, 1 if the current state, 0 otherwise.",
+		[]string{"state"},
+		nil,
+	)
+	c.syncLastResult = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_last_result"),
+		"Result of the last synchronization attempt of W32Time, 1 if the current result, 0 otherwise.",
+		[]string{"result"},
+		nil,
+	)
+	c.syncLastSuccessfulSync = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_last_success_timestamp_seconds"),
+		"Time of the last successful synchronization of W32Time, in unix time. Omitted until the first synchronization.",
+		nil,
+		nil,
+	)
+	c.syncSource = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "sync_source_info"),
+		"Time source that W32Time synchronizes with. The value is always 1.",
+		[]string{"source"},
+		nil,
+	)
+
+	if slices.Contains(c.config.CollectorsEnabled, collectorSyncStatus) {
+		if err := w32time.Load(); err != nil {
+			return err
+		}
+	}
+
 	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
 		var err error
 
@@ -239,6 +321,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
 		if err := c.collectNTP(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting time ntp metrics: %w", err))
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, collectorSyncStatus) {
+		if err := c.collectSyncStatus(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting time sync status metrics: %w", err))
 		}
 	}
 
@@ -353,6 +441,73 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].NTPServerOutgoingResponsesTotal,
 	)
+
+	return nil
+}
+
+//nolint:gochecknoglobals
+var (
+	syncStates = []struct {
+		state w32time.State
+		label string
+	}{
+		{w32time.StateUnset, "unset"},
+		{w32time.StateHold, "hold"},
+		{w32time.StateSync, "sync"},
+		{w32time.StateSpike, "spike"},
+	}
+	syncResults = []struct {
+		result w32time.SyncResult
+		label  string
+	}{
+		{w32time.SyncResultSuccess, "success"},
+		{w32time.SyncResultNoData, "no_data"},
+		{w32time.SyncResultStaleData, "stale_data"},
+		{w32time.SyncResultChangeTooBig, "change_too_big"},
+		{w32time.SyncResultShutdown, "shutdown"},
+	}
+)
+
+// collectSyncStatus publishes the status that w32tm /query /status shows.
+func (c *Collector) collectSyncStatus(ch chan<- prometheus.Metric) error {
+	status, err := w32time.QueryStatus()
+	if err != nil {
+		return err
+	}
+
+	for _, m := range []struct {
+		desc  *prometheus.Desc
+		value float64
+	}{
+		{c.syncPhaseOffset, status.PhaseOffset.Seconds()},
+		{c.syncStratum, float64(status.Stratum)},
+		{c.syncLeapIndicator, float64(status.LeapIndicator)},
+		{c.syncPollInterval, status.PollInterval.Seconds()},
+		{c.syncRootDelay, status.RootDelay.Seconds()},
+		{c.syncRootDispersion, status.RootDispersion.Seconds()},
+	} {
+		ch <- prometheus.MustNewConstMetric(m.desc, prometheus.GaugeValue, m.value)
+	}
+
+	for _, s := range syncStates {
+		ch <- prometheus.MustNewConstMetric(c.syncState, prometheus.GaugeValue, utils.BoolToFloat(status.State == s.state), s.label)
+	}
+
+	for _, r := range syncResults {
+		ch <- prometheus.MustNewConstMetric(c.syncLastResult, prometheus.GaugeValue, utils.BoolToFloat(status.LastSyncResult == r.result), r.label)
+	}
+
+	if !status.LastSuccessfulSync.IsZero() {
+		ch <- prometheus.MustNewConstMetric(
+			c.syncLastSuccessfulSync,
+			prometheus.GaugeValue,
+			float64(status.LastSuccessfulSync.UnixMilli())/1e3,
+		)
+	}
+
+	if status.Source != "" {
+		ch <- prometheus.MustNewConstMetric(c.syncSource, prometheus.GaugeValue, 1, status.Source)
+	}
 
 	return nil
 }

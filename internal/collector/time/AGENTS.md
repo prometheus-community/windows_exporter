@@ -19,6 +19,22 @@ Hyper-V guest.
 - `NTP Client Time Source Count`, `NTP Roundtrip Delay` and both NTP server
   counters were 0 on this host.
 
+## `sync_status` (w32time.dll)
+
+`sync_status` calls `W32TimeQueryStatus(NULL, &info)` from w32time.dll, the
+local client of MS-W32T (`internal/headers/w32time`). It is what `w32tm /query
+/status` shows and needs no administrative rights (checked with a basic-user
+restricted token). Verified against `w32tm /query /status /verbose` on Windows
+Server 2025 (Hyper-V guest, stratum 1 from the VM IC provider):
+
+- `ulSize` is 120 on 64-bit Windows; `parseStatus` rejects a smaller size.
+- `qwLastSyncTicks` is a FILETIME (w32tm "Last Successful Sync Time"), not
+  ticks. `tpTimeLastGoodSync` is a duration in 100 ns since that sync, not a
+  FILETIME; the collector publishes the timestamp only.
+- `refidSource` is in network byte order: w32tm prints it byte-swapped.
+- The source string lives in the same buffer; free only the outer buffer with
+  `W32TimeBufferFree`.
+
 ## Counter reference
 
 Recorded on Windows Server 2025 (build 26100). `Raw` and `Base` are the first and second

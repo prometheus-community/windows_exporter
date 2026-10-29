@@ -14,7 +14,7 @@ Please note the Time Service perflib counters are only available on [Windows Ser
 ## Flags
 
 ### `--collector.time.enabled`
-Comma-separated list of collectors to use. Supported values are `system_time`, `clock_source` and `ntp`. Defaults to all, if not specified.
+Comma-separated list of collectors to use. Supported values are `system_time`, `clock_source`, `ntp` and `sync_status`. Defaults to all, if not specified.
 For example: `--collector.time.enabled=ntp,system_time`.
 Matching is case-sensitive.
 
@@ -34,6 +34,16 @@ Matching is case-sensitive.
 | `windows_time_current_timestamp_seconds`           | Current time as reported by the operating system, in [Unix time](https://en.wikipedia.org/wiki/Unix_time). See [time.UnixMicro()](https://golang.org/pkg/time/#UnixMicro) for details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | gauge   | None       |
 | `windows_time_timezone`                            | Current timezone as reported by the operating system.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | gauge   | `timezone` |
 | `windows_time_clock_sync_source`                   | This value reflects the sync source of the system clock.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | gauge   | `type`     |
+| `windows_time_sync_phase_offset_seconds` | Signed time difference between the local clock and the time source of W32Time, in seconds. Positive values mean the local clock is ahead. Unlike `windows_time_computed_time_offset_seconds`, it keeps the sign. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_stratum` | Stratum of the local clock of W32Time. 0 means unspecified, 16 unsynchronized. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_leap_indicator` | NTP leap indicator of W32Time: 0 no warning, 1 last minute has 61 seconds, 2 last minute has 59 seconds, 3 not synchronized. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_poll_interval_seconds` | Current poll interval of W32Time, in seconds. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_root_delay_seconds` | Total round-trip delay of W32Time to the primary time source, in seconds. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_root_dispersion_seconds` | Root dispersion of W32Time: the maximum error relative to the primary time source, in seconds. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_state` | State of the W32Time clock discipline (`unset`, `hold`, `sync`, `spike`), 1 if the current state, 0 otherwise. Collector `sync_status`. | gauge | `state` |
+| `windows_time_sync_last_result` | Result of the last synchronization attempt of W32Time (`success`, `no_data`, `stale_data`, `change_too_big`, `shutdown`), 1 if the current result, 0 otherwise. Collector `sync_status`. | gauge | `result` |
+| `windows_time_sync_last_success_timestamp_seconds` | Time of the last successful synchronization of W32Time, in unix time. Omitted until the first synchronization. Collector `sync_status`. | gauge | None |
+| `windows_time_sync_source_info` | Time source that W32Time synchronizes with, as `w32tm /query /status` shows it. The value is always 1. Collector `sync_status`. | gauge | `source` |
 
 ### Example metric
 ```
@@ -49,8 +59,14 @@ windows_time_clock_sync_source{type="NoSync"} 0
 windows_time_current_timestamp_seconds 1.74862554e+09
 ```
 
+The `sync_status` metrics come from the same status as `w32tm /query /status`.
+They need the Windows Time service, but no administrative rights.
+
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Seconds since the last successful synchronization:
+```
+time() - windows_time_sync_last_success_timestamp_seconds
+```
 
 ## Alerting examples
 **prometheus.rules**
@@ -64,4 +80,14 @@ _This collector does not yet have any useful queries added, we would appreciate 
   annotations:
     summary: "NTP client delay: (instance {{ $labels.instance }})"
     description: "RTT for NTP client is greater than 1 second!\nVALUE = {{ $value }}sec\n  LABELS: {{ $labels }}"
+
+# Alert on hosts whose clock was not synchronized for more than 6 hours.
+- alert: TimeNotSynchronized
+  expr: time() - windows_time_sync_last_success_timestamp_seconds > 6 * 3600
+  for: 15m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Clock not synchronized: (instance {{ $labels.instance }})"
+    description: "W32Time last synchronized {{ $value | humanizeDuration }} ago.\n  LABELS: {{ $labels }}"
 ```
