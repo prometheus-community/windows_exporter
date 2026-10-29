@@ -26,7 +26,10 @@ import (
 )
 
 //nolint:gochecknoglobals
-var ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP = windows.Errno(20116)
+var (
+	ERROR_DHCP_SUBNET_NOT_PRESENT           = windows.Errno(20005)
+	ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP = windows.Errno(20116)
+)
 
 type DHCPV4Scope struct {
 	Name             string
@@ -144,6 +147,28 @@ type DHCP_MIB_INFO_V5 struct {
 	ScopesWithDelayedOffers win32.DWORD
 	Scopes                  win32.DWORD
 	ScopeInfo               *DHCP_SUBNET_MIB_INFO_V5
+}
+
+// DHCP_RESERVATION_INFO_ARRAY https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_reservation_info_array
+type DHCP_RESERVATION_INFO_ARRAY struct {
+	NumElements win32.DWORD
+	Elements    **DHCP_IP_RESERVATION_INFO
+}
+
+// DHCP_IP_RESERVATION_INFO https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_ip_reservation_info
+type DHCP_IP_RESERVATION_INFO struct {
+	ReservedIpAddress   DHCP_IP_ADDRESS
+	ReservedForClient   DHCP_CLIENT_UID
+	ReservedClientName  win32.LPWSTR
+	ReservedClientDesc  win32.LPWSTR
+	bAllowedClientTypes byte
+	fOptionsPresent     byte
+}
+
+// DHCP_CLIENT_UID https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_binary_data
+type DHCP_CLIENT_UID struct {
+	DataLength win32.DWORD
+	Data       *byte
 }
 
 type DHCP_SUBNET_MIB_INFO_V5 struct {

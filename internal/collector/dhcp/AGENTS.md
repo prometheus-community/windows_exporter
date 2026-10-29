@@ -20,6 +20,22 @@ with a DHCP server that served no clients.
   The `perfdata` tags must keep it.
 - Only `Packets Received/sec` was nonzero on the recording host.
 
+## Scope metrics (dhcpsapi)
+
+The scope metrics come from the DHCP Server Management API in
+[`internal/headers/dhcpsapi`](../../headers/dhcpsapi), the local form of
+[MS-DHCPM](https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/MS-DHCPM/%5bMS-DHCPM%5d.pdf).
+
+- The server allocates every pointer of a returned structure separately and
+  the caller frees each one (MS-DHCPM section 3); `DhcpRpcFreeMemory` frees a
+  single allocation. Free the embedded arrays and strings before the
+  structure, as the `free*` helpers do, and extend them with new fields.
+- `DhcpGetSuperScopeInfoV4` returns `ERROR_SUCCESS` without a table on a
+  server that has no scopes yet.
+- A scope can be deleted while the scopes are read; its calls then fail with
+  `ERROR_DHCP_SUBNET_NOT_PRESENT` (20005). It is skipped. Other per-scope
+  errors are joined, and the scopes that were read are still published.
+
 ## Counter reference
 
 Recorded on Windows Server 2025 (build 26100). `Raw` and `Base` are the first and second
