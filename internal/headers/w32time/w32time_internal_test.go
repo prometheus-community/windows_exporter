@@ -30,8 +30,7 @@ import (
 )
 
 // statusSample is the W32TIME_STATUS_INFO that W32TimeQueryStatus returned
-// on a Windows Server 2025 Hyper-V guest, up to the source string. w32tm
-// /query /status reported the same values.
+// on a Windows Server 2025 Hyper-V guest, up to the source string.
 const statusSample = "" +
 	"78000000 00000000 01000000 06000000" +
 	"564d5450 00000000 f0b7a4eb a867dd01" +
