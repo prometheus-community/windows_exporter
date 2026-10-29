@@ -40,7 +40,7 @@ function Remove-Installed([String] $Name) {
     foreach ($key in Get-ArpKey) {
         Invoke-Msi -Name "$Name-cleanup" -Arguments @('/x', $key.PSChildName) | Out-Null
     }
-    Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ (Join-Path $installDir 'windows_exporter.exe') | Stop-Process -Force -ErrorAction SilentlyContinue
     if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir -ErrorAction SilentlyContinue }
     & netsh.exe advfirewall firewall delete rule name=windows_exporter | Out-Null
 }
