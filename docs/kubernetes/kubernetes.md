@@ -55,7 +55,7 @@ spec:
 
 ### Prometheus PodMonitor
 
-Create the [Pod Monitor](https://prometheus-operator.dev/docs/operator/design/#podmonitor) to configure the scraping:
+Create the [Pod Monitor](https://prometheus-operator.dev/docs/getting-started/design/#podmonitor) to configure the scraping:
 
 ```bash
 kubectl apply -f docs/kubernetes/windows-exporter-podmonitor.yaml

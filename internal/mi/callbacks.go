@@ -71,7 +71,7 @@ type operationCallbacks struct {
 // instanceResultCallback is the MI_OperationCallback_Instance of all queries.
 // The callback context identifies the query.
 //
-// https://learn.microsoft.com/en-us/windows/win32/api/mi/nc-mi-mi_operationcallback_instance
+// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/dn792327(v=vs.85)
 //
 //nolint:gochecknoglobals
 var instanceResultCallback = sync.OnceValue(func() uintptr {
