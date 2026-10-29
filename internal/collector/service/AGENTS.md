@@ -36,3 +36,16 @@
 - `TestCollectorPicksUpConfigChanges` creates a real service and changes it
   through the SCM. It needs an elevated process: it skips locally without one
   and fails in CI, where `service` is in `WINDOWS_EXPORTER_TEST_COLLECTORS`.
+- `EnumServicesStatusEx` fills at most 256 KiB per call (`BOUNDED_DWORD_256K`
+  in [MS-SCMR](https://winprotocoldocs-bhdugrdyduf5h2e4.b02.azurefd.net/MS-SCMR/%5bMS-SCMR%5d.pdf)).
+  `queryAllServices` passes a resume index and keeps calling while the SCM
+  returns `ERROR_MORE_DATA` with services; it only grows the buffer, up to
+  that limit, when not one service fits. RDS hosts add per-user service
+  instances for every session, so their list can exceed one call.
+  `TestQueryAllServicesResumes` forces several calls with a small buffer.
+- `OpenService` fails with `ERROR_ACCESS_DENIED` when the service's DACL denies
+  `SERVICE_QUERY_CONFIG` to the exporter's account, and with
+  `ERROR_SERVICE_DOES_NOT_EXIST` for a service deleted after the
+  enumeration. The first publishes the state without the configuration
+  (`TestCollectorPublishesServiceWithDeniedConfig`); the second skips the
+  service with a debug log.

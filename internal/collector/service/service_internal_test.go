@@ -261,3 +261,108 @@ func TestServiceTriggerInfoLayout(t *testing.T) {
 	assert.Equal(t, pointerSize, unsafe.Offsetof(info.trigger))
 	assert.Equal(t, 3*pointerSize, unsafe.Sizeof(info))
 }
+
+// TestQueryAllServicesResumes enumerates with a buffer that holds only a few
+// services, so that EnumServicesStatusEx returns ERROR_MORE_DATA with a part
+// of the services several times, and compares the result with one call.
+func TestQueryAllServicesResumes(t *testing.T) {
+	t.Parallel()
+
+	c := New(&Config{
+		ServiceInclude: regexp.MustCompile(".+"),
+		ServiceExclude: regexp.MustCompile("^$"),
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { assert.NoError(t, c.Close()) })
+
+	names := func(entries []serviceEntry) []string {
+		result := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			result = append(result, entry.name)
+		}
+
+		slices.Sort(result)
+
+		return slices.Compact(result)
+	}
+
+	all, err := c.queryAllServices()
+	require.NoError(t, err)
+	require.NotEmpty(t, all)
+
+	// A service can be added or removed between the two enumerations.
+	c.queryAllServicesBuffer = make([]byte, 2048)
+
+	resumed, err := c.queryAllServices()
+	require.NoError(t, err)
+	require.Len(t, c.queryAllServicesBuffer, 2048, "a buffer that holds a service is not grown")
+	require.InDelta(t, len(all), len(resumed), 5)
+	require.Len(t, names(resumed), len(resumed), "no service is returned twice")
+
+	// A buffer that holds no service is grown.
+	c.queryAllServicesBuffer = make([]byte, 16)
+
+	grown, err := c.queryAllServices()
+	require.NoError(t, err)
+	require.InDelta(t, len(all), len(grown), 5)
+	require.Greater(t, len(c.queryAllServicesBuffer), 16)
+}
+
+// TestCollectorPublishesServiceWithDeniedConfig creates a service whose DACL
+// denies SERVICE_QUERY_CONFIG to administrators. Its state must still be
+// published. It needs an elevated process, which the Windows CI runners are.
+func TestCollectorPublishesServiceWithDeniedConfig(t *testing.T) {
+	t.Parallel()
+
+	required := slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), Name)
+	if !windows.GetCurrentProcessToken().IsElevated() {
+		if required {
+			t.Fatal("creating a test service needs an elevated process")
+		}
+
+		t.Skip("creating a test service needs an elevated process")
+	}
+
+	manager, err := mgr.Connect()
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, manager.Disconnect()) })
+
+	name := fmt.Sprintf("windows_exporter_test_denied_%d", time.Now().UnixNano())
+
+	// The service is never started.
+	service, err := manager.CreateService(name, `C:\Windows\System32\cmd.exe`, mgr.Config{
+		StartType:   mgr.StartManual,
+		DisplayName: "denied",
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, service.Delete())
+		assert.NoError(t, service.Close())
+	})
+
+	// Deny SERVICE_QUERY_CONFIG (CC) to administrators, allow everything else.
+	sd, err := windows.SecurityDescriptorFromString("D:(D;;CC;;;BA)(A;;GA;;;BA)(A;;GA;;;SY)")
+	require.NoError(t, err)
+
+	dacl, _, err := sd.DACL()
+	require.NoError(t, err)
+	require.NoError(t, windows.SetSecurityInfo(service.Handle, windows.SE_SERVICE, windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil))
+
+	c := New(&Config{
+		ServiceInclude: regexp.MustCompile("^" + regexp.QuoteMeta(name) + "$"),
+		ServiceExclude: regexp.MustCompile("^$"),
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { assert.NoError(t, c.Close()) })
+
+	_, available, err := c.queryServiceConfig(name)
+	require.NoError(t, err)
+	require.False(t, available, "the configuration cannot be read")
+
+	metrics := serviceMetrics(t, c, name)
+	assert.InDelta(t, 1.0, metrics["windows_service_state{state=stopped}"], 0)
+
+	for series := range metrics {
+		assert.NotContains(t, series, "windows_service_start_mode", "the start mode is part of the configuration")
+	}
+}
