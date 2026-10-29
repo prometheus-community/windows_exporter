@@ -187,6 +187,7 @@ percentages except where noted.
 | `windows-time` | `time` | `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSourceLocal` | Clock source is `Local CMOS Clock` or `NoSync` | 10m | Warning |
+| `windows-time` | `time` | `WindowsClockSyncFailing` | Last synchronization attempt did not succeed | 1h | Warning |
 | `windows-pagefile` | `pagefile` | `WindowsPagefileAlmostFull` | Page file usage above `pagefileUsageThreshold` (80%) | 15m | Warning |
 | `windows-diskdrive` | `diskdrive` | `WindowsDiskDriveNotOK` | Drive status other than `OK` or `Unknown` | 5m | Critical |
 | `windows-license` | `license` | `WindowsLicenseNotGenuine` | License status is not `genuine` | 1h | Warning |
@@ -218,7 +219,7 @@ value that oscillates around a threshold does not flap. The state alerts
 `WindowsExporterDown`, `WindowsCollectorFailed`, `WindowsCollectorTimeout`,
 `WindowsScrapeQueueTimeout`, `WindowsServiceNotRunning`,
 `WindowsClockNotSynchronising` and the state alerts of the opt-in collectors
-(clock source, drive status, license, task result, pending updates, Hyper-V,
+(clock source and sync result, drive status, license, task result, pending updates, Hyper-V,
 cluster and Storage Spaces health), and the one-shot `WindowsHostRebooted`,
 have no `keep_firing_for` and resolve as soon as their condition clears.
 `keep_firing_for` needs Prometheus 2.42 or later; set `keepFiringFor: ''` for

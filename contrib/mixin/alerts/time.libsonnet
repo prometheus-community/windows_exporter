@@ -42,6 +42,19 @@
         },
         state:: true,
       },
+      {
+        alert: 'WindowsClockSyncFailing',
+        expr: |||
+          windows_time_sync_last_result{%(windowsExporterSelector)s, result!="success"} == 1
+        ||| % c,
+        'for': '1h',
+        labels: { severity: 'warning' },
+        annotations: {
+          summary: 'Windows clock synchronization fails',
+          description: 'The last synchronization attempt of Windows Time on {{ $labels.instance }} has ended with {{ $labels.result }} for 1 hour.',
+        },
+        state:: true,
+      },
     ]),
   },
 }

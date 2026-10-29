@@ -6,6 +6,7 @@ function(on)
     b.rows([
       if on('time') then b.summary([84, 85, 86, 87]),
       if on('time') then b.row('Clock', b.flow([[88, 24, 8]])),
+      if on('time') then b.row('Synchronization', b.flow([[405, 6, 4], [406, 6, 4], [407, 6, 4], [408, 6, 4], [409, 24, 8]])),
     ]),
     [
       b.panel.new(84, 'Time zone', 'stat')
@@ -81,6 +82,29 @@ function(on)
         + b.query.withLegendFormat('clock offset'),
         b.query.new('windows_time_ntp_round_trip_delay_seconds{job=~"$job", instance="$instance"}', 'B')
         + b.query.withLegendFormat('NTP round-trip delay'),
+      ])
+      + b.panel.withDefaults({
+        unit: 's',
+      }),
+
+      b.labelStat(405, 'Sync state', 'State of the Windows Time clock discipline: sync when the clock follows its source, hold or spike while it ignores samples, unset before the first sample. Needs the sync_status subcollector of the time collector.', 'windows_time_sync_state{job=~"$job", instance="$instance"} == 1', 'state'),
+
+      b.labelStat(406, 'Last sync result', 'Result of the last synchronization attempt of Windows Time.', 'windows_time_sync_last_result{job=~"$job", instance="$instance"} == 1', 'result'),
+
+      b.stat(407, 'Since last successful sync', 'Time since Windows Time last synchronized with its source. Domain members poll every few minutes; standalone hosts can poll as rarely as once a week.', 'time() - windows_time_sync_last_success_timestamp_seconds{job=~"$job", instance="$instance"}', unit='s'),
+
+      b.labelStat(408, 'Time source', 'Time source that Windows Time synchronizes with, as w32tm /query /status shows it.', 'windows_time_sync_source_info{job=~"$job", instance="$instance"}', 'source'),
+
+      // The phase offset is signed, so the axis has no minimum.
+      b.panel.new(409, 'Sync phase offset, root delay and dispersion', 'timeseries')
+      + b.panel.withDescription('Signed phase offset from the time source, and the round-trip delay and maximum error relative to the primary time source, as Windows Time reports them.')
+      + b.panel.withQueries([
+        b.query.new('windows_time_sync_phase_offset_seconds{job=~"$job", instance="$instance"}', 'A')
+        + b.query.withLegendFormat('phase offset'),
+        b.query.new('windows_time_sync_root_delay_seconds{job=~"$job", instance="$instance"}', 'B')
+        + b.query.withLegendFormat('root delay'),
+        b.query.new('windows_time_sync_root_dispersion_seconds{job=~"$job", instance="$instance"}', 'C')
+        + b.query.withLegendFormat('root dispersion'),
       ])
       + b.panel.withDefaults({
         unit: 's',
