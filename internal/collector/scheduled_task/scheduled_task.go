@@ -416,14 +416,23 @@ func (r taskReader) getScheduledTasks() (ScheduledTasks, error) {
 // fetchTasksInFolder appends readable tasks and reports errors after reading the remaining tasks.
 func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTasks) error {
 	tasks, err := folder.Tasks()
+	if isDeleted(err) {
+		return nil
+	}
+
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
+
 	defer tasks.Release()
 
 	errs := []error{}
 
 	for task, err := range tasks.All() {
+		if isDeleted(err) {
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("enumerate tasks: %w", err))
 
@@ -431,6 +440,10 @@ func (r taskReader) fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTas
 		}
 
 		parsedTask, ok, err := r.parseTask(task)
+		if isDeleted(err) {
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parse task: %w", err))
 
@@ -457,12 +470,21 @@ func (r taskReader) fetchTasksRecursively(folder *taskschd.TaskFolder, folderPat
 	}
 
 	folders, err := folder.Folders()
+	if isDeleted(err) {
+		return errors.Join(errs...)
+	}
+
 	if err != nil {
 		return errors.Join(append(errs, fmt.Errorf("folder %s: get sub folders: %w", folderPath, err))...)
 	}
+
 	defer folders.Release()
 
 	for subfolder, err := range folders.All() {
+		if isDeleted(err) {
+			continue
+		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
 
@@ -482,6 +504,14 @@ func (r taskReader) fetchTasksRecursively(folder *taskschd.TaskFolder, folderPat
 	}
 
 	return errors.Join(errs...)
+}
+
+// isDeleted reports the errors Task Scheduler returns for a task or folder
+// that was deleted between its enumeration and a read. Such an item is no
+// longer registered, so it is skipped instead of reported as unreadable.
+func isDeleted(err error) bool {
+	return errors.Is(err, ole.HRESULT(0x80070002)) || // HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)
+		errors.Is(err, ole.HRESULT(0x80070003)) // HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)
 }
 
 // parseTask reads a task that passes includeTask and reports false for filtered

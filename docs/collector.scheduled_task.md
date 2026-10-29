@@ -39,7 +39,9 @@ collector does not read folders whose tasks the include and exclude expressions
 reject whatever their names are, such as everything below `/Microsoft/` with
 the default. Expressions of the form `/Folder/.+` or `/Folder/.*` (also as
 alternatives) are recognized for exclude, and a literal folder prefix for include.
-Errors reading folders that are not walked are not reported.
+Errors reading folders that are not walked are not reported. A task or folder
+that is deleted while the collector reads it (`0x80070002` or `0x80070003`) is
+skipped without an error.
 
 ### `--collector.scheduled_task.missed-runs`
 
@@ -83,7 +85,16 @@ Status | Result code (decimal) | Result code (hexadecimal) | Meaning
 
 Application exit codes, scheduler errors, and unrecognized results are grouped
 under `unknown`. This status means the result code has no named mapping; it does
-not establish whether the task succeeded or failed.
+not establish whether the task succeeded or failed. Scheduler errors that are
+often seen as a last result include:
+
+Result code (hexadecimal) | Name | Meaning
+--------------------------|------|--------
+`0x8004131F` | `SCHED_E_ALREADY_RUNNING` | An instance of the task was already running
+`0x80041320` | `SCHED_E_USER_NOT_LOGGED_ON` | The task did not run because the user is not logged on
+`0x80041324` | `SCHED_E_TASK_ATTEMPTED` | The task was attempted, but a scheduling constraint prevented the run
+`0x800710E0` | `HRESULT_FROM_WIN32(ERROR_REQUEST_REFUSED)` | The operator or administrator refused the request, for example because a condition was not met
+
 See [Microsoft's Task Scheduler result codes](https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-error-and-success-constants)
 for details.
 

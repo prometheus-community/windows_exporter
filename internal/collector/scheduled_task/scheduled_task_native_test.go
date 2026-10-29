@@ -69,6 +69,40 @@ func TestFetchTasksInFolderPartialCollection(t *testing.T) {
 	}
 }
 
+// TestFetchTasksSkipsDeletedItems checks that tasks and folders deleted between
+// enumeration and read are skipped without an error.
+func TestFetchTasksSkipsDeletedItems(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		itemError uintptr
+	}{
+		{name: "file not found", itemError: 0x80070002},
+		{name: "path not found", itemError: 0x80070003},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var released, foldersReleased, collectionsReleased int
+
+			taskItems := []*ole.Object{fakeScheduledTask(1, &released), nil, fakeScheduledTask(3, &released)}
+			childTasks, _ := fakeTaskCollectionWithItemError(taskItems, false, &collectionsReleased, tc.itemError)
+			childFolders, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+			child := fakeTaskFolder(childTasks, childFolders, &foldersReleased)
+
+			folders, attempted := fakeTaskCollectionWithItemError([]*ole.Object{nil, &child.Object}, false, &collectionsReleased, tc.itemError)
+			emptyTasks, _ := fakeTaskCollection(nil, false, &collectionsReleased)
+			root := fakeTaskFolder(emptyTasks, folders, nil)
+			tasks := ScheduledTasks{}
+
+			require.NoError(t, readAllTasks.fetchTasksRecursively(root, `\`, &tasks))
+			require.Equal(t, []int64{1, 2}, *attempted)
+			require.Len(t, tasks, 2)
+			require.Equal(t, TaskState(1), tasks[0].State)
+			require.Equal(t, TaskState(3), tasks[1].State)
+			require.Equal(t, 2, released)
+			require.Equal(t, 1, foldersReleased)
+		})
+	}
+}
+
 func TestFetchTasksRecursivelyPartialFolderCollection(t *testing.T) {
 	var tasksReleased, foldersReleased, collectionsReleased int
 
@@ -326,7 +360,13 @@ func TestFetchTasksInFolderSkipsMissedRuns(t *testing.T) {
 }
 
 // The fake native collections use the Task Scheduler's one-based VARIANT indices.
+// A nil item cannot be read (E_ACCESSDENIED).
 func fakeTaskCollection(items []*ole.Object, countError bool, released *int) (*ole.Object, *[]int64) {
+	return fakeTaskCollectionWithItemError(items, countError, released, 0x80070005)
+}
+
+// fakeTaskCollectionWithItemError returns itemError for nil items.
+func fakeTaskCollectionWithItemError(items []*ole.Object, countError bool, released *int, itemError uintptr) (*ole.Object, *[]int64) {
 	var methods [9]uintptr
 
 	attempted := []int64{}
@@ -349,7 +389,7 @@ func fakeTaskCollection(items []*ole.Object, countError bool, released *int) (*o
 
 		item := items[index.Value-1]
 		if item == nil {
-			return 0x80070005
+			return itemError
 		}
 
 		*out = item
