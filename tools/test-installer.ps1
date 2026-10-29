@@ -155,6 +155,16 @@ function Assert-ServiceRemoved {
     }
 }
 
+# Add/Remove Programs shows where the package is installed.
+function Assert-InstallLocation {
+    $key = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+        Where-Object { (Get-ItemProperty $_.PSPath).PSObject.Properties['DisplayName'] -and (Get-ItemProperty $_.PSPath).DisplayName -eq $serviceName }
+    $location = @($key | ForEach-Object { (Get-ItemProperty $_.PSPath).PSObject.Properties['InstallLocation'] } | Where-Object { $_ } | ForEach-Object Value)
+    if ($location.Count -ne 1 -or $location[0].TrimEnd('\') -ne $installDir) {
+        throw "InstallLocation in Add/Remove Programs is '$($location -join "', '")', expected $installDir"
+    }
+}
+
 function Assert-InstalledExecutable {
     $expected = (Get-FileHash -Algorithm SHA256 $Executable).Hash
     $actual = (Get-FileHash -Algorithm SHA256 $installedExe).Hash
@@ -257,18 +267,31 @@ try {
     Invoke-Msiexec -Name 'uninstall' -Arguments @('/x', "`"$UpgradeMsi`"")
     Assert-ServiceRemoved
     Assert-ForeignAlive -Operation 'uninstall'
+
+    # The uninstall removes config.yaml only while it is empty; a configuration the user wrote stays.
+    if (-not (Test-Path $configFile) -or (Get-Content -Raw $configFile) -notmatch 'enabled: os,service') {
+        throw "the uninstall did not keep the configured $configFile"
+    }
+
+    Remove-Item -Recurse -Force $installDir
     Write-Host '::endgroup::'
 
     Write-Step 'Fresh install of this build'
     Invoke-Msiexec -Name 'install' -Arguments @('/i', "`"$Msi`"", "LISTEN_PORT=$servicePort")
     Assert-ServiceRunning | Out-Null
     Assert-InstalledExecutable
+    Assert-InstallLocation
     Assert-ForeignAlive -Operation 'install'
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the fresh install'
     Invoke-Msiexec -Name 'uninstall-fresh' -Arguments @('/x', "`"$Msi`"")
     Assert-ServiceRemoved
+
+    # The empty config.yaml of the default install is removed with the rest.
+    if (Test-Path $installDir) {
+        throw "$installDir still exists after uninstall: $((Get-ChildItem -Recurse -Force -Name $installDir) -join ', ')"
+    }
     Assert-ForeignAlive -Operation 'uninstall of the fresh install'
     Write-Host '::endgroup::'
 
