@@ -108,7 +108,8 @@ type SessionFT struct {
 	TestConnection      uintptr
 }
 
-// Close closes a session and releases all associated memory.
+// Close closes a session and releases all associated memory. A concurrent
+// call returns [ErrNotInitialized] without waiting for the first one.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_close
 func (s *Session) Close() error {

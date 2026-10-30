@@ -198,6 +198,10 @@ func TestSession_CloseDuringQueries(t *testing.T) {
 func TestSession_CloseDuringNestedQuery(t *testing.T) {
 	session := newInternalTestSession(t)
 
+	// Closes the session if the test fails before it calls Close; a no-op
+	// afterward.
+	t.Cleanup(func() { _ = session.Close() })
+
 	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
 	require.NoError(t, err)
 
@@ -290,17 +294,18 @@ func TestSession_RejectsManualAck(t *testing.T) {
 // which MI permits, is unmarshalled like any other instance instead of
 // ending the result set.
 func TestAppendInstance_NoElements(t *testing.T) {
-	session := newInternalTestSession(t)
+	application, err := ApplicationInitialize()
+	require.NoError(t, err)
 
-	t.Cleanup(func() { require.NoError(t, session.Close()) })
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
 
 	className, err := windows.UTF16PtrFromString("Empty")
 	require.NoError(t, err)
 
 	var instance *Instance
 
-	r0, _, _ := syscall.SyscallN(session.application.ft.NewInstance,
-		uintptr(unsafe.Pointer(session.application)),
+	r0, _, _ := syscall.SyscallN(application.ft.NewInstance,
+		uintptr(unsafe.Pointer(application)),
 		uintptr(unsafe.Pointer(className)),
 		0,
 		uintptr(unsafe.Pointer(&instance)),

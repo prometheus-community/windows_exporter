@@ -272,8 +272,8 @@ func (q *asyncQuery) instanceResult(instance *Instance, moreResults bool, result
 		return
 	}
 
-	// After an error, the remaining results are skipped
-	// until the cancellation takes effect.
+	// After an error, the remaining results are skipped until the
+	// cancellation takes effect. A nil instance carries no data.
 	if q.err != nil || instance == nil {
 		return
 	}
