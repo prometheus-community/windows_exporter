@@ -20,11 +20,15 @@ package mi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 // newInternalTestSession returns a session and its application. The caller
@@ -184,6 +188,146 @@ func TestSession_CloseDuringQueries(t *testing.T) {
 	require.NoError(t, session.Close())
 
 	wg.Wait()
+}
+
+// TestSession_CloseDuringNestedQuery closes a session while a QueryFunc
+// handler is running and then starts another query from that handler.
+// MI_Session_Close waits for the outer operation, which waits for the
+// handler, so Close must not hold lifecycle while MI_Session_Close runs:
+// the nested query has to fail with ErrNotInitialized instead of blocking.
+func TestSession_CloseDuringNestedQuery(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	closed := make(chan error, 1)
+
+	var (
+		once      sync.Once
+		nestedErr error
+	)
+
+	outerErr := make(chan error, 1)
+
+	go func() {
+		outerErr <- session.QueryFunc(NamespaceRootCIMv2, queryExpression, BuildQueryTimeout, func(*Instance) error {
+			var err error
+
+			once.Do(func() {
+				go func() { closed <- session.Close() }()
+
+				// Wait until Close has marked the session closed. Before the
+				// fix, Close kept the write lock until MI_Session_Close had
+				// returned, which waits for this handler.
+				deadline := time.Now().Add(10 * time.Second)
+
+				for {
+					if session.lifecycle.TryRLock() {
+						isClosed := session.closed
+						session.lifecycle.RUnlock()
+
+						if isClosed {
+							break
+						}
+					}
+
+					if time.Now().After(deadline) {
+						err = errors.New("close kept lifecycle locked while MI_Session_Close waited for this handler")
+
+						return
+					}
+
+					time.Sleep(time.Millisecond)
+				}
+
+				nestedErr = session.QueryFunc(NamespaceRootCIMv2, queryExpression, BuildQueryTimeout, func(*Instance) error { return nil })
+			})
+
+			return err
+		})
+	}()
+
+	select {
+	case err := <-outerErr:
+		require.NotContains(t, fmt.Sprint(err), "kept lifecycle locked")
+	case <-time.After(time.Minute):
+		require.FailNow(t, "the outer query did not return")
+	}
+
+	require.ErrorIs(t, nestedErr, ErrNotInitialized)
+
+	select {
+	case err := <-closed:
+		require.NoError(t, err)
+	case <-time.After(time.Minute):
+		require.FailNow(t, "Close did not return")
+	}
+}
+
+// TestSession_RejectsManualAck checks that a query with
+// MI_OPERATIONFLAGS_MANUAL_ACK_RESULTS fails instead of waiting forever for
+// an acknowledgement the callbacks never send.
+func TestSession_RejectsManualAck(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	queryExpression, err := NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	var dst []struct {
+		Name string `mi:"Name"`
+	}
+
+	err = session.QueryUnmarshal(&dst, OperationFlagsStandardRTTI|operationFlagsManualAckResults, nil,
+		NamespaceRootCIMv2, QueryDialectWQL, queryExpression)
+	require.ErrorContains(t, err, "MANUAL_ACK_RESULTS")
+	require.Empty(t, dst)
+}
+
+// TestAppendInstance_NoElements checks that an instance without elements,
+// which MI permits, is unmarshalled like any other instance instead of
+// ending the result set.
+func TestAppendInstance_NoElements(t *testing.T) {
+	session := newInternalTestSession(t)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	className, err := windows.UTF16PtrFromString("Empty")
+	require.NoError(t, err)
+
+	var instance *Instance
+
+	r0, _, _ := syscall.SyscallN(session.application.ft.NewInstance,
+		uintptr(unsafe.Pointer(session.application)),
+		uintptr(unsafe.Pointer(className)),
+		0,
+		uintptr(unsafe.Pointer(&instance)),
+	)
+	require.ErrorIs(t, ResultError(r0), MI_RESULT_OK)
+
+	t.Cleanup(func() { require.NoError(t, instance.Delete()) })
+
+	count, err := instance.GetElementCount()
+	require.NoError(t, err)
+	require.Zero(t, count)
+
+	type row struct {
+		Name string `mi:"Name"`
+	}
+
+	dst := []row{{Name: "first"}}
+
+	fields, err := miFieldsOf[row]()
+	require.NoError(t, err)
+
+	// QueryUnmarshal skips missing elements: the instance is a zero row.
+	require.NoError(t, appendInstance(&dst, instance, fields, true))
+	require.Equal(t, []row{{Name: "first"}, {}}, dst)
+
+	// Operation.Unmarshal reports them.
+	require.ErrorIs(t, appendInstance(&dst, instance, fields, false), MI_RESULT_NO_SUCH_PROPERTY)
 }
 
 // Test_asyncQuery_ContextDoneAfterFinalResult checks a context that is done

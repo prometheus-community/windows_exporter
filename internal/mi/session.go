@@ -72,8 +72,9 @@ type Session struct {
 
 	// lifecycle orders starting queries against Close. startQuery holds a
 	// read lock from checking closed until MI_Session_QueryInstances has
-	// returned, so Close, which holds the write lock, never deletes options
-	// that a query is about to start with. closed is guarded by it.
+	// returned. Close sets closed under the write lock, so every query has
+	// either started before or fails, and Close never deletes options that a
+	// query is about to start with. closed is guarded by it.
 	lifecycle sync.RWMutex
 	closed    bool
 
@@ -119,13 +120,21 @@ func (s *Session) Close() error {
 	// startQuery, and makes queries started afterwards fail instead of using
 	// options that are about to be deleted.
 	s.lifecycle.Lock()
-	defer s.lifecycle.Unlock()
 
 	if s.closed {
+		s.lifecycle.Unlock()
+
 		return ErrNotInitialized
 	}
 
 	s.closed = true
+
+	// The lock is released before MI_Session_Close, which blocks until every
+	// operation is closed. A QueryFunc handler that starts another query
+	// would otherwise wait for the lock while its own operation, and with it
+	// MI_Session_Close, waits for the handler. That query fails, because
+	// closed is set.
+	s.lifecycle.Unlock()
 
 	// MI_Session_Close cancels running operations and blocks until their
 	// handles are closed. The default and cached options are deleted
@@ -311,8 +320,14 @@ func setField(miTag string, field reflect.Value, element *Element) error {
 			return fieldTypeError(miTag, field, "boolean")
 		}
 
-		field.SetBool(element.value == 1)
-	case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
+		field.SetBool(element.bool())
+	case ValueTypeUINT8:
+		return setUintField(miTag, field, uint64(uint8(element.value)))
+	case ValueTypeUINT16:
+		return setUintField(miTag, field, uint64(uint16(element.value)))
+	case ValueTypeUINT32:
+		return setUintField(miTag, field, uint64(uint32(element.value)))
+	case ValueTypeUINT64:
 		return setUintField(miTag, field, uint64(element.value))
 	case ValueTypeSINT8:
 		return setIntField(miTag, field, int64(int8(element.value)))

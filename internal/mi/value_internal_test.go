@@ -50,6 +50,7 @@ func TestElementFloat64(t *testing.T) {
 	}{
 		{"bool true", ValueTypeBOOLEAN, 1, 1},
 		{"bool false", ValueTypeBOOLEAN, 0, 0},
+		{"bool ignores high bits", ValueTypeBOOLEAN, 0xFF00, 0},
 		{"uint8 ignores high bits", ValueTypeUINT8, 0xFF01, 1},
 		{"sint8 negative", ValueTypeSINT8, 0xFF, -1},
 		{"sint16 negative", ValueTypeSINT16, 0xFFFE, -2},
@@ -152,6 +153,7 @@ func TestElementString(t *testing.T) {
 		want      string
 	}{
 		{"bool", ValueTypeBOOLEAN, 1, "true"},
+		{"bool ignores high bits", ValueTypeBOOLEAN, 0xFF00, "false"},
 		{"uint16", ValueTypeUINT16, 0x1_0005, "5"},
 		{"uint64", ValueTypeUINT64, math.MaxUint64, "18446744073709551615"},
 		{"sint32 negative", ValueTypeSINT32, 0xFFFFFFFF, "-1"},
@@ -174,6 +176,29 @@ func TestElementIsNull(t *testing.T) {
 
 	require.True(t, newElement(ValueTypeUINT32, [5]uint64{}, flagNull).IsNull())
 	require.False(t, newElement(ValueTypeUINT32, [5]uint64{}, 0).IsNull())
+}
+
+// TestElementNullConverters checks that the converters reject a NULL element
+// instead of reading its union, which MI may leave filled. A NULL string
+// holding an invalid pointer must not be dereferenced.
+func TestElementNullConverters(t *testing.T) {
+	t.Parallel()
+
+	filled := [5]uint64{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
+
+	for _, valueType := range []ValueType{ValueTypeBOOLEAN, ValueTypeUINT32, ValueTypeSINT64, ValueTypeREAL64, ValueTypeSTRING} {
+		element := newElement(valueType, filled, flagNull)
+
+		_, err := element.Float64()
+		require.ErrorIs(t, err, ErrNullValue, valueType)
+
+		_, err = element.String()
+		require.ErrorIs(t, err, ErrNullValue, valueType)
+
+		value, err := element.GetValue()
+		require.NoError(t, err, valueType)
+		require.Nil(t, value, valueType)
+	}
 }
 
 // nativeAlloc returns zeroed memory outside the Go heap, like the buffers MI

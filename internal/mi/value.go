@@ -87,13 +87,23 @@ func (e *Element) IsNull() bool {
 	return e.flags&flagNull != 0
 }
 
+// bool decodes an MI_Boolean, which is an MI_Uint8.
+func (e *Element) bool() bool {
+	return uint8(e.value) != 0
+}
+
 // Float64 converts a boolean, numeric or datetime element to a float64.
 // Booleans become 0 or 1, timestamps become seconds since the Unix epoch and
-// intervals become seconds.
+// intervals become seconds. A NULL element returns [ErrNullValue]: MI makes no
+// promise about the contents of its union.
 func (e *Element) Float64() (float64, error) {
+	if e.IsNull() {
+		return 0, ErrNullValue
+	}
+
 	switch e.valueType {
 	case ValueTypeBOOLEAN:
-		if e.value == 1 {
+		if e.bool() {
 			return 1, nil
 		}
 
@@ -131,7 +141,12 @@ func (e *Element) Float64() (float64, error) {
 }
 
 // String converts a string, boolean or integer element to its string form.
+// A NULL element returns [ErrNullValue].
 func (e *Element) String() (string, error) {
+	if e.IsNull() {
+		return "", ErrNullValue
+	}
+
 	switch e.valueType {
 	case ValueTypeSTRING:
 		if e.value == 0 {
@@ -140,7 +155,7 @@ func (e *Element) String() (string, error) {
 
 		return windows.UTF16PtrToString((*uint16)(unsafe.Pointer(e.value))), nil
 	case ValueTypeBOOLEAN:
-		return strconv.FormatBool(e.value == 1), nil
+		return strconv.FormatBool(e.bool()), nil
 	case ValueTypeUINT8:
 		return strconv.FormatUint(uint64(uint8(e.value)), 10), nil
 	case ValueTypeUINT16:
@@ -239,7 +254,7 @@ func (e *Element) GetValue() (any, error) {
 
 	switch e.valueType {
 	case ValueTypeBOOLEAN:
-		return e.value == 1, nil
+		return e.bool(), nil
 	case ValueTypeUINT8:
 		return uint8(e.value), nil
 	case ValueTypeSINT8:

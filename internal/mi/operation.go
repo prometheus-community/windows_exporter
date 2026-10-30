@@ -44,6 +44,11 @@ type OperationFlags uint32
 
 const (
 	OperationFlagsStandardRTTI OperationFlags = 0x0800
+
+	// operationFlagsManualAckResults is MI_OPERATIONFLAGS_MANUAL_ACK_RESULTS.
+	// MI then delivers the next result only after the previous one has been
+	// acknowledged, which the callbacks of this package never do.
+	operationFlagsManualAckResults OperationFlags = 0x0001
 )
 
 // Operation represents an operation.
@@ -338,17 +343,12 @@ func (o *Operation) unmarshal[T any](dst *[]T, fields []miField, skipMissing boo
 			return fmt.Errorf("failed to get instance: %w", err)
 		}
 
-		// If WMI returns nil, it means there are no more results.
-		if instance == nil {
-			break
-		}
-
-		if err := appendInstance(dst, instance, fields, skipMissing); err != nil {
-			if errors.Is(err, errStopQuery) {
-				break
+		// MI may deliver a result without an instance, e.g. the final one.
+		// Only moreResults ends the result set.
+		if instance != nil {
+			if err := appendInstance(dst, instance, fields, skipMissing); err != nil {
+				return err
 			}
-
-			return err
 		}
 
 		if !moreResults {
@@ -360,18 +360,8 @@ func (o *Operation) unmarshal[T any](dst *[]T, fields []miField, skipMissing boo
 }
 
 // appendInstance unmarshals instance and appends it to dst. An instance
-// without elements ends the result set; appendInstance then returns
-// errStopQuery.
+// without elements is valid; it does not end the result set.
 func appendInstance[T any](dst *[]T, instance *Instance, fields []miField, skipMissing bool) error {
-	counter, err := instance.GetElementCount()
-	if err != nil {
-		return fmt.Errorf("failed to get element count: %w", err)
-	}
-
-	if counter == 0 {
-		return errStopQuery
-	}
-
 	var elem T
 
 	if err := unmarshalInstance(instance, fields, reflect.ValueOf(&elem).Elem(), skipMissing); err != nil {
