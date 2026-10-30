@@ -127,9 +127,6 @@ func releaseGuardTimer(timer *time.Timer) {
 	guardTimers.Put(timer)
 }
 
-// errStopQuery cancels a query without an error.
-var errStopQuery = errors.New("stop query")
-
 // callbackPanicError reports a panic recovered in an MI callback. The value
 // is formatted by Error, outside the callback, because formatting can panic
 // as well.
@@ -150,8 +147,7 @@ type asyncQuery struct {
 	pinner    runtime.Pinner
 
 	// onInstance is called for every instance, inside the callback. An error
-	// cancels the query and is returned by wait; errStopQuery cancels it
-	// without an error.
+	// cancels the query and is returned by wait.
 	onInstance func(*Instance) error
 
 	// handler is called on the waiting goroutine for copies of the instances,
@@ -276,8 +272,8 @@ func (q *asyncQuery) instanceResult(instance *Instance, moreResults bool, result
 		return
 	}
 
-	// After an error or an early stop, the remaining results are skipped
-	// until the cancellation takes effect.
+	// After an error, the remaining results are skipped until the
+	// cancellation takes effect. A nil instance carries no data.
 	if q.err != nil || instance == nil {
 		return
 	}
@@ -353,10 +349,6 @@ func (q *asyncQuery) wait(ctx context.Context) error {
 
 			if q.handlerErr != nil {
 				return q.handlerErr
-			}
-
-			if errors.Is(q.err, errStopQuery) {
-				return nil
 			}
 
 			return q.err
@@ -474,10 +466,17 @@ func (s *Session) query(flags OperationFlags, operationOptions *OperationOptions
 }
 
 // runQuery starts query, see [Session.startQuery], waits for it with
-// cancellation, see [asyncQuery.wait], and closes it.
+// cancellation, see [asyncQuery.wait], and closes it. It rejects
+// MI_OPERATIONFLAGS_MANUAL_ACK_RESULTS before starting the query.
 func (s *Session) runQuery(ctx context.Context, query *asyncQuery, flags OperationFlags, operationOptions *OperationOptions,
 	queryTimeout time.Duration, namespaceName Namespace, queryDialect QueryDialect, queryExpression Query,
 ) error {
+	// The callbacks never acknowledge a result, so with manual
+	// acknowledgement the query would wait for the second result forever.
+	if flags&operationFlagsManualAckResults != 0 {
+		return errors.New("unsupported operation flag MI_OPERATIONFLAGS_MANUAL_ACK_RESULTS")
+	}
+
 	release, err := s.startQuery(query, flags, operationOptions, queryTimeout, namespaceName, queryDialect, queryExpression)
 	if err != nil {
 		return err

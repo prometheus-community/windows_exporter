@@ -48,10 +48,24 @@ Query timeouts and options:
   closed every operation. Other timeouts, e.g. the remaining scrape budget,
   get per-query options that are deleted after the operation is closed.
 - `startQuery` holds the read lock of `Session.lifecycle` from the `closed`
-  check until `MI_Session_QueryInstances` has returned; `Close` holds the
-  write lock across `MI_Session_Close` and the option deletion. Start every
-  callback query through `runQuery`/`startQuery`, never by calling
-  `asyncQuery.start` with session options directly.
+  check until `MI_Session_QueryInstances` has returned; `Close` sets `closed`
+  under the write lock and releases it before `MI_Session_Close`, which waits
+  for every operation and thus for running `QueryFunc` handlers. Holding the
+  lock there deadlocks a handler that starts another query
+  (`TestSession_CloseDuringNestedQuery`). Start every callback query through
+  `runQuery`/`startQuery`, never by calling `asyncQuery.start` with session
+  options directly.
+
+Results and values:
+
+- Only `moreResults == MI_FALSE` ends a result set. A nil instance and an
+  instance without elements are valid results, not the end.
+- `runQuery` rejects `MI_OPERATIONFLAGS_MANUAL_ACK_RESULTS`: the callback
+  never acknowledges results.
+- Decode scalars at the width of their `MI_Value` member (`MI_Boolean` is an
+  `MI_Uint8`). `Element.Float64` and `Element.String` return `ErrNullValue`
+  for NULL elements; MI keeps the union filled for them (verified with
+  `miutils.dll` 10.0.26100.3323).
 
 Cancellation: `QueryContext` and `QueryFuncContext` do not start a query
 for a done context. When it is done during the query, `wait` fails the query

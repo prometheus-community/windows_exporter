@@ -43,10 +43,17 @@ func TestSetField(t *testing.T) {
 	}{
 		{"boolean", Element{value: 1, valueType: ValueTypeBOOLEAN}, newField[bool](), true, false},
 		{"boolean_into_int", Element{value: 1, valueType: ValueTypeBOOLEAN}, newField[int](), nil, true},
+		// MI_Boolean is an MI_Uint8; the other bytes of the union are not part of it.
+		{"boolean_ignores_high_bits", Element{value: 0xFF00, valueType: ValueTypeBOOLEAN}, newField[bool](), false, false},
+		{"boolean_nonzero_is_true", Element{value: 0xFF02, valueType: ValueTypeBOOLEAN}, newField[bool](), true, false},
 
 		{"uint32_into_uint64", Element{value: math.MaxUint32, valueType: ValueTypeUINT32}, newField[uint64](), uint64(math.MaxUint32), false},
 		{"uint64_overflows_uint32", Element{value: math.MaxUint32 + 1, valueType: ValueTypeUINT64}, newField[uint32](), nil, true},
 		{"uint32_into_string", Element{value: 1, valueType: ValueTypeUINT32}, newField[string](), nil, true},
+		{"uint8_ignores_high_bits", Element{value: 0xFFFF_FF05, valueType: ValueTypeUINT8}, newField[uint8](), uint8(5), false},
+		{"uint16_ignores_high_bits", Element{value: 0x1_0005, valueType: ValueTypeUINT16}, newField[uint16](), uint16(5), false},
+		{"uint16_ignores_high_bits_into_uint64", Element{value: 0x1_0005, valueType: ValueTypeUINT16}, newField[uint64](), uint64(5), false},
+		{"uint32_ignores_high_bits", Element{value: 0xFF_0000_0005, valueType: ValueTypeUINT32}, newField[uint64](), uint64(5), false},
 
 		{"sint8_sign_extends", Element{value: 0xFF, valueType: ValueTypeSINT8}, newField[int64](), int64(-1), false},
 		{"sint16_sign_extends", Element{value: 0xFFFF, valueType: ValueTypeSINT16}, newField[int64](), int64(-1), false},
