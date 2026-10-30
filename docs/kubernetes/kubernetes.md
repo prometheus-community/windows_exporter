@@ -12,7 +12,7 @@ Requirements:
 
 ## Container Image
 
-The image is a HostProcess container image based on [`mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image`](https://github.com/microsoft/windows-host-process-containers-base-image). One image works on every Windows version that supports HostProcess containers. The released images are listed in the [Docker section](../README.md#docker-implementation) of the readme.
+The image is a HostProcess container image based on [`mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image`](https://github.com/microsoft/windows-host-process-containers-base-image). One image works on every Windows version that supports HostProcess containers. The released images are listed in the [Docker section](../../README.md#docker-implementation) of the readme.
 
 To build your own image, use `docker buildx` on Linux, for example in WSL. The image only copies the binary, so it builds on Linux although it's a Windows image. Put the amd64 binary into an otherwise empty directory as `windows_exporter-<version>-amd64.exe`, the name the CI build uses, and build the image from that directory:
 
@@ -27,7 +27,7 @@ Before beginning you need to deploy the [Prometheus Operator](https://github.com
 
 ### Windows Exporter DaemonSet
 
-This creates a pod on every Windows node. A ConfigMap holds the configuration of the Windows exporter with [configuration file](../README.md#using-a-configuration-file).  Adjust the configuration file for the collectors you are interested in.
+This creates a pod on every Windows node. A ConfigMap holds the configuration of the Windows exporter with [configuration file](../../README.md#using-a-configuration-file).  Adjust the configuration file for the collectors you are interested in.
 
 ```bash
 kubectl apply -f docs/kubernetes/windows-exporter-daemonset.yaml
