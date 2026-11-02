@@ -220,6 +220,10 @@ jobs:
           Get-ChildItem -Path output
           "VERSION=$Version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+          # Use unsigned executables for fork PRs, where signing is unavailable.
+          New-Item -ItemType Directory -Force output\final | Out-Null
+          Copy-Item output\windows_exporter-*.exe output\final\
+
       - name: upload unsigned artifact
         id: unsigned-executables
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -229,6 +233,7 @@ jobs:
           retention-days: 1
 
       - name: Sign build artifacts
+        id: sign-executables
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
@@ -243,7 +248,16 @@ jobs:
           wait-for-completion-timeout-in-seconds: "21000"
           output-artifact-directory: output/signed
           parameters: |
-            version: ${{ steps.version.outputs.VERSION }}
+            version: ${{ toJSON(steps.version.outputs.VERSION) }}
+
+      - name: Stage signed executables
+        if: ${{ steps.sign-executables.outcome == 'success' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+          foreach($Arch in "amd64", "arm64") {
+            Copy-Item "output\signed\windows_exporter-$Version-$Arch.exe" output\final\ -ErrorAction Stop
+          }
 
       - name: Install WiX
         run: dotnet tool install --global wix --version 5.0.2
@@ -262,7 +276,7 @@ jobs:
 
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\signed\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\final\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\
@@ -277,6 +291,7 @@ jobs:
           retention-days: 1
 
       - name: Sign installer artifacts
+        id: sign-installers
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
@@ -291,7 +306,21 @@ jobs:
           wait-for-completion-timeout-in-seconds: "21000"
           output-artifact-directory: output/signed
           parameters: |
-            version: ${{ steps.version.outputs.VERSION }}
+            version: ${{ toJSON(steps.version.outputs.VERSION) }}
+
+      - name: Stage signed installers
+        if: ${{ steps.sign-installers.outcome == 'success' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+          foreach($Arch in "amd64", "arm64") {
+            Copy-Item "output\signed\windows_exporter-$Version-$Arch.msi" output\final\ -ErrorAction Stop
+          }
+
+      - name: Stage unsigned installers for fork pull requests
+        if: ${{ steps.sign-installers.outcome == 'skipped' }}
+        run: |
+          Copy-Item output\windows_exporter-*.msi output\final\ -ErrorAction Stop
 
       # The runner is a disposable machine, so the MSI can be installed for real:
       # upgrade from the latest release, repair, uninstall and a fresh install,
@@ -303,8 +332,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
-          $Executable = "output\signed\windows_exporter-$Version-amd64.exe"
-          $Msi = "output\signed\windows_exporter-$Version-amd64.msi"
+          $Executable = "output\final\windows_exporter-$Version-amd64.exe"
+          $Msi = "output\final\windows_exporter-$Version-amd64.msi"
 
           $PreviousVersion = (gh release view --repo prometheus-community/windows_exporter --json tagName --jq .tagName) -replace '^v', ''
           if ($LASTEXITCODE -ne 0 -or -not $PreviousVersion) {
@@ -349,14 +378,14 @@ jobs:
           # Checksum only a complete set of artifacts.
           foreach($Arch in "amd64", "arm64") {
             foreach($Extension in "exe", "msi") {
-              $Artifact = "output\signed\windows_exporter-$Version-$Arch.$Extension"
+              $Artifact = "output\final\windows_exporter-$Version-$Arch.$Extension"
               if (-not (Test-Path -PathType Leaf $Artifact)) {
                 throw "Missing release artifact $Artifact"
               }
             }
           }
 
-          $checksums = Get-ChildItem -Path output\signed -File |
+          $checksums = Get-ChildItem -Path output\final -File |
             Where-Object { $_.Name -match '^windows_exporter-.*\.(exe|msi)$' } |
             Sort-Object Name |
             ForEach-Object {
@@ -373,8 +402,8 @@ jobs:
           name: windows_exporter_binaries
           retention-days: 7
           path: |
-            output\signed\windows_exporter-*.exe
-            output\signed\windows_exporter-*.msi
+            output\final\windows_exporter-*.exe
+            output\final\windows_exporter-*.msi
             output\sha256sums.txt
 
   docker:
