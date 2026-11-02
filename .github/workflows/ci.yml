@@ -234,7 +234,7 @@ jobs:
 
       - name: Sign build artifacts
         id: sign-executables
-        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter' && github.ref != 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -276,7 +276,7 @@ jobs:
 
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\final\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\
@@ -292,7 +292,7 @@ jobs:
 
       - name: Sign installer artifacts
         id: sign-installers
-        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter' && github.ref != 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
