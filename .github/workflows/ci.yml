@@ -276,7 +276,7 @@ jobs:
 
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\final\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\
