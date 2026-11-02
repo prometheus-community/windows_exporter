@@ -226,6 +226,7 @@ jobs:
 
       - name: upload unsigned artifact
         id: unsigned-executables
+        if: &sign_release ${{ github.repository == 'prometheus-community/windows_exporter' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-executables
@@ -234,7 +235,7 @@ jobs:
 
       - name: Sign build artifacts
         id: sign-executables
-        if: ${{ github.repository == 'prometheus-community/windows_exporter' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/v') }}
+        if: *sign_release
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -284,6 +285,7 @@ jobs:
 
       - name: upload unsigned installers
         id: unsigned-installers
+        if: *sign_release
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-installers
@@ -292,7 +294,7 @@ jobs:
 
       - name: Sign installer artifacts
         id: sign-installers
-        if: ${{ github.repository == 'prometheus-community/windows_exporter' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/v') }}
+        if: *sign_release
         uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
