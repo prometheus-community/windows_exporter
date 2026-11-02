@@ -194,6 +194,7 @@ jobs:
     needs:
       - build
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -207,6 +208,7 @@ jobs:
           path: output
 
       - name: Add version to binary names
+        id: version
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
@@ -216,40 +218,32 @@ jobs:
           }
 
           Get-ChildItem -Path output
+          "VERSION=$Version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: upload unsigned artifact
+        id: unsigned-executables
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-executables
+          path: output/*.exe
+          retention-days: 1
 
       - name: Sign build artifacts
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $Version = Get-Content output\VERSION
-
-          $b64      = $env:CODE_SIGN_KEY
-          $filename = 'windows_exporter_CodeSign.pfx'
-
-          $bytes = [Convert]::FromBase64String($b64)
-          [IO.File]::WriteAllBytes($filename, $bytes)
-
-          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
-          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
-          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
-          Sort-Object { [Version]$_.Name } -Descending |
-          Select-Object -First 1 |
-          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
-
-          if (Test-Path $latestSigntool) {
-            Write-Output $latestSigntool
-          } else {
-            throw "signtool.exe not found"
-          }
-
-          foreach($Arch in "amd64", "arm64") {
-            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
-          }
-
-          Remove-Item windows_exporter_CodeSign.pfx
-        env:
-          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
-          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: unsigned-executables
+          github-artifact-id: '${{ steps.unsigned-executables.outputs.artifact-id }}'
+          # release-signing requests need manual approval in the SignPath
+          # portal; wait for it, up to just under the 6 hour job limit.
+          wait-for-completion-timeout-in-seconds: "21000"
+          output-artifact-directory: output/signed
+          parameters: |
+            version: ${{ steps.version.outputs.VERSION }}
 
       - name: Install WiX
         run: dotnet tool install --global wix --version 5.0.2
@@ -268,45 +262,36 @@ jobs:
 
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\signed\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\
           Get-ChildItem -Path output\
 
+      - name: upload unsigned installers
+        id: unsigned-installers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-installers
+          path: output/*.msi
+          retention-days: 1
+
       - name: Sign installer artifacts
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $Version = Get-Content output\VERSION
-
-          $b64      = $env:CODE_SIGN_KEY
-          $filename = 'windows_exporter_CodeSign.pfx'
-
-          $bytes = [Convert]::FromBase64String($b64)
-          [IO.File]::WriteAllBytes($filename, $bytes)
-
-          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
-          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
-          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
-          Sort-Object { [Version]$_.Name } -Descending |
-          Select-Object -First 1 |
-          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
-
-          if (Test-Path $latestSigntool) {
-            Write-Output $latestSigntool
-          } else {
-            throw "signtool.exe not found"
-          }
-
-          foreach($Arch in "amd64", "arm64") {
-            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.msi"
-          }
-
-          Remove-Item windows_exporter_CodeSign.pfx
-        env:
-          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
-          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: unsigned-installers
+          github-artifact-id: '${{ steps.unsigned-installers.outputs.artifact-id }}'
+          # release-signing requests need manual approval in the SignPath
+          # portal; wait for it, up to just under the 6 hour job limit.
+          wait-for-completion-timeout-in-seconds: "21000"
+          output-artifact-directory: output/signed
+          parameters: |
+            version: ${{ steps.version.outputs.VERSION }}
 
       # The runner is a disposable machine, so the MSI can be installed for real:
       # upgrade from the latest release, repair, uninstall and a fresh install,
@@ -318,8 +303,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
-          $Executable = "output\windows_exporter-$Version-amd64.exe"
-          $Msi = "output\windows_exporter-$Version-amd64.msi"
+          $Executable = "output\signed\windows_exporter-$Version-amd64.exe"
+          $Msi = "output\signed\windows_exporter-$Version-amd64.msi"
 
           $PreviousVersion = (gh release view --repo prometheus-community/windows_exporter --json tagName --jq .tagName) -replace '^v', ''
           if ($LASTEXITCODE -ne 0 -or -not $PreviousVersion) {
@@ -364,14 +349,14 @@ jobs:
           # Checksum only a complete set of artifacts.
           foreach($Arch in "amd64", "arm64") {
             foreach($Extension in "exe", "msi") {
-              $Artifact = "output\windows_exporter-$Version-$Arch.$Extension"
+              $Artifact = "output\signed\windows_exporter-$Version-$Arch.$Extension"
               if (-not (Test-Path -PathType Leaf $Artifact)) {
                 throw "Missing release artifact $Artifact"
               }
             }
           }
 
-          $checksums = Get-ChildItem -Path output -File |
+          $checksums = Get-ChildItem -Path output\signed -File |
             Where-Object { $_.Name -match '^windows_exporter-.*\.(exe|msi)$' } |
             Sort-Object Name |
             ForEach-Object {
@@ -386,9 +371,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows_exporter_binaries
+          retention-days: 7
           path: |
-            output\windows_exporter-*.exe
-            output\windows_exporter-*.msi
+            output\signed\windows_exporter-*.exe
+            output\signed\windows_exporter-*.msi
             output\sha256sums.txt
 
   docker:
