@@ -395,18 +395,15 @@ jobs:
               "$hash  $($_.Name)"
             }
 
-          $checksums | Set-Content output\sha256sums.txt -Encoding ascii
-          Get-Content output\sha256sums.txt
+          $checksums | Set-Content output\final\sha256sums.txt -Encoding ascii
+          Get-Content output\final\sha256sums.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows_exporter_binaries
           retention-days: 7
-          path: |
-            output\final\windows_exporter-*.exe
-            output\final\windows_exporter-*.msi
-            output\sha256sums.txt
+          path: output\final\
 
   docker:
     name: Build docker images
