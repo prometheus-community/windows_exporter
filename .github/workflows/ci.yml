@@ -242,7 +242,7 @@ jobs:
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: unsigned-executables
+          artifact-configuration-slug: ${{ vars.SIGNPATH_EXECUTABLE_ARTIFACT_CONFIGURATION_SLUG }}
           github-artifact-id: '${{ steps.unsigned-executables.outputs.artifact-id }}'
           # release-signing requests need manual approval in the SignPath
           # portal; wait for it, up to just under the 6 hour job limit.
@@ -301,7 +301,7 @@ jobs:
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: unsigned-installers
+          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}
           github-artifact-id: '${{ steps.unsigned-installers.outputs.artifact-id }}'
           # release-signing requests need manual approval in the SignPath
           # portal; wait for it, up to just under the 6 hour job limit.
@@ -395,18 +395,15 @@ jobs:
               "$hash  $($_.Name)"
             }
 
-          $checksums | Set-Content output\sha256sums.txt -Encoding ascii
-          Get-Content output\sha256sums.txt
+          $checksums | Set-Content output\final\sha256sums.txt -Encoding ascii
+          Get-Content output\final\sha256sums.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows_exporter_binaries
           retention-days: 7
-          path: |
-            output\final\windows_exporter-*.exe
-            output\final\windows_exporter-*.msi
-            output\sha256sums.txt
+          path: output\final\
 
   docker:
     name: Build docker images
