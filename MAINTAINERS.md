@@ -1,11 +1,4 @@
-Maintainers in alphabetical order
+<!-- Generated from https://github.com/prometheus/org-infra/blob/main/team-members.yaml; edit the catalog instead. -->
 
-* [Ben Reedy](https://github.com/breed808) - breed808@breed808.com
-* [Jan-Otto Kröpke](https://github.com/jkroepke) - github@jkroepke.de
-
-Alumni
-
-* [Brian Brazil](https://github.com/brian-brazil)
-* [Calle Pettersson](https://github.com/carlpett)
-* [Martin Lindhe](https://github.com/martinlindhe)
-
+* Ben Reedy <breed808@breed808.com> @breed808
+* Jan-Otto Kröpke <mail@jkroepke.de> @jkroepke
