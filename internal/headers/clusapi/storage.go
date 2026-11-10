@@ -58,7 +58,7 @@ func (c *Cluster) DiskPartitions(deadline time.Time) (_ []Partition, resultErr e
 	if err := c.begin(deadline); err != nil {
 		return nil, err
 	}
-	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
+	defer func() { resultErr = errors.Join(resultErr, c.end(resultErr)) }()
 
 	if err := c.open(); err != nil {
 		return nil, err
