@@ -246,6 +246,8 @@ func TestIsBrokenBinding(t *testing.T) {
 		{errors.Join(errors.New("missing property"), fmt.Errorf("ClusterControl 0x7000055: %w", windows.RPC_S_SERVER_UNAVAILABLE)), true},
 		{fmt.Errorf("GetClusterQuorumResource: %w", windows.RPC_S_CALL_FAILED), true},
 		{windows.EPT_S_NOT_REGISTERED, true},
+		{windows.ERROR_INVALID_HANDLE, true},
+		{windows.RPC_X_SS_IN_NULL_CONTEXT, true},
 	} {
 		if got := isBrokenBinding(tc.err); got != tc.want {
 			t.Errorf("isBrokenBinding(%v) = %t, want %t", tc.err, got, tc.want)

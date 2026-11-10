@@ -361,6 +361,9 @@ var brokenBindingErrors = []error{
 	windows.RPC_S_CALL_FAILED,
 	windows.RPC_S_CALL_FAILED_DNE,
 	windows.EPT_S_NOT_REGISTERED,
+	// Stale context handles after a server restart.
+	windows.ERROR_INVALID_HANDLE, // RPC_X_SS_CONTEXT_MISMATCH
+	windows.RPC_X_SS_IN_NULL_CONTEXT,
 }
 
 // isBrokenBinding reports whether err contains one of brokenBindingErrors.
