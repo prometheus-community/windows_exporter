@@ -168,7 +168,7 @@ func (c *Cluster) objects(api *objectAPI, deadline time.Time) (_ []Object, resul
 	if err := c.begin(deadline); err != nil {
 		return nil, err
 	}
-	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
+	defer func() { resultErr = errors.Join(resultErr, c.end(resultErr)) }()
 
 	if err := c.open(); err != nil {
 		return nil, err

@@ -19,6 +19,7 @@ package clusapi
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -38,6 +39,7 @@ type fakeAPI struct {
 	closeErr    error
 	names       []string
 	deleted     map[string]bool
+	readErr     []error
 	// blockEnum, if set, is closed when the first enumeration starts and
 	// waited on before it continues.
 	started   chan struct{}
@@ -99,6 +101,16 @@ func (f *fakeAPI) api() *nativeAPI {
 		},
 		closeResource: func(uintptr) error { return nil },
 		readResource: func(_ uintptr, resource *Resource, _ *controlScratch, _ time.Time) error {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+
+			if len(f.readErr) != 0 {
+				err := f.readErr[0]
+				f.readErr = f.readErr[1:]
+
+				return err
+			}
+
 			resource.Values["State"] = 2
 			resource.IdentityValid = true
 
@@ -183,6 +195,61 @@ func TestClusterReopensAfterOpenEnumFailure(t *testing.T) {
 
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A handle can answer some calls and fail others with RPC_S_SERVER_UNAVAILABLE
+// after the cluster service restarted. Any call failing with a broken RPC
+// binding drops the handle so the next scrape reopens the cluster; other errors
+// keep it.
+func TestClusterReopensAfterBrokenBinding(t *testing.T) {
+	fake := &fakeAPI{
+		names:   []string{"a"},
+		readErr: []error{windows.ERROR_ACCESS_DENIED, windows.RPC_S_SERVER_UNAVAILABLE},
+	}
+	c := &Cluster{api: fake.api()}
+
+	if _, err := c.Resources(time.Time{}); !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		t.Fatalf("lost native error: %v", err)
+	}
+
+	if c.handle != fakeClusterHandle || len(fake.closes) != 0 {
+		t.Fatalf("non-RPC error dropped the handle: handle = %#x, closes = %v", c.handle, fake.closes)
+	}
+
+	if _, err := c.Resources(time.Time{}); !errors.Is(err, windows.RPC_S_SERVER_UNAVAILABLE) {
+		t.Fatalf("lost native error: %v", err)
+	}
+
+	if c.handle != 0 || len(fake.closes) != 1 || fake.closes[0] != fakeClusterHandle {
+		t.Fatalf("broken binding kept the handle: handle = %#x, closes = %v", c.handle, fake.closes)
+	}
+
+	resources, err := c.Resources(time.Time{})
+	if err != nil || len(resources) != 1 || fake.opens != 2 {
+		t.Fatalf("resources = %v, opens = %d, err = %v", resources, fake.opens, err)
+	}
+
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIsBrokenBinding(t *testing.T) {
+	for _, tc := range []struct {
+		err  error
+		want bool
+	}{
+		{nil, false},
+		{windows.ERROR_ACCESS_DENIED, false},
+		{windows.RPC_S_SERVER_UNAVAILABLE, true},
+		{errors.Join(errors.New("missing property"), fmt.Errorf("ClusterControl 0x7000055: %w", windows.RPC_S_SERVER_UNAVAILABLE)), true},
+		{fmt.Errorf("GetClusterQuorumResource: %w", windows.RPC_S_CALL_FAILED), true},
+		{windows.EPT_S_NOT_REGISTERED, true},
+	} {
+		if got := isBrokenBinding(tc.err); got != tc.want {
+			t.Errorf("isBrokenBinding(%v) = %t, want %t", tc.err, got, tc.want)
+		}
 	}
 }
 

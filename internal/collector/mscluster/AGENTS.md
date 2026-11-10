@@ -18,6 +18,13 @@
   second call fails with `clusapi.ErrBusy`, and `Close` leaves the handle to
   the running call. `callSource` stops waiting at the scrape budget, so one
   stuck RPC does not hold `Collect` and the other subcollectors.
+- A `Cluster` keeps its handle between scrapes. A cluster service restart can
+  leave it half broken: `GetClusterInformation` still returns the name while
+  `ClusterControl` and `GetClusterQuorumResource` fail with
+  `RPC_S_SERVER_UNAVAILABLE` on every scrape. `end` therefore drops the handle
+  whenever a call's result contains an RPC binding error
+  (`brokenBindingErrors`), not only when the first RPC fails; pass the call's
+  result to `end`.
 - `closeSources` drops a source even when its `Close` fails, so `Build` can
   recreate it. Grafana Alloy calls `Build`/`Close` repeatedly.
 - Every subcollector has a fixture test that checks gathered metric families

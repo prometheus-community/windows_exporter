@@ -57,7 +57,7 @@ func (c *Cluster) Properties(deadline time.Time) (_ Object, resultErr error) {
 	if err := c.begin(deadline); err != nil {
 		return Object{}, err
 	}
-	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
+	defer func() { resultErr = errors.Join(resultErr, c.end(resultErr)) }()
 
 	if err := c.open(); err != nil {
 		return Object{}, err
