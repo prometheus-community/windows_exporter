@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 //
 // Copyright The Prometheus Authors
+
 //go:build windows
 
 package testutils
