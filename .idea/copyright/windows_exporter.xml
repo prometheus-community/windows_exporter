@@ -1,7 +1,7 @@
 <component name="CopyrightManager">
-  <copyright>
-    <option name="keyword" value="The Prometheus Authors" />
-    <option name="notice" value="SPDX-License-Identifier: MIT&#10;&#10;Copyright The Prometheus Authors" />
-    <option name="myName" value="windows_exporter" />
-  </copyright>
+    <copyright>
+        <option name="keyword" value="The Prometheus Authors" />
+        <option name="notice" value="SPDX-License-Identifier: MIT&#10;&#10;Copyright The Prometheus Authors" />
+        <option name="myName" value="windows_exporter" />
+    </copyright>
 </component>
