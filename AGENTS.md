@@ -67,7 +67,7 @@ Use the Go version specified in [`go.mod`](go.mod) and the linter version pinned
 in [`Makefile`](Makefile). Do not change versions to work around a local tooling
 problem. Follow [`.golangci.yaml`](.golangci.yaml), [`.editorconfig`](.editorconfig)
 and [`.gitattributes`](.gitattributes); keep LF line endings and the existing
-license headers. Use structured `slog` attributes and the existing Windows API
+license headers (`SPDX-License-Identifier: MIT`, enforced by `goheader`). Use structured `slog` attributes and the existing Windows API
 wrappers (`golang.org/x/sys/windows`, `NewLazySystemDLL`). `LazyProc.Call`
 panics for a missing export: add every proc a binding calls without its own
 `Find` check to the package's `lazyproc.Once` list, and call the package's
