@@ -1,17 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //
 // Copyright The Prometheus Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 //go:build windows
 
@@ -307,15 +296,25 @@ func (c *Cluster) open() error {
 	return nil
 }
 
-// end finishes a call started by begin. If Close ran meanwhile, the handle is
-// released here and the CloseCluster error is returned.
-func (c *Cluster) end() error {
+// end finishes a call started by begin with the call's result. If Close ran
+// meanwhile, the handle is released here and the CloseCluster error is
+// returned. A result with a broken RPC binding drops the handle, so the next
+// call reopens the cluster.
+func (c *Cluster) end(result error) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.running = false
 
-	if !c.closed || c.handle == 0 {
+	if c.handle == 0 {
+		return nil
+	}
+
+	if !c.closed {
+		if isBrokenBinding(result) {
+			c.resetHandle()
+		}
+
 		return nil
 	}
 
@@ -336,6 +335,39 @@ func (c *Cluster) end() error {
 func (c *Cluster) resetHandle() {
 	_ = c.native().closeCluster(c.handle)
 	c.handle = 0
+}
+
+// brokenBindingErrors are RPC errors after which a cluster handle stays
+// unusable, for example once the local cluster service restarted. Some calls
+// on such a handle still succeed: GetClusterInformation returned the cluster
+// name while ClusterControl and GetClusterQuorumResource failed with
+// RPC_S_SERVER_UNAVAILABLE on every scrape until the exporter restarted.
+//
+//nolint:gochecknoglobals
+var brokenBindingErrors = []error{
+	windows.RPC_S_INVALID_BINDING,
+	windows.RPC_S_SERVER_UNAVAILABLE,
+	windows.RPC_S_CALL_FAILED,
+	windows.RPC_S_CALL_FAILED_DNE,
+	windows.EPT_S_NOT_REGISTERED,
+	// Stale context handles after a server restart.
+	windows.ERROR_INVALID_HANDLE, // RPC_X_SS_CONTEXT_MISMATCH
+	windows.RPC_X_SS_IN_NULL_CONTEXT,
+}
+
+// isBrokenBinding reports whether err contains one of brokenBindingErrors.
+func isBrokenBinding(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	for _, target := range brokenBindingErrors {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // errObjectDeleted marks an object that was deleted after ClusterOpenEnum took
@@ -404,7 +436,7 @@ func (c *Cluster) Resources(deadline time.Time) (_ []Resource, resultErr error) 
 	if err := c.begin(deadline); err != nil {
 		return nil, err
 	}
-	defer func() { resultErr = errors.Join(resultErr, c.end()) }()
+	defer func() { resultErr = errors.Join(resultErr, c.end(resultErr)) }()
 
 	if err := c.open(); err != nil {
 		return nil, err

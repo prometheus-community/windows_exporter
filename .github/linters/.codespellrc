@@ -1,2 +1,3 @@
 [codespell]
+skip = */MAINTAINERS.md
 ignore-words-list = notin,entires,te
