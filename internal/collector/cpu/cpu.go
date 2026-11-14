@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/labelcache"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -45,6 +47,12 @@ type Collector struct {
 	processorMPerfValues map[string]utils.Counter
 	// timeValues are the processor times of the last scrape by core and mode.
 	timeValues map[timeKey]float64
+	// nextTimeValues is the map that the next scrape fills. It is swapped with
+	// timeValues after each scrape, so publish doesn't allocate a map per scrape.
+	nextTimeValues map[timeKey]float64
+
+	// labels reuses the label pairs of the per-core series between scrapes.
+	labels labelcache.Cache
 
 	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
@@ -80,6 +88,11 @@ func NewWithFlags(_ *kingpin.Application) *Collector {
 
 func (c *Collector) GetName() string {
 	return Name
+}
+
+// ScrapeCaches returns the caches that the collection resets and begins a scrape of around Collect.
+func (c *Collector) ScrapeCaches() []scrapecache.Cache {
+	return []scrapecache.Cache{&c.labels}
 }
 
 func (c *Collector) Close() error {
@@ -193,6 +206,7 @@ func (c *Collector) buildDescriptors() {
 	c.processorRTCValues = map[string]utils.Counter{}
 	c.processorMPerfValues = map[string]utils.Counter{}
 	c.timeValues = map[timeKey]float64{}
+	c.nextTimeValues = map[timeKey]float64{}
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
@@ -214,7 +228,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 func (c *Collector) publish(ch chan<- prometheus.Metric) {
 	var coreCount float64
 
-	timeValues := make(map[timeKey]float64, len(c.timeValues))
+	scrape := c.labels.Scrape()
+
+	timeValues := c.nextTimeValues
+	clear(timeValues)
 
 	for _, coreData := range c.perfDataObject {
 		core := coreData.Name
@@ -242,133 +259,133 @@ func (c *Collector) publish(ch chan<- prometheus.Metric) {
 
 		c.processorMPerfValues[core] = counterProcessorMPerfValues
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "c1", coreData.C1TimeSeconds),
 			core, "c1",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "c2", coreData.C2TimeSeconds),
 			core, "c2",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.cStateSecondsTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "c3", coreData.C3TimeSeconds),
 			core, "c3",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "idle", coreData.IdleTimeSeconds),
 			core, "idle",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "interrupt", coreData.InterruptTimeSeconds),
 			core, "interrupt",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "dpc", coreData.DpcTimeSeconds),
 			core, "dpc",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "privileged", coreData.PrivilegedTimeSeconds),
 			core, "privileged",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.timeTotal,
 			prometheus.CounterValue,
 			c.monotonicTime(timeValues, core, "user", coreData.UserTimeSeconds),
 			core, "user",
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.interruptsTotal,
 			prometheus.CounterValue,
 			coreData.InterruptsTotal,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.dpcsTotal,
 			prometheus.CounterValue,
 			coreData.DpcQueuedPerSecond,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.clockInterruptsTotal,
 			prometheus.CounterValue,
 			coreData.ClockInterruptsTotal,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.idleBreakEventsTotal,
 			prometheus.CounterValue,
 			coreData.IdleBreakEventsTotal,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.parkingStatus,
 			prometheus.GaugeValue,
 			coreData.ParkingStatus,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorFrequencyHertz,
 			prometheus.GaugeValue,
 			coreData.ProcessorFrequencyMHz*1e6,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorPerformance,
 			prometheus.CounterValue,
 			coreData.ProcessorPerformance,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorMPerf,
 			prometheus.CounterValue,
 			counterProcessorMPerfValues.Value(),
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorRTC,
 			prometheus.CounterValue,
 			counterProcessorRTCValues.Value(),
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorUtility,
 			prometheus.CounterValue,
 			coreData.ProcessorUtilityRate,
 			core,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
+		ch <- scrape.MustNewConstMetric(
 			c.processorPrivilegedUtility,
 			prometheus.CounterValue,
 			coreData.PrivilegedUtilitySeconds,
@@ -376,9 +393,10 @@ func (c *Collector) publish(ch chan<- prometheus.Metric) {
 		)
 	}
 
+	c.nextTimeValues = c.timeValues
 	c.timeValues = timeValues
 
-	ch <- prometheus.MustNewConstMetric(
+	ch <- scrape.MustNewConstMetric(
 		c.logicalProcessors,
 		prometheus.GaugeValue,
 		coreCount,
