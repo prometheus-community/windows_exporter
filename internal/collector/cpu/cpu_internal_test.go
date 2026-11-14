@@ -18,9 +18,12 @@
 package cpu
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/prometheus-community/windows_exporter/internal/scrapecache"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -106,4 +109,129 @@ func TestMonotonicTime(t *testing.T) {
 
 	values = scrapeTimes(t, c, perfDataCounterValues{Name: "0,0", PrivilegedTimeSeconds: 20}, perfDataCounterValues{Name: "0,1", PrivilegedTimeSeconds: 29.5})
 	require.InDelta(t, 29.5, privileged(values, "0,1"), 0, "a core that returns starts without state")
+}
+
+// scrapeCached publishes the rows once within a scrape of the caches of c, as
+// the collection does, and returns the written metrics by metric name.
+func scrapeCached(t *testing.T, c *Collector, rows ...perfDataCounterValues) map[string][]*dto.Metric {
+	t.Helper()
+
+	c.perfDataObject = rows
+
+	ch := make(chan prometheus.Metric, 32*len(rows)+1)
+
+	cacheScrape := scrapecache.Begin(c)
+	c.publish(ch)
+	cacheScrape.End(nil)
+	close(ch)
+
+	byName := map[string][]*dto.Metric{}
+
+	for metric := range ch {
+		out := &dto.Metric{}
+		require.NoError(t, metric.Write(out))
+
+		switch metric.Desc() {
+		case c.interruptsTotal:
+			byName["windows_cpu_interrupts_total"] = append(byName["windows_cpu_interrupts_total"], out)
+		case c.timeTotal:
+			byName["windows_cpu_time_seconds_total"] = append(byName["windows_cpu_time_seconds_total"], out)
+		case c.logicalProcessors:
+			byName["windows_cpu_logical_processor"] = append(byName["windows_cpu_logical_processor"], out)
+		}
+	}
+
+	return byName
+}
+
+// labelPair returns the label pair of the metric with the name, or nil.
+func labelPair(metric *dto.Metric, name string) *dto.LabelPair {
+	for _, label := range metric.GetLabel() {
+		if label.GetName() == name {
+			return label
+		}
+	}
+
+	return nil
+}
+
+func TestPublishCached(t *testing.T) {
+	t.Parallel()
+
+	c := New(nil)
+	c.buildDescriptors()
+
+	// coreLabels holds the core label pair of interrupts_total by core, as
+	// first seen in a scrape.
+	coreLabels := map[string]*dto.LabelPair{}
+
+	for i, step := range []struct {
+		rows []perfDataCounterValues
+		want map[string]float64
+		// reused lists the cores whose label pairs must come from an earlier scrape.
+		reused []string
+	}{
+		{
+			rows: []perfDataCounterValues{{Name: "0,0", UserTimeSeconds: 1, InterruptsTotal: 10}, {Name: "0,1", UserTimeSeconds: 2, InterruptsTotal: 20}},
+			want: map[string]float64{"0,0": 10, "0,1": 20},
+		},
+		{
+			rows:   []perfDataCounterValues{{Name: "0,0", UserTimeSeconds: 3, InterruptsTotal: 11}, {Name: "0,1", UserTimeSeconds: 4, InterruptsTotal: 21}},
+			want:   map[string]float64{"0,0": 11, "0,1": 21},
+			reused: []string{"0,0", "0,1"},
+		},
+		{
+			// Core 0,1 disappears, so the commit drops its series from the cache.
+			rows:   []perfDataCounterValues{{Name: "0,0", UserTimeSeconds: 5, InterruptsTotal: 12}},
+			want:   map[string]float64{"0,0": 12},
+			reused: []string{"0,0"},
+		},
+		{
+			// Core 0,1 returns with new label pairs.
+			rows:   []perfDataCounterValues{{Name: "0,0", UserTimeSeconds: 6, InterruptsTotal: 13}, {Name: "0,1", UserTimeSeconds: 7, InterruptsTotal: 22}},
+			want:   map[string]float64{"0,0": 13, "0,1": 22},
+			reused: []string{"0,0"},
+		},
+	} {
+		metrics := scrapeCached(t, c, step.rows...)
+
+		interrupts := map[string]float64{}
+		labels := map[string]*dto.LabelPair{}
+
+		for _, metric := range metrics["windows_cpu_interrupts_total"] {
+			core := labelPair(metric, "core")
+			require.NotNil(t, core)
+
+			interrupts[core.GetValue()] = metric.GetCounter().GetValue()
+			labels[core.GetValue()] = core
+		}
+
+		require.Equal(t, step.want, interrupts, "step %d", i)
+
+		for core, label := range labels {
+			if slices.Contains(step.reused, core) {
+				require.Same(t, coreLabels[core], label, "step %d: core %s reuses its label pairs", i, core)
+			} else {
+				require.NotSame(t, coreLabels[core], label, "step %d: core %s has new label pairs", i, core)
+			}
+
+			coreLabels[core] = label
+		}
+
+		require.Len(t, metrics["windows_cpu_time_seconds_total"], 5*len(step.rows))
+		require.Len(t, metrics["windows_cpu_logical_processor"], 1)
+		require.InDelta(t, float64(len(step.rows)), metrics["windows_cpu_logical_processor"][0].GetGauge().GetValue(), 0)
+
+		for _, metric := range metrics["windows_cpu_time_seconds_total"] {
+			if labelPair(metric, "mode").GetValue() != "user" {
+				continue
+			}
+
+			for _, row := range step.rows {
+				if row.Name == labelPair(metric, "core").GetValue() {
+					require.InDelta(t, row.UserTimeSeconds, metric.GetCounter().GetValue(), 0, "step %d: core %s", i, row.Name)
+				}
+			}
+		}
+	}
 }
