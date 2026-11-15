@@ -141,7 +141,8 @@ The following parameters are available:
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                              |
 | `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                                      |
 | `SERVICE_ACCOUNT`    | Account the service runs as, for example `NT SERVICE\windows_exporter`. Defaults to an empty string (`LocalSystem`). The installer does not grant the account any rights, see [permissions](docs/permissions.md) |
-| `SERVICE_PASSWORD`   | Password of `SERVICE_ACCOUNT`. Only a user account needs one; a virtual account or a gMSA has none. The installer does not write it to its log                              |
+| `SERVICE_PASSWORD`   | Password of `SERVICE_ACCOUNT`. Only a user account needs one; a virtual account or a gMSA has none. The installer does not write it to its log and does not remember it |
+| `RESET_SETTINGS`     | Set to `1` to ignore the settings that an earlier install remembered, see [Upgrades and repairs](#upgrades-and-repairs)                                                    |
 
 > [!NOTE]
 > The installer properties are always preferred over the values defined in the config file. If you prefer to configure via the config file, avoid using any of the properties listed above.
@@ -193,6 +194,29 @@ PowerShell versions 7.3 and above require [PSNativeCommandArgumentPassing](https
 $PSNativeCommandArgumentPassing = 'Legacy'
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.exchange.enabled=""ADAccessProcesses"""
 ```
+
+### Upgrades and repairs
+
+The installer remembers the parameters of each install, `APPLICATIONFOLDER` included and
+`SERVICE_PASSWORD` excepted, in the registry key `HKLM\SOFTWARE\prometheus-community\windows_exporter`.
+An upgrade, a repair or another run of the
+installer, for example by `winget upgrade`, keeps the earlier settings for every parameter that is
+not on its command line. A parameter on the command line replaces the remembered value, and
+`RESET_SETTINGS=1` returns every parameter that is not on the command line to its default. The
+uninstall removes the remembered settings.
+
+Installers of 0.32.1 and earlier do not remember their parameters: pass them once more on the
+first upgrade from such a version.
+
+An empty parameter on the command line counts as not set, so it keeps its remembered value. To
+remove one setting, pass `RESET_SETTINGS=1` together with the parameters to keep.
+
+A service that runs as a user account needs `SERVICE_PASSWORD` again on every upgrade, since the
+upgrade creates the service again. Without it, the upgrade stops with an error before it changes
+anything.
+
+Settings that were changed outside the installer, for example by editing the service's command line,
+are not remembered. Use the config file for settings that the installer has no parameter for.
 
 ## Docker Implementation
 
