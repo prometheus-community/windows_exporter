@@ -15,6 +15,10 @@ Param (
     # release. Defaults to $Msi.
     [Parameter(Mandatory = $false)]
     [String] $UpgradeMsi = '',
+    # MSI with a higher version than $Msi, for the major upgrade that must keep
+    # the remembered settings. Defaults to $UpgradeMsi.
+    [Parameter(Mandatory = $false)]
+    [String] $HigherMsi = '',
     # Executable packaged in $Msi and $UpgradeMsi.
     [Parameter(Mandatory = $true)]
     [String] $Executable,
@@ -32,9 +36,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3
 
 if (-not $UpgradeMsi) { $UpgradeMsi = $Msi }
+if (-not $HigherMsi) { $HigherMsi = $UpgradeMsi }
 
 $Msi = (Resolve-Path $Msi).Path
 $UpgradeMsi = (Resolve-Path $UpgradeMsi).Path
+$HigherMsi = (Resolve-Path $HigherMsi).Path
 $Executable = (Resolve-Path $Executable).Path
 
 $serviceName = 'windows_exporter'
@@ -362,10 +368,13 @@ try {
     Assert-ServiceFlags -Operation 'the repair' -Expected $settingsFlags
     Write-Host '::endgroup::'
 
-    # $UpgradeMsi has a higher version than $Msi in pull requests, so this is
-    # a major upgrade there and another run of the same version otherwise.
+    # A major upgrade removes the service of $Msi and creates it again.
     Write-Step 'Upgrade without settings'
-    Invoke-Msiexec -Name 'upgrade-settings' -Arguments @('/i', "`"$UpgradeMsi`"")
+    Invoke-Msiexec -Name 'upgrade-settings' -Arguments @('/i', "`"$HigherMsi`"")
+    if ($HigherMsi -ne $Msi -and $null -eq (Select-String -Path (Join-Path $WorkDir 'upgrade-settings.log') -Encoding unicode -Pattern 'Property\(S\): (WIX_UPGRADE_DETECTED|OLDERVERSIONBEINGUPGRADED) = ')) {
+        throw "the run of $HigherMsi was not a major upgrade"
+    }
+
     Assert-ServiceRunning -Port $settingsPort | Out-Null
     Assert-ServiceFlags -Operation 'the upgrade without settings' -Expected $settingsFlags
     Assert-ForeignAlive -Operation 'upgrade without settings'
@@ -374,7 +383,7 @@ try {
     Write-Step 'Change one setting'
     # A property on the command line replaces its remembered value only.
     $changedPort = 9184
-    Invoke-Msiexec -Name 'change-settings' -Arguments @('/i', "`"$UpgradeMsi`"", "LISTEN_PORT=$changedPort")
+    Invoke-Msiexec -Name 'change-settings' -Arguments @('/i', "`"$HigherMsi`"", "LISTEN_PORT=$changedPort")
     Assert-ServiceRunning -Port $changedPort | Out-Null
     Assert-ServiceFlags -Operation 'the change of the port' `
         -Expected @("--web.listen-address=`":$changedPort`"", '--collectors.enabled os,service', '--log.level=debug') `
@@ -382,14 +391,14 @@ try {
     Write-Host '::endgroup::'
 
     Write-Step 'Reset the settings'
-    Invoke-Msiexec -Name 'reset-settings' -Arguments @('/i', "`"$UpgradeMsi`"", 'RESET_SETTINGS=1')
+    Invoke-Msiexec -Name 'reset-settings' -Arguments @('/i', "`"$HigherMsi`"", 'RESET_SETTINGS=1')
     Assert-ServiceRunning | Out-Null
     Assert-ServiceFlags -Operation 'the reset' -Expected @('--config.file=') `
         -Unexpected @('--web.listen-address', '--collectors.enabled', '--log.level')
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the install with settings'
-    Invoke-Msiexec -Name 'uninstall-settings' -Arguments @('/x', "`"$UpgradeMsi`"")
+    Invoke-Msiexec -Name 'uninstall-settings' -Arguments @('/x', "`"$HigherMsi`"")
     Assert-ServiceRemoved
     Assert-InstallDirRemoved
     if (Test-Path $settingsKey) {
