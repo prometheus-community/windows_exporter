@@ -343,6 +343,10 @@ try {
     Invoke-Msiexec -Name 'install-settings' -Arguments @('/i', "`"$Msi`"", "LISTEN_PORT=$settingsPort", 'ENABLED_COLLECTORS=os,service', 'EXTRA_FLAGS="--log.level=debug"')
     Assert-ServiceRunning -Port $settingsPort | Out-Null
     Assert-ServiceFlags -Operation 'the install with settings' -Expected $settingsFlags
+    $remembered = Get-ItemProperty -Path $settingsKey
+    if ($remembered.LISTEN_PORT -ne "$settingsPort" -or $remembered.APPLICATIONFOLDER.TrimEnd('\') -ne $installDir) {
+        throw "$settingsKey does not hold the settings of the install: LISTEN_PORT=$($remembered.LISTEN_PORT), APPLICATIONFOLDER=$($remembered.APPLICATIONFOLDER)"
+    }
     Assert-ForeignAlive -Operation 'install with settings'
     Write-Host '::endgroup::'
 
@@ -415,11 +419,22 @@ try {
     Write-Host '::endgroup::'
 
     Write-Step 'Run the install with a virtual service account again without settings'
+    # The account must come from the remembered settings, not from a service
+    # that Windows Installer left unchanged.
+    if ((Get-ItemProperty -Path $settingsKey).SERVICE_ACCOUNT -ne $account) {
+        throw "$settingsKey does not remember SERVICE_ACCOUNT $account"
+    }
+
     Invoke-Msiexec -Name 'rerun-account' -Arguments @('/i', "`"$Msi`"")
     Assert-ServiceRunning | Out-Null
     $startName = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").StartName
     if ($startName -ne $account) {
         throw "service $serviceName runs as $startName after a run without SERVICE_ACCOUNT, expected $account"
+    }
+
+    $restored = Select-String -Path (Join-Path $WorkDir 'rerun-account.log') -Encoding unicode -Pattern 'Property\(S\): SERVICE_ACCOUNT = '
+    if ($null -eq $restored -or -not ($restored | Where-Object { $_.Line.Contains($account) })) {
+        throw 'the run without SERVICE_ACCOUNT did not restore the remembered account'
     }
 
     Write-Host '::endgroup::'

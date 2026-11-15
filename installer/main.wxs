@@ -40,21 +40,21 @@
         <!-- The settings of the service. Each install remembers them in the registry (C_Settings), so an
             upgrade, a repair or a re-run without the properties on its command line keeps the earlier
             settings instead of the defaults. A property on the command line replaces its remembered value,
-            and RESET_SETTINGS=1 ignores all remembered values. -->
+            and RESET_SETTINGS=1 ignores all remembered values except the install folder. -->
         <Property Id="ENABLED_COLLECTORS" Secure="yes" />
         <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
 
         <Property Id="EXTRA_FLAGS" Secure="yes" />
         <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
-        <!-- Without a value, so that the remembered value can fill it. SetDefaultSettings sets the default. -->
+        <!-- Without a value, so that the remembered value can fill it. The SetDefault actions below set the default. -->
         <Property Id="CONFIG_FILE" Secure="yes" />
         <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
         <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
         <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
 
         <Property Id="LISTEN_ADDR" Secure="yes" />
-        <!-- Without a value, so that the remembered value can fill it. SetDefaultSettings sets the default. -->
+        <!-- Without a value, so that the remembered value can fill it. The SetDefault actions below set the default. -->
         <Property Id="LISTEN_PORT" Secure="yes" />
         <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
 
@@ -91,14 +91,17 @@
         <?endforeach?>
 
         <!-- The install folder is searched as a directory, so a folder that no longer exists falls back to the default.
-            Setting it before CostFinalize keeps an APPLICATIONFOLDER given on the command line. -->
+            Setting it before CostFinalize keeps an APPLICATIONFOLDER given on the command line. RESET_SETTINGS
+            keeps it: only an explicit APPLICATIONFOLDER moves the installation, together with config.yaml in it.
+            The execute sequence restores it also after the UI did, since a directory property is not secure and
+            may not reach an elevated server. -->
         <Property Id="REMEMBERED_APPLICATIONFOLDER">
             <RegistrySearch Id="Remembered_APPLICATIONFOLDER" Root="HKLM" Key="$(var.SettingsKey)" Name="APPLICATIONFOLDER" Type="directory" Bitness="always64" />
         </Property>
         <SetProperty Id="APPLICATIONFOLDER" Action="RestoreUi_APPLICATIONFOLDER" Value="[REMEMBERED_APPLICATIONFOLDER]" After="AppSearch" Sequence="ui"
-            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER AND NOT RESET_SETTINGS" />
+            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER" />
         <SetProperty Id="APPLICATIONFOLDER" Action="Restore_APPLICATIONFOLDER" Value="[REMEMBERED_APPLICATIONFOLDER]" After="AppSearch" Sequence="execute"
-            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER AND NOT RESET_SETTINGS AND NOT SETTINGS_RESTORED" />
+            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER" />
 
         <SetProperty Id="SETTINGS_RESTORED" Action="SetSettingsRestored" Value="1" After="RestoreUi_APPLICATIONFOLDER" Sequence="ui" />
 
@@ -108,9 +111,10 @@
         <SetProperty Id="CONFIG_FILE" Action="SetDefaultConfigFileUi" Value="config.yaml" After="RestoreUi_CONFIG_FILE" Sequence="ui" Condition="NOT CONFIG_FILE" />
         <SetProperty Id="CONFIG_FILE" Action="SetDefaultConfigFile" Value="config.yaml" After="Restore_CONFIG_FILE" Sequence="execute" Condition="NOT CONFIG_FILE" />
 
-        <!-- A user account needs its password, which is never remembered. A repair keeps the password of the
-            existing service, but an upgrade creates the service again and fails without it. Remember whether
-            the account had one, and stop an install that would create the service without it. -->
+        <!-- A user account needs its password, which is never remembered. An upgrade creates the service again
+            and a repair or another run reconfigures it, and whether an empty password then keeps the existing
+            one is not verified. Remember whether the account had one, and stop every run but a full uninstall
+            that would configure the service without it. -->
         <Property Id="REMEMBERED_SERVICE_PASSWORD_SET">
             <RegistrySearch Id="Remembered_SERVICE_PASSWORD_SET" Root="HKLM" Key="$(var.SettingsKey)" Name="SERVICE_PASSWORD_SET" Type="raw" Bitness="always64" />
         </Property>
@@ -259,7 +263,7 @@
             <Custom Action="SetInstallLocation" After="CostFinalize" />
 
             <Custom Action="CheckServicePassword" Before="InstallInitialize"
-                    Condition="NOT Installed AND NOT REMOVE AND ServicePasswordSet AND NOT SERVICE_PASSWORD" />
+                    Condition="NOT (REMOVE~=&quot;ALL&quot;) AND ServicePasswordSet AND NOT SERVICE_PASSWORD" />
 
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"
                     Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
