@@ -93,8 +93,9 @@
         <!-- The install folder is searched as a directory, so a folder that no longer exists falls back to the default.
             Setting it before CostFinalize keeps an APPLICATIONFOLDER given on the command line. RESET_SETTINGS
             keeps it: only an explicit APPLICATIONFOLDER moves the installation, together with config.yaml in it.
-            The execute sequence restores it also after the UI did, since a directory property is not secure and
-            may not reach an elevated server. -->
+            The folder is a secure property, so the folder that the UI chose or restored reaches the server; the
+            execute sequence restores it only when nothing set it. -->
+        <Property Id="APPLICATIONFOLDER" Secure="yes" />
         <Property Id="REMEMBERED_APPLICATIONFOLDER">
             <RegistrySearch Id="Remembered_APPLICATIONFOLDER" Root="HKLM" Key="$(var.SettingsKey)" Name="APPLICATIONFOLDER" Type="directory" Bitness="always64" />
         </Property>
