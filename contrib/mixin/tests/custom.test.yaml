@@ -269,3 +269,27 @@ tests:
       - alertname: WindowsADReplicationFailures
         eval_time: 28m
         exp_alerts: []
+  - name: AD replication partner failures preserve selectors and partner labels
+    interval: 1m
+    input_series:
+      - series: 'windows_ad_replication_partner_consecutive_failures{job="windows-custom", instance="host:9182", cluster="test", naming_context="DC=example,DC=com", partner="DC02", partner_site="HQ"}'
+        values: '0 2x65 0x10'
+      - series: 'windows_ad_replication_partner_consecutive_failures{job="windows-custom", instance="host:9182", cluster="test", naming_context="CN=Configuration,DC=example,DC=com", partner="DC02", partner_site="HQ"}'
+        values: '0x80'
+      - series: 'windows_ad_replication_partner_consecutive_failures{job="windows-custom", instance="host:9182", cluster="prod", naming_context="DC=example,DC=com", partner="DC02", partner_site="HQ"}'
+        values: '5x80'
+    alert_rule_test:
+      - alertname: WindowsADReplicationPartnerFailing
+        eval_time: 60m
+        exp_alerts: []
+      - alertname: WindowsADReplicationPartnerFailing
+        eval_time: 61m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, naming_context: 'DC=example,DC=com', partner: DC02, partner_site: HQ, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsadreplicationpartnerfailing/
+              summary: Active Directory replication from a partner is failing
+              description: 'host:9182 has failed to replicate DC=example,DC=com from HQ/DC02 2 times in a row, for at least an hour.'
+      - alertname: WindowsADReplicationPartnerFailing
+        eval_time: 80m
+        exp_alerts: []

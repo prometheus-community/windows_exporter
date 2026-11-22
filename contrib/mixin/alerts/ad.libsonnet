@@ -27,6 +27,18 @@
           description: 'Replication synchronization requests on {{ $labels.instance }} have been failing for 15 minutes.',
         },
       },
+      {
+        alert: 'WindowsADReplicationPartnerFailing',
+        expr: |||
+          windows_ad_replication_partner_consecutive_failures{%(windowsExporterSelector)s} > 0
+        ||| % c,
+        'for': '1h',
+        labels: { severity: 'warning' },
+        annotations: {
+          summary: 'Active Directory replication from a partner is failing',
+          description: '{{ $labels.instance }} has failed to replicate {{ $labels.naming_context }} from {{ if $labels.partner_site }}{{ $labels.partner_site }}/{{ end }}{{ $labels.partner }} {{ $value }} times in a row, for at least an hour.',
+        },
+      },
     ]),
   },
 }
