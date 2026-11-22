@@ -298,6 +298,125 @@ The `collector` label contains the configured object `name`.
 
 # Examples
 
+The following examples cover Windows Server roles that have no collector of their own. Object and counter names are
+the English names from the Microsoft documentation linked with each example; check them on your server with
+`Get-Counter -ListSet '<object>' | Select-Object -ExpandProperty Paths`. Counters with `type: counter` hold cumulative
+raw values. Rates such as `Requests/Sec` also do with the default `raw` type, so query them with `rate()`.
+
+## Storage Replica
+
+Replication state, recovery point and throughput of each replication group, from the counters that
+[Storage Replica documents](https://learn.microsoft.com/windows-server/storage/storage-replica/server-to-server-storage-replication#step-4-manage-replication).
+Collect them on the source and the destination server. The documentation gives neither the unit of the RPO counters
+nor the meaning of the `Replication State` values, so compare them with `Get-SRGroup` before you alert on them.
+
+```yaml
+collector:
+  performancecounter:
+    objects: |-
+      - name: storage_replica
+        object: "Storage Replica Statistics"
+        instances: ["*"]
+        instance_label: "replication_group"
+        counters:
+          - name: "Replication State"
+            metric: windows_performancecounter_storage_replica_replication_state
+            type: "gauge"
+          - name: "Current RPO"
+            metric: windows_performancecounter_storage_replica_current_rpo
+            type: "gauge"
+          - name: "Target RPO"
+            metric: windows_performancecounter_storage_replica_target_rpo
+            type: "gauge"
+          - name: "Current Log Queue Length"
+            metric: windows_performancecounter_storage_replica_log_queue_length
+            type: "gauge"
+          - name: "Total Bytes Sent"
+            metric: windows_performancecounter_storage_replica_sent_bytes_total
+            type: "counter"
+          - name: "Total Bytes Received"
+            metric: windows_performancecounter_storage_replica_received_bytes_total
+            type: "counter"
+```
+
+## ASP.NET
+
+Queueing and restarts of classic ASP.NET (.NET Framework) applications on IIS, the counters that
+[Exchange lists for ASP.NET](https://learn.microsoft.com/exchange/exchange-2013-performance-counters-exchange-2013-help#aspnet).
+`ASP.NET` holds the values for the whole server, `ASP.NET Applications` one instance per application, such as
+`_LM_W3SVC_1_ROOT`, plus `__Total__`.
+
+```yaml
+collector:
+  performancecounter:
+    objects: |-
+      - name: aspnet
+        object: "ASP.NET"
+        counters:
+          - name: "Requests Queued"
+            metric: windows_performancecounter_aspnet_requests_queued
+            type: "gauge"
+          - name: "Requests Rejected"
+            metric: windows_performancecounter_aspnet_requests_rejected_total
+            type: "counter"
+          - name: "Application Restarts"
+            metric: windows_performancecounter_aspnet_application_restarts_total
+            type: "counter"
+          - name: "Worker Process Restarts"
+            metric: windows_performancecounter_aspnet_worker_process_restarts_total
+            type: "counter"
+      - name: aspnet_applications
+        object: "ASP.NET Applications"
+        instances: ["*"]
+        instance_label: "app"
+        counters:
+          - name: "Requests/Sec"
+            metric: windows_performancecounter_aspnet_application_requests_total
+            type: "counter"
+          - name: "Requests Executing"
+            metric: windows_performancecounter_aspnet_application_requests_executing
+            type: "gauge"
+          - name: "Requests In Application Queue"
+            metric: windows_performancecounter_aspnet_application_requests_queued
+            type: "gauge"
+```
+
+The `ASP.NET` object only exists while the ASP.NET 4.x feature is installed, and its instances appear once an
+application has started.
+
+## Netlogon
+
+NTLM and Kerberos PAC validation bottlenecks on domain controllers and member servers (MaxConcurrentApi). Microsoft
+describes the counters in
+[performance tuning for NTLM authentication](https://learn.microsoft.com/troubleshoot/windows-server/windows-security/performance-tuning-ntlm-authentication-maxconcurrentapi).
+There is one instance per secure channel, named after the domain controller, plus `_Total`.
+
+```yaml
+collector:
+  performancecounter:
+    objects: |-
+      - name: netlogon
+        object: "Netlogon"
+        instances: ["*"]
+        instance_label: "secure_channel"
+        counters:
+          - name: "Semaphore Waiters"
+            metric: windows_performancecounter_netlogon_semaphore_waiters
+            type: "gauge"
+          - name: "Semaphore Holders"
+            metric: windows_performancecounter_netlogon_semaphore_holders
+            type: "gauge"
+          - name: "Semaphore Acquires"
+            metric: windows_performancecounter_netlogon_semaphore_acquires_total
+            type: "counter"
+          - name: "Semaphore Timeouts"
+            metric: windows_performancecounter_netlogon_semaphore_timeouts_total
+            type: "counter"
+```
+
+`Semaphore Waiters` above 0 for longer periods means authentication requests wait for a free MaxConcurrentApi slot.
+An increasing `windows_performancecounter_netlogon_semaphore_timeouts_total` means they gave up.
+
 ## thermalzone collector
 
 ```yaml
