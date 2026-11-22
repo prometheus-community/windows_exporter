@@ -117,6 +117,7 @@
       WindowsStorageVirtualDiskUnhealthy: true,
       WindowsDHCPScopeAlmostExhausted: true,
       WindowsDNSZoneTransferFailures: true,
+      WindowsTCPDynamicPortsAlmostExhausted: true,
     },
 
     runbookURLPattern: 'https://prometheus-community.github.io/windows_exporter/runbooks/%s/',
@@ -161,5 +162,7 @@
     updatePendingDuration: '7d',
     // Failed zone transfers per second.
     dnsZoneTransferFailureRateThreshold: 0,
+    // Percent of the TCP dynamic port range in use.
+    tcpDynamicPortUsageThreshold: 80,
   },
 }

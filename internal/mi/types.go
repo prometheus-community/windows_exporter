@@ -38,6 +38,7 @@ func NewNamespace(namespace string) (Namespace, error) {
 //nolint:gochecknoglobals
 var (
 	NamespaceRootCIMv2             = utils.Must(NewNamespace("root/CIMv2"))
+	NamespaceRootStandardCIMv2     = utils.Must(NewNamespace("root/StandardCimv2"))
 	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
 	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
 	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))

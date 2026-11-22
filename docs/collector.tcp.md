@@ -5,14 +5,14 @@ The tcp collector exposes metrics about the TCP network stack.
 |||
 -|-
 Metric name prefix  | `tcp`
-Data source         | Perflib
+Data source         | Perflib, `GetExtendedTcpTable`, MI (`MSFT_NetTCPSetting`)
 Enabled by default? | No
 
 ## Flags
 
 ### `--collector.tcp.enabled`
 
-Comma-separated list of collectors to use. Supported values are `metrics` and `connections_state`. Defaults to all, if not specified.
+Comma-separated list of collectors to use. Supported values are `metrics`, `connections_state` and `dynamic_ports`. Defaults to all, if not specified.
 
 Example: `--collector.tcp.enabled=metrics`
 
@@ -31,11 +31,42 @@ Example: `--collector.tcp.enabled=metrics`
 | `windows_tcp_segments_sent_total`          | Total segments sent, including those on current connections, but excluding those containing *only* retransmitted bytes                                                                                                                              | counter | af     |
 | `windows_tcp_connections`      | Number of TCP connections by state among: CLOSED, LISTENING, SYN_SENT, SYN_RECEIVED, ESTABLISHED, FIN_WAIT1, FIN_WAIT2, CLOSE_WAIT, CLOSING, LAST_ACK, TIME_WAIT, DELETE_TCB                                                                        | gauge   | af, state |
 
+### Dynamic ports (`dynamic_ports`)
+
+Windows assigns the local port of an outgoing connection from the dynamic port range, 49152 to 65535 by default.
+When all of them are held, new outgoing connections fail with `WSAENOBUFS` (10055), see
+[Troubleshoot port exhaustion issues](https://learn.microsoft.com/troubleshoot/windows-client/networking/tcp-ip-port-exhaustion-troubleshooting).
+
+| Name                                     | Description                                                                                                         | Type  | Labels |
+|------------------------------------------|---------------------------------------------------------------------------------------------------------------------|-------|--------|
+| `windows_tcp_dynamic_ports_in_use`       | Number of distinct local ports inside the dynamic port range that a connection in any state, including TIME_WAIT, holds | gauge | af     |
+| `windows_tcp_dynamic_port_range_size`    | Number of ports in the dynamic port range                                                                           | gauge | af     |
+
+The collector reads the range once at start from the `Internet` setting of `MSFT_NetTCPSetting`
+(`Get-NetTCPSetting -SettingName Internet`) and uses it for both address families. Restart the exporter after changing
+the range with `netsh int <ipv4|ipv6> set dynamicport tcp` or `Set-NetTCPSetting`. Both sub-collectors that read the
+connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape.
+
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Percent of the dynamic port range in use:
+
+```promql
+windows_tcp_dynamic_ports_in_use / windows_tcp_dynamic_port_range_size * 100
+```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+The mixin ships `WindowsTCPDynamicPortsAlmostExhausted`, which fires when more than 80% of the range has been in use
+for 10 minutes:
+
+```yaml
+- alert: WindowsTCPDynamicPortsAlmostExhausted
+  expr: (windows_tcp_dynamic_ports_in_use / (windows_tcp_dynamic_port_range_size > 0)) * 100 > 80
+  for: 10m
+  labels:
+    severity: warning
+```

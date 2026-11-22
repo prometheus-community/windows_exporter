@@ -3,7 +3,7 @@
 local mixin = import '../mixin.libsonnet';
 local config = (import '../config.libsonnet')._config;
 local everything = mixin { _config+:: { collectors: { [name]: true for name in std.objectFields(config.collectors) } } };
-local optionalGroups = ['windows-pagefile', 'windows-diskdrive', 'windows-license', 'windows-active-directory', 'windows-time', 'windows-scheduled-task', 'windows-update', 'windows-hyperv', 'windows-cluster', 'windows-storage-spaces', 'windows-dhcp', 'windows-dns'];
+local optionalGroups = ['windows-pagefile', 'windows-diskdrive', 'windows-license', 'windows-active-directory', 'windows-time', 'windows-scheduled-task', 'windows-update', 'windows-hyperv', 'windows-cluster', 'windows-storage-spaces', 'windows-dhcp', 'windows-dns', 'windows-tcp'];
 local names(alerts) = std.sort([rule.alert for group in alerts.groups for rule in group.rules]);
 local groupNames(alerts) = [group.name for group in alerts.groups];
 

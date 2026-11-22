@@ -31,6 +31,7 @@ const (
 
 	subCollectorMetrics          = "metrics"
 	subCollectorConnectionsState = "connections_state"
+	subCollectorDynamicPorts     = "dynamic_ports"
 )
 
 type Config struct {
@@ -42,6 +43,7 @@ var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorMetrics,
 		subCollectorConnectionsState,
+		subCollectorDynamicPorts,
 	},
 }
 
@@ -67,6 +69,13 @@ type Collector struct {
 	segmentsRetransmittedTotal *prometheus.Desc
 	segmentsSentTotal          *prometheus.Desc
 	connectionsStateCount      *prometheus.Desc
+
+	// dynamicPortRange is the range Windows assigns local ports of outgoing
+	// connections from, read once in Build. It is empty when the
+	// dynamic_ports sub-collector is disabled.
+	dynamicPortRange     iphlpapi.PortRange
+	dynamicPortsInUse    *prometheus.Desc
+	dynamicPortRangeSize *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -121,8 +130,8 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	subCollectors := []string{subCollectorMetrics, subCollectorConnectionsState}
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
+	subCollectors := []string{subCollectorMetrics, subCollectorConnectionsState, subCollectorDynamicPorts}
 
 	for _, collector := range c.config.CollectorsEnabled {
 		if !slices.Contains(subCollectors, collector) {
@@ -132,10 +141,20 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) ||
+		slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
 		if err := iphlpapi.Load(); err != nil {
 			return err
 		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
+		portRange, err := queryDynamicPortRange(miSession)
+		if err != nil {
+			return err
+		}
+
+		c.dynamicPortRange = portRange
 	}
 
 	labels := []string{"af"}
@@ -200,6 +219,18 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"af", "state"},
 		nil,
 	)
+	c.dynamicPortsInUse = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_ports_in_use"),
+		"Number of distinct local ports inside the TCP dynamic port range that a connection in any state, including TIME_WAIT, holds",
+		labels,
+		nil,
+	)
+	c.dynamicPortRangeSize = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_size"),
+		"Number of ports in the TCP dynamic port range, read at exporter start",
+		labels,
+		nil,
+	)
 
 	errs := make([]error, 0)
 
@@ -236,9 +267,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
-		if err := c.collectConnectionsState(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting tcp connection state metrics: %w", err))
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) ||
+		slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
+		if err := c.collectConnectionTable(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting tcp connection table metrics: %w", err))
 		}
 	}
 
@@ -336,32 +368,57 @@ func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics []perf
 	)
 }
 
-func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
+// collectConnectionTable reads the connection table of each address family
+// once and publishes the connection states and the dynamic port usage from it.
+func (c *Collector) collectConnectionTable(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
 
-	if stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET); err != nil {
-		errs = append(errs, fmt.Errorf("failed to collect TCP connection states for %s: %w", ipAddressFamilyIPv4, err))
-	} else {
-		c.sendTCPStateMetrics(ch, stateCounts, ipAddressFamilyIPv4)
-	}
+	for _, family := range []struct {
+		id   uint32
+		name string
+	}{
+		{windows.AF_INET, ipAddressFamilyIPv4},
+		{windows.AF_INET6, ipAddressFamilyIPv6},
+	} {
+		stats, err := iphlpapi.GetTCPConnectionStats(family.id, c.dynamicPortRange)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to read the TCP connection table for %s: %w", family.name, err))
 
-	if stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET6); err != nil {
-		errs = append(errs, fmt.Errorf("failed to collect TCP6 connection states for %s: %w", ipAddressFamilyIPv6, err))
-	} else {
-		c.sendTCPStateMetrics(ch, stateCounts, ipAddressFamilyIPv6)
+			continue
+		}
+
+		c.writeConnectionTableMetrics(ch, stats, family.name)
 	}
 
 	return errors.Join(errs...)
 }
 
-func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi.MIB_TCP_STATE]uint32, af string) {
-	for state, count := range stateCounts {
+func (c *Collector) writeConnectionTableMetrics(ch chan<- prometheus.Metric, stats iphlpapi.TCPConnectionStats, af string) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
+		for state, count := range stats.States {
+			ch <- prometheus.MustNewConstMetric(
+				c.connectionsStateCount,
+				prometheus.GaugeValue,
+				float64(count),
+				af,
+				state.String(),
+			)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
 		ch <- prometheus.MustNewConstMetric(
-			c.connectionsStateCount,
+			c.dynamicPortsInUse,
 			prometheus.GaugeValue,
-			float64(count),
+			float64(stats.PortsInRange),
 			af,
-			state.String(),
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.dynamicPortRangeSize,
+			prometheus.GaugeValue,
+			float64(c.dynamicPortRange.NumberOfPorts),
+			af,
 		)
 	}
 }

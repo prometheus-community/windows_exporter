@@ -41,6 +41,14 @@ type MIB_TCP6ROW_OWNER_PID struct {
 	dwOwningPid     uint32
 }
 
+func (row MIB_TCPROW_OWNER_PID) state() MIB_TCP_STATE { return row.dwState }
+
+func (row MIB_TCPROW_OWNER_PID) localPort() uint16 { return row.dwLocalPort.uint16() }
+
+func (row MIB_TCP6ROW_OWNER_PID) state() MIB_TCP_STATE { return row.dwState }
+
+func (row MIB_TCP6ROW_OWNER_PID) localPort() uint16 { return row.dwLocalPort.uint16() }
+
 type MIB_TCP_STATE uint32
 
 const (
