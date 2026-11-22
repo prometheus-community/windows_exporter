@@ -184,6 +184,7 @@ percentages except where noted.
 | `windows-system` | `system` | `WindowsHostRebooted` | Boot time less than ten minutes old and changed | 0m | Info |
 | `windows-active-directory` | `ad` | `WindowsADPendingReplication` | Pending operations above `adPendingReplicationThreshold` (50) | 15m | Warning |
 | `windows-active-directory` | `ad` | `WindowsADReplicationFailures` | Failed synchronization requests above `adReplicationFailureRateThreshold` (0 requests/second) | 15m | Warning |
+| `windows-active-directory` | `ad` | `WindowsADReplicationPartnerFailing` | Inbound replication of a naming context from a partner failed at least once in a row (`replication_partners` sub-collector) | 1h | Warning |
 | `windows-time` | `time` | `WindowsClockNotSynchronising` | No active NTP time sources | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSkewDetected` | Absolute reported time offset above `clockOffsetThresholdSeconds` (0.05 seconds) | 10m | Warning |
 | `windows-time` | `time` | `WindowsClockSourceLocal` | Clock source is `Local CMOS Clock` or `NoSync` | 10m | Warning |

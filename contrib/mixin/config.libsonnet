@@ -97,6 +97,7 @@
       WindowsHostRebooted: true,
       WindowsADPendingReplication: true,
       WindowsADReplicationFailures: true,
+      WindowsADReplicationPartnerFailing: true,
       WindowsClockNotSynchronising: true,
       WindowsClockSkewDetected: true,
       WindowsClockSourceLocal: true,

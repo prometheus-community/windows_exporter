@@ -7,29 +7,64 @@
 package ad
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/ntdsapi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const Name = "ad"
+const (
+	Name = "ad"
 
-type Config struct{}
+	subCollectorMetrics             = "metrics"
+	subCollectorReplicationPartners = "replication_partners"
+)
+
+type Config struct {
+	CollectorsEnabled []string `yaml:"enabled"`
+}
 
 //nolint:gochecknoglobals
-var ConfigDefaults = Config{}
+var ConfigDefaults = Config{
+	CollectorsEnabled: []string{
+		subCollectorMetrics,
+		subCollectorReplicationPartners,
+	},
+}
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
+
+	// dcName is the DNS name of the local domain controller, so that DsBindW
+	// binds to it with Kerberos instead of to any global catalog.
+	dcName string
+	// dsHandle is the directory service binding of the replication_partners
+	// sub-collector. It is 0 until the first scrape binds, and after a failed
+	// call, so that the next scrape binds again.
+	dsHandle ntdsapi.Handle
+	// accessDeniedOnce limits the warning about a missing replication right to
+	// one per exporter start.
+	accessDeniedOnce sync.Once
+
+	replicationPartnerConsecutiveFailures *prometheus.Desc
+	replicationPartnerLastAttempt         *prometheus.Desc
+	replicationPartnerLastResult          *prometheus.Desc
+	replicationPartnerLastSuccess         *prometheus.Desc
 
 	addressBookClientSessions                                *prometheus.Desc
 	addressBookOperationsTotal                               *prometheus.Desc
@@ -100,6 +135,10 @@ func New(config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -107,8 +146,26 @@ func New(config *Config) *Collector {
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
+		config: ConfigDefaults,
+	}
+	c.config.CollectorsEnabled = make([]string, 0)
+
+	var collectorsEnabled string
+
+	app.Flag(
+		"collector.ad.enabled",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -117,24 +174,66 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
+	c.perfDataCollector = nil
+
+	if c.dsHandle != 0 {
+		err := ntdsapi.Unbind(c.dsHandle)
+		c.dsHandle = 0
+
+		if err != nil {
+			return fmt.Errorf("failed to release the directory service binding: %w", err)
+		}
+	}
 
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	subCollectors := []string{subCollectorMetrics, subCollectorReplicationPartners}
+
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains(subCollectors, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join(subCollectors, ", "),
+			)
+		}
+	}
+
+	c.logger = logger.With(slog.String("collector", Name))
 	c.buildDescriptors()
 
-	var err error
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorReplicationPartners) {
+		if err := ntdsapi.Load(); err != nil {
+			return err
+		}
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DirectoryServices", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
+		if err := sysinfoapi.Load(); err != nil {
+			return err
+		}
+
+		dcName, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
+		if err != nil {
+			return fmt.Errorf("failed to get the DNS name of the domain controller: %w", err)
+		}
+
+		c.dcName = dcName
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		var err error
+
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "DirectoryServices", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
+		}
 	}
 
 	return nil
 }
 
 func (c *Collector) buildDescriptors() {
+	c.buildReplicationPartnerDescriptors()
+
 	c.addressBookOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "address_book_operations_total"),
 		"Total number of address book (NSPI) operations, by operation (AB ANR/Browses/Matches/Property Reads/Searches/Proxy Lookups).",
@@ -513,6 +612,24 @@ func (c *Collector) buildDescriptors() {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	errs := make([]error, 0)
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		if err := c.collectPerfData(ch); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorReplicationPartners) {
+		if err := c.collectReplicationPartners(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed to collect replication partner metrics: %w", err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) collectPerfData(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", err)
