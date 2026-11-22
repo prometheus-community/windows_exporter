@@ -298,7 +298,8 @@ The `collector` label contains the configured object `name`.
 
 # Examples
 
-The following examples cover Windows Server roles that have no collector of their own. Object and counter names are
+The Storage Replica, ASP.NET and Netlogon examples cover Windows Server roles that have no collector of their own.
+Object and counter names are
 the English names from the Microsoft documentation linked with each example; check them on your server with
 `Get-Counter -ListSet '<object>' | Select-Object -ExpandProperty Paths`. Counters with `type: counter` hold cumulative
 raw values. Rates such as `Requests/Sec` also do with the default `raw` type, so query them with `rate()`.
@@ -381,8 +382,9 @@ collector:
             type: "gauge"
 ```
 
-The `ASP.NET` object only exists while the ASP.NET 4.x feature is installed, and its instances appear once an
-application has started.
+Both objects only exist while the ASP.NET 4.x feature is installed. The `ASP.NET Applications` instances appear once an
+application has started. The `__Total__` instance repeats the sum of all applications, so exclude it with
+`app!="__Total__"` before you use `sum()`.
 
 ## Netlogon
 
@@ -415,7 +417,10 @@ collector:
 ```
 
 `Semaphore Waiters` above 0 for longer periods means authentication requests wait for a free MaxConcurrentApi slot.
-An increasing `windows_performancecounter_netlogon_semaphore_timeouts_total` means they gave up.
+If `Semaphore Holders` stays below MaxConcurrentApi at the same time, the bottleneck is further downstream, at the
+domain controller named in the instance. An increasing `windows_performancecounter_netlogon_semaphore_timeouts_total`
+means requests gave up. The `_Total` instance repeats the sum of all secure channels, so exclude it before you use
+`sum()`.
 
 ## thermalzone collector
 
