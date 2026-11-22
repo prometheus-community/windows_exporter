@@ -7,6 +7,24 @@ notes below were recorded on a Windows Server 2025 DC (forest with one DC,
 light lab traffic) so that changes can be checked without one. Re-check them on
 a DC when one is available.
 
+## Replication partners
+
+The `replication_partners` sub-collector calls `DsReplicaGetInfoW` with
+`DS_REPL_INFO_NEIGHBORS` and no naming context, which returns the inbound
+neighbors of every naming context, the data of `repadmin /showrepl`
+(binding in `internal/headers/ntdsapi`). `DsBindW` needs the DNS name of the
+local DC: with a NULL name it binds to any global catalog of the forest, and
+`localhost` has no matching SPN, so it cannot use Kerberos. The binding does
+not survive a restart of the directory service, so a failed query unbinds and
+the next scrape binds again; Build does not bind, so a DC that is still
+starting does not lose the collector.
+
+A DC without partners (the lab DC below) returns zero neighbors and publishes
+no series. `partner`/`partner_site` come from the source's NTDS Settings DN;
+a deleted DSA keeps `\0ADEL:<guid>` in its first RDN and the server and site
+behind it, so two entries can map to the same labels and the second one falls
+back to the full DN.
+
 ## Raw counter types
 
 `pdh.CounterTypeRaw` returns the raw first value and, for fractions, the base

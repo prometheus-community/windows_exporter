@@ -5,14 +5,20 @@ The ad collector exposes metrics about a Active Directory Domain Services domain
 |||
 -|-
 Metric name prefix  | `ad`
-Classes             | [`Win32_PerfRawData_DirectoryServices_DirectoryServices`](https://msdn.microsoft.com/en-us/library/ms803980.aspx)
+Data source         | Perflib object `DirectoryServices` (`metrics`), [`DsReplicaGetInfoW`](https://learn.microsoft.com/en-us/windows/win32/api/ntdsapi/nf-ntdsapi-dsreplicagetinfow) (`replication_partners`)
 Enabled by default? | No
 
 ## Flags
 
-None
+### `--collector.ad.enabled`
+
+Comma-separated list of collectors to use. Supported values are `metrics` and `replication_partners`. Defaults to all, if not specified.
+
+Example: `--collector.ad.enabled=metrics`
 
 ## Metrics
+
+### Metrics (`metrics`)
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
@@ -79,11 +85,61 @@ Name | Description | Type | Labels
 `windows_ad_tombstoned_objects_collected_total` | Total number of tombstoned objects garbage collected (Tombstones Garbage Collected) | counter | None
 `windows_ad_tombstoned_objects_visited_total` | Total number of tombstoned objects visited by garbage collection (Tombstones Visited) | counter | None
 
+### Replication partners (`replication_partners`)
+
+The inbound replication state of every naming context from every source domain controller, the data that
+`repadmin /showrepl` shows. The performance counters above only count replication for the whole domain controller;
+these series name the partner and naming context that fail.
+
+Name | Description | Type | Labels
+-----|-------------|------|-------
+`windows_ad_replication_partner_consecutive_failures` | Number of failed inbound replication attempts since the last successful one | gauge | `naming_context`, `partner`, `partner_site`
+`windows_ad_replication_partner_last_result` | Win32 error code of the last inbound replication attempt, 0 on success | gauge | `naming_context`, `partner`, `partner_site`
+`windows_ad_replication_partner_last_success_timestamp_seconds` | Time of the last successful inbound replication, as a Unix timestamp. Absent if it never succeeded | gauge | `naming_context`, `partner`, `partner_site`
+`windows_ad_replication_partner_last_attempt_timestamp_seconds` | Time of the last inbound replication attempt, as a Unix timestamp. Absent if it was never attempted | gauge | `naming_context`, `partner`, `partner_site`
+
+`naming_context` is the distinguished name of the naming context, for example `DC=example,DC=com`,
+`CN=Configuration,DC=example,DC=com` or `DC=DomainDnsZones,DC=example,DC=com`. `partner` and `partner_site` are the
+server and site name of the source domain controller. If its NTDS Settings object does not have the usual
+distinguished name, `partner` is that distinguished name and `partner_site` is empty. The same applies when a deleted
+domain controller and its successor with the same name are both still listed.
+
+Common values of `windows_ad_replication_partner_last_result` are 1722 (RPC server unavailable), 1256 (remote system
+not available), 8453 (replication access denied), 8524 (DNS lookup failure), 8456/8457 (source or destination is
+rejecting replication) and 8614 (the partner has not replicated for longer than the tombstone lifetime).
+`net helpmsg <code>` prints the message of a code.
+
+The collector binds to the directory service of the local domain controller by its DNS name, so Kerberos is used.
+Reading the replication state needs the "Monitor Active Directory Replication" right, which domain controllers and
+administrators have, so the default `LocalSystem` service account works. A domain controller
+without partners, for example the only one in its forest, publishes no series. A failed bind or query fails only this
+sub-collector; the next scrape binds again.
+
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+
+```
+windows_ad_replication_partner_consecutive_failures{naming_context="DC=example,DC=com",partner="DC02",partner_site="Default-First-Site-Name"} 3
+windows_ad_replication_partner_last_result{naming_context="DC=example,DC=com",partner="DC02",partner_site="Default-First-Site-Name"} 1722
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Time since the last successful inbound replication, per partner and naming context:
+
+```
+time() - windows_ad_replication_partner_last_success_timestamp_seconds
+```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+```yaml
+- alert: WindowsADReplicationPartnerFailing
+  expr: windows_ad_replication_partner_consecutive_failures > 0
+  for: 1h
+  labels:
+    severity: warning
+  annotations:
+    summary: "{{ $labels.instance }} fails to replicate {{ $labels.naming_context }} from {{ $labels.partner }}"
+```
+
+The mixin ships this alert as `WindowsADReplicationPartnerFailing`.
