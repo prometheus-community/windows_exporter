@@ -112,8 +112,11 @@ rejecting replication) and 8614 (the partner has not replicated for longer than 
 The collector binds to the directory service of the local domain controller by its DNS name, so Kerberos is used.
 Reading the replication state needs the "Monitor Active Directory Replication" right, which domain controllers and
 administrators have, so the default `LocalSystem` service account works. A domain controller
-without partners, for example the only one in its forest, publishes no series. A failed bind or query fails only this
-sub-collector; the next scrape binds again.
+without partners, for example the only one in its forest, publishes no series. If the service account lacks that
+right, the exporter logs a warning once and publishes no replication series; the other `ad` metrics keep working. Any
+other failed bind or query marks the `ad` collector as failed for that scrape, and the next scrape binds again.
+`DsReplicaGetInfoW` takes no timeout, so an unresponsive directory service can hold the scrape until its RPC times
+out.
 
 ### Example metric
 

@@ -142,7 +142,7 @@ func InboundNeighbors(handle Handle) ([]Neighbor, error) {
 	r0, _, _ := syscall.SyscallN(procDsReplicaGetInfoW.Addr(),
 		uintptr(handle),
 		dsReplInfoNeighbors,
-		0, // All naming contexts.
+		0, // All naming contexts, as for repadmin /showrepl (MS-DRSR IDL_DRSGetReplInfo, DS_REPL_INFO_NEIGHBORS).
 		0, // All sources.
 		uintptr(unsafe.Pointer(&info)),
 	)

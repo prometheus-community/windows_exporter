@@ -6,8 +6,9 @@ title: WindowsADReplicationPartnerFailing
 
 Inbound replication of one naming context from one source domain controller
 has failed on every attempt for at least an hour. The alert names the naming
-context, the partner and its site. This alert is opt-in and requires the `ad`
-collector with its `replication_partners` sub-collector.
+context, the partner and its site. The alert only fires where the `ad`
+collector is enabled, which is off by default, with its `replication_partners`
+sub-collector, which is on by default.
 
 ## Impact
 

@@ -9,11 +9,13 @@ package ad
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/ntdsapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
 // buildReplicationPartnerDescriptors creates the descriptors of the
@@ -60,6 +62,19 @@ func (c *Collector) collectReplicationPartners(ch chan<- prometheus.Metric) erro
 	}
 
 	neighbors, err := ntdsapi.InboundNeighbors(c.dsHandle)
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		// The service account lacks the "Monitor Active Directory Replication"
+		// right. The binding is fine, so keep it, warn once and publish nothing
+		// instead of failing the whole ad collector on every scrape.
+		c.accessDeniedOnce.Do(func() {
+			c.logger.Warn("reading the replication partners was denied, grant the service account the 'Monitor Active Directory Replication' right or disable the replication_partners sub-collector",
+				slog.Any("err", err),
+			)
+		})
+
+		return nil
+	}
+
 	if err != nil {
 		// A binding does not survive a restart of the directory service, so
 		// bind again on the next scrape.
@@ -82,9 +97,8 @@ func (c *Collector) writeReplicationPartners(ch chan<- prometheus.Metric, neighb
 	for _, neighbor := range neighbors {
 		partner, site := partnerFromDsaDN(neighbor.SourceDsaDN)
 
-		// A domain controller that was demoted and promoted again under the same
-		// name can show up twice, once as a deleted DSA. Fall back to the full
-		// distinguished name to keep the series apart.
+		// partnerFromDsaDN already keeps deleted DSAs apart. Fall back to the full
+		// distinguished name for any other entry that would share the series.
 		k := key{neighbor.NamingContext, partner, site}
 		if _, ok := seen[k]; ok {
 			partner, site = neighbor.SourceDsaDN, ""
@@ -134,8 +148,16 @@ func (c *Collector) writeReplicationPartners(ch chan<- prometheus.Metric, neighb
 // partnerFromDsaDN returns the server and site name of a source domain
 // controller from the distinguished name of its NTDS Settings object,
 // CN=NTDS Settings,CN=<server>,CN=Servers,CN=<site>,CN=Sites,CN=Configuration,...
-// For any other shape it returns the distinguished name and an empty site.
+// For any other shape, and for a deleted DSA, it returns the distinguished name
+// and an empty site.
 func partnerFromDsaDN(dn string) (string, string) {
+	// A deleted object carries "\0ADEL:<guid>" in its RDN. A deleted DSA keeps
+	// the server and site of its live successor, so short labels would publish
+	// its failures under the name of a healthy domain controller.
+	if strings.Contains(strings.ToUpper(dn), `\0ADEL:`) {
+		return dn, ""
+	}
+
 	rdns := splitDN(dn)
 	if len(rdns) < 5 ||
 		!strings.EqualFold(rdns[2], "CN=Servers") ||

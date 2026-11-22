@@ -17,13 +17,19 @@ local DC: with a NULL name it binds to any global catalog of the forest, and
 `localhost` has no matching SPN, so it cannot use Kerberos. The binding does
 not survive a restart of the directory service, so a failed query unbinds and
 the next scrape binds again; Build does not bind, so a DC that is still
-starting does not lose the collector.
+starting does not lose the collector. `ERROR_ACCESS_DENIED` from the query
+means the service account lacks "Monitor Active Directory Replication": it is
+logged once and the sub-collector publishes nothing instead of failing `ad` on
+every scrape. `DsBindW` and `DsReplicaGetInfoW` take no timeout, so the scrape
+budget cannot be enforced; a hung NTDS holds the scrape until the RPC times out.
 
 A DC without partners (the lab DC below) returns zero neighbors and publishes
 no series. `partner`/`partner_site` come from the source's NTDS Settings DN;
 a deleted DSA keeps `\0ADEL:<guid>` in its first RDN and the server and site
-behind it, so two entries can map to the same labels and the second one falls
-back to the full DN.
+of its live successor, so it always gets the full DN as `partner` and an empty
+`partner_site`; otherwise its failures would appear under the healthy DC's name,
+depending on the order of the entries. Any other duplicate also falls back to
+the full DN.
 
 ## Raw counter types
 

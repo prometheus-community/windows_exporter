@@ -28,10 +28,10 @@ func TestPartnerFromDsaDN(t *testing.T) {
 			site:    "Default-First-Site-Name",
 		},
 		{
-			// A deleted DSA keeps its server and site in the DN.
+			// A deleted DSA keeps the server and site of its successor, so it
+			// keeps the full DN.
 			dn:      `CN=NTDS Settings\0ADEL:5b3c1d2e-0000-0000-0000-000000000000,CN=DC03,CN=Servers,CN=Branch,CN=Sites,CN=Configuration,DC=example,DC=com`,
-			partner: "DC03",
-			site:    "Branch",
+			partner: `CN=NTDS Settings\0ADEL:5b3c1d2e-0000-0000-0000-000000000000,CN=DC03,CN=Servers,CN=Branch,CN=Sites,CN=Configuration,DC=example,DC=com`,
 		},
 		{
 			dn:      `CN=NTDS Settings,CN=DC04,CN=Servers,CN=Berlin\, Mitte,CN=Sites,CN=Configuration,DC=example,DC=com`,
@@ -67,23 +67,24 @@ func TestWriteReplicationPartners(t *testing.T) {
 
 	neighbors := []ntdsapi.Neighbor{
 		{
+			// Same server and site as the live DC02, from a deleted DSA. It
+			// comes first, so the live entry must not depend on the order.
+			NamingContext:  domainNC,
+			SourceDsaDN:    dc02Old,
+			LastSyncResult: 8419, // ERROR_DS_CANT_FIND_DSA_OBJ.
+		},
+		{
 			NamingContext:           domainNC,
 			SourceDsaDN:             dc02,
 			LastSyncSuccess:         success,
 			LastSyncAttempt:         attempt,
-			LastSyncResult:          1722, // RPC_S_SERVER_UNAVAILABLE
+			LastSyncResult:          1722, // RPC_S_SERVER_UNAVAILABLE.
 			ConsecutiveSyncFailures: 3,
 		},
 		{
 			// Never replicated: no timestamps.
 			NamingContext: configNC,
 			SourceDsaDN:   dc02,
-		},
-		{
-			// Same server and site as the first entry, from a deleted DSA.
-			NamingContext:  domainNC,
-			SourceDsaDN:    dc02Old,
-			LastSyncResult: 8419, // ERROR_DS_DRA_SOURCE_DISABLED
 		},
 	}
 

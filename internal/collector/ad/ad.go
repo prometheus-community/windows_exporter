@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -44,6 +45,7 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
@@ -55,6 +57,9 @@ type Collector struct {
 	// sub-collector. It is 0 until the first scrape binds, and after a failed
 	// call, so that the next scrape binds again.
 	dsHandle ntdsapi.Handle
+	// accessDeniedOnce limits the warning about a missing replication right to
+	// one per exporter start.
+	accessDeniedOnce sync.Once
 
 	replicationPartnerConsecutiveFailures *prometheus.Desc
 	replicationPartnerLastAttempt         *prometheus.Desc
@@ -194,6 +199,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	c.logger = logger.With(slog.String("collector", Name))
 	c.buildDescriptors()
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorReplicationPartners) {
@@ -216,7 +222,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		var err error
 
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DirectoryServices", pdh.InstancesAll)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "DirectoryServices", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 		}
