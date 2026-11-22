@@ -50,15 +50,6 @@ type TCPConnectionStats struct {
 	PortsInRange uint32
 }
 
-func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
-	stats, err := GetTCPConnectionStats(family, PortRange{})
-	if err != nil {
-		return nil, err
-	}
-
-	return stats.States, nil
-}
-
 // GetTCPConnectionStats reads the TCP connection table of family once and
 // returns the connection count per state and the number of distinct local
 // ports inside portRange. An empty portRange counts no ports.

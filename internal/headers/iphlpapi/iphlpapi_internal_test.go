@@ -33,7 +33,7 @@ func TestSummarizeTCPTable(t *testing.T) {
 		{dwState: TCPStateEstablished, dwLocalPort: networkPort(49152)},
 		{dwState: TCPStateTimeWait, dwLocalPort: networkPort(50000)},
 		{dwState: TCPStateEstablished, dwLocalPort: networkPort(65535)},
-		// The last port inside a range that ends at 49151 is outside.
+		// The port just below the range start is outside.
 		{dwState: TCPStateEstablished, dwLocalPort: networkPort(49151)},
 	}
 

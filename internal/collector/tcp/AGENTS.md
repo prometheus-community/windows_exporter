@@ -20,6 +20,11 @@ of rows. Ports in the rows are in network byte order (`BigEndianUint32`).
 and `Set-NetTCPSetting` can change each setting on Server 2016 and later.
 Which of them the kernel uses for a connection depends on the transport filter.
 If a probe on Windows shows that netsh and the `Internet` setting can differ,
-read the range per address family instead. A count counts every state:
+read the range per address family instead. Open questions for a Windows probe: whether IPv4 and IPv6 share one ephemeral
+port pool (then the per-`af` counts should be summed for the alert), and
+whether `GetExtendedTcpTable` lists sockets in state `BOUND` (bound, not
+connected, shown by `netstat -anoq`); the docs assume it does not. If MI cannot
+read the range, Build logs a warning and drops `dynamic_ports` instead of
+failing the collector. A count counts every state:
 a `TIME_WAIT` connection still holds its local port, and a listener on an
 ephemeral port takes it out of the pool.

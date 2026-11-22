@@ -14,8 +14,8 @@ needs the `tcp` collector with its `dynamic_ports` sub-collector.
 ## Impact
 
 Windows assigns the local port of an outgoing connection from this range. Once
-it is exhausted, new outgoing connections fail with `WSAENOBUFS` (10055) or
-`WSAEADDRINUSE` (10048), and the System event log records event 4227 or 4231
+it is exhausted, new outgoing connections fail with `WSAENOBUFS` (10055),
+an explicit `bind` to port 0 with `WSAEADDRINUSE` (10048), and the System event log records event 4227 or 4231
 from Tcpip. Services that open many short connections, such as web servers
 calling backends, proxies, Exchange or SQL clients, fail first. Incoming
 connections to listening ports are not affected.
@@ -31,11 +31,18 @@ connections to listening ports are not affected.
 
    ```powershell
    netsh int ipv4 show dynamicport tcp
+   netsh int ipv4 show excludedportrange tcp
+   netstat -anoq | findstr BOUND
    Get-NetTCPConnection | Group-Object -Property State, OwningProcess | Sort-Object Count -Descending | Select-Object -First 10 Count, Name
    Get-Process -Id <OwningProcess>
    ```
 
-3. Check the System event log for Tcpip events 4227 and 4231.
+3. Excluded port ranges inside the dynamic range (often reserved by Hyper-V,
+   WinNAT or container networking) leave fewer usable ports than the range
+   size, so exhaustion can happen below 100 percent. Sockets in state `BOUND`
+   (bound, not connected) also hold ports but are most likely not counted by
+   the metric; many of them for one process point to a socket leak.
+4. Check the System event log for Tcpip events 4227 and 4231.
 
 ## Mitigation
 

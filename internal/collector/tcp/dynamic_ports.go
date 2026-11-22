@@ -22,7 +22,7 @@ const dynamicPortRangeSetting = "Internet"
 
 //nolint:gochecknoglobals
 var dynamicPortRangeQuery = utils.Must(mi.NewQuery(
-	"SELECT SettingName, DynamicPortRangeStartPort, DynamicPortRangeNumberOfPorts FROM MSFT_NetTCPSetting",
+	"SELECT SettingName, DynamicPortRangeStartPort, DynamicPortRangeNumberOfPorts FROM MSFT_NetTCPSetting WHERE SettingName = 'Internet'",
 ))
 
 // msftNetTCPSetting is the part of MSFT_NetTCPSetting that holds the dynamic

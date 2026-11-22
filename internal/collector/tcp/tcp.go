@@ -151,10 +151,19 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
 		portRange, err := queryDynamicPortRange(miSession)
 		if err != nil {
-			return err
-		}
+			// The other sub-collectors do not need MI, so a broken provider
+			// disables only this one instead of the whole collector.
+			logger.Warn("failed to read the TCP dynamic port range, disabling the dynamic_ports sub-collector",
+				slog.String("collector", Name),
+				slog.Any("err", err),
+			)
 
-		c.dynamicPortRange = portRange
+			c.config.CollectorsEnabled = slices.DeleteFunc(slices.Clone(c.config.CollectorsEnabled), func(name string) bool {
+				return name == subCollectorDynamicPorts
+			})
+		} else {
+			c.dynamicPortRange = portRange
+		}
 	}
 
 	labels := []string{"af"}

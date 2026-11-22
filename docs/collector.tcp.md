@@ -45,7 +45,16 @@ When all of them are held, new outgoing connections fail with `WSAENOBUFS` (1005
 The collector reads the range once at start from the `Internet` setting of `MSFT_NetTCPSetting`
 (`Get-NetTCPSetting -SettingName Internet`) and uses it for both address families. Restart the exporter after changing
 the range with `netsh int <ipv4|ipv6> set dynamicport tcp` or `Set-NetTCPSetting`. Both sub-collectors that read the
-connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape.
+connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If the range
+cannot be read, the exporter logs a warning and runs without `dynamic_ports`.
+
+The count has limits:
+
+- Ports held by sockets that are bound but not connected (state `BOUND` in `netstat -anoq` and `Get-NetTCPConnection`)
+  are most likely not part of the connection table this metric reads, so a leak of bound sockets is under-counted.
+- Excluded port ranges (`netsh int ipv4 show excludedportrange tcp`), which Hyper-V, WinNAT or container networking
+  reserve, shrink the usable range without showing up in `windows_tcp_dynamic_port_range_size`.
+- Connections that take their local port from the AutoReuse port range of `Set-NetTCPSetting` are not counted.
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_

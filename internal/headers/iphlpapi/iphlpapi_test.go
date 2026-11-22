@@ -16,12 +16,27 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func TestGetTCPConnectionStates(t *testing.T) {
+func TestGetTCPConnectionStats(t *testing.T) {
 	t.Parallel()
 
-	pid, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET)
+	var listenConf net.ListenConfig
+
+	listener, err := listenConf.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	require.NotEmpty(t, pid)
+
+	t.Cleanup(func() {
+		require.NoError(t, listener.Close())
+	})
+
+	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+
+	port := uint16(tcpAddr.Port)
+
+	stats, err := iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: port, NumberOfPorts: 1})
+	require.NoError(t, err)
+	require.NotZero(t, stats.States[iphlpapi.TCPStateListening])
+	require.EqualValues(t, 1, stats.PortsInRange)
 }
 
 func TestGetOwnerPIDOfTCPPort(t *testing.T) {
@@ -44,10 +59,10 @@ func TestGetOwnerPIDOfTCPPort(t *testing.T) {
 	require.EqualValues(t, os.Getpid(), pid)
 }
 
-func BenchmarkGetTCPConnectionStates(b *testing.B) {
+func BenchmarkGetTCPConnectionStats(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_, _ = iphlpapi.GetTCPConnectionStates(windows.AF_INET)
+		_, _ = iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: 49152, NumberOfPorts: 16384})
 	}
 }
