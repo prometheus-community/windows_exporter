@@ -106,6 +106,28 @@ var DHCP_SUBNET_STATE_NAMES = map[DHCP_SUBNET_STATE]string{
 	DhcpSubnetInvalidState:     "InvalidState",
 }
 
+// DHCP_RESERVATION_INFO_ARRAY https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_reservation_info_array
+type DHCP_RESERVATION_INFO_ARRAY struct {
+	NumElements win32.DWORD
+	Elements    **DHCP_IP_RESERVATION_INFO
+}
+
+// DHCP_IP_RESERVATION_INFO https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_ip_reservation_info
+type DHCP_IP_RESERVATION_INFO struct {
+	ReservedIpAddress   DHCP_IP_ADDRESS
+	ReservedForClient   DHCP_BINARY_DATA
+	ReservedClientName  win32.LPWSTR
+	ReservedClientDesc  win32.LPWSTR
+	BAllowedClientTypes byte
+	FOptionsPresent     byte
+}
+
+// DHCP_BINARY_DATA https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_binary_data
+type DHCP_BINARY_DATA struct {
+	DataLength win32.DWORD
+	Data       *byte
+}
+
 type DHCP_FAILOVER_STATISTICS struct {
 	NumAddr          win32.DWORD
 	AddrFree         win32.DWORD
