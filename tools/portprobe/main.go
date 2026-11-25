@@ -1195,7 +1195,10 @@ func boundPorts() []int {
 }
 
 // tablePorts returns local ports of the IP Helper TCP (all states) or UDP
-// tables for IPv4 and IPv6, with TIME_WAIT rows separately.
+// tables for IPv4 and IPv6, with TIME_WAIT and FIN_WAIT2 rows separately.
+// Both hold only a weak port reference after closesocket, so they do not
+// block bind(0). A half-closed FIN_WAIT2 socket that is still open does hold
+// its port; the table cannot tell the two apart.
 func tablePorts(proto string) (ports, timeWait []int) {
 	for _, af := range []uint32{windows.AF_INET, windows.AF_INET6} {
 		if proto == "udp" {
@@ -1224,7 +1227,7 @@ func tablePorts(proto string) (ports, timeWait []int) {
 			r := buf[4+i*rowSize:]
 			p := int(binary.BigEndian.Uint16(r[portOff:]))
 
-			if binary.LittleEndian.Uint32(r[stateOff:]) == 11 {
+			if st := binary.LittleEndian.Uint32(r[stateOff:]); st == 11 || st == 7 {
 				timeWait = append(timeWait, p)
 			} else {
 				ports = append(ports, p)
