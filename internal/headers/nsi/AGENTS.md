@@ -11,13 +11,14 @@ reimplementation. Check new calls the same way before relying on them.
 ## Call path of netsh
 
 Found by static analysis of the x64 binaries of build 26100 (user mode
-26100.9818, `netio.sys` 26100.9974) in November 2026, without PDB symbols. No
-binary was run for it. Names of internal structures and functions below are
-descriptive, not symbol names.
+26100.9818, `netio.sys` 26100.9974) in November 2026, later checked against
+the public PDBs from the Microsoft symbol server. No binary was run for it.
+Function and object names in backticks below are Microsoft symbol names; the
+public PDBs carry no structure types, so structure fields are descriptive.
 
 ```text
 netsh.exe
-  -> netiohlp.dll    command handler, e.g. show dynamicport (RVA 0x7DC0)
+  -> netiohlp.dll    command handler, e.g. NhIpHandleShowDynamicPortRange
   -> winnsi.dll      NsiRpcGetAllParameters[Ex]
        RPC context NULL     -> nsi.dll!NsiGetAllParametersEx (local)
        RPC context not NULL -> rpcrt4.dll!Ndr64AsyncClientCall (remote)
@@ -131,18 +132,29 @@ necessarily the values in effect.
 
 ## Objects
 
-| Module | Object | Key  | Read-write part | Content                                 |
-|--------|--------|------|-----------------|-----------------------------------------|
-| TCP    | 20     | none | 4 bytes         | dynamic port range (`show dynamicport`) |
-| UDP    | 4      | none | 4 bytes         | dynamic port range                      |
+| Module | Object | Key     | Read-write part | tcpip.sys descriptor                         | Content                                  |
+|--------|--------|---------|-----------------|----------------------------------------------|------------------------------------------|
+| TCP    | 20     | none    | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range (`show dynamicport`)  |
+| UDP    | 4      | none    | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range                       |
+| TCP    | 34     | none    | 44 bytes        | `InetPortPoolExInformationObject`            | extended port pool settings, not decoded |
+| TCP    | 29     | 4 bytes | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
+| UDP    | 5      | 4 bytes | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
+
+netsh handles them in `NhIpHandleShowDynamicPortRange`,
+`NhIpHandleSetDynamicPortRange` and `NhIpHandleShowExcludedPortRange`.
+Object 34 is read by `InetGetAllPortPoolExParameters` and relates to
+`InetIsPortInSmartRange`; its layout is unknown, so do not use it yet. Port
+reservations (`InetPortReservationInformationObject`) are separate objects
+from exclusions. The object indexes of objects 29 and 5 come from static
+analysis only and have not been probed.
 
 Dynamic port range layout: the first port as a big-endian `uint16` at offset 0,
 the number of ports as a little-endian `uint16` at offset 2. The descriptor in
 `tcpip.sys` (one template, registered for TCP object 20 and UDP object 4)
 has no key, a 4-byte read-write part, no read-only parts and no
 single-parameter callback, so the 4 bytes are the whole object. The get-all
-callback copies them from the provider's state without any byte swapping and
-without an address family. Bytes read with `NsiGetParameter` on
+callback `InetGetAllPortPoolParameters` copies them from the port pool without
+any byte swapping and without an address family. Bytes read with `NsiGetParameter` on
 Windows Server 2025 build 26100: `c0 00 00 40` for the default 49152/16384,
 `c0 01 ff 3f` after `netsh int ipv4 set dynamicport tcp start=49153
 num=16383`. Windows 11 build 26300 read the same. The mixed byte order looks
@@ -150,23 +162,42 @@ odd, but the probe and the kernel confirm it; do not "fix" it.
 
 `tcpip.sys` starts with the default `c0 00 00 40`, then loads the persistent
 range and keeps it if it is valid. The same check runs when the active range
-is changed: start port at least 1024, at least 255 ports, and start plus
+is changed (`ValidatePortPoolRw`): start port at least 1024, at least 255 ports, and start plus
 count at most 65536.
 
 There is one object per protocol, not per address family: setting the IPv4
 range with netsh also changed the IPv6 range and every `MSFT_NetTCPSetting`
-instance. Whether IPv4 and IPv6 also share one pool of ports in `tcpip.sys`
-is not known.
+instance.
+
+## Port pools and compartments
+
+`tcpip.sys` keeps one port pool per protocol and network compartment, not per
+address family. `TcpGetPortPoolInCurrentCompartment` and
+`UdpGetPortPoolInCurrentCompartment` take the compartment of the calling
+thread (from `TcpCompartmentSet` and `UdpCompartmentSet`) and no address
+family. The bind handlers of TCP and UDP take a wildcard port from that pool
+with `InetAcquireWildcardPortUnderLock`, for IPv4 and IPv6 alike. So IPv4 and
+IPv6 connections most likely draw from one pool (strong static evidence, not
+measured); the rules for the same port number in both families have not been
+traced.
+
+NSI reads go to the compartment of the calling thread. The exporter runs in
+the default compartment (1); containers with their own compartment have their
+own pools, which the exporter's NSI read does not see. Whether
+`GetExtendedTcpTable` lists connections of other compartments has not been
+checked.
 
 ## Open questions
 
-- Whether IPv4 and IPv6 share one ephemeral pool. The configuration is
-  shared; the allocation has not been traced in `tcpip.sys`.
+- Whether a port number held by an IPv4 connection can also be handed to an
+  IPv6 connection. The pool is shared; the per-port rules are not traced.
+- The layout of TCP object 34 (extended port pool).
 - Whether the object index and layout are the same on Windows Server 2016 and
   2019. CI covers Windows Server 2022 and Windows 11 ARM through the live
   test. Callers must keep a fallback (the tcp collector falls back to
   `MSFT_NetTCPSetting`).
-- The excluded port ranges (`show excludedportrange`) have not been traced.
+- The layout of the excluded port ranges (objects 29 and 5) has not been
+  probed on a live system.
 - What stores 3 and 4 are for.
 
 ## Adding a call
