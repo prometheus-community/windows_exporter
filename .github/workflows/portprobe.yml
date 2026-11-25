@@ -45,57 +45,37 @@ jobs:
           Get-Counter -ListSet TCPv4,TCPv6,UDPv4,UDPv6 | ForEach-Object { $_.CounterSetName; $_.Counter }
           logman query providers Microsoft-Windows-TCPIP | Select-Object -First 60
 
-      - name: NSI and netsh, default range
+      - name: Hold, bench and iphlpapi exports, default range
         shell: powershell
         run: |
-          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") {
-            netsh int $af show dynamicport $p
-            netsh int $af show excludedportrange protocol=$p store=active
-            netsh int $af show excludedportrange protocol=$p store=persistent
-          } }
-          .\portprobe.exe nsi
+          .\portprobe.exe hold
+          .\portprobe.exe bench
 
-      - name: Pairs and collisions, default range
-        shell: powershell
-        run: |
-          .\portprobe.exe pairs
-          .\portprobe.exe -n 1500 collide
-
-      - name: Small range experiments
+      - name: NSI as non-admin user and as LocalSystem
         shell: powershell
         run: |
           $ErrorActionPreference = "Continue"
-          function Show { foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { "== $af $p"; netsh int $af show dynamicport $p store=active } } }
-          "## IPv6 set, IPv4 read"
-          netsh int ipv6 set dynamicport tcp start=50001 num=301 store=active
-          netsh int ipv6 set dynamicport udp start=50003 num=303 store=active
-          Show
-          .\portprobe.exe nsi | Select-String "range"
-          "## Minimum: num=254 must fail, num=255 works"
-          netsh int ipv4 set dynamicport tcp start=50000 num=254 store=active
+          $exe = (Resolve-Path .\portprobe.exe).Path
+          $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 16) + "!a1"
+          net user probeuser $pw /add | Out-Null
+          foreach ($run in @(@{n="probeuser"; a=@("/ru","probeuser","/rp",$pw)}, @{n="SYSTEM"; a=@("/ru","SYSTEM")})) {
+            $out = "$env:RUNNER_TEMP\nsi-$($run.n).txt"
+            icacls $env:RUNNER_TEMP /grant "probeuser:(OI)(CI)M" | Out-Null
+            icacls (Split-Path $exe) /grant "probeuser:(OI)(CI)RX" | Out-Null
+            schtasks /create /tn "probe-$($run.n)" /tr "cmd /c `"$exe`" nsi > `"$out`" 2>&1 & whoami /groups >> `"$out`"" /sc once /st 23:59 /f @($run.a) | Out-Null
+            schtasks /run /tn "probe-$($run.n)" | Out-Null
+            Start-Sleep 15
+            "===== as $($run.n)"
+            Get-Content $out | Select-String -NotMatch "probe getall"
+          }
+          net user probeuser /delete | Out-Null
+
+      - name: Small range, SO_REUSE_UNICASTPORT
+        shell: powershell
+        run: |
           netsh int ipv4 set dynamicport tcp start=50000 num=255 store=active
-          netsh int ipv4 set dynamicport udp start=50000 num=255 store=active
-          Show
-          .\portprobe.exe nsi | Select-String "range|store=0"
-          .\portprobe.exe -start 50000 -count 255 exhaust
-          .\portprobe.exe -start 50000 -count 255 connect
-
-          "## Exclusions"
-          netsh int ipv4 add excludedportrange protocol=tcp startport=50100 numberofports=20 store=active
-          netsh int ipv6 add excludedportrange protocol=tcp startport=50110 numberofports=20 store=active
-          netsh int ipv6 add excludedportrange protocol=udp startport=50200 numberofports=10 store=active
-          netsh int ipv4 add excludedportrange protocol=tcp startport=65500 numberofports=5 store=active
-          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { netsh int $af show excludedportrange protocol=$p store=active } }
-          .\portprobe.exe nsi | Select-String -NotMatch "probe getall"
-          .\portprobe.exe -start 50000 -count 255 capacity
-          netsh int ipv4 delete excludedportrange protocol=tcp startport=50100 numberofports=20 store=active
-          netsh int ipv6 delete excludedportrange protocol=tcp startport=50110 numberofports=20 store=active
-          netsh int ipv6 delete excludedportrange protocol=udp startport=50200 numberofports=10 store=active
-          netsh int ipv4 delete excludedportrange protocol=tcp startport=65500 numberofports=5 store=active
-          .\portprobe.exe -start 50000 -count 255 capacity
-
-          "## Port exhaustion events"
-          Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Tcpip'} -MaxEvents 20 -ErrorAction SilentlyContinue | Format-List TimeCreated, Id, Message
+          .\portprobe.exe -start 50000 -count 255 unicast
+          .\portprobe.exe -start 50000 -count 255 hold
 
       - name: Restore range
         if: always()

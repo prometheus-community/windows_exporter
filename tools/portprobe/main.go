@@ -966,6 +966,194 @@ func runNSI() {
 	}
 }
 
+// ---------------------------------------------------------------- hold
+
+//nolint:gochecknoglobals
+var (
+	procInternalGetBoundTcpEndpointTable  = modiphlpapi.NewProc("InternalGetBoundTcpEndpointTable")
+	procInternalGetBoundTcp6EndpointTable = modiphlpapi.NewProc("InternalGetBoundTcp6EndpointTable")
+	procInternalGetTcpDynamicPortRange    = modiphlpapi.NewProc("InternalGetTcpDynamicPortRange")
+	procInternalGetUdpDynamicPortRange    = modiphlpapi.NewProc("InternalGetUdpDynamicPortRange")
+	modkernel32                           = windows.NewLazySystemDLL("kernel32.dll")
+	procGetProcessHeap                    = modkernel32.NewProc("GetProcessHeap")
+	procHeapSize                          = modkernel32.NewProc("HeapSize")
+	procHeapFree                          = modkernel32.NewProc("HeapFree")
+)
+
+// boundTable calls the undocumented iphlpapi export and dumps what it returns.
+func boundTable(p *windows.LazyProc, name string) {
+	if err := p.Find(); err != nil {
+		fmt.Printf("%s: %v\n", name, err)
+
+		return
+	}
+
+	heap, _, _ := procGetProcessHeap.Call()
+
+	var tbl uintptr
+
+	r0, _, _ := syscall.SyscallN(p.Addr(), uintptr(unsafe.Pointer(&tbl)), heap, 0)
+	if r0 != 0 || tbl == 0 {
+		fmt.Printf("%s: error %d\n", name, r0)
+
+		return
+	}
+
+	size, _, _ := syscall.SyscallN(procHeapSize.Addr(), heap, 0, tbl)
+	b := unsafe.Slice((*byte)(unsafe.Pointer(tbl)), int(size))
+	n := binary.LittleEndian.Uint32(b)
+
+	inRange := 0
+
+	if n > 0 {
+		rowSize := (int(size) - 4) / int(n)
+		fmt.Printf("%s: n=%d heap=%d bytes (approx row %d)\n  first rows: %s\n", name, n, size, rowSize, hex.EncodeToString(b[:min(len(b), 4+3*rowSize+8)]))
+	} else {
+		fmt.Printf("%s: n=0 heap=%d\n", name, size)
+	}
+
+	_ = inRange
+	_, _, _ = syscall.SyscallN(procHeapFree.Addr(), heap, 0, tbl)
+}
+
+func iphlpRange() {
+	for _, p := range []*windows.LazyProc{procInternalGetTcpDynamicPortRange, procInternalGetUdpDynamicPortRange} {
+		if err := p.Find(); err != nil {
+			fmt.Println(p.Name, err)
+
+			continue
+		}
+
+		var start, count uint16
+		r0, _, _ := syscall.SyscallN(p.Addr(), uintptr(unsafe.Pointer(&start)), uintptr(unsafe.Pointer(&count)))
+		fmt.Printf("%s: r=%d start=%d (0x%04x) count=%d (0x%04x)\n", p.Name, r0, start, start, count, count)
+	}
+}
+
+// runHold holds 37 bound-only, 23 listening and 11 connected TCP sockets
+// and shows which tables list them.
+func runHold() {
+	_, stop := listener("127.0.0.1:40011", false)
+	defer stop()
+
+	var hs []windows.Handle
+
+	b, bp, _ := fill(spec{fam: v4, proto: "tcp", addr: "wildcard"}, 37)
+	l, lp, _ := fill(spec{fam: v4, proto: "tcp", addr: "wildcard", listen: true}, 23)
+	c, cp, _ := connectMany(spec{fam: v4, proto: "tcp", addr: "wildcard"}, &windows.SockaddrInet4{Port: 40011, Addr: [4]byte{127, 0, 0, 1}}, 11, false)
+	b6, _, _ := fill(spec{fam: v6only, proto: "tcp", addr: "wildcard"}, 5)
+	hs = append(append(append(append(hs, b...), l...), c...), b6...)
+
+	fmt.Printf("## hold: bound %v\n  listen %v\n  connected %v\n", bp, lp, cp)
+	tableCounts("tcp")
+	boundTable(procInternalGetBoundTcpEndpointTable, "InternalGetBoundTcpEndpointTable")
+	boundTable(procInternalGetBoundTcp6EndpointTable, "InternalGetBoundTcp6EndpointTable")
+	iphlpRange()
+
+	out, _ := exec.Command("netstat", "-anq", "-p", "TCP").CombinedOutput()
+	bound := 0
+
+	for _, line := range strings.Split(string(out), "\n") {
+		if strings.Contains(line, "BOUND") {
+			bound++
+		}
+	}
+
+	fmt.Printf("netstat -anq BOUND rows (tcp v4): %d\n", bound)
+
+	closeAll(hs)
+}
+
+// runUnicast checks SO_REUSE_UNICASTPORT with fresh listeners: can one local
+// port serve connections to different remote endpoints?
+func runUnicast() {
+	_, s1 := listener("127.0.0.1:40021", false)
+	_, s2 := listener("127.0.0.1:40022", false)
+
+	defer s1()
+	defer s2()
+
+	r1 := &windows.SockaddrInet4{Port: 40021, Addr: [4]byte{127, 0, 0, 1}}
+	r2 := &windows.SockaddrInet4{Port: 40022, Addr: [4]byte{127, 0, 0, 1}}
+
+	for _, mode := range []struct {
+		name      string
+		unicast   bool
+		bindFirst bool
+	}{{"unicast connect", true, false}, {"unicast bind(0)+connect", true, true}, {"plain bind(0)+connect", false, true}} {
+		s := spec{fam: v4, proto: "tcp", addr: "wildcard", unicast: mode.unicast}
+		h1, p1, e1 := connectMany(s, r1, maxSocketsPerSeries, mode.bindFirst)
+		h2, p2, e2 := connectMany(s, r2, maxSocketsPerSeries, mode.bindFirst)
+		fmt.Printf("### %s: to :40021 %d (%s) stop=%s; to :40022 %d (%s) shared ports=%d stop=%s\n",
+			mode.name, len(h1), portSummary(p1), errStr(e1), len(h2), portSummary(p2), overlap(p1, p2), errStr(e2))
+		closeAll(h1)
+		closeAll(h2)
+		// Let FIN_WAIT_2 sockets go: the listeners keep the server ends open.
+		time.Sleep(2 * time.Second)
+	}
+}
+
+// runBench reads the range and the exclusion tables concurrently and in a
+// loop, and checks that NsiFreeTable releases what NsiAllocateAndGetTable
+// allocated.
+func runBench() {
+	const iterations = 20000
+
+	// PROCESS_MEMORY_COUNTERS: cb, PageFaultCount, then 8 SIZE_T fields;
+	// PagefileUsage is the 7th of them.
+	var pmc struct {
+		cb, faults uint32
+		sizes      [8]uintptr
+	}
+
+	proc := modkernel32.NewProc("K32GetProcessMemoryInfo")
+	mem := func() uintptr {
+		pmc.cb = uint32(unsafe.Sizeof(pmc))
+		_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(windows.CurrentProcess()), uintptr(unsafe.Pointer(&pmc)), uintptr(pmc.cb))
+
+		return pmc.sizes[6]
+	}
+
+	for _, kind := range []string{"range", "table"} {
+		before := mem()
+		start := time.Now()
+
+		var (
+			wg   sync.WaitGroup
+			mu   sync.Mutex
+			errs = map[string]int{}
+		)
+
+		for range 8 {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				for range iterations / 8 {
+					var err error
+					if kind == "range" {
+						_, _, _, err = getAll(1, tcpModule, 20, 4, 0, 0)
+					} else {
+						_, _, err = table(1, tcpModule, 29, 4, 2)
+					}
+
+					if err != nil {
+						mu.Lock()
+						errs[err.Error()]++
+						mu.Unlock()
+					}
+				}
+			}()
+		}
+
+		wg.Wait()
+		el := time.Since(start)
+		fmt.Printf("bench %s: %d calls on 8 goroutines in %v (%.1f us/call), errors=%v, pagefile usage %d -> %d KiB\n",
+			kind, iterations, el, float64(el.Microseconds())/iterations, errs, before/1024, mem()/1024)
+	}
+}
+
 // ---------------------------------------------------------------- main
 
 func netsh(args ...string) {
@@ -990,6 +1178,12 @@ func main() {
 		runExhaust()
 	case "connect":
 		runConnect()
+	case "hold":
+		runHold()
+	case "unicast":
+		runUnicast()
+	case "bench":
+		runBench()
 	case "capacity":
 		for _, sp := range []spec{{fam: v4, proto: "tcp", addr: "wildcard"}, {fam: v6only, proto: "tcp", addr: "wildcard"}, {fam: v4, proto: "udp", addr: "wildcard"}, {fam: v6only, proto: "udp", addr: "wildcard"}} {
 			hs, ps, err := fill(sp, maxSocketsPerSeries)
