@@ -50,6 +50,7 @@ Fix the client that opens the connections: reuse connections (HTTP
 keep-alive, connection pools) instead of opening one per request, and close
 leaked ones. Restarting the owning process frees its ports at once. As a short
 term measure, enlarge the range with
-`netsh int ipv4 set dynamicport tcp start=<port> num=<count>` (and `ipv6`),
-keeping clear of ports that services listen on. The exporter picks up the new
-range on the next scrape. Confirm the share stays below the threshold.
+`netsh int ipv4 set dynamicport tcp start=<port> num=<count>`, which also
+changes the IPv6 range, keeping clear of ports that services listen on. The
+exporter picks up the new range on the next scrape, or after a restart if it
+logged that it fell back to `MSFT_NetTCPSetting`. Confirm the share stays below the threshold.

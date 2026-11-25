@@ -7,7 +7,8 @@
 // Package nsi reads parameters of the network store interface (nsi.dll), the
 // store behind the IP Helper API and netsh. The API is undocumented; the
 // object index and the parameter layout here were found by probing Windows
-// 11 build 26300 and Windows Server 2025 build 26100 (see AGENTS.md).
+// 11 build 26300 and Windows Server 2025 build 26100, see
+// internal/collector/tcp/AGENTS.md.
 package nsi
 
 import (
@@ -53,6 +54,8 @@ type npiModuleID struct {
 	moduleID windows.GUID
 }
 
+// tcpModuleID is only read; NsiGetParameter does not modify it.
+//
 //nolint:gochecknoglobals
 var tcpModuleID = npiModuleID{
 	length: uint16(unsafe.Sizeof(npiModuleID{})),
@@ -77,8 +80,9 @@ func TCPDynamicPortRange() (uint16, uint16, error) {
 		uintptr(len(buf)),
 		0, // Offset.
 	)
-	if r0 != 0 {
-		return 0, 0, fmt.Errorf("NsiGetParameter: %w", windows.Errno(r0))
+	// The function returns a 32-bit Win32 error code.
+	if uint32(r0) != 0 {
+		return 0, 0, fmt.Errorf("NsiGetParameter: %w", windows.Errno(uint32(r0)))
 	}
 
 	start, count := parsePortRange(buf)
@@ -87,7 +91,7 @@ func TCPDynamicPortRange() (uint16, uint16, error) {
 }
 
 // parsePortRange decodes the 4-byte range: the first port in network byte
-// order, like every port in NSI, then the number of ports in host order.
+// order, then the number of ports in host order.
 func parsePortRange(buf [4]byte) (uint16, uint16) {
 	return binary.BigEndian.Uint16(buf[0:2]), binary.LittleEndian.Uint16(buf[2:4])
 }

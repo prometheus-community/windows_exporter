@@ -31,7 +31,7 @@ func (c *Collector) buildDynamicPortRange(logger *slog.Logger, miSession *mi.Ses
 		return nil
 	}
 
-	logger.Debug("failed to read the TCP dynamic port range from NSI, reading it once from MSFT_NetTCPSetting",
+	logger.Warn("failed to read the TCP dynamic port range from NSI, reading it once from MSFT_NetTCPSetting; restart the exporter after changing the range",
 		slog.String("collector", Name),
 		slog.Any("err", nsiErr),
 	)
@@ -64,8 +64,8 @@ func (c *Collector) refreshDynamicPortRange() error {
 }
 
 // dynamicPortRangeSetting is the TCP setting whose dynamic port range the
-// dynamic_ports sub-collector uses. See AGENTS.md for how it relates to
-// netsh and the other settings.
+// dynamic_ports sub-collector falls back to when NSI cannot be read. netsh
+// changes every setting together, see internal/collector/tcp/AGENTS.md.
 const dynamicPortRangeSetting = "Internet"
 
 //nolint:gochecknoglobals

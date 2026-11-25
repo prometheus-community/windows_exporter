@@ -235,7 +235,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	)
 	c.dynamicPortRangeSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_size"),
-		"Number of ports in the TCP dynamic port range, read at exporter start",
+		"Number of ports in the TCP dynamic port range, which IPv4 and IPv6 share",
 		labels,
 		nil,
 	)
