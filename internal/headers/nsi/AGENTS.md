@@ -145,7 +145,7 @@ netsh handles them in `NhIpHandleShowDynamicPortRange`,
 Object 34 is read by `InetGetAllPortPoolExParameters` and relates to
 `InetIsPortInSmartRange`; its layout is unknown, so do not use it yet. Port
 reservations (`InetPortReservationInformationObject`) are separate objects
-from exclusions. The object indexes of objects 29 and 5 come from static
+from exclusions. The object indices of objects 29 and 5 come from static
 analysis only and have not been probed.
 
 Dynamic port range layout: the first port as a big-endian `uint16` at offset 0,
