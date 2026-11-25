@@ -5,10 +5,8 @@
 //go:build windows
 
 // Package nsi reads parameters of the network store interface (nsi.dll), the
-// store behind the IP Helper API and netsh. The API is undocumented; the
-// object index and the parameter layout here were found by probing Windows
-// 11 build 26300 and Windows Server 2025 build 26100, see
-// internal/collector/tcp/AGENTS.md.
+// store behind the IP Helper API and netsh. The API is undocumented; see
+// AGENTS.md in this directory for how the calls and layouts were found.
 package nsi
 
 import (
@@ -23,10 +21,10 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	modnsi              = windows.NewLazySystemDLL("nsi.dll")
-	procNsiGetParameter = modnsi.NewProc("NsiGetParameter")
+	modnsi                  = windows.NewLazySystemDLL("nsi.dll")
+	procNsiGetAllParameters = modnsi.NewProc("NsiGetAllParameters")
 
-	load = lazyproc.Once(modnsi, procNsiGetParameter)
+	load = lazyproc.Once(modnsi, procNsiGetAllParameters)
 )
 
 // Load checks that nsi.dll exports every function this package calls. Call it
@@ -36,8 +34,6 @@ func Load() error { return load() }
 const (
 	// storeActive is NsiActive of NSI_STORE, the values in effect.
 	storeActive = 1
-	// structTypeRW is NsiStructRw of NSI_STRUCT_TYPE.
-	structTypeRW = 0
 	// moduleIDTypeGUID is MIT_GUID of NPI_MODULEID_TYPE.
 	moduleIDTypeGUID = 1
 	// tcpObjectDynamicPortRange is the keyless object of the TCP module that
@@ -54,7 +50,7 @@ type npiModuleID struct {
 	moduleID windows.GUID
 }
 
-// tcpModuleID is only read; NsiGetParameter does not modify it.
+// tcpModuleID is only read; NsiGetAllParameters does not modify it.
 //
 //nolint:gochecknoglobals
 var tcpModuleID = npiModuleID{
@@ -69,20 +65,24 @@ var tcpModuleID = npiModuleID{
 func TCPDynamicPortRange() (uint16, uint16, error) {
 	var buf [4]byte
 
-	r0, _, _ := syscall.SyscallN(procNsiGetParameter.Addr(),
+	// The same call as netsh int ipv4 show dynamicport tcp: only the
+	// read-write part of the object, no read-only dynamic or static part.
+	r0, _, _ := syscall.SyscallN(procNsiGetAllParameters.Addr(),
 		storeActive,
 		uintptr(unsafe.Pointer(&tcpModuleID)),
 		tcpObjectDynamicPortRange,
 		0, // No key.
 		0,
-		structTypeRW,
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(len(buf)),
-		0, // Offset.
+		0, // No read-only dynamic part.
+		0,
+		0, // No read-only static part.
+		0,
 	)
 	// The function returns a 32-bit Win32 error code.
 	if uint32(r0) != 0 {
-		return 0, 0, fmt.Errorf("NsiGetParameter: %w", windows.Errno(uint32(r0)))
+		return 0, 0, fmt.Errorf("NsiGetAllParameters: %w", windows.Errno(uint32(r0)))
 	}
 
 	start, count := parsePortRange(buf)
