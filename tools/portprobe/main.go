@@ -1207,7 +1207,7 @@ func runBench() {
 // boundPorts returns the local ports of TCP endpoints that are bound but not
 // listening or connected (state 100 in MIB_TCPROW2/MIB_TCP6ROW2), read with
 // the undocumented iphlpapi exports netstat -q uses.
-func boundPorts() []int {
+func boundPorts() ([]int, error) {
 	var out []int
 
 	heap, _, _ := procGetProcessHeap.Call()
@@ -1220,9 +1220,7 @@ func boundPorts() []int {
 
 		r0, _, _ := syscall.SyscallN(t.p.Addr(), uintptr(unsafe.Pointer(&tbl)), heap, 0)
 		if r0 != 0 || tbl == 0 {
-			fmt.Println("bound table error", r0)
-
-			continue
+			return nil, fmt.Errorf("bound table error %d", r0)
 		}
 
 		n := *(*uint32)(unsafe.Pointer(tbl))
@@ -1235,7 +1233,7 @@ func boundPorts() []int {
 		_, _, _ = syscall.SyscallN(procHeapFree.Addr(), heap, 0, tbl)
 	}
 
-	return out
+	return out, nil
 }
 
 // tablePorts returns local ports of the IP Helper TCP (all states) or UDP
@@ -1284,7 +1282,7 @@ func tablePorts(proto string) (ports, timeWait []int) {
 
 // estimate predicts how many port-0 binds still succeed: range size minus the
 // union of excluded ports and local ports of endpoints inside the range.
-func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
+func estimate(proto string) (free, excluded, used, timeWaitOnly int, err error) {
 	inRange := func(p int) bool { return p >= rangeStart && p < rangeStart+rangeCount }
 	set := map[int]bool{}
 
@@ -1295,7 +1293,7 @@ func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
 
 	keys, _, err := table(1, m, obj, 4, 0)
 	if err != nil {
-		fmt.Println("exclusions:", err)
+		return 0, 0, 0, 0, fmt.Errorf("exclusions: %w", err)
 	}
 
 	for _, k := range keys {
@@ -1310,7 +1308,12 @@ func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
 
 	ports, tw := tablePorts(proto)
 	if proto == "tcp" {
-		ports = append(ports, boundPorts()...)
+		bp, err := boundPorts()
+		if err != nil {
+			return 0, 0, 0, 0, err
+		}
+
+		ports = append(ports, bp...)
 	}
 
 	for _, p := range ports {
@@ -1320,22 +1323,31 @@ func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
 		}
 	}
 
+	weak := map[int]bool{}
+
 	for _, p := range tw {
-		if inRange(p) && !set[p] {
+		if inRange(p) && !set[p] && !weak[p] {
+			weak[p] = true
 			timeWaitOnly++
 		}
 	}
 
-	return rangeCount - len(set), excluded, used, timeWaitOnly
+	return rangeCount - len(set), excluded, used, timeWaitOnly, nil
 }
 
 func check(name, proto string) {
-	free, excl, used, tw := estimate(proto)
+	free, excl, used, tw, eerr := estimate(proto)
+	if eerr != nil {
+		fmt.Printf("### %s %s: estimate FAILED: %v\n", name, proto, eerr)
+
+		return
+	}
+
 	tableCounts(proto)
 	sp := spec{fam: v4, proto: proto, addr: "wildcard"}
 	hs, _, err := fill(sp, maxSocketsPerSeries)
 	closeAll(hs)
-	fmt.Printf("### %s %s: predicted free=%d (excluded=%d, endpoint ports=%d, TIME_WAIT-only ports=%d), actual port-0 binds=%d (%s), diff=%d\n",
+	fmt.Printf("### %s %s: predicted free=%d (excluded=%d, endpoint ports=%d, TIME_WAIT/FIN_WAIT2-only ports=%d), actual port-0 binds=%d (%s), diff=%d\n",
 		name, proto, free, excl, used, tw, len(hs), errStr(err), len(hs)-free)
 }
 
@@ -1376,6 +1388,17 @@ func runValidate() {
 	time.Sleep(2 * time.Second)
 	check("V2 60 TIME_WAIT", "tcp")
 	stopT()
+
+	// Half-closed sockets: shutdown(SD_SEND) puts them into FIN_WAIT2 while
+	// the socket stays open, so they keep their port.
+	hc, _, _ := connectMany(spec{fam: v4, proto: "tcp", addr: "wildcard"}, &windows.SockaddrInet4{Port: 40031, Addr: [4]byte{127, 0, 0, 1}}, 30, false)
+	for _, h := range hc {
+		_ = windows.Shutdown(h, windows.SHUT_WR)
+	}
+
+	time.Sleep(time.Second)
+	check("V3 30 half-closed FIN_WAIT2 (open)", "tcp")
+	closeAll(hc)
 }
 
 // ---------------------------------------------------------------- restricted
