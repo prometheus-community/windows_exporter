@@ -71,11 +71,13 @@ type Collector struct {
 	connectionsStateCount      *prometheus.Desc
 
 	// dynamicPortRange is the range Windows assigns local ports of outgoing
-	// connections from, read once in Build. It is empty when the
-	// dynamic_ports sub-collector is disabled.
-	dynamicPortRange     iphlpapi.PortRange
-	dynamicPortsInUse    *prometheus.Desc
-	dynamicPortRangeSize *prometheus.Desc
+	// connections from. It is empty when the dynamic_ports sub-collector is
+	// disabled. With dynamicPortRangeFromNSI it is read again on every
+	// scrape, otherwise it is the MI value read in Build.
+	dynamicPortRange        iphlpapi.PortRange
+	dynamicPortRangeFromNSI bool
+	dynamicPortsInUse       *prometheus.Desc
+	dynamicPortRangeSize    *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -149,9 +151,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
-		portRange, err := queryDynamicPortRange(miSession)
-		if err != nil {
-			// The other sub-collectors do not need MI, so a broken provider
+		if err := c.buildDynamicPortRange(logger, miSession); err != nil {
+			// The other sub-collectors need neither source, so a failure
 			// disables only this one instead of the whole collector.
 			logger.Warn("failed to read the TCP dynamic port range, disabling the dynamic_ports sub-collector",
 				slog.String("collector", Name),
@@ -161,8 +162,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			c.config.CollectorsEnabled = slices.DeleteFunc(slices.Clone(c.config.CollectorsEnabled), func(name string) bool {
 				return name == subCollectorDynamicPorts
 			})
-		} else {
-			c.dynamicPortRange = portRange
 		}
 	}
 
@@ -381,6 +380,13 @@ func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics []perf
 // once and publishes the connection states and the dynamic port usage from it.
 func (c *Collector) collectConnectionTable(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
+
+	if c.dynamicPortRangeFromNSI {
+		// A failed read keeps the previous range.
+		if err := c.refreshDynamicPortRange(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	for _, family := range []struct {
 		id   uint32

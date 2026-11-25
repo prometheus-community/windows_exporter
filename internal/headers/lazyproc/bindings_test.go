@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/nsi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/ntdll"
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/slc"
@@ -49,6 +50,7 @@ func TestBindingsLoad(t *testing.T) {
 		{name: "hcs", load: hcs.Load, optionalDLL: "computecore.dll"},
 		{name: "iphlpapi", load: iphlpapi.Load},
 		{name: "kernel32", load: kernel32.Load},
+		{name: "nsi", load: nsi.Load},
 		{name: "ntdll", load: ntdll.Load},
 		{name: "psapi", load: psapi.Load},
 		{name: "slc", load: slc.Load},

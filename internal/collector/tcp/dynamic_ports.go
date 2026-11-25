@@ -9,11 +9,59 @@ package tcp
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/nsi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 )
+
+// buildDynamicPortRange reads the dynamic port range from NSI, the store
+// netsh reads, and falls back to MSFT_NetTCPSetting once when NSI fails.
+func (c *Collector) buildDynamicPortRange(logger *slog.Logger, miSession *mi.Session) error {
+	nsiErr := nsi.Load()
+	if nsiErr == nil {
+		nsiErr = c.refreshDynamicPortRange()
+	}
+
+	if nsiErr == nil {
+		c.dynamicPortRangeFromNSI = true
+
+		return nil
+	}
+
+	logger.Debug("failed to read the TCP dynamic port range from NSI, reading it once from MSFT_NetTCPSetting",
+		slog.String("collector", Name),
+		slog.Any("err", nsiErr),
+	)
+
+	portRange, err := queryDynamicPortRange(miSession)
+	if err != nil {
+		return errors.Join(nsiErr, err)
+	}
+
+	c.dynamicPortRange = portRange
+
+	return nil
+}
+
+// refreshDynamicPortRange reads the dynamic port range from NSI. IPv4 and
+// IPv6 share the range.
+func (c *Collector) refreshDynamicPortRange() error {
+	start, count, err := nsi.TCPDynamicPortRange()
+	if err != nil {
+		return fmt.Errorf("failed to read the TCP dynamic port range: %w", err)
+	}
+
+	if count == 0 {
+		return errors.New("failed to read the TCP dynamic port range: empty range")
+	}
+
+	c.dynamicPortRange = iphlpapi.PortRange{Start: start, NumberOfPorts: count}
+
+	return nil
+}
 
 // dynamicPortRangeSetting is the TCP setting whose dynamic port range the
 // dynamic_ports sub-collector uses. See AGENTS.md for how it relates to

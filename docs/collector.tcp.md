@@ -5,7 +5,7 @@ The tcp collector exposes metrics about the TCP network stack.
 |||
 -|-
 Metric name prefix  | `tcp`
-Data source         | Perflib, `GetExtendedTcpTable`, MI (`MSFT_NetTCPSetting`)
+Data source         | Perflib, `GetExtendedTcpTable`, NSI (`nsi.dll`), MI (`MSFT_NetTCPSetting`) as fallback
 Enabled by default? | No
 
 ## Flags
@@ -42,11 +42,12 @@ When all of them are held, new outgoing connections fail with `WSAENOBUFS` (1005
 | `windows_tcp_dynamic_ports_in_use`       | Number of distinct local ports inside the dynamic port range that a connection in any state, including TIME_WAIT, holds | gauge | af     |
 | `windows_tcp_dynamic_port_range_size`    | Number of ports in the dynamic port range                                                                           | gauge | af     |
 
-The collector reads the range once at start from the `Internet` setting of `MSFT_NetTCPSetting`
-(`Get-NetTCPSetting -SettingName Internet`) and uses it for both address families. Restart the exporter after changing
-the range with `netsh int <ipv4|ipv6> set dynamicport tcp` or `Set-NetTCPSetting`. Both sub-collectors that read the
-connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If the range
-cannot be read, the exporter logs a warning and runs without `dynamic_ports`.
+The collector reads the range on every scrape from the network store interface (NSI), the store that
+`netsh int ipv4 show dynamicport tcp` reads, so a change with `netsh` shows up without a restart. IPv4 and IPv6 share
+the range. If NSI cannot be read, the collector reads the range once at start from the `Internet` setting of
+`MSFT_NetTCPSetting` instead; then restart the exporter after changing the range. Both sub-collectors that read the
+connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If neither
+source works, the exporter logs a warning and runs without `dynamic_ports`.
 
 The count has limits:
 

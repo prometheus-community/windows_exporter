@@ -51,5 +51,5 @@ keep-alive, connection pools) instead of opening one per request, and close
 leaked ones. Restarting the owning process frees its ports at once. As a short
 term measure, enlarge the range with
 `netsh int ipv4 set dynamicport tcp start=<port> num=<count>` (and `ipv6`),
-keeping clear of ports that services listen on, and restart the exporter so
-it reads the new range. Confirm the share stays below the threshold.
+keeping clear of ports that services listen on. The exporter picks up the new
+range on the next scrape. Confirm the share stays below the threshold.
