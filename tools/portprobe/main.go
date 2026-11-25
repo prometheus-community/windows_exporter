@@ -968,6 +968,50 @@ func runNSI() {
 	}
 }
 
+// runObj34 dumps TCP object 34 (port pool ex) and the range object 20 from
+// stores 1 and 3, with the first 4 bytes decoded like object 20 and the rest
+// as little-endian uint16 and uint32 words.
+func runObj34() {
+	for _, store := range []uint32{1, 3} {
+		r20, _, _, err := getAll(store, tcpModule, 20, 4, 0, 0)
+		fmt.Printf("obj34: store=%d tcp 20: %s err=%v\n", store, hex.EncodeToString(r20), err)
+
+		b, _, _, err := getAll(store, tcpModule, 34, 44, 0, 0)
+		fmt.Printf("obj34: store=%d tcp 34: %s err=%v\n", store, hex.EncodeToString(b), err)
+
+		if len(b) < 44 {
+			continue
+		}
+
+		fmt.Printf("obj34:   smart start=%d count=%d\n", binary.BigEndian.Uint16(b), binary.LittleEndian.Uint16(b[2:]))
+
+		var u16, u32 []string
+		for i := 4; i+2 <= len(b); i += 2 {
+			u16 = append(u16, fmt.Sprintf("+%d=%d", i, binary.LittleEndian.Uint16(b[i:])))
+		}
+
+		for i := 4; i+4 <= len(b); i += 4 {
+			u32 = append(u32, fmt.Sprintf("+%d=%d", i, binary.LittleEndian.Uint32(b[i:])))
+		}
+
+		fmt.Printf("obj34:   u16 %s\n", strings.Join(u16, " "))
+		fmt.Printf("obj34:   u32 %s\n", strings.Join(u32, " "))
+	}
+
+	for _, o := range []struct {
+		name string
+		m    *npiModuleID
+		obj  uint32
+	}{{"tcp exclusions (29)", tcpModule, 29}, {"udp exclusions (5)", udpModule, 5}} {
+		ks, _, err := table(1, o.m, o.obj, 4, 2)
+		fmt.Printf("obj34: %s n=%d err=%v\n", o.name, len(ks), err)
+
+		for _, k := range ks {
+			fmt.Printf("obj34:   start=%d count=%d\n", binary.LittleEndian.Uint16(k), binary.LittleEndian.Uint16(k[2:]))
+		}
+	}
+}
+
 // ---------------------------------------------------------------- hold
 
 //nolint:gochecknoglobals
@@ -1445,6 +1489,8 @@ func main() {
 			fmt.Printf("capacity %s: %d (%s), stopped by: %s\n", sp, len(hs), portSummary(ps), errStr(err))
 			closeAll(hs)
 		}
+	case "obj34":
+		runObj34()
 	case "netsh":
 		netsh(flag.Args()[1:]...)
 	default:

@@ -45,40 +45,48 @@ jobs:
           Get-Counter -ListSet TCPv4,TCPv6,UDPv4,UDPv6 | ForEach-Object { $_.CounterSetName; $_.Counter }
           logman query providers Microsoft-Windows-TCPIP | Select-Object -First 60
 
-      - name: Hold, bench and iphlpapi exports, default range
+      - name: Auto-reuse port range (TCP object 34), authorized for disposable runners only
         shell: powershell
         run: |
-          .\portprobe.exe hold
-          .\portprobe.exe bench
-
-      - name: NSI with a restricted (non-admin) token
-        shell: powershell
-        run: |
-          .\portprobe.exe restricted
-          $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 8) + "!a1"
-          net user probeuser $pw /add | Out-Null
-          $cred = New-Object System.Management.Automation.PSCredential("probeuser", (ConvertTo-SecureString $pw -AsPlainText -Force))
-          icacls $env:RUNNER_TEMP /grant "probeuser:(OI)(CI)M" | Out-Null
-          icacls (Get-Location).Path /grant "probeuser:(OI)(CI)RX" /T /Q | Out-Null
-          try {
-            Start-Process -FilePath (Resolve-Path .\portprobe.exe).Path -ArgumentList "restricted" -Credential $cred -Wait -NoNewWindow -RedirectStandardOutput "$env:RUNNER_TEMP\pu.txt" -WorkingDirectory $env:RUNNER_TEMP
-            "===== as probeuser (standard user logon)"
-            Get-Content "$env:RUNNER_TEMP\pu.txt"
-          } catch { "Start-Process as probeuser failed: $_" }
-          net user probeuser /delete | Out-Null
-
-      - name: Small range, SO_REUSE_UNICASTPORT
-        shell: powershell
-        run: |
+          $fmt = { Get-NetTCPSetting | Format-Table SettingName, DynamicPortRangeStartPort, DynamicPortRangeNumberOfPorts, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort -AutoSize | Out-String -Width 300 }
+          "===== before"
+          & $fmt
+          Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters | Out-String -Width 300
           netsh int ipv4 set dynamicport tcp start=50000 num=255 store=active
-          netsh int ipv4 set dynamicport udp start=50000 num=255 store=active
-          .\portprobe.exe -start 50000 -count 255 unicast
-          .\portprobe.exe -start 50000 -count 255 validate
-          netsh int ipv4 add excludedportrange protocol=tcp startport=50200 numberofports=15 store=active
-          netsh int ipv4 add excludedportrange protocol=udp startport=50210 numberofports=7 store=active
-          .\portprobe.exe -start 50000 -count 255 validate
-          netsh int ipv4 delete excludedportrange protocol=tcp startport=50200 numberofports=15 store=active
-          netsh int ipv4 delete excludedportrange protocol=udp startport=50210 numberofports=7 store=active
+          .\portprobe.exe obj34
+          .\portprobe.exe -start 50000 -count 255 capacity
+          foreach ($case in @(@(50100, 50), @(60000, 100))) {
+            "===== set auto-reuse range start=$($case[0]) count=$($case[1])"
+            foreach ($name in "Internet", "Datacenter", "InternetCustom", "DatacenterCustom") {
+              try { Set-NetTCPSetting -SettingName $name -AutoReusePortRangeStartPort $case[0] -AutoReusePortRangeNumberOfPorts $case[1] -ErrorAction Stop; "set $name ok" } catch { "set $name failed: $_" }
+            }
+            & $fmt
+            .\portprobe.exe obj34
+            netsh int ipv4 show dynamicport tcp
+            netsh int ipv4 show excludedportrange tcp
+            .\portprobe.exe -start 50000 -count 255 capacity
+            .\portprobe.exe -start 50000 -count 255 unicast
+            .\portprobe.exe -start 50000 -count 255 validate
+          }
+          "===== max connections via CIM"
+          foreach ($i in Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPSetting) {
+            try { Set-CimInstance -InputObject $i -Property @{AutoReusePortRangeMaxConnections = [uint32]1234; AutoReusePortRangeMaxConnectionsPerPort = [uint32]7} -ErrorAction Stop; "cim set $($i.SettingName) ok" } catch { "cim set $($i.SettingName) failed: $_" }
+          }
+          & $fmt
+          .\portprobe.exe obj34
+          Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters | Out-String -Width 300
+
+      - name: Restore auto-reuse range
+        if: always()
+        shell: powershell
+        run: |
+          foreach ($name in "Internet", "Datacenter", "InternetCustom", "DatacenterCustom") {
+            try { Set-NetTCPSetting -SettingName $name -AutoReusePortRangeStartPort 0 -AutoReusePortRangeNumberOfPorts 0 -ErrorAction Stop } catch { "reset $name failed: $_" }
+          }
+          foreach ($i in Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPSetting) {
+            try { Set-CimInstance -InputObject $i -Property @{AutoReusePortRangeMaxConnections = [uint32]0; AutoReusePortRangeMaxConnectionsPerPort = [uint32]0} -ErrorAction Stop } catch { "cim reset $($i.SettingName) failed: $_" }
+          }
+          Get-NetTCPSetting | Format-Table SettingName, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort -AutoSize | Out-String -Width 300
 
       - name: Restore range
         if: always()
