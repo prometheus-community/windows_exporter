@@ -14,7 +14,7 @@
         labels: { severity: 'warning' },
         annotations: {
           summary: 'TCP dynamic ports are almost exhausted',
-          description: 'Connections on {{ $labels.instance }} have held more than %(tcpDynamicPortUsageThreshold)s%% of the {{ $labels.af }} TCP dynamic port range for 10 minutes.' % c,
+          description: 'Connections on {{ $labels.instance }} have held more than %(tcpDynamicPortUsageThreshold)s%% of the TCP dynamic port range for 10 minutes.' % c,
         },
       },
     ]),

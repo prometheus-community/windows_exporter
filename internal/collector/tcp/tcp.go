@@ -229,14 +229,14 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	)
 	c.dynamicPortsInUse = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_ports_in_use"),
-		"Number of distinct local ports inside the TCP dynamic port range that a connection in any state, including TIME_WAIT, holds",
-		labels,
+		"Number of distinct local ports inside the TCP dynamic port range that an IPv4 or IPv6 connection in any state, including TIME_WAIT, holds",
+		nil,
 		nil,
 	)
 	c.dynamicPortRangeSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_size"),
 		"Number of ports in the TCP dynamic port range, which IPv4 and IPv6 share",
-		labels,
+		nil,
 		nil,
 	)
 
@@ -388,6 +388,15 @@ func (c *Collector) collectConnectionTable(ch chan<- prometheus.Metric) error {
 		}
 	}
 
+	// IPv4 and IPv6 connections take their local ports from one port pool,
+	// so both tables add to one set. See internal/headers/nsi/AGENTS.md.
+	var ports *iphlpapi.PortSet
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
+		ports = &iphlpapi.PortSet{}
+	}
+
+	tablesRead := 0
+
 	for _, family := range []struct {
 		id   uint32
 		name string
@@ -395,45 +404,48 @@ func (c *Collector) collectConnectionTable(ch chan<- prometheus.Metric) error {
 		{windows.AF_INET, ipAddressFamilyIPv4},
 		{windows.AF_INET6, ipAddressFamilyIPv6},
 	} {
-		stats, err := iphlpapi.GetTCPConnectionStats(family.id, c.dynamicPortRange)
+		stats, err := iphlpapi.GetTCPConnectionStats(family.id, c.dynamicPortRange, ports)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to read the TCP connection table for %s: %w", family.name, err))
 
 			continue
 		}
 
-		c.writeConnectionTableMetrics(ch, stats, family.name)
+		tablesRead++
+
+		c.writeConnectionStates(ch, stats, family.name)
 	}
 
-	return errors.Join(errs...)
-}
-
-func (c *Collector) writeConnectionTableMetrics(ch chan<- prometheus.Metric, stats iphlpapi.TCPConnectionStats, af string) {
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
-		for state, count := range stats.States {
-			ch <- prometheus.MustNewConstMetric(
-				c.connectionsStateCount,
-				prometheus.GaugeValue,
-				float64(count),
-				af,
-				state.String(),
-			)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
+	// A count from one table only would under-report the shared pool.
+	if ports != nil && tablesRead == 2 {
 		ch <- prometheus.MustNewConstMetric(
 			c.dynamicPortsInUse,
 			prometheus.GaugeValue,
-			float64(stats.PortsInRange),
-			af,
+			float64(ports.Len()),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dynamicPortRangeSize,
 			prometheus.GaugeValue,
 			float64(c.dynamicPortRange.NumberOfPorts),
+		)
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) writeConnectionStates(ch chan<- prometheus.Metric, stats iphlpapi.TCPConnectionStats, af string) {
+	if !slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
+		return
+	}
+
+	for state, count := range stats.States {
+		ch <- prometheus.MustNewConstMetric(
+			c.connectionsStateCount,
+			prometheus.GaugeValue,
+			float64(count),
 			af,
+			state.String(),
 		)
 	}
 }

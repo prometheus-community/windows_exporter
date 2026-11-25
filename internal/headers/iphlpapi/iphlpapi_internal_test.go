@@ -37,15 +37,30 @@ func TestSummarizeTCPTable(t *testing.T) {
 		{dwState: TCPStateEstablished, dwLocalPort: networkPort(49151)},
 	}
 
-	stats := summarizeTCPTable(table, PortRange{Start: 49152, NumberOfPorts: 16384})
+	var ports PortSet
+
+	stats := summarizeTCPTable(table, PortRange{Start: 49152, NumberOfPorts: 16384}, &ports)
 	require.Equal(t, map[MIB_TCP_STATE]uint32{
 		TCPStateListening:   2,
 		TCPStateEstablished: 3,
 		TCPStateTimeWait:    1,
 	}, stats.States)
-	require.EqualValues(t, 3, stats.PortsInRange)
+	require.EqualValues(t, 3, ports.Len())
 
-	require.Zero(t, summarizeTCPTable(table, PortRange{}).PortsInRange)
+	// A second table, as for the other address family, adds only new ports.
+	summarizeTCPTable([]MIB_TCP6ROW_OWNER_PID{
+		{dwState: TCPStateEstablished, dwLocalPort: networkPort(50000)},
+		{dwState: TCPStateEstablished, dwLocalPort: networkPort(50001)},
+	}, PortRange{Start: 49152, NumberOfPorts: 16384}, &ports)
+	require.EqualValues(t, 4, ports.Len())
+
+	var empty PortSet
+
+	summarizeTCPTable(table, PortRange{}, &empty)
+	require.Zero(t, empty.Len())
+
+	// A nil set only counts the states.
+	require.Len(t, summarizeTCPTable(table, PortRange{}, nil).States, 3)
 }
 
 func TestPortRangeContains(t *testing.T) {

@@ -37,16 +37,18 @@ Windows assigns the local port of an outgoing connection from the dynamic port r
 When all of them are held, new outgoing connections fail with `WSAENOBUFS` (10055), see
 [Troubleshoot port exhaustion issues](https://learn.microsoft.com/troubleshoot/windows-client/networking/tcp-ip-port-exhaustion-troubleshooting).
 
-| Name                                     | Description                                                                                                         | Type  | Labels |
-|------------------------------------------|---------------------------------------------------------------------------------------------------------------------|-------|--------|
-| `windows_tcp_dynamic_ports_in_use`       | Number of distinct local ports inside the dynamic port range that a connection in any state, including TIME_WAIT, holds | gauge | af     |
-| `windows_tcp_dynamic_port_range_size`    | Number of ports in the dynamic port range                                                                           | gauge | af     |
+| Name                                  | Description                                                                                                                           | Type  | Labels |
+|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|-------|--------|
+| `windows_tcp_dynamic_ports_in_use`    | Number of distinct local ports inside the dynamic port range that an IPv4 or IPv6 connection in any state, including TIME_WAIT, holds | gauge | None   |
+| `windows_tcp_dynamic_port_range_size` | Number of ports in the dynamic port range                                                                                             | gauge | None   |
 
 The collector reads the range on every scrape from the network store interface (NSI), the store that
 `netsh int ipv4 show dynamicport tcp` reads, so a change with `netsh` shows up without a restart. IPv4 and IPv6 share
-the range. If NSI cannot be read, the collector reads the range once at start from the `Internet` setting of
+the range and take their ports from one pool, so the metrics have no `af` label and a port counts once, whichever
+address family holds it. If NSI cannot be read, the collector reads the range once at start from the `Internet` setting of
 `MSFT_NetTCPSetting` instead; then restart the exporter after changing the range. Both sub-collectors that read the
-connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If neither
+connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If one of the
+two tables cannot be read, the scrape reports no `dynamic_ports` metrics rather than a count that is too low. If neither
 source works, the exporter logs a warning and runs without `dynamic_ports`.
 
 The count has limits:

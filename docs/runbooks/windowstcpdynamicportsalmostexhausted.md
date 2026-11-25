@@ -4,11 +4,12 @@ title: WindowsTCPDynamicPortsAlmostExhausted
 
 ## Meaning
 
-Connections of one address family (`af`) have held more than
-`tcpDynamicPortUsageThreshold` (80 percent by default) of the TCP dynamic port
-range for 10 minutes. The share divides `windows_tcp_dynamic_ports_in_use`, the
-distinct local ports inside the range that a connection in any state holds,
-including `TIME_WAIT`, by `windows_tcp_dynamic_port_range_size`. The alert
+IPv4 and IPv6 connections have held more than `tcpDynamicPortUsageThreshold`
+(80 percent by default) of the TCP dynamic port range for 10 minutes. Both
+address families take their ports from one pool. The share divides
+`windows_tcp_dynamic_ports_in_use`, the distinct local ports inside the range
+that an IPv4 or IPv6 connection in any state holds, including `TIME_WAIT`, by
+`windows_tcp_dynamic_port_range_size`. The alert
 needs the `tcp` collector with its `dynamic_ports` sub-collector.
 
 ## Impact
@@ -24,7 +25,7 @@ connections to listening ports are not affected.
 
 1. Compare `windows_tcp_dynamic_ports_in_use` with
    `windows_tcp_connections{state="TIME_WAIT"}` and
-   `windows_tcp_connections{state="ESTABLISHED"}` of the same `af`. Many
+   `windows_tcp_connections{state="ESTABLISHED"}` of both address families. Many
    `TIME_WAIT` connections point to a client that opens a new connection per
    request; many established ones to a connection leak.
 2. On the server, find the processes that hold the ports:

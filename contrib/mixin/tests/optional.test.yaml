@@ -533,33 +533,29 @@ tests:
               description: 'Zone transfers from DNS server dns:9182 have been failing for 15 minutes.'
       - {alertname: WindowsDNSZoneTransferFailures, eval_time: 26m, exp_alerts: []}
 
-  - name: TCP dynamic port usage fires per address family and resolves after keep_firing_for
+  - name: TCP dynamic port usage fires and resolves after keep_firing_for
     interval: 1m
     input_series:
-      - series: 'windows_tcp_dynamic_ports_in_use{job="windows-custom", instance="web:9182", cluster="test", af="ipv4"}'
+      - series: 'windows_tcp_dynamic_ports_in_use{job="windows-custom", instance="web:9182", cluster="test"}'
         values: '1000x5 13000x20 1000x10'
-      - series: 'windows_tcp_dynamic_port_range_size{job="windows-custom", instance="web:9182", cluster="test", af="ipv4"}'
-        values: '16384x35'
-      - series: 'windows_tcp_dynamic_ports_in_use{job="windows-custom", instance="web:9182", cluster="test", af="ipv6"}'
-        values: '100x35'
-      - series: 'windows_tcp_dynamic_port_range_size{job="windows-custom", instance="web:9182", cluster="test", af="ipv6"}'
+      - series: 'windows_tcp_dynamic_port_range_size{job="windows-custom", instance="web:9182", cluster="test"}'
         values: '16384x35'
     alert_rule_test:
       - {alertname: WindowsTCPDynamicPortsAlmostExhausted, eval_time: 15m, exp_alerts: []}
       - alertname: WindowsTCPDynamicPortsAlmostExhausted
         eval_time: 16m
         exp_alerts:
-          - exp_labels: {job: windows-custom, instance: 'web:9182', cluster: test, af: ipv4, severity: warning}
+          - exp_labels: {job: windows-custom, instance: 'web:9182', cluster: test, severity: warning}
             exp_annotations:
               runbook_url: https://runbooks.example.com/windows/windowstcpdynamicportsalmostexhausted/
               summary: TCP dynamic ports are almost exhausted
-              description: 'Connections on web:9182 have held more than 75% of the ipv4 TCP dynamic port range for 10 minutes.'
+              description: 'Connections on web:9182 have held more than 75% of the TCP dynamic port range for 10 minutes.'
       - alertname: WindowsTCPDynamicPortsAlmostExhausted
         eval_time: 31m
         exp_alerts:
-          - exp_labels: {job: windows-custom, instance: 'web:9182', cluster: test, af: ipv4, severity: warning}
+          - exp_labels: {job: windows-custom, instance: 'web:9182', cluster: test, severity: warning}
             exp_annotations:
               runbook_url: https://runbooks.example.com/windows/windowstcpdynamicportsalmostexhausted/
               summary: TCP dynamic ports are almost exhausted
-              description: 'Connections on web:9182 have held more than 75% of the ipv4 TCP dynamic port range for 10 minutes.'
+              description: 'Connections on web:9182 have held more than 75% of the TCP dynamic port range for 10 minutes.'
       - {alertname: WindowsTCPDynamicPortsAlmostExhausted, eval_time: 32m, exp_alerts: []}

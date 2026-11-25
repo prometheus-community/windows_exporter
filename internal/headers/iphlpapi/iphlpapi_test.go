@@ -33,10 +33,12 @@ func TestGetTCPConnectionStats(t *testing.T) {
 
 	port := uint16(tcpAddr.Port)
 
-	stats, err := iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: port, NumberOfPorts: 1})
+	var ports iphlpapi.PortSet
+
+	stats, err := iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: port, NumberOfPorts: 1}, &ports)
 	require.NoError(t, err)
 	require.NotZero(t, stats.States[iphlpapi.TCPStateListening])
-	require.EqualValues(t, 1, stats.PortsInRange)
+	require.EqualValues(t, 1, ports.Len())
 }
 
 func TestGetOwnerPIDOfTCPPort(t *testing.T) {
@@ -63,6 +65,8 @@ func BenchmarkGetTCPConnectionStats(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_, _ = iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: 49152, NumberOfPorts: 16384})
+		var ports iphlpapi.PortSet
+
+		_, _ = iphlpapi.GetTCPConnectionStats(windows.AF_INET, iphlpapi.PortRange{Start: 49152, NumberOfPorts: 16384}, &ports)
 	}
 }

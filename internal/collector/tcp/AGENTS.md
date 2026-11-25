@@ -24,9 +24,11 @@ IPv6: setting it for IPv4 with netsh changed IPv6 and every
 `MSFT_NetTCPSetting` instance too. If neither source works, Build drops `dynamic_ports` instead of failing
 the collector.
 
-Open questions: whether IPv4 and IPv6 also share one ephemeral port pool (then
-the per-`af` counts should be summed for the alert), and whether
-`GetExtendedTcpTable` lists sockets in state `BOUND` (bound, not connected,
-shown by `netstat -anoq`); the docs assume it does not. A count counts every
+IPv4 and IPv6 connections take their ports from one pool per protocol and
+compartment, so `dynamic_ports_in_use` has no `af` label: both tables add to
+one `iphlpapi.PortSet`, and a scrape where one table fails reports no
+`dynamic_ports` metrics. Open question: whether `GetExtendedTcpTable` lists
+sockets in state `BOUND` (bound, not connected, shown by `netstat -anoq`); the
+docs assume it does not. A count counts every
 state: a `TIME_WAIT` connection still holds its local port, and a listener on
 an ephemeral port takes it out of the pool.
