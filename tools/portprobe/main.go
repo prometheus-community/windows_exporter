@@ -1284,6 +1284,7 @@ func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
 
 func check(name, proto string) {
 	free, excl, used, tw := estimate(proto)
+	tableCounts(proto)
 	sp := spec{fam: v4, proto: proto, addr: "wildcard"}
 	hs, _, err := fill(sp, maxSocketsPerSeries)
 	closeAll(hs)
