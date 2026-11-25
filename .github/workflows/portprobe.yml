@@ -1,0 +1,105 @@
+name: Ephemeral port probe
+
+on:
+  push:
+    branches:
+      - claude/project-thread-g4ilxe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.2'
+
+      - name: Build
+        shell: powershell
+        run: go build -o portprobe.exe ./tools/portprobe/
+
+      - name: System info
+        shell: powershell
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          "OS: $($os.Caption) $($os.Version) build $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').UBR) arch $env:PROCESSOR_ARCHITECTURE"
+          foreach ($f in "$env:windir\System32\drivers\tcpip.sys","$env:windir\System32\drivers\netio.sys","$env:windir\System32\drivers\nsiproxy.sys","$env:windir\System32\nsi.dll","$env:windir\System32\netiohlp.dll") {
+            $i = Get-Item $f
+            "{0} {1} {2}" -f $i.Name, $i.VersionInfo.FileVersionRaw, (Get-FileHash $f -Algorithm SHA256).Hash
+          }
+          whoami /groups | Select-String "High Mandatory|S-1-5-32-544"
+          Get-NetTCPSetting | Format-Table SettingName, DynamicPortRangeStartPort, DynamicPortRangeNumberOfPorts, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort -AutoSize | Out-String -Width 300
+          Get-NetUDPSetting | Format-List
+          Get-NetCompartment | Format-Table -AutoSize
+          Get-Counter -ListSet TCPv4,TCPv6,UDPv4,UDPv6 | ForEach-Object { $_.CounterSetName; $_.Counter }
+          logman query providers Microsoft-Windows-TCPIP | Select-Object -First 60
+
+      - name: NSI and netsh, default range
+        shell: powershell
+        run: |
+          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") {
+            netsh int $af show dynamicport $p
+            netsh int $af show excludedportrange protocol=$p store=active
+            netsh int $af show excludedportrange protocol=$p store=persistent
+          } }
+          .\portprobe.exe nsi
+
+      - name: Pairs and collisions, default range
+        shell: powershell
+        run: |
+          .\portprobe.exe pairs
+          .\portprobe.exe -n 1500 collide
+
+      - name: Small range experiments
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          function Show { foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { "== $af $p"; netsh int $af show dynamicport $p store=active } } }
+          "## IPv6 set, IPv4 read"
+          netsh int ipv6 set dynamicport tcp start=50001 num=301 store=active
+          netsh int ipv6 set dynamicport udp start=50003 num=303 store=active
+          Show
+          .\portprobe.exe nsi | Select-String "range"
+          "## Minimum: num=254 must fail, num=255 works"
+          netsh int ipv4 set dynamicport tcp start=50000 num=254 store=active
+          netsh int ipv4 set dynamicport tcp start=50000 num=255 store=active
+          netsh int ipv4 set dynamicport udp start=50000 num=255 store=active
+          Show
+          .\portprobe.exe nsi | Select-String "range|store=0"
+          .\portprobe.exe -start 50000 -count 255 exhaust
+          .\portprobe.exe -start 50000 -count 255 connect
+
+          "## Exclusions"
+          netsh int ipv4 add excludedportrange protocol=tcp startport=50100 numberofports=20 store=active
+          netsh int ipv6 add excludedportrange protocol=tcp startport=50110 numberofports=20 store=active
+          netsh int ipv6 add excludedportrange protocol=udp startport=50200 numberofports=10 store=active
+          netsh int ipv4 add excludedportrange protocol=tcp startport=65500 numberofports=5 store=active
+          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { netsh int $af show excludedportrange protocol=$p store=active } }
+          .\portprobe.exe nsi | Select-String -NotMatch "probe getall"
+          .\portprobe.exe -start 50000 -count 255 capacity
+          netsh int ipv4 delete excludedportrange protocol=tcp startport=50100 numberofports=20 store=active
+          netsh int ipv6 delete excludedportrange protocol=tcp startport=50110 numberofports=20 store=active
+          netsh int ipv6 delete excludedportrange protocol=udp startport=50200 numberofports=10 store=active
+          netsh int ipv4 delete excludedportrange protocol=tcp startport=65500 numberofports=5 store=active
+          .\portprobe.exe -start 50000 -count 255 capacity
+
+          "## Port exhaustion events"
+          Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Tcpip'} -MaxEvents 20 -ErrorAction SilentlyContinue | Format-List TimeCreated, Id, Message
+
+      - name: Restore range
+        if: always()
+        shell: powershell
+        run: |
+          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { netsh int $af set dynamicport $p start=49152 num=16384 store=active } }
+          foreach ($af in "ipv4","ipv6") { foreach ($p in "tcp","udp") { netsh int $af show dynamicport $p } }
