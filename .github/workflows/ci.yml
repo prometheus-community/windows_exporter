@@ -1775,7 +1775,7 @@ jobs:
                   -State Active
 
               # The dhcp tests expect these 20 reservations, and that a page
-              # of 2048 bytes is too small for all of them.
+              # of 1024 bytes is too small for all of them.
               1..20 | ForEach-Object {
                   Add-DhcpServerv4Reservation `
                       -ScopeId "192.0.2.0" `

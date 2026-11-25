@@ -24,6 +24,10 @@ online Generic Service that depends on an online IP Address, plus an offline IP
 Address. The `CIFailedResources` group contains a Generic Service whose binary is
 missing, so it stays failed. Native and WMI parity tests require these resources.
 
+DHCP serves the `GitHubActions` scope `192.0.2.0/24` with 20 reservations.
+The `dhcp` tests require their count and read them in pages of 1024 bytes,
+which hold only some of them.
+
 Hyper-V runs the `GitHubActions` VM with a 1 GB dynamic VHDX and a legacy
 network adapter. A second VM, `CIVirtualHardDisk`, is never started: it has a
 dynamic disk with a checkpoint, so it runs on a differencing `.avhdx`, and a

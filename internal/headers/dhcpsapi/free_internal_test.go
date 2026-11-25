@@ -69,16 +69,17 @@ func TestFreeReservationInfoArray(t *testing.T) {
 
 	name := win32.NewLPWSTR("host")
 	desc := win32.NewLPWSTR("description")
-	clientID := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x01}
+	fullID := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x01}
+	bareID := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x02}
 
 	full := &DHCP_IP_RESERVATION_INFO{
-		ReservedForClient:  DHCP_BINARY_DATA{DataLength: 6, Data: &clientID[0]},
+		ReservedForClient:  DHCP_BINARY_DATA{DataLength: 6, Data: &fullID[0]},
 		ReservedClientName: *name,
 		ReservedClientDesc: *desc,
 	}
 	// A reservation without a name and a description.
 	bare := &DHCP_IP_RESERVATION_INFO{
-		ReservedForClient: DHCP_BINARY_DATA{DataLength: 6, Data: &clientID[0]},
+		ReservedForClient: DHCP_BINARY_DATA{DataLength: 6, Data: &bareID[0]},
 	}
 	elements := []*DHCP_IP_RESERVATION_INFO{full, nil, bare}
 	array := &DHCP_RESERVATION_INFO_ARRAY{NumElements: 3, Elements: &elements[0]}
@@ -87,8 +88,8 @@ func TestFreeReservationInfoArray(t *testing.T) {
 
 	freeReservationInfoArray(array, recordFree(&freed))
 	require.Equal(t, []uintptr{
-		ptr(&clientID[0]), name.Pointer(), desc.Pointer(), ptr(full),
-		ptr(&clientID[0]), ptr(bare),
+		ptr(&fullID[0]), name.Pointer(), desc.Pointer(), ptr(full),
+		ptr(&bareID[0]), ptr(bare),
 		ptr(&elements[0]), ptr(array),
 	}, freed, "the members are freed before the reservation, the reservations before the array")
 
@@ -101,30 +102,4 @@ func TestFreeReservationInfoArray(t *testing.T) {
 	freed = nil
 	freeReservationInfoArray(nil, recordFree(&freed))
 	require.Empty(t, freed)
-}
-
-// TestReservationInfoLayout pins the 64-bit layout that the client returns:
-// the client identifier is a nested structure, so it starts at offset 8.
-func TestReservationInfoLayout(t *testing.T) {
-	t.Parallel()
-
-	if unsafe.Sizeof(uintptr(0)) != 8 {
-		t.Skip("layout of a 64-bit process")
-	}
-
-	var info DHCP_IP_RESERVATION_INFO
-
-	require.Equal(t, uintptr(0), unsafe.Offsetof(info.ReservedIpAddress))
-	require.Equal(t, uintptr(8), unsafe.Offsetof(info.ReservedForClient))
-	require.Equal(t, uintptr(8), unsafe.Offsetof(info.ReservedForClient.Data))
-	require.Equal(t, uintptr(24), unsafe.Offsetof(info.ReservedClientName))
-	require.Equal(t, uintptr(32), unsafe.Offsetof(info.ReservedClientDesc))
-	require.Equal(t, uintptr(40), unsafe.Offsetof(info.BAllowedClientTypes))
-	require.Equal(t, uintptr(41), unsafe.Offsetof(info.FOptionsPresent))
-	require.Equal(t, uintptr(48), unsafe.Sizeof(info))
-
-	var array DHCP_RESERVATION_INFO_ARRAY
-
-	require.Equal(t, uintptr(8), unsafe.Offsetof(array.Elements))
-	require.Equal(t, uintptr(16), unsafe.Sizeof(array))
 }

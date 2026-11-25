@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
@@ -23,16 +22,23 @@ type reservationPage struct {
 	elements uint32
 	// noArray leaves EnumElementInfo NULL, as for a subnet without reservations.
 	noArray bool
+	// stuck leaves the resume handle as it was.
+	stuck bool
 }
 
 // fakeReservations answers one page per call and records the calls.
 type fakeReservations struct {
-	pages []reservationPage
+	// reservations is the number of reservations of the subnet.
+	reservations uint32
+	pages        []reservationPage
 
 	subnets           []DHCP_IP_ADDRESS
 	resumeHandles     []uint32
 	preferredMaximums []uint32
-	arrays            []uintptr
+	// allocations is the number of blocks handed out.
+	allocations int
+	// keep holds the blocks, so that no address is used twice.
+	keep []any
 }
 
 func (f *fakeReservations) enum(
@@ -49,19 +55,19 @@ func (f *fakeReservations) enum(
 	f.resumeHandles = append(f.resumeHandles, *resumeHandle)
 	f.preferredMaximums = append(f.preferredMaximums, preferredMaximum)
 
-	remaining := uint32(0)
-	for _, p := range f.pages[len(f.subnets)-1:] {
-		remaining += p.elements
-	}
-
-	// Like the server: the resume handle counts the reservations returned so
-	// far, and ElementsTotal includes the ones of this page.
-	*resumeHandle += page.elements
+	// Like the server: ElementsTotal counts the reservations from the resume
+	// handle on, including the ones of this page, and the resume handle
+	// counts the reservations returned so far.
 	*elementsRead = page.elements
-	*elementsTotal = remaining
+	*elementsTotal = f.reservations - *resumeHandle
+
+	if !page.stuck {
+		*resumeHandle += page.elements
+	}
 
 	if !page.noArray {
 		array := &DHCP_RESERVATION_INFO_ARRAY{NumElements: page.elements}
+		f.allocations++
 
 		if page.elements > 0 {
 			elements := make([]*DHCP_IP_RESERVATION_INFO, page.elements)
@@ -70,11 +76,12 @@ func (f *fakeReservations) enum(
 			}
 
 			array.Elements = &elements[0]
+			f.allocations += 1 + len(elements)
+			f.keep = append(f.keep, elements)
 		}
 
 		*elementsInfo = array
-
-		f.arrays = append(f.arrays, uintptr(unsafe.Pointer(array)))
+		f.keep = append(f.keep, array)
 	}
 
 	return page.ret
@@ -87,6 +94,7 @@ func TestCountSubnetReservations(t *testing.T) {
 
 	for _, tc := range []struct {
 		name          string
+		reservations  uint32
 		pages         []reservationPage
 		count         uint32
 		resumeHandles []uint32
@@ -95,12 +103,14 @@ func TestCountSubnetReservations(t *testing.T) {
 	}{
 		{
 			name:          "one page",
+			reservations:  3,
 			pages:         []reservationPage{{ret: windows.ERROR_SUCCESS, elements: 3}},
 			count:         3,
 			resumeHandles: []uint32{0},
 		},
 		{
-			name: "several pages",
+			name:         "several pages",
+			reservations: 9,
 			pages: []reservationPage{
 				{ret: windows.ERROR_MORE_DATA, elements: 4},
 				{ret: windows.ERROR_MORE_DATA, elements: 4},
@@ -110,7 +120,8 @@ func TestCountSubnetReservations(t *testing.T) {
 			resumeHandles: []uint32{0, 4, 8},
 		},
 		{
-			name: "the last page ends with no more items",
+			name:         "the last page ends with no more items",
+			reservations: 4,
 			pages: []reservationPage{
 				{ret: windows.ERROR_MORE_DATA, elements: 4},
 				{ret: windows.ERROR_NO_MORE_ITEMS, noArray: true},
@@ -125,15 +136,40 @@ func TestCountSubnetReservations(t *testing.T) {
 			resumeHandles: []uint32{0},
 		},
 		{
-			// What a preferred maximum of 0 returned: the call that leaks in
-			// the DHCP Server service. It must not be repeated.
-			name:          "a page without reservations",
+			// What a preferred maximum of 0 returns: an empty array and the
+			// count in ElementsTotal. The call leaks in the DHCP Server
+			// service, so it must not be repeated.
+			name:          "a first page without reservations",
+			reservations:  3,
 			pages:         []reservationPage{{ret: windows.ERROR_MORE_DATA}, {ret: windows.ERROR_MORE_DATA}},
+			count:         3,
 			resumeHandles: []uint32{0},
-			err:           "returned no reservations",
 		},
 		{
-			name: "an error after the first page",
+			name:         "a later page without reservations",
+			reservations: 9,
+			pages: []reservationPage{
+				{ret: windows.ERROR_MORE_DATA, elements: 4},
+				{ret: windows.ERROR_MORE_DATA},
+				{ret: windows.ERROR_MORE_DATA},
+			},
+			count:         9,
+			resumeHandles: []uint32{0, 4},
+		},
+		{
+			name:         "a resume handle that does not advance",
+			reservations: 9,
+			pages: []reservationPage{
+				{ret: windows.ERROR_MORE_DATA, elements: 4, stuck: true},
+				{ret: windows.ERROR_MORE_DATA, elements: 4, stuck: true},
+			},
+			resumeHandles: []uint32{0},
+			err:           "did not advance",
+			errno:         windows.ERROR_MORE_DATA,
+		},
+		{
+			name:         "an error after the first page",
+			reservations: 9,
 			pages: []reservationPage{
 				{ret: windows.ERROR_MORE_DATA, elements: 4},
 				{ret: ERROR_DHCP_SUBNET_NOT_PRESENT, noArray: true},
@@ -147,17 +183,15 @@ func TestCountSubnetReservations(t *testing.T) {
 
 			var freed []uintptr
 
-			fake := &fakeReservations{pages: tc.pages}
+			fake := &fakeReservations{reservations: tc.reservations, pages: tc.pages}
 
 			count, err := countSubnetReservations(subnet, 4096, fake.enum, recordFree(&freed))
 
-			switch {
-			case tc.err != "":
-				require.ErrorContains(t, err, tc.err)
-			case tc.errno != 0:
-				require.ErrorIs(t, err, tc.errno)
-			default:
+			if tc.errno == 0 {
 				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, tc.errno)
+				require.ErrorContains(t, err, tc.err)
 			}
 
 			require.Equal(t, tc.count, count)
@@ -168,19 +202,13 @@ func TestCountSubnetReservations(t *testing.T) {
 				require.Equal(t, uint32(4096), fake.preferredMaximums[i])
 			}
 
-			for _, array := range fake.arrays {
-				require.Contains(t, freed, array, "every page is freed")
-			}
+			// Every block of every page is freed exactly once.
+			require.Len(t, freed, fake.allocations)
+
+			slices.Sort(freed)
+			require.Len(t, slices.Compact(freed), fake.allocations, "no block is freed twice")
 		})
 	}
-}
-
-// TestReservationsPreferredMaximum guards the page size: every call that
-// cannot return all remaining reservations leaks in the DHCP Server service.
-func TestReservationsPreferredMaximum(t *testing.T) {
-	t.Parallel()
-
-	require.Equal(t, uint32(0xFFFFFFFF), uint32(reservationsPreferredMaximum))
 }
 
 // TestCountSubnetReservationsFixture reads the reservations of the CI scope
@@ -198,11 +226,6 @@ func TestCountSubnetReservationsFixture(t *testing.T) {
 	// 192.0.2.0, the GitHubActions scope with 20 reservations.
 	const subnet = DHCP_IP_ADDRESS(0xC0000200)
 
-	count, err := countSubnetReservations(subnet, reservationsPreferredMaximum, dhcpV4EnumSubnetReservations, dhcpRpcFreeMemory)
-	require.NoError(t, err)
-	require.Equal(t, uint32(20), count)
-
-	// 2048 bytes hold only a few reservations, so this needs several calls.
 	calls := 0
 	counting := func(
 		subnetAddress DHCP_IP_ADDRESS,
@@ -217,8 +240,24 @@ func TestCountSubnetReservationsFixture(t *testing.T) {
 		return dhcpV4EnumSubnetReservations(subnetAddress, resumeHandle, preferredMaximum, elementsInfo, elementsRead, elementsTotal)
 	}
 
-	count, err = countSubnetReservations(subnet, 2048, counting, dhcpRpcFreeMemory)
+	count, err := countSubnetReservations(subnet, reservationsPreferredMaximum, counting, dhcpRpcFreeMemory)
+	require.NoError(t, err)
+	require.Equal(t, uint32(20), count)
+	require.Equal(t, 1, calls, "the server must return all reservations with one call")
+
+	// 1024 bytes hold only a few reservations, so this needs several calls.
+	calls = 0
+
+	count, err = countSubnetReservations(subnet, 1024, counting, dhcpRpcFreeMemory)
 	require.NoError(t, err)
 	require.Equal(t, uint32(20), count)
 	require.Greater(t, calls, 1, "the fixture must need more than one page")
+
+	// The call this package made before: no reservations, but their count.
+	calls = 0
+
+	count, err = countSubnetReservations(subnet, 0, counting, dhcpRpcFreeMemory)
+	require.NoError(t, err)
+	require.Equal(t, uint32(20), count)
+	require.Equal(t, 1, calls)
 }

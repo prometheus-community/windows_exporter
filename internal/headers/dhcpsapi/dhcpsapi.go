@@ -299,8 +299,8 @@ func dhcpGetMibInfoV5(mibInfo **DHCP_MIB_INFO_V5) error {
 }
 
 // reservationsPreferredMaximum is the PreferredMaximum of
-// DhcpV4EnumSubnetReservations, in bytes: no limit, so that one call returns
-// all reservations of a subnet.
+// DhcpV4EnumSubnetReservations, in bytes: the value that the Win32
+// documentation names to retrieve all reservations of a subnet with one call.
 //
 // The DHCP Server service keeps about 500 bytes allocated for every call that
 // returns ERROR_MORE_DATA, until the service restarts. That is every call
@@ -345,11 +345,10 @@ func dhcpV4EnumSubnetReservations(
 
 // countSubnetReservations returns the number of reservations of the subnet.
 // The server has no call that returns only the count, so it reads the
-// reservations and adds up ElementsRead; ElementsTotal includes the elements
-// of the page it comes with. With reservationsPreferredMaximum the first call
-// returns all of them. More pages are read if the server asks for it, although
-// each of them leaks in the server. free is dhcpRpcFreeMemory outside of
-// tests.
+// reservations and adds up ElementsRead. With reservationsPreferredMaximum the
+// first call returns all of them. If the server returns ERROR_MORE_DATA
+// anyway, the next page is read, although the server leaks for each call that
+// ends that way. free is dhcpRpcFreeMemory outside of tests.
 func countSubnetReservations(
 	subnetAddress DHCP_IP_ADDRESS,
 	preferredMaximum uint32,
@@ -368,6 +367,8 @@ func countSubnetReservations(
 			elementsInfo  *DHCP_RESERVATION_INFO_ARRAY
 		)
 
+		previousHandle := resumeHandle
+
 		ret := enum(subnetAddress, &resumeHandle, preferredMaximum, &elementsInfo, &elementsRead, &elementsTotal)
 
 		freeReservationInfoArray(elementsInfo, free)
@@ -381,9 +382,15 @@ func countSubnetReservations(
 			return count, nil
 		case windows.ERROR_MORE_DATA:
 			if elementsRead == 0 {
-				// The page cannot hold the next reservation. Asking again
-				// would never end.
-				return 0, fmt.Errorf("dhcpV4EnumSubnetReservations returned no reservations for a preferred maximum of %d bytes", preferredMaximum)
+				// The page cannot hold the next reservation, and asking
+				// again would never end. ElementsTotal is the number of
+				// reservations from the resume handle on, so the count is
+				// known without another call.
+				return count + elementsTotal, nil
+			}
+
+			if resumeHandle == previousHandle {
+				return 0, fmt.Errorf("dhcpV4EnumSubnetReservations did not advance after %d reservations: %w", count, ret)
 			}
 		default:
 			return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", ret)

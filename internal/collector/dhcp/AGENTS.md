@@ -53,7 +53,9 @@ The scope metrics come from the DHCP Server Management API in
   `PreferredMaximum = 0`, which returns `ElementsRead = 0`, the count in
   `ElementsTotal` and an empty array. Reading only the count that way added
   126 MB to the service in 300000 calls. Do not page an enumeration of this
-  API and never ask it for the count alone.
+  API and never ask it for the count alone. If the server returns a page
+  without elements anyway, the count is taken from `ElementsTotal` instead of
+  asking again.
 - The client returns every level of a reservation page as an allocation of
   its own: the client identifier, the name and the description of each
   reservation, the reservation, the pointer array and the structure. Freeing
