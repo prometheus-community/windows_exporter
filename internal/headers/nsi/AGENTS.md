@@ -10,8 +10,10 @@ reimplementation. Check new calls the same way before relying on them.
 
 ## Call path of netsh
 
-Found by static analysis of build 26100.9818 (x64) in November 2026. No
-binary was run for it.
+Found by static analysis of the x64 binaries of build 26100 (user mode
+26100.9818, `netio.sys` 26100.9974) in November 2026, without PDB symbols. No
+binary was run for it. Names of internal structures and functions below are
+descriptive, not symbol names.
 
 ```text
 netsh.exe
@@ -21,8 +23,9 @@ netsh.exe
        RPC context not NULL -> rpcrt4.dll!Ndr64AsyncClientCall (remote)
   -> nsi.dll         builds the request, DeviceIoControl on \\.\Nsi
   -> nsiproxy.sys    validates the request size, forwards it
-  -> netio.sys       NsiGetAllParametersEx, dispatches to the provider
-  -> tcpip.sys       provider of the TCP and UDP modules (not traced)
+  -> netio.sys       NsiGetAllParametersEx, looks up the object descriptor,
+                     checks the sizes, calls the provider callback
+  -> tcpip.sys       provider of the TCP and UDP modules
 ```
 
 `netiohlp.dll` keeps the RPC context in a global. It is only set by
@@ -39,12 +42,33 @@ logic, so call `nsi.dll` directly: no RPC, no MI, no cgo.
 `nsiproxy.sys` has separate paths for 32-bit callers (`IoIs32bitProcess`).
 Use the exported functions; never build the IOCTL requests by hand.
 
+## Object descriptors in netio.sys
+
+Every provider registers one 104-byte (`0x68`) descriptor per object.
+`netio.sys` finds it by object index and checks the caller's key and buffer
+sizes against it:
+
+| Offset | Field                                    |
+|--------|------------------------------------------|
+| `0x00` | key size                                 |
+| `0x04` | read-write part size (struct type 0)     |
+| `0x08` | read-only dynamic part size (type 1)     |
+| `0x0C` | read-only static part size (type 2)      |
+| `0x20` | single-parameter get callback, or NULL   |
+| `0x30` | get-all callback                         |
+| `0x38` | set-all callback                         |
+
+So `NSI_STRUCT_TYPE` is 0 = read-write, 1 = dynamic, 2 = static; larger
+values are refused. `NsiGetParameterEx` checks `Offset + ParamLen` against the
+part size. When the single-parameter callback is NULL, it calls the get-all
+callback and copies `ParamLen` bytes from `Offset`.
+
 ## NsiGetAllParameters
 
-Use it for reads. It is the call local netsh makes, so it gets the same
-request in the kernel, and it needs no `NSI_STRUCT_TYPE` argument. An earlier
-version used `NsiGetParameter` with struct type 0 (read-write) and read the
-same bytes.
+Use it for reads. It is the call local netsh makes and needs no struct type.
+For the dynamic port range `NsiGetParameter` (struct type 0, offset 0, 4
+bytes) reaches the same provider callback through the fallback above, and an
+earlier version of this package read the same bytes with it.
 
 ```c
 DWORD NsiGetAllParameters(
@@ -86,16 +110,24 @@ has a layout test. The module IDs are in Wine's `nsi.h`:
 
 ## Stores
 
-| Store | Read                         | Write                              |
-|-------|------------------------------|------------------------------------|
-| 0     | persistent configuration     | netsh maps `store=persistent` to 2 |
-| 1     | active configuration         | active configuration               |
-| 2     | refused by the remote path   | persistent                         |
+From `NsiGetAllParametersEx` and `NsiSetAllParametersEx` in `netio.sys`:
 
-Read store 1: it holds the values in effect. Store 2 is probably "both"
-(persistent and active), which would explain why netsh writes persistent
-changes there and why the remote read path refuses it, but this is not
-confirmed.
+| Store | Read                                   | Write                         |
+|-------|----------------------------------------|-------------------------------|
+| 0     | persistent configuration               | persistent only               |
+| 1     | active configuration                   | active only                   |
+| 2     | invalid parameter                      | active, then persistent       |
+| 3     | active provider, else persistent       | invalid parameter             |
+| 4     | separate get-all path, purpose unknown | invalid parameter             |
+
+Read store 1: it holds the values in effect. netsh writes `store=persistent`
+with store 2, which updates the active value first and then the persistent
+one. The two updates are separate, not atomic.
+
+The persistent values live in the registry under
+`HKLM\SYSTEM\CurrentControlSet\Control\Nsi\{module GUID}\{object index}`.
+Do not read them there: they are the configuration for the next boot, not
+necessarily the values in effect.
 
 ## Objects
 
@@ -105,13 +137,21 @@ confirmed.
 | UDP    | 4      | none | 4 bytes         | dynamic port range                      |
 
 Dynamic port range layout: the first port as a big-endian `uint16` at offset 0,
-the number of ports as a little-endian `uint16` at offset 2. The read-write
-buffer netsh passes for this object has not been measured. If Windows wants a
-larger buffer, the live test fails. Bytes read with `NsiGetParameter` on
+the number of ports as a little-endian `uint16` at offset 2. The descriptor in
+`tcpip.sys` (one template, registered for TCP object 20 and UDP object 4)
+has no key, a 4-byte read-write part, no read-only parts and no
+single-parameter callback, so the 4 bytes are the whole object. The get-all
+callback copies them from the provider's state without any byte swapping and
+without an address family. Bytes read with `NsiGetParameter` on
 Windows Server 2025 build 26100: `c0 00 00 40` for the default 49152/16384,
 `c0 01 ff 3f` after `netsh int ipv4 set dynamicport tcp start=49153
 num=16383`. Windows 11 build 26300 read the same. The mixed byte order looks
-odd, but the probe confirmed it; do not "fix" it.
+odd, but the probe and the kernel confirm it; do not "fix" it.
+
+`tcpip.sys` starts with the default `c0 00 00 40`, then loads the persistent
+range and keeps it if it is valid. The same check runs when the active range
+is changed: start port at least 1024, at least 255 ports, and start plus
+count at most 65536.
 
 There is one object per protocol, not per address family: setting the IPv4
 range with netsh also changed the IPv6 range and every `MSFT_NetTCPSetting`
@@ -120,20 +160,20 @@ is not known.
 
 ## Open questions
 
-- Whether the 4 bytes are the whole read-write part of the object, or only
-  its start. A larger buffer has not been tried.
-- Whether IPv4 and IPv6 share one ephemeral pool (needs `tcpip.sys`).
+- Whether IPv4 and IPv6 share one ephemeral pool. The configuration is
+  shared; the allocation has not been traced in `tcpip.sys`.
 - Whether the object index and layout are the same on Windows Server 2016 and
   2019. CI covers Windows Server 2022 and Windows 11 ARM through the live
   test. Callers must keep a fallback (the tcp collector falls back to
   `MSFT_NetTCPSetting`).
 - The excluded port ranges (`show excludedportrange`) have not been traced.
-- `netio.sys` would answer the struct type values and the provider dispatch.
+- What stores 3 and 4 are for.
 
 ## Adding a call
 
 1. Find the netsh command that shows the value and trace it in
    `netiohlp.dll` to the module, object index, store, key and buffer sizes.
+   The provider's descriptor (see above) gives the exact part sizes.
 2. Probe it on a live system and change the value with netsh to confirm the
    layout and byte order. Restore the value afterwards.
 3. Add a layout test with the observed bytes and a live test with loose

@@ -46,7 +46,8 @@ func TestTCPDynamicPortRange(t *testing.T) {
 
 	start, count, err := TCPDynamicPortRange()
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, start, uint16(1025))
+	// The bounds tcpip.sys enforces when it loads or changes the range.
+	require.GreaterOrEqual(t, start, uint16(1024))
 	require.GreaterOrEqual(t, count, uint16(255))
 	require.LessOrEqual(t, uint32(start)+uint32(count), uint32(65536))
 }
