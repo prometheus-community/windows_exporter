@@ -24,7 +24,7 @@ layout in object 4 of module `{eb004a02-…}`. Found by probing Windows 11 build
 26300 and Windows Server 2025 build 26100 in November 2026; the API is
 undocumented, so `nsi` has a layout test and a live test, and Build falls back
 to the `Internet` instance of `MSFT_NetTCPSetting` (read once) when NSI fails.
-There is one range per protocol: setting it for ipv4 with netsh changed ipv6
+There is one range per protocol: setting it for IPv4 with netsh changed IPv6
 and every `MSFT_NetTCPSetting` instance too. If neither source works, Build
 logs a warning and drops `dynamic_ports` instead of failing the collector.
 
