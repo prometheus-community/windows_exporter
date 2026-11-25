@@ -56,7 +56,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Continue"
           $exe = (Resolve-Path .\portprobe.exe).Path
-          $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 16) + "!a1"
+          $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 8) + "!a1"
           net user probeuser $pw /add | Out-Null
           foreach ($run in @(@{n="probeuser"; a=@("/ru","probeuser","/rp",$pw)}, @{n="SYSTEM"; a=@("/ru","SYSTEM")})) {
             $out = "$env:RUNNER_TEMP\nsi-$($run.n).txt"
@@ -74,8 +74,14 @@ jobs:
         shell: powershell
         run: |
           netsh int ipv4 set dynamicport tcp start=50000 num=255 store=active
+          netsh int ipv4 set dynamicport udp start=50000 num=255 store=active
           .\portprobe.exe -start 50000 -count 255 unicast
-          .\portprobe.exe -start 50000 -count 255 hold
+          .\portprobe.exe -start 50000 -count 255 validate
+          netsh int ipv4 add excludedportrange protocol=tcp startport=50200 numberofports=15 store=active
+          netsh int ipv4 add excludedportrange protocol=udp startport=50210 numberofports=7 store=active
+          .\portprobe.exe -start 50000 -count 255 validate
+          netsh int ipv4 delete excludedportrange protocol=tcp startport=50200 numberofports=15 store=active
+          netsh int ipv4 delete excludedportrange protocol=udp startport=50210 numberofports=7 store=active
 
       - name: Restore range
         if: always()

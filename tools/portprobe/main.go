@@ -27,6 +27,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -1097,7 +1099,7 @@ func runUnicast() {
 // loop, and checks that NsiFreeTable releases what NsiAllocateAndGetTable
 // allocated.
 func runBench() {
-	const iterations = 20000
+	const iterations = 200000
 
 	// PROCESS_MEMORY_COUNTERS: cb, PageFaultCount, then 8 SIZE_T fields;
 	// PagefileUsage is the 7th of them.
@@ -1114,7 +1116,7 @@ func runBench() {
 		return pmc.sizes[6]
 	}
 
-	for _, kind := range []string{"range", "table"} {
+	for _, kind := range []string{"range", "table", "table", "table"} {
 		before := mem()
 		start := time.Now()
 
@@ -1149,9 +1151,183 @@ func runBench() {
 
 		wg.Wait()
 		el := time.Since(start)
+		runtime.GC()
+		debug.FreeOSMemory()
 		fmt.Printf("bench %s: %d calls on 8 goroutines in %v (%.1f us/call), errors=%v, pagefile usage %d -> %d KiB\n",
 			kind, iterations, el, float64(el.Microseconds())/iterations, errs, before/1024, mem()/1024)
 	}
+}
+
+// ---------------------------------------------------------------- validate
+
+// boundPorts returns the local ports of TCP endpoints that are bound but not
+// listening or connected (state 100 in MIB_TCPROW2/MIB_TCP6ROW2), read with
+// the undocumented iphlpapi exports netstat -q uses.
+func boundPorts() []int {
+	var out []int
+
+	heap, _, _ := procGetProcessHeap.Call()
+
+	for _, t := range []struct {
+		p                *windows.LazyProc
+		rowSize, portOff int
+	}{{procInternalGetBoundTcpEndpointTable, 28, 8}, {procInternalGetBoundTcp6EndpointTable, 60, 20}} {
+		var tbl uintptr
+
+		r0, _, _ := syscall.SyscallN(t.p.Addr(), uintptr(unsafe.Pointer(&tbl)), heap, 0)
+		if r0 != 0 || tbl == 0 {
+			fmt.Println("bound table error", r0)
+
+			continue
+		}
+
+		n := *(*uint32)(unsafe.Pointer(tbl))
+		b := unsafe.Slice((*byte)(unsafe.Pointer(tbl)), 4+int(n)*t.rowSize)
+
+		for i := range int(n) {
+			out = append(out, int(binary.BigEndian.Uint16(b[4+i*t.rowSize+t.portOff:])))
+		}
+
+		_, _, _ = syscall.SyscallN(procHeapFree.Addr(), heap, 0, tbl)
+	}
+
+	return out
+}
+
+// tablePorts returns local ports of the IP Helper TCP (all states) or UDP
+// tables for IPv4 and IPv6, with TIME_WAIT rows separately.
+func tablePorts(proto string) (ports, timeWait []int) {
+	for _, af := range []uint32{windows.AF_INET, windows.AF_INET6} {
+		if proto == "udp" {
+			buf := getTable(procGetExtendedUdpTable, af, 1)
+			rowSize, portOff := 12, 4
+
+			if af == windows.AF_INET6 {
+				rowSize, portOff = 28, 20
+			}
+
+			for i := range int(binary.LittleEndian.Uint32(buf)) {
+				ports = append(ports, int(binary.BigEndian.Uint16(buf[4+i*rowSize+portOff:])))
+			}
+
+			continue
+		}
+
+		buf := getTable(procGetExtendedTcpTable, af, 5)
+		rowSize, portOff, stateOff := 24, 8, 0
+
+		if af == windows.AF_INET6 {
+			rowSize, portOff, stateOff = 56, 20, 48
+		}
+
+		for i := range int(binary.LittleEndian.Uint32(buf)) {
+			r := buf[4+i*rowSize:]
+			p := int(binary.BigEndian.Uint16(r[portOff:]))
+
+			if binary.LittleEndian.Uint32(r[stateOff:]) == 11 {
+				timeWait = append(timeWait, p)
+			} else {
+				ports = append(ports, p)
+			}
+		}
+	}
+
+	return ports, timeWait
+}
+
+// estimate predicts how many port-0 binds still succeed: range size minus the
+// union of excluded ports and local ports of endpoints inside the range.
+func estimate(proto string) (free, excluded, used, timeWaitOnly int) {
+	inRange := func(p int) bool { return p >= rangeStart && p < rangeStart+rangeCount }
+	set := map[int]bool{}
+
+	m, obj := tcpModule, uint32(29)
+	if proto == "udp" {
+		m, obj = udpModule, 5
+	}
+
+	keys, _, err := table(1, m, obj, 4, 0)
+	if err != nil {
+		fmt.Println("exclusions:", err)
+	}
+
+	for _, k := range keys {
+		start, count := int(binary.LittleEndian.Uint16(k)), int(binary.LittleEndian.Uint16(k[2:]))
+		for p := start; p < start+count; p++ {
+			if inRange(p) && !set[p] {
+				set[p] = true
+				excluded++
+			}
+		}
+	}
+
+	ports, tw := tablePorts(proto)
+	if proto == "tcp" {
+		ports = append(ports, boundPorts()...)
+	}
+
+	for _, p := range ports {
+		if inRange(p) && !set[p] {
+			set[p] = true
+			used++
+		}
+	}
+
+	for _, p := range tw {
+		if inRange(p) && !set[p] {
+			timeWaitOnly++
+		}
+	}
+
+	return rangeCount - len(set), excluded, used, timeWaitOnly
+}
+
+func check(name, proto string) {
+	free, excl, used, tw := estimate(proto)
+	sp := spec{fam: v4, proto: proto, addr: "wildcard"}
+	hs, _, err := fill(sp, maxSocketsPerSeries)
+	closeAll(hs)
+	fmt.Printf("### %s %s: predicted free=%d (excluded=%d, endpoint ports=%d, TIME_WAIT-only ports=%d), actual port-0 binds=%d (%s), diff=%d\n",
+		name, proto, free, excl, used, tw, len(hs), errStr(err), len(hs)-free)
+}
+
+// runValidate compares the estimate from public and semi-public tables with
+// the measured capacity under different socket mixes.
+func runValidate() {
+	check("V0 idle", "tcp")
+	check("V0 idle", "udp")
+
+	_, stop := listener("127.0.0.1:40031", false)
+	defer stop()
+
+	var hs []windows.Handle
+
+	add := func(h []windows.Handle, _ []int, _ error) { hs = append(hs, h...) }
+	add(fill(spec{fam: v4, proto: "tcp", addr: "wildcard"}, 30))
+	add(fill(spec{fam: v6only, proto: "tcp", addr: "wildcard", listen: true}, 20))
+	add(fill(spec{fam: dual, proto: "tcp", addr: "wildcard"}, 10))
+	add(fill(spec{fam: v4, proto: "tcp", addr: "loopback2"}, 10))
+	add(connectMany(spec{fam: v4, proto: "tcp", addr: "wildcard"}, &windows.SockaddrInet4{Port: 40031, Addr: [4]byte{127, 0, 0, 1}}, 20, false))
+
+	for p := rangeStart + rangeCount - 10; p < rangeStart+rangeCount; p++ {
+		if h, _, err := bindPort(spec{fam: v6only, proto: "tcp", addr: "loopback"}, p); err == nil {
+			hs = append(hs, h)
+		}
+	}
+
+	add(fill(spec{fam: v4, proto: "udp", addr: "wildcard"}, 25))
+	add(fill(spec{fam: v6only, proto: "udp", addr: "wildcard"}, 15))
+	check("V1 mixed sockets held", "tcp")
+	check("V1 mixed sockets held", "udp")
+	closeAll(hs)
+	time.Sleep(time.Second)
+
+	_, stopT := listener("127.0.0.1:40032", true)
+	tw, _, _ := connectMany(spec{fam: v4, proto: "tcp", addr: "wildcard"}, &windows.SockaddrInet4{Port: 40032, Addr: [4]byte{127, 0, 0, 1}}, 60, false)
+	closeAll(tw)
+	time.Sleep(2 * time.Second)
+	check("V2 60 TIME_WAIT", "tcp")
+	stopT()
 }
 
 // ---------------------------------------------------------------- main
@@ -1184,6 +1360,8 @@ func main() {
 		runUnicast()
 	case "bench":
 		runBench()
+	case "validate":
+		runValidate()
 	case "capacity":
 		for _, sp := range []spec{{fam: v4, proto: "tcp", addr: "wildcard"}, {fam: v6only, proto: "tcp", addr: "wildcard"}, {fam: v4, proto: "udp", addr: "wildcard"}, {fam: v6only, proto: "udp", addr: "wildcard"}} {
 			hs, ps, err := fill(sp, maxSocketsPerSeries)
