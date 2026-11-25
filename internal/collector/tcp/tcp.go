@@ -276,7 +276,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPortRange) {
 		if err := c.collectDynamicPortRange(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting tcp dynamic port range metrics: %w", err))
+			errs = append(errs, err)
 		}
 	}
 

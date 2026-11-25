@@ -213,8 +213,9 @@ checked.
 - The layout of TCP object 34 (extended port pool).
 - Whether the object index and layout are the same on Windows Server 2016 and
   2019. CI covers Windows Server 2022 and Windows 11 ARM through the live
-  test. Callers log a warning and skip the metric when `Load` or a read
-  fails; they never substitute a default.
+  test. Callers log a warning and skip the metric when `Load` fails, and
+  return an error without a value when a read fails; they never substitute
+  a default.
 - The layout of the excluded port ranges (objects 29 and 5) has not been
   probed on a live system.
 - What stores 3 and 4 are for.

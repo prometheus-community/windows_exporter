@@ -93,6 +93,9 @@ func TestDynamicPortRangeConcurrent(t *testing.T) {
 func BenchmarkDynamicPortRange(b *testing.B) {
 	require.NoError(b, Load())
 
+	_, err := DynamicPortRange(ProtocolTCP)
+	require.NoError(b, err)
+
 	b.ReportAllocs()
 
 	for b.Loop() {
