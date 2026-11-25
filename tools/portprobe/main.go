@@ -1069,29 +1069,29 @@ func runHold() {
 // runUnicast checks SO_REUSE_UNICASTPORT with fresh listeners: can one local
 // port serve connections to different remote endpoints?
 func runUnicast() {
-	_, s1 := listener("127.0.0.1:40021", false)
-	_, s2 := listener("127.0.0.1:40022", false)
-
-	defer s1()
-	defer s2()
-
-	r1 := &windows.SockaddrInet4{Port: 40021, Addr: [4]byte{127, 0, 0, 1}}
-	r2 := &windows.SockaddrInet4{Port: 40022, Addr: [4]byte{127, 0, 0, 1}}
-
-	for _, mode := range []struct {
+	for i, mode := range []struct {
 		name      string
 		unicast   bool
 		bindFirst bool
-	}{{"unicast connect", true, false}, {"unicast bind(0)+connect", true, true}, {"plain bind(0)+connect", false, true}} {
+	}{{"unicast connect", true, false}, {"unicast bind(0)+connect", true, true}, {"plain connect", false, false}} {
+		// Fresh listeners per mode, so FIN_WAIT_2 leftovers of an earlier
+		// mode cannot collide with the 4-tuples of this one.
+		p1, p2 := 40100+i*2, 40101+i*2
+		_, s1 := listener(fmt.Sprintf("127.0.0.1:%d", p1), false)
+		_, s2 := listener(fmt.Sprintf("127.0.0.1:%d", p2), false)
+		r1 := &windows.SockaddrInet4{Port: p1, Addr: [4]byte{127, 0, 0, 1}}
+		r2 := &windows.SockaddrInet4{Port: p2, Addr: [4]byte{127, 0, 0, 1}}
+
 		s := spec{fam: v4, proto: "tcp", addr: "wildcard", unicast: mode.unicast}
-		h1, p1, e1 := connectMany(s, r1, maxSocketsPerSeries, mode.bindFirst)
-		h2, p2, e2 := connectMany(s, r2, maxSocketsPerSeries, mode.bindFirst)
-		fmt.Printf("### %s: to :40021 %d (%s) stop=%s; to :40022 %d (%s) shared ports=%d stop=%s\n",
-			mode.name, len(h1), portSummary(p1), errStr(e1), len(h2), portSummary(p2), overlap(p1, p2), errStr(e2))
+		h1, ports1, e1 := connectMany(s, r1, maxSocketsPerSeries, mode.bindFirst)
+		h2, ports2, e2 := connectMany(s, r2, maxSocketsPerSeries, mode.bindFirst)
+		fmt.Printf("### %s: to :%d %d (%s) stop=%s; to :%d %d (%s) shared ports=%d stop=%s\n",
+			mode.name, p1, len(h1), portSummary(ports1), errStr(e1), p2, len(h2), portSummary(ports2), overlap(ports1, ports2), errStr(e2))
 		closeAll(h1)
 		closeAll(h2)
-		// Let FIN_WAIT_2 sockets go: the listeners keep the server ends open.
-		time.Sleep(2 * time.Second)
+		s1()
+		s2()
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -1330,6 +1330,77 @@ func runValidate() {
 	stopT()
 }
 
+// ---------------------------------------------------------------- restricted
+
+// runRestricted drops to a token without the Administrators group and
+// without privileges before the first NSI call of this process.
+func runRestricted() {
+	runtime.LockOSThread()
+
+	var tok windows.Token
+	if err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY|windows.TOKEN_IMPERSONATE|windows.TOKEN_ASSIGN_PRIMARY, &tok); err != nil {
+		fmt.Println("OpenProcessToken:", err)
+
+		return
+	}
+
+	admins, _ := windows.CreateWellKnownSid(windows.WinBuiltinAdministratorsSid)
+	deny := []windows.SIDAndAttributes{{Sid: admins}}
+
+	var restricted windows.Token
+
+	// DISABLE_MAX_PRIVILEGE = 1.
+	r, _, e := modadvapi32.NewProc("CreateRestrictedToken").Call(uintptr(tok), 1, 1, uintptr(unsafe.Pointer(&deny[0])), 0, 0, 0, 0, uintptr(unsafe.Pointer(&restricted)))
+	if r == 0 {
+		fmt.Println("CreateRestrictedToken:", e)
+
+		return
+	}
+
+	var imp windows.Token
+	if err := windows.DuplicateTokenEx(restricted, windows.TOKEN_ALL_ACCESS, nil, windows.SecurityImpersonation, windows.TokenImpersonation, &imp); err != nil {
+		fmt.Println("DuplicateTokenEx:", err)
+
+		return
+	}
+
+	if err := windows.SetThreadToken(nil, imp); err != nil {
+		fmt.Println("SetThreadToken:", err)
+
+		return
+	}
+
+	var th windows.Token
+	_ = windows.OpenThreadToken(windows.CurrentThread(), windows.TOKEN_QUERY, true, &th)
+	member, _ := th.IsMember(admins)
+	fmt.Printf("## restricted token: member of Administrators=%v elevated=%v\n", member, th.IsElevated())
+
+	runNSIOnThread()
+	boundTable(procInternalGetBoundTcpEndpointTable, "InternalGetBoundTcpEndpointTable")
+	iphlpRange()
+}
+
+//nolint:gochecknoglobals
+var modadvapi32 = windows.NewLazySystemDLL("advapi32.dll")
+
+// runNSIOnThread is the read-only part of runNSI without the object scan.
+func runNSIOnThread() {
+	rw, _, _, err := getAll(1, tcpModule, 20, 4, 0, 0)
+	fmt.Printf("getall tcp 20: %s err=%v\n", hex.EncodeToString(rw), err)
+	rw, _, _, err = getAll(1, udpModule, 4, 4, 0, 0)
+	fmt.Printf("getall udp 4: %s err=%v\n", hex.EncodeToString(rw), err)
+	rw, _, _, err = getAll(1, tcpModule, 34, 44, 0, 0)
+	fmt.Printf("getall tcp 34: %s err=%v\n", hex.EncodeToString(rw), err)
+
+	for _, o := range []struct {
+		m   *npiModuleID
+		obj uint32
+	}{{tcpModule, 29}, {udpModule, 5}} {
+		ks, _, err := table(1, o.m, o.obj, 4, 2)
+		fmt.Printf("table %d: n=%d err=%v\n", o.obj, len(ks), err)
+	}
+}
+
 // ---------------------------------------------------------------- main
 
 func netsh(args ...string) {
@@ -1360,6 +1431,8 @@ func main() {
 		runUnicast()
 	case "bench":
 		runBench()
+	case "restricted":
+		runRestricted()
 	case "validate":
 		runValidate()
 	case "capacity":

@@ -51,23 +51,20 @@ jobs:
           .\portprobe.exe hold
           .\portprobe.exe bench
 
-      - name: NSI as non-admin user and as LocalSystem
+      - name: NSI with a restricted (non-admin) token
         shell: powershell
         run: |
-          $ErrorActionPreference = "Continue"
-          $exe = (Resolve-Path .\portprobe.exe).Path
+          .\portprobe.exe restricted
           $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 8) + "!a1"
           net user probeuser $pw /add | Out-Null
-          foreach ($run in @(@{n="probeuser"; a=@("/ru","probeuser","/rp",$pw)}, @{n="SYSTEM"; a=@("/ru","SYSTEM")})) {
-            $out = "$env:RUNNER_TEMP\nsi-$($run.n).txt"
-            icacls $env:RUNNER_TEMP /grant "probeuser:(OI)(CI)M" | Out-Null
-            icacls (Split-Path $exe) /grant "probeuser:(OI)(CI)RX" | Out-Null
-            schtasks /create /tn "probe-$($run.n)" /tr "cmd /c `"$exe`" nsi > `"$out`" 2>&1 & whoami /groups >> `"$out`"" /sc once /st 23:59 /f @($run.a) | Out-Null
-            schtasks /run /tn "probe-$($run.n)" | Out-Null
-            Start-Sleep 15
-            "===== as $($run.n)"
-            Get-Content $out | Select-String -NotMatch "probe getall"
-          }
+          $cred = New-Object System.Management.Automation.PSCredential("probeuser", (ConvertTo-SecureString $pw -AsPlainText -Force))
+          icacls $env:RUNNER_TEMP /grant "probeuser:(OI)(CI)M" | Out-Null
+          icacls (Get-Location).Path /grant "probeuser:(OI)(CI)RX" /T /Q | Out-Null
+          try {
+            Start-Process -FilePath (Resolve-Path .\portprobe.exe).Path -ArgumentList "restricted" -Credential $cred -Wait -NoNewWindow -RedirectStandardOutput "$env:RUNNER_TEMP\pu.txt" -WorkingDirectory $env:RUNNER_TEMP
+            "===== as probeuser (standard user logon)"
+            Get-Content "$env:RUNNER_TEMP\pu.txt"
+          } catch { "Start-Process as probeuser failed: $_" }
           net user probeuser /delete | Out-Null
 
       - name: Small range, SO_REUSE_UNICASTPORT
