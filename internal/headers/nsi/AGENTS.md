@@ -41,8 +41,10 @@ Use the exported functions; never build the IOCTL requests by hand.
 
 ## NsiGetAllParameters
 
-Use it for reads. It is the call local netsh makes, and it needs no
-`NSI_STRUCT_TYPE`, whose numeric values are not proven by the analysis.
+Use it for reads. It is the call local netsh makes, so it gets the same
+request in the kernel, and it needs no `NSI_STRUCT_TYPE` argument. An earlier
+version used `NsiGetParameter` with struct type 0 (read-write) and read the
+same bytes.
 
 ```c
 DWORD NsiGetAllParameters(
@@ -90,8 +92,10 @@ has a layout test. The module IDs are in Wine's `nsi.h`:
 | 1     | active configuration         | active configuration               |
 | 2     | refused by the remote path   | persistent                         |
 
-Read store 1: it holds the values in effect. Whether a write to store 2 also
-changes the active values is not known.
+Read store 1: it holds the values in effect. Store 2 is probably "both"
+(persistent and active), which would explain why netsh writes persistent
+changes there and why the remote read path refuses it, but this is not
+confirmed.
 
 ## Objects
 
@@ -101,7 +105,9 @@ changes the active values is not known.
 | UDP    | 4      | none | 4 bytes         | dynamic port range                      |
 
 Dynamic port range layout: the first port as a big-endian `uint16` at offset 0,
-the number of ports as a little-endian `uint16` at offset 2. Bytes read on
+the number of ports as a little-endian `uint16` at offset 2. The read-write
+buffer netsh passes for this object has not been measured. If Windows wants a
+larger buffer, the live test fails. Bytes read with `NsiGetParameter` on
 Windows Server 2025 build 26100: `c0 00 00 40` for the default 49152/16384,
 `c0 01 ff 3f` after `netsh int ipv4 set dynamicport tcp start=49153
 num=16383`. Windows 11 build 26300 read the same. The mixed byte order looks
@@ -131,6 +137,7 @@ is not known.
 2. Probe it on a live system and change the value with netsh to confirm the
    layout and byte order. Restore the value afterwards.
 3. Add a layout test with the observed bytes and a live test with loose
-   bounds, and add the function to `lazyproc` via `Load`.
+   bounds. Add the proc to the `lazyproc.Once` list of the package, which
+   `Load` checks, and call `Load` in the collector's `Build`.
 4. Keep a fallback in the caller and drop only that sub-collector when both
    sources fail.

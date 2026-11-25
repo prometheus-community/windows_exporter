@@ -20,7 +20,8 @@ module, the same call as local `netsh int ipv4 show dynamicport tcp`). See
 path, the layout and how it was found. NSI is undocumented, so Build falls
 back to the `Internet` instance of `MSFT_NetTCPSetting` (read once) when NSI
 fails, and logs a warning. There is one range per protocol, shared by IPv4 and
-IPv6. If neither source works, Build drops `dynamic_ports` instead of failing
+IPv6: setting it for IPv4 with netsh changed IPv6 and every
+`MSFT_NetTCPSetting` instance too. If neither source works, Build drops `dynamic_ports` instead of failing
 the collector.
 
 Open questions: whether IPv4 and IPv6 also share one ephemeral port pool (then
