@@ -51,6 +51,7 @@ jobs:
           $fmt = { Get-NetTCPSetting | Format-Table SettingName, DynamicPortRangeStartPort, DynamicPortRangeNumberOfPorts, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort -AutoSize | Out-String -Width 300 }
           "===== before"
           & $fmt
+          Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPSetting | Select-Object SettingName, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort | Export-Clixml "$env:RUNNER_TEMP\tcpsetting.xml"
           Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters | Out-String -Width 300
           netsh int ipv4 set dynamicport tcp start=50000 num=255 store=active
           .\portprobe.exe obj34
@@ -80,11 +81,15 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          foreach ($name in "Internet", "Datacenter", "InternetCustom", "DatacenterCustom") {
-            try { Set-NetTCPSetting -SettingName $name -AutoReusePortRangeStartPort 0 -AutoReusePortRangeNumberOfPorts 0 -ErrorAction Stop } catch { "reset $name failed: $_" }
-          }
+          if (-not (Test-Path "$env:RUNNER_TEMP\tcpsetting.xml")) { "no saved settings, nothing changed"; exit 0 }
+          $orig = Import-Clixml "$env:RUNNER_TEMP\tcpsetting.xml"
           foreach ($i in Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPSetting) {
-            try { Set-CimInstance -InputObject $i -Property @{AutoReusePortRangeMaxConnections = [uint32]0; AutoReusePortRangeMaxConnectionsPerPort = [uint32]0} -ErrorAction Stop } catch { "cim reset $($i.SettingName) failed: $_" }
+            $o = $orig | Where-Object SettingName -eq $i.SettingName
+            if (-not $o) { continue }
+            $props = @{}
+            foreach ($p in "AutoReusePortRangeStartPort", "AutoReusePortRangeNumberOfPorts", "AutoReusePortRangeMaxConnections", "AutoReusePortRangeMaxConnectionsPerPort") { if ($i.$p -ne $o.$p) { $props[$p] = $o.$p } }
+            if ($props.Count -eq 0) { continue }
+            try { Set-CimInstance -InputObject $i -Property $props -ErrorAction Stop; "restored $($i.SettingName)" } catch { "restore $($i.SettingName) failed: $_" }
           }
           Get-NetTCPSetting | Format-Table SettingName, AutoReusePortRangeStartPort, AutoReusePortRangeNumberOfPorts, AutoReusePortRangeMaxConnections, AutoReusePortRangeMaxConnectionsPerPort -AutoSize | Out-String -Width 300
 
