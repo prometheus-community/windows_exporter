@@ -209,7 +209,6 @@ percentages except where noted.
 | `windows-dhcp` | `dhcp` | `WindowsDHCPScopeAlmostExhausted` | Free addresses of an active scope below `dhcpScopeFreeWarningThreshold` (10%) | 15m | Warning |
 | `windows-dhcp` | `dhcp` | `WindowsDHCPScopeAlmostExhausted` | Free addresses of an active scope below `dhcpScopeFreeCriticalThreshold` (2%) | 15m | Critical |
 | `windows-dns` | `dns` | `WindowsDNSZoneTransferFailures` | Zone transfer failure rate above `dnsZoneTransferFailureRateThreshold` (0 per second) | 15m | Warning |
-| `windows-tcp` | `tcp` | `WindowsTCPDynamicPortsAlmostExhausted` | Local ports in use above `tcpDynamicPortUsageThreshold` (80%) of the dynamic port range (`dynamic_ports` sub-collector) | 10m | Warning |
 
 `_config.alerts` lists every alert by name. Set one to `false` to leave it out,
 for example `alerts+: { WindowsHostRebooted: false }`; an unknown name fails the

@@ -16,6 +16,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/nsi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -31,7 +32,7 @@ const (
 
 	subCollectorMetrics          = "metrics"
 	subCollectorConnectionsState = "connections_state"
-	subCollectorDynamicPorts     = "dynamic_ports"
+	subCollectorDynamicPortRange = "dynamic_port_range"
 )
 
 type Config struct {
@@ -43,7 +44,7 @@ var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorMetrics,
 		subCollectorConnectionsState,
-		subCollectorDynamicPorts,
+		subCollectorDynamicPortRange,
 	},
 }
 
@@ -69,15 +70,8 @@ type Collector struct {
 	segmentsRetransmittedTotal *prometheus.Desc
 	segmentsSentTotal          *prometheus.Desc
 	connectionsStateCount      *prometheus.Desc
-
-	// dynamicPortRange is the range Windows assigns local ports of outgoing
-	// connections from. It is empty when the dynamic_ports sub-collector is
-	// disabled. With dynamicPortRangeFromNSI it is read again on every
-	// scrape, otherwise it is the MI value read in Build.
-	dynamicPortRange        iphlpapi.PortRange
-	dynamicPortRangeFromNSI bool
-	dynamicPortsInUse       *prometheus.Desc
-	dynamicPortRangeSize    *prometheus.Desc
+	dynamicPortRangeStart      *prometheus.Desc
+	dynamicPortRangeSize       *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -132,8 +126,8 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
-	subCollectors := []string{subCollectorMetrics, subCollectorConnectionsState, subCollectorDynamicPorts}
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	subCollectors := []string{subCollectorMetrics, subCollectorConnectionsState, subCollectorDynamicPortRange}
 
 	for _, collector := range c.config.CollectorsEnabled {
 		if !slices.Contains(subCollectors, collector) {
@@ -143,24 +137,23 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) ||
-		slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
 		if err := iphlpapi.Load(); err != nil {
 			return err
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
-		if err := c.buildDynamicPortRange(logger, miSession); err != nil {
-			// The other sub-collectors need neither source, so a failure
-			// disables only this one instead of the whole collector.
-			logger.Warn("failed to read the TCP dynamic port range, disabling the dynamic_ports sub-collector",
+	// NSI is undocumented. Without it, run without the range instead of
+	// failing the whole collector.
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPortRange) {
+		if err := nsi.Load(); err != nil {
+			logger.Warn("failed to load the network store interface, disabling the dynamic_port_range sub-collector",
 				slog.String("collector", Name),
 				slog.Any("err", err),
 			)
 
 			c.config.CollectorsEnabled = slices.DeleteFunc(slices.Clone(c.config.CollectorsEnabled), func(name string) bool {
-				return name == subCollectorDynamicPorts
+				return name == subCollectorDynamicPortRange
 			})
 		}
 	}
@@ -227,9 +220,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		[]string{"af", "state"},
 		nil,
 	)
-	c.dynamicPortsInUse = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dynamic_ports_in_use"),
-		"Number of distinct local ports inside the TCP dynamic port range that an IPv4 or IPv6 connection in any state, including TIME_WAIT, holds",
+	c.dynamicPortRangeStart = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_start"),
+		"First port of the TCP dynamic port range, which IPv4 and IPv6 share",
 		nil,
 		nil,
 	)
@@ -275,10 +268,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) ||
-		slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
-		if err := c.collectConnectionTable(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting tcp connection table metrics: %w", err))
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
+		if err := c.collectConnectionsState(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting tcp connection state metrics: %w", err))
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPortRange) {
+		if err := c.collectDynamicPortRange(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting tcp dynamic port range metrics: %w", err))
 		}
 	}
 
@@ -376,70 +374,26 @@ func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics []perf
 	)
 }
 
-// collectConnectionTable reads the connection table of each address family
-// once and publishes the connection states and the dynamic port usage from it.
-func (c *Collector) collectConnectionTable(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
 
-	if c.dynamicPortRangeFromNSI {
-		// A failed read keeps the previous range.
-		if err := c.refreshDynamicPortRange(); err != nil {
-			errs = append(errs, err)
-		}
+	if stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect TCP connection states for %s: %w", ipAddressFamilyIPv4, err))
+	} else {
+		c.sendTCPStateMetrics(ch, stateCounts, ipAddressFamilyIPv4)
 	}
 
-	// IPv4 and IPv6 connections take their local ports from one port pool,
-	// so both tables add to one set. See internal/headers/nsi/AGENTS.md.
-	var ports *iphlpapi.PortSet
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorDynamicPorts) {
-		ports = &iphlpapi.PortSet{}
-	}
-
-	tablesRead := 0
-
-	for _, family := range []struct {
-		id   uint32
-		name string
-	}{
-		{windows.AF_INET, ipAddressFamilyIPv4},
-		{windows.AF_INET6, ipAddressFamilyIPv6},
-	} {
-		stats, err := iphlpapi.GetTCPConnectionStats(family.id, c.dynamicPortRange, ports)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to read the TCP connection table for %s: %w", family.name, err))
-
-			continue
-		}
-
-		tablesRead++
-
-		c.writeConnectionStates(ch, stats, family.name)
-	}
-
-	// A count from one table only would under-report the shared pool.
-	if ports != nil && tablesRead == 2 {
-		ch <- prometheus.MustNewConstMetric(
-			c.dynamicPortsInUse,
-			prometheus.GaugeValue,
-			float64(ports.Len()),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.dynamicPortRangeSize,
-			prometheus.GaugeValue,
-			float64(c.dynamicPortRange.NumberOfPorts),
-		)
+	if stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET6); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect TCP6 connection states for %s: %w", ipAddressFamilyIPv6, err))
+	} else {
+		c.sendTCPStateMetrics(ch, stateCounts, ipAddressFamilyIPv6)
 	}
 
 	return errors.Join(errs...)
 }
 
-func (c *Collector) writeConnectionStates(ch chan<- prometheus.Metric, stats iphlpapi.TCPConnectionStats, af string) {
-	if !slices.Contains(c.config.CollectorsEnabled, subCollectorConnectionsState) {
-		return
-	}
-
-	for state, count := range stats.States {
+func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi.MIB_TCP_STATE]uint32, af string) {
+	for state, count := range stateCounts {
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionsStateCount,
 			prometheus.GaugeValue,
@@ -448,4 +402,28 @@ func (c *Collector) writeConnectionStates(ch chan<- prometheus.Metric, stats iph
 			state.String(),
 		)
 	}
+}
+
+// collectDynamicPortRange reads the active range on every scrape, so a change
+// with netsh shows up without a restart. A failed read reports no range
+// rather than a default.
+func (c *Collector) collectDynamicPortRange(ch chan<- prometheus.Metric) error {
+	portRange, err := nsi.DynamicPortRange(nsi.ProtocolTCP)
+	if err != nil {
+		return fmt.Errorf("failed to read the TCP dynamic port range: %w", err)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.dynamicPortRangeStart,
+		prometheus.GaugeValue,
+		float64(portRange.Start),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.dynamicPortRangeSize,
+		prometheus.GaugeValue,
+		float64(portRange.NumberOfPorts),
+	)
+
+	return nil
 }

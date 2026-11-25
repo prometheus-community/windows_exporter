@@ -26,4 +26,3 @@
 + (import 'storage_spaces.libsonnet')
 + (import 'dhcp.libsonnet')
 + (import 'dns.libsonnet')
-+ (import 'tcp.libsonnet')

@@ -5,14 +5,14 @@ The tcp collector exposes metrics about the TCP network stack.
 |||
 -|-
 Metric name prefix  | `tcp`
-Data source         | Perflib, `GetExtendedTcpTable`, NSI (`nsi.dll`), MI (`MSFT_NetTCPSetting`) as fallback
+Data source         | Perflib, IP Helper API, network store interface (NSI)
 Enabled by default? | No
 
 ## Flags
 
 ### `--collector.tcp.enabled`
 
-Comma-separated list of collectors to use. Supported values are `metrics`, `connections_state` and `dynamic_ports`. Defaults to all, if not specified.
+Comma-separated list of collectors to use. Supported values are `metrics`, `connections_state` and `dynamic_port_range`. Defaults to all, if not specified.
 
 Example: `--collector.tcp.enabled=metrics`
 
@@ -31,54 +31,34 @@ Example: `--collector.tcp.enabled=metrics`
 | `windows_tcp_segments_sent_total`          | Total segments sent, including those on current connections, but excluding those containing *only* retransmitted bytes                                                                                                                              | counter | af     |
 | `windows_tcp_connections`      | Number of TCP connections by state among: CLOSED, LISTENING, SYN_SENT, SYN_RECEIVED, ESTABLISHED, FIN_WAIT1, FIN_WAIT2, CLOSE_WAIT, CLOSING, LAST_ACK, TIME_WAIT, DELETE_TCB                                                                        | gauge   | af, state |
 
-### Dynamic ports (`dynamic_ports`)
+### Dynamic port range (`dynamic_port_range`)
 
-Windows assigns the local port of an outgoing connection from the dynamic port range, 49152 to 65535 by default.
-When all of them are held, new outgoing connections fail with `WSAENOBUFS` (10055), see
-[Troubleshoot port exhaustion issues](https://learn.microsoft.com/troubleshoot/windows-client/networking/tcp-ip-port-exhaustion-troubleshooting).
+| Name                                   | Description                                                     | Type  | Labels |
+|----------------------------------------|-----------------------------------------------------------------|-------|--------|
+| `windows_tcp_dynamic_port_range_start` | First port of the TCP dynamic port range                        | gauge | None   |
+| `windows_tcp_dynamic_port_range_size`  | Number of ports in the TCP dynamic port range                   | gauge | None   |
 
-| Name                                  | Description                                                                                                                           | Type  | Labels |
-|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|-------|--------|
-| `windows_tcp_dynamic_ports_in_use`    | Number of distinct local ports inside the dynamic port range that an IPv4 or IPv6 connection in any state, including TIME_WAIT, holds | gauge | None   |
-| `windows_tcp_dynamic_port_range_size` | Number of ports in the dynamic port range                                                                                             | gauge | None   |
-
-The collector reads the range on every scrape from the network store interface (NSI), the store that
+Windows assigns the local port of an outgoing connection from the dynamic port range, 49152 to 65535 by default. The
+collector reads the active range on every scrape from the network store interface (NSI), the store that
 `netsh int ipv4 show dynamicport tcp` reads, so a change with `netsh` shows up without a restart. IPv4 and IPv6 share
-the range and take their ports from one pool, so the metrics have no `af` label and a port counts once, whichever
-address family holds it. If NSI cannot be read, the collector reads the range once at start from the `Internet` setting of
-`MSFT_NetTCPSetting` instead; then restart the exporter after changing the range. Both sub-collectors that read the
-connection table, `connections_state` and `dynamic_ports`, share one read per address family and scrape. If one of the
-two tables cannot be read, the scrape reports no `dynamic_ports` metrics rather than a count that is too low. If neither
-source works, the exporter logs a warning and runs without `dynamic_ports`.
+one range, so the metrics have no `af` label. The exporter observes the default network compartment; containers with
+their own compartment can have their own range.
 
-The count has limits:
+NSI is undocumented. If `nsi.dll` cannot be loaded, the exporter logs a warning and runs without `dynamic_port_range`;
+if a read fails, the scrape reports an error and no range instead of a default. No administrator rights are needed.
 
-- Ports held by sockets that are bound but not connected (state `BOUND` in `netstat -anoq` and `Get-NetTCPConnection`)
-  are most likely not part of the connection table this metric reads, so a leak of bound sockets is under-counted.
-- Excluded port ranges (`netsh int ipv4 show excludedportrange tcp`), which Hyper-V, WinNAT or container networking
-  reserve, shrink the usable range without showing up in `windows_tcp_dynamic_port_range_size`.
-- Connections that take their local port from the AutoReuse port range of `Set-NetTCPSetting` are not counted.
+The metrics show the configured range, not how many of its ports are in use. Excluded port ranges
+(`netsh int ipv4 show excludedportrange tcp`) are not subtracted.
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+
+```text
+windows_tcp_dynamic_port_range_size 16384
+windows_tcp_dynamic_port_range_start 49152
+```
 
 ## Useful queries
-
-Percent of the dynamic port range in use:
-
-```promql
-windows_tcp_dynamic_ports_in_use / windows_tcp_dynamic_port_range_size * 100
-```
+_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
 
 ## Alerting examples
-
-The mixin ships `WindowsTCPDynamicPortsAlmostExhausted`, which fires when more than 80% of the range has been in use
-for 10 minutes:
-
-```yaml
-- alert: WindowsTCPDynamicPortsAlmostExhausted
-  expr: (windows_tcp_dynamic_ports_in_use / (windows_tcp_dynamic_port_range_size > 0)) * 100 > 80
-  for: 10m
-  labels:
-    severity: warning
-```
+_This collector does not yet have alerting examples, we would appreciate your help adding them!_

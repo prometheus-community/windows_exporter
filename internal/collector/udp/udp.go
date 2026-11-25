@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/nsi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -42,6 +43,11 @@ type Collector struct {
 	datagramsReceivedTotal       *prometheus.Desc
 	datagramsReceivedErrorsTotal *prometheus.Desc
 	datagramsSentTotal           *prometheus.Desc
+
+	// dynamicPortRangeEnabled is false when nsi.dll could not be loaded.
+	dynamicPortRangeEnabled bool
+	dynamicPortRangeStart   *prometheus.Desc
+	dynamicPortRangeSize    *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -102,6 +108,30 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.dynamicPortRangeStart = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_start"),
+		"First port of the UDP dynamic port range, which IPv4 and IPv6 share",
+		nil,
+		nil,
+	)
+	c.dynamicPortRangeSize = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_port_range_size"),
+		"Number of ports in the UDP dynamic port range, which IPv4 and IPv6 share",
+		nil,
+		nil,
+	)
+
+	// NSI is undocumented. Without it, run without the range instead of
+	// failing the whole collector.
+	if err := nsi.Load(); err != nil {
+		logger.Warn("failed to load the network store interface, the UDP dynamic port range is not collected",
+			slog.String("collector", Name),
+			slog.Any("err", err),
+		)
+	} else {
+		c.dynamicPortRangeEnabled = true
+	}
+
 	errs := make([]error, 0)
 
 	var err error
@@ -127,7 +157,43 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	return c.collect(ch)
+	errs := make([]error, 0)
+
+	if err := c.collect(ch); err != nil {
+		errs = append(errs, err)
+	}
+
+	if c.dynamicPortRangeEnabled {
+		if err := c.collectDynamicPortRange(ch); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+// collectDynamicPortRange reads the active range on every scrape, so a change
+// with netsh shows up without a restart. A failed read reports no range
+// rather than a default.
+func (c *Collector) collectDynamicPortRange(ch chan<- prometheus.Metric) error {
+	portRange, err := nsi.DynamicPortRange(nsi.ProtocolUDP)
+	if err != nil {
+		return fmt.Errorf("failed to read the UDP dynamic port range: %w", err)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.dynamicPortRangeStart,
+		prometheus.GaugeValue,
+		float64(portRange.Start),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.dynamicPortRangeSize,
+		prometheus.GaugeValue,
+		float64(portRange.NumberOfPorts),
+	)
+
+	return nil
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {

@@ -64,12 +64,31 @@ values are refused. `NsiGetParameterEx` checks `Offset + ParamLen` against the
 part size. When the single-parameter callback is NULL, it calls the get-all
 callback and copies `ParamLen` bytes from `Offset`.
 
+## NsiGetParameter
+
+The package reads with it. It is the simpler call and, for objects without a
+single-parameter callback such as the dynamic port range, reaches the same
+provider callback as netsh through the fallback above. Both calls returned the
+same bytes on Windows Server 2025 and passed the live test in CI on Windows
+Server 2022 and Windows 11 ARM.
+
+```c
+DWORD NsiGetParameter(
+    DWORD Store, const NPI_MODULEID *ModuleId, DWORD ObjectIndex,
+    const void *Key, DWORD KeyLen,
+    DWORD StructType,                 // 0 = read-write part
+    void *Param, DWORD ParamLen, DWORD Offset);
+```
+
+Nine arguments, all passed through `syscall.SyscallN`. It returns a Win32
+error code in the low 32 bits; compare `uint32(r0)`, not `r0`. The module ID
+and the buffer only need to live for the call: `SyscallN` keeps the Go
+pointers alive until it returns, and nsi.dll keeps no reference.
+
 ## NsiGetAllParameters
 
-Use it for reads. It is the call local netsh makes and needs no struct type.
-For the dynamic port range `NsiGetParameter` (struct type 0, offset 0, 4
-bytes) reaches the same provider callback through the fallback above, and an
-earlier version of this package read the same bytes with it.
+The call local netsh makes. Use it when you need several parts of an object
+at once.
 
 ```c
 DWORD NsiGetAllParameters(
@@ -194,8 +213,8 @@ checked.
 - The layout of TCP object 34 (extended port pool).
 - Whether the object index and layout are the same on Windows Server 2016 and
   2019. CI covers Windows Server 2022 and Windows 11 ARM through the live
-  test. Callers must keep a fallback (the tcp collector falls back to
-  `MSFT_NetTCPSetting`).
+  test. Callers log a warning and skip the metric when `Load` or a read
+  fails; they never substitute a default.
 - The layout of the excluded port ranges (objects 29 and 5) has not been
   probed on a live system.
 - What stores 3 and 4 are for.
@@ -210,5 +229,6 @@ checked.
 3. Add a layout test with the observed bytes and a live test with loose
    bounds. Add the proc to the `lazyproc.Once` list of the package, which
    `Load` checks, and call `Load` in the collector's `Build`.
-4. Keep a fallback in the caller and drop only that sub-collector when both
-   sources fail.
+4. In the caller, log a warning and drop only that metric or sub-collector
+   when `Load` fails, and return the error without a value when a read fails.
+   Do not substitute a default and do not fall back to MI.

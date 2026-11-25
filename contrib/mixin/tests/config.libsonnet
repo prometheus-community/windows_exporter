@@ -28,7 +28,6 @@
       pagefile: true,
       scheduled_task: true,
       storage_spaces: true,
-      tcp: true,
       time: true,
       update: true,
     },
@@ -37,7 +36,6 @@
     dhcpScopeFreeCriticalThreshold: 5,
     updatePendingDuration: '2d',
     dnsZoneTransferFailureRateThreshold: 0.05,
-    tcpDynamicPortUsageThreshold: 75,
     taskSelector: 'task!~"/Ignored.*"',
   },
 }
