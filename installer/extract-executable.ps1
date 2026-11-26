@@ -41,7 +41,7 @@ public static class MsiPackage
     [DllImport("msi.dll")]
     static extern uint MsiViewFetch(IntPtr view, out IntPtr record);
     [DllImport("msi.dll")]
-    static extern uint MsiRecordReadStream(IntPtr record, uint field, byte[] buffer, ref uint size);
+    static extern uint MsiRecordReadStream(IntPtr record, uint field, [Out] byte[] buffer, ref uint size);
     [DllImport("msi.dll", CharSet = CharSet.Unicode)]
     static extern uint MsiRecordGetStringW(IntPtr record, uint field, StringBuilder value, ref uint size);
     [DllImport("msi.dll")]
@@ -156,6 +156,12 @@ try {
     $Cabinet = [MsiPackage]::EmbeddedCabinet($Msi)
     $CabinetPath = Join-Path $Work $Cabinet
     [MsiPackage]::ExportStream($Msi, $Cabinet, $CabinetPath)
+
+    # expand.exe copies a file that is not a cabinet instead of failing.
+    $Header = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($CabinetPath), 0, 4)
+    if ($Header -ne 'MSCF') {
+        throw "Stream $Cabinet in $Msi is not a cabinet ($((Get-Item $CabinetPath).Length) bytes, header '$Header')"
+    }
 
     & expand.exe $CabinetPath "-F:*" $Files
     # $ErrorActionPreference does not apply to native commands.
