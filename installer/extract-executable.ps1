@@ -8,7 +8,8 @@
 #
 # The package embeds one cabinet (see Media in main.wxs). It is read from the
 # _Streams table through msi.dll and unpacked with expand.exe, which works for
-# packages of any architecture, unlike an administrative install.
+# packages of any architecture, unlike an administrative install. Files in the
+# cabinet are stored under their File table key, not their file name.
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory = $true)]
@@ -19,15 +20,15 @@ Param (
 $ErrorActionPreference = "Stop"
 
 $Cabinet = "windows_exporter.cab"
-# Files in a WiX cabinet are named after their File Id in files.wxs.
-$FileId = "windows_exporter.exe"
+$FileName = "windows_exporter.exe"
 
 Add-Type -TypeDefinition @'
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
-public static class MsiStream
+public static class MsiPackage
 {
     [DllImport("msi.dll", CharSet = CharSet.Unicode)]
     static extern uint MsiOpenDatabaseW(string path, IntPtr persist, out IntPtr db);
@@ -39,26 +40,77 @@ public static class MsiStream
     static extern uint MsiViewFetch(IntPtr view, out IntPtr record);
     [DllImport("msi.dll")]
     static extern uint MsiRecordReadStream(IntPtr record, uint field, byte[] buffer, ref uint size);
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+    static extern uint MsiRecordGetStringW(IntPtr record, uint field, StringBuilder value, ref uint size);
     [DllImport("msi.dll")]
     static extern uint MsiCloseHandle(IntPtr handle);
+
+    const uint ERROR_NO_MORE_ITEMS = 259;
 
     static void Check(uint result, string call)
     {
         if (result != 0) throw new InvalidOperationException(call + " failed with error " + result);
     }
 
-    public static void Export(string msi, string stream, string output)
+    // Calls read for each row of a query on the package, opened read-only.
+    static void Query(string msi, string query, Action<IntPtr> read)
     {
-        IntPtr db = IntPtr.Zero, view = IntPtr.Zero, record = IntPtr.Zero;
+        IntPtr db = IntPtr.Zero, view = IntPtr.Zero;
         try
         {
-            // MSIDBOPEN_READONLY
+            // IntPtr.Zero is MSIDBOPEN_READONLY.
             Check(MsiOpenDatabaseW(msi, IntPtr.Zero, out db), "MsiOpenDatabase");
-            Check(MsiDatabaseOpenViewW(db, "SELECT `Data` FROM `_Streams` WHERE `Name` = '" + stream + "'", out view), "MsiDatabaseOpenView");
+            Check(MsiDatabaseOpenViewW(db, query, out view), "MsiDatabaseOpenView");
             Check(MsiViewExecute(view, IntPtr.Zero), "MsiViewExecute");
-            // ERROR_NO_MORE_ITEMS means the stream does not exist.
-            Check(MsiViewFetch(view, out record), "MsiViewFetch for stream " + stream);
+            while (true)
+            {
+                IntPtr record;
+                uint result = MsiViewFetch(view, out record);
+                if (result == ERROR_NO_MORE_ITEMS) break;
+                Check(result, "MsiViewFetch");
+                try { read(record); } finally { MsiCloseHandle(record); }
+            }
+        }
+        finally
+        {
+            if (view != IntPtr.Zero) MsiCloseHandle(view);
+            if (db != IntPtr.Zero) MsiCloseHandle(db);
+        }
+    }
 
+    static string GetString(IntPtr record, uint field)
+    {
+        StringBuilder value = new StringBuilder(256);
+        uint size = (uint)value.Capacity;
+        Check(MsiRecordGetStringW(record, field, value, ref size), "MsiRecordGetString");
+        return value.ToString();
+    }
+
+    // Returns the File table key of the file with the given long name.
+    public static string FileKey(string msi, string fileName)
+    {
+        string key = null;
+        Query(msi, "SELECT `File`, `FileName` FROM `File`", delegate (IntPtr record)
+        {
+            // FileName is "short|long", or only the name if it is a short name.
+            string name = GetString(record, 2);
+            int separator = name.IndexOf('|');
+            if (separator >= 0) name = name.Substring(separator + 1);
+            if (!string.Equals(name, fileName, StringComparison.OrdinalIgnoreCase)) return;
+            if (key != null) throw new InvalidOperationException(msi + " contains more than one " + fileName);
+            key = GetString(record, 1);
+        });
+        if (key == null) throw new InvalidOperationException(msi + " does not contain " + fileName);
+        return key;
+    }
+
+    // Writes an embedded stream, such as a cabinet, to a file.
+    public static void ExportStream(string msi, string stream, string output)
+    {
+        bool found = false;
+        Query(msi, "SELECT `Data` FROM `_Streams` WHERE `Name` = '" + stream + "'", delegate (IntPtr record)
+        {
+            found = true;
             using (FileStream file = File.Create(output))
             {
                 byte[] buffer = new byte[1 << 16];
@@ -70,33 +122,31 @@ public static class MsiStream
                     file.Write(buffer, 0, (int)size);
                 }
             }
-        }
-        finally
-        {
-            if (record != IntPtr.Zero) MsiCloseHandle(record);
-            if (view != IntPtr.Zero) MsiCloseHandle(view);
-            if (db != IntPtr.Zero) MsiCloseHandle(db);
-        }
+        });
+        if (!found) throw new InvalidOperationException(msi + " has no stream " + stream);
     }
 }
 '@
 
 $Msi = (Resolve-Path $Msi).Path
 $Work = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $Work | Out-Null
+$Files = Join-Path $Work "files"
+New-Item -ItemType Directory -Path $Files | Out-Null
 try {
+    $FileKey = [MsiPackage]::FileKey($Msi, $FileName)
     $CabinetPath = Join-Path $Work $Cabinet
-    [MsiStream]::Export($Msi, $Cabinet, $CabinetPath)
+    [MsiPackage]::ExportStream($Msi, $Cabinet, $CabinetPath)
 
-    & expand.exe $CabinetPath "-F:$FileId" $Work | Out-Null
+    & expand.exe $CabinetPath "-F:*" $Files
     # $ErrorActionPreference does not apply to native commands.
     if ($LASTEXITCODE -ne 0) {
         throw "expand.exe failed with exit code $LASTEXITCODE for $Msi"
     }
 
-    $Extracted = Join-Path $Work $FileId
+    $Extracted = Join-Path $Files $FileKey
     if (-not (Test-Path -PathType Leaf $Extracted)) {
-        throw "$Msi does not contain $FileId in $Cabinet"
+        $Found = (Get-ChildItem -Path $Files -Name) -join ', '
+        throw "$Cabinet in $Msi does not contain $FileKey ($FileName), found: $Found"
     }
 
     $Parent = Split-Path -Parent $Destination
