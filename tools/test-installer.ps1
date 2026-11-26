@@ -429,14 +429,15 @@ try {
 
     Write-Step 'Upgrade an install in another folder without settings'
     # Without the remembered folder, a major upgrade moved the installation
-    # back to Program Files and left config.yaml behind.
+    # back to Program Files and left config.yaml behind. Windows Installer
+    # quotes the executable in ImagePath only when its path has a space.
     $customDir = Join-Path $env:SystemDrive 'windows_exporter_custom'
     Invoke-Msiexec -Name 'install-folder' -Arguments @('/i', "`"$Msi`"", "APPLICATIONFOLDER=`"$customDir\`"")
     Assert-ServiceRunning | Out-Null
     Invoke-Msiexec -Name 'upgrade-folder' -Arguments @('/i', "`"$HigherMsi`"")
     Assert-ServiceRunning | Out-Null
     Assert-ServiceFlags -Operation 'the upgrade of the install in another folder' `
-        -Expected @("`"$customDir\windows_exporter.exe`"", "--config.file=`"$customDir\config.yaml`"")
+        -Expected @("$customDir\windows_exporter.exe", "--config.file=`"$customDir\config.yaml`"")
     if (Test-Path $installedExe) {
         throw "the upgrade of the install in $customDir installed $installedExe"
     }
