@@ -57,6 +57,15 @@ const (
 // healthPath is the URL path of the health endpoint.
 const healthPath = "/health"
 
+// healthPaths returns the URL paths of the health endpoint: healthPath and the
+// liveness and readiness probe paths that other Prometheus exporters and
+// Prometheus itself serve. The exporter is ready as soon as the HTTP server
+// runs, because the collectors are built before it starts, so all paths
+// answer the same.
+func healthPaths() []string {
+	return []string{healthPath, "/-/healthy", "/-/ready"}
+}
+
 func main() {
 	// os.Kill can't be caught. On Windows, Go delivers console close, logoff and shutdown events as SIGTERM.
 	//nolint:forbidigo // os/signal only accepts syscall.Signal values, not windows.Signal.
@@ -541,12 +550,16 @@ func newServeMux(metricsPath string, debugEnabled bool, metricsHandler http.Hand
 		return nil, fmt.Errorf("--telemetry.path %q must start with /", metricsPath)
 	}
 
-	if metricsPath == healthPath {
+	if slices.Contains(healthPaths(), metricsPath) {
 		return nil, fmt.Errorf("--telemetry.path %q is reserved for the health endpoint", metricsPath)
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("GET "+healthPath, httphandler.NewHealthHandler())
+
+	healthHandler := httphandler.NewHealthHandler()
+	for _, path := range healthPaths() {
+		mux.Handle("GET "+path, healthHandler)
+	}
 
 	if debugEnabled {
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)

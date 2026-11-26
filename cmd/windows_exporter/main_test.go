@@ -206,6 +206,10 @@ func TestNewServeMux(t *testing.T) {
 		{path: "metrics", wantErr: "must start with /"},
 		{path: "", wantErr: "must start with /"},
 		{path: "/health", wantErr: "reserved for the health endpoint"},
+		{path: "/-/healthy", wantErr: "reserved for the health endpoint"},
+		{path: "/-/ready", wantErr: "reserved for the health endpoint"},
+		{path: "/-/"},
+		{path: "/-/healthy/"},
 		{path: "/debug/pprof/", debug: true, wantErr: "cannot be registered"},
 		{path: "/debug/pprof/trace", debug: true, wantErr: "cannot be registered"},
 		{path: "/metrics/{name", wantErr: "cannot be registered"},
@@ -227,7 +231,7 @@ func TestNewServeMux(t *testing.T) {
 
 			require.NoError(t, err)
 
-			for _, path := range []string{tc.path, healthPath} {
+			for _, path := range append([]string{tc.path}, healthPaths()...) {
 				rec := httptest.NewRecorder()
 				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
 				require.Equal(t, http.StatusOK, rec.Code, path)
