@@ -53,6 +53,22 @@ jobs:
           (netstat -anq -p tcp | Select-String "BOUND").Count
           (netstat -anq -p tcpv6 | Select-String "BOUND").Count
 
+      - name: TCP object 35 as a standard user
+        shell: powershell
+        run: |
+          $pw = "Pp-" + [guid]::NewGuid().ToString("N").Substring(0, 8) + "!a1"
+          net user probeuser $pw /add | Out-Null
+          $cred = New-Object System.Management.Automation.PSCredential("probeuser", (ConvertTo-SecureString $pw -AsPlainText -Force))
+          icacls $env:RUNNER_TEMP /grant "probeuser:(OI)(CI)M" | Out-Null
+          icacls (Get-Location).Path /grant "probeuser:(OI)(CI)RX" /T /Q | Out-Null
+          try {
+            Start-Process -FilePath (Resolve-Path .\portprobe.exe).Path -ArgumentList "obj35" -Credential $cred -Wait -NoNewWindow -RedirectStandardOutput "$env:RUNNER_TEMP\pu35.txt" -RedirectStandardError "$env:RUNNER_TEMP\pu35err.txt" -WorkingDirectory $env:RUNNER_TEMP
+            "===== obj35 as probeuser (standard user logon)"
+            Get-Content "$env:RUNNER_TEMP\pu35.txt"
+            Get-Content "$env:RUNNER_TEMP\pu35err.txt"
+          } catch { "Start-Process as probeuser failed: $_" }
+          net user probeuser /delete | Out-Null
+
       - name: Restore auto-reuse range
         if: always()
         shell: powershell
