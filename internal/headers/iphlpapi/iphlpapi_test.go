@@ -42,7 +42,9 @@ func TestGetTCPConnectionStates(t *testing.T) {
 func TestAddUDPPorts(t *testing.T) {
 	t.Parallel()
 
-	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	var listenConf net.ListenConfig
+
+	conn, err := listenConf.ListenPacket(t.Context(), "udp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

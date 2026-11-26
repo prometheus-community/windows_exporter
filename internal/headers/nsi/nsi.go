@@ -111,11 +111,14 @@ type PortRange struct {
 	NumberOfPorts uint16
 }
 
-// Usage splits the range into the ports that exclusions reserve and the
-// ports that inUse reports as taken and that no exclusion covers. Exclusions
-// can extend beyond the range; only the overlap counts.
-func (r PortRange) Usage(exclusions []PortRange, inUse func(port uint16) bool) (excluded, used uint32) {
-	var reserved [65536 / 64]uint64
+// Usage returns the number of ports in the range that exclusions reserve and
+// the number of ports that inUse reports as taken and that no exclusion
+// covers, in that order. Exclusions can extend beyond the range; only the overlap counts.
+func (r PortRange) Usage(exclusions []PortRange, inUse func(port uint16) bool) (uint32, uint32) {
+	var (
+		reserved       [65536 / 64]uint64
+		excluded, used uint32
+	)
 
 	for _, e := range exclusions {
 		for p := uint32(e.Start); p < uint32(e.Start)+uint32(e.NumberOfPorts); p++ {
