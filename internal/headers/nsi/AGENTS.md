@@ -151,21 +151,42 @@ necessarily the values in effect.
 
 ## Objects
 
-| Module | Object | Key     | Read-write part | tcpip.sys descriptor                         | Content                                  |
-|--------|--------|---------|-----------------|----------------------------------------------|------------------------------------------|
-| TCP    | 20     | none    | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range (`show dynamicport`)  |
-| UDP    | 4      | none    | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range                       |
-| TCP    | 34     | none    | 44 bytes        | `InetPortPoolExInformationObject`            | extended port pool settings, not decoded |
-| TCP    | 29     | 4 bytes | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
-| UDP    | 5      | 4 bytes | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
+| Module | Object | Key      | Read-write part | tcpip.sys descriptor                         | Content                                  |
+|--------|--------|----------|-----------------|----------------------------------------------|------------------------------------------|
+| TCP    | 20     | none     | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range (`show dynamicport`)  |
+| UDP    | 4      | none     | 4 bytes         | `InetPortPoolInformationObject`              | dynamic port range                       |
+| TCP    | 34     | none     | 44 bytes        | `InetPortPoolExInformationObject`            | extended port pool settings, not decoded |
+| TCP    | 29     | 4 bytes  | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
+| UDP    | 5      | 4 bytes  | 2 bytes         | `InetPortExclusionGrantingInformationObject` | excluded port ranges, enumerated         |
+| TCP    | 35     | 56 bytes | not read        | bound endpoint object                        | bound TCP sockets, enumerated            |
 
 netsh handles them in `NhIpHandleShowDynamicPortRange`,
 `NhIpHandleSetDynamicPortRange` and `NhIpHandleShowExcludedPortRange`.
 Object 34 is read by `InetGetAllPortPoolExParameters` and relates to
 `InetIsPortInSmartRange`; its layout is unknown, so do not use it yet. Port
 reservations (`InetPortReservationInformationObject`) are separate objects
-from exclusions. The object indices of objects 29 and 5 come from static
-analysis only and have not been probed.
+from exclusions.
+
+Excluded port range layout: the key holds the first port and the number of
+ports, both little-endian `uint16`. The 2-byte read-write part holds flags and
+is not read. Read the active store (1); the persistent store (0) returned no
+rows on Windows Server 2025. Ranges never overlap, zero rows are valid, and a
+standard user can read the table. `NsiAllocateAndGetTable` with only the keys
+(`rw`, dynamic and static pointers NULL) is enough.
+
+Bound endpoint layout (TCP object 35): the table behind
+`InternalGetBoundTcpEndpointTable` and `InternalGetBoundTcp6EndpointTable`,
+the sockets that are bound but neither listen nor connect. One table holds
+IPv4 and IPv6. The 56-byte key starts with the local `SOCKADDR_INET`: the
+family as a little-endian `uint16` at offset 0, the port as a big-endian
+`uint16` at offset 2. Read only these and the family-specific address: for
+IPv4 rows the unused bytes of the `SOCKADDR_INET` are not zeroed (leftover
+UTF-16 text was seen), so never compare or hash whole keys. Request only the
+keys; asking for the dynamic part as well misaligned the rows on Windows
+Server 2022, and key sizes 48 and 64 are rejected. Runtime-verified on builds
+20348 and 26100, also as a standard user, with the same port set as the
+`Internal*` functions; the symbols exist on 14393 and 17763. A read takes
+30-60 µs.
 
 Dynamic port range layout: the first port as a big-endian `uint16` at offset 0,
 the number of ports as a little-endian `uint16` at offset 2. The descriptor in
@@ -206,6 +227,16 @@ own pools, which the exporter's NSI read does not see. Whether
 `GetExtendedTcpTable` lists connections of other compartments has not been
 checked.
 
+Each pool has a 65536-bit bitmap; Windows has no counter of free ports. The
+collectors estimate the ports in use as the range minus the excluded ports and
+the ports that a socket holds. For TCP, a port is held by a row of
+`GetExtendedTcpTable` in any state except `TIME_WAIT` and `FIN_WAIT2` (after
+`closesocket` they keep only a weak reference) and by a bound endpoint of
+object 35. For UDP it is any row of `GetExtendedUdpTable`. On Windows Server
+2022 and 2025 this matched the free ports of the bitmap exactly in 24 of 24
+TCP checks. Not covered: ports that TCP auto-reuse reserves (active only after a
+reboot), per-destination limits from `TIME_WAIT` and the Modern Standby range.
+
 ## Open questions
 
 - Whether a port number held by an IPv4 connection can also be handed to an
@@ -216,8 +247,6 @@ checked.
   test. Callers log a warning and skip the metric when `Load` fails, and
   return an error without a value when a read fails; they never substitute
   a default.
-- The layout of the excluded port ranges (objects 29 and 5) has not been
-  probed on a live system.
 - What stores 3 and 4 are for.
 
 ## Adding a call

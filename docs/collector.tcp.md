@@ -33,32 +33,50 @@ Example: `--collector.tcp.enabled=metrics`
 
 ### Dynamic port range (`dynamic_port_range`)
 
-| Name                                   | Description                                                     | Type  | Labels |
-|----------------------------------------|-----------------------------------------------------------------|-------|--------|
-| `windows_tcp_dynamic_port_range_start` | First port of the TCP dynamic port range                        | gauge | None   |
-| `windows_tcp_dynamic_port_range_size`  | Number of ports in the TCP dynamic port range                   | gauge | None   |
+| Name                                                 | Description                                                         | Type  | Labels |
+|------------------------------------------------------|---------------------------------------------------------------------|-------|--------|
+| `windows_tcp_dynamic_port_range_size`                | Number of ports in the TCP dynamic port range                       | gauge | None   |
+| `windows_tcp_dynamic_port_range_excluded_ports`      | Number of ports in the range that an excluded port range reserves   | gauge | None   |
+| `windows_tcp_dynamic_port_range_observed_used_ports` | Number of ports in the range, not excluded, that a TCP socket holds | gauge | None   |
 
 Windows assigns the local port of an outgoing connection from the dynamic port range, 49152 to 65535 by default. The
-collector reads the active range on every scrape from the network store interface (NSI), the store that
-`netsh int ipv4 show dynamicport tcp` reads, so a change with `netsh` shows up without a restart. IPv4 and IPv6 share
-one range, so the metrics have no `af` label. The exporter observes the default network compartment; containers with
-their own compartment can have their own range.
+collector reads the active range and the excluded port ranges on every scrape from the network store interface (NSI),
+the store that `netsh int ipv4 show dynamicport tcp` and `netsh int ipv4 show excludedportrange tcp` read, so a change
+with `netsh` shows up without a restart. IPv4 and IPv6 share one pool, so the metrics have no `af` label.
 
-NSI is undocumented. If `nsi.dll` cannot be loaded, the exporter logs a warning and runs without `dynamic_port_range`;
-if a read fails, the scrape reports an error and no range instead of a default. No administrator rights are needed.
+`observed_used_ports` counts the distinct local ports in the range that are not excluded and that a TCP socket of
+either address family holds: connections in any state except `TIME_WAIT` and `FIN_WAIT2`, listeners, and sockets that
+are bound but neither listen nor connect. The free ports are about
+`size - excluded_ports - observed_used_ports`. On Windows Server 2022 and 2025 this matched the ports that are free for
+a new `bind()` to port 0 exactly. Keep in mind:
 
-The metrics show the configured range, not how many of its ports are in use. Excluded port ranges
-(`netsh int ipv4 show excludedportrange tcp`) are not subtracted.
+- The value is an estimate from separate snapshots of the tables, not a kernel counter; Windows has none.
+- A connection in `TIME_WAIT` does not block a new bind, but `connect()` cannot reuse its port for the same remote
+  address and port. The capacity towards one destination can therefore be lower than the free ports suggest.
+- Ports that the TCP auto-reuse feature reserves are not counted.
+- Sockets that the application already closed but that are stuck in `FIN_WAIT1`, `CLOSING` or `LAST_ACK` are counted.
+- The exporter observes the default network compartment; containers with their own compartment have their own pool.
+
+NSI is undocumented. If `nsi.dll` cannot be loaded, the exporter logs a warning and runs without `dynamic_port_range`.
+If a read fails, the scrape reports an error and drops the metrics that depend on it, instead of reporting zero or a
+default. No administrator rights are needed.
 
 ### Example metric
 
 ```text
+windows_tcp_dynamic_port_range_excluded_ports 1024
+windows_tcp_dynamic_port_range_observed_used_ports 12000
 windows_tcp_dynamic_port_range_size 16384
-windows_tcp_dynamic_port_range_start 49152
 ```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Share of the usable dynamic ports in use:
+
+```promql
+windows_tcp_dynamic_port_range_observed_used_ports
+  / (windows_tcp_dynamic_port_range_size - windows_tcp_dynamic_port_range_excluded_ports)
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
