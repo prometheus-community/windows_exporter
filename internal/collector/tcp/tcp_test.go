@@ -24,8 +24,9 @@ func TestCollector(t *testing.T) {
 
 	// The shared dynamic port range has no address family label.
 	for _, name := range []string{
-		"windows_tcp_dynamic_port_range_start",
 		"windows_tcp_dynamic_port_range_size",
+		"windows_tcp_dynamic_port_range_excluded_ports",
+		"windows_tcp_dynamic_port_range_observed_used_ports",
 	} {
 		require.Contains(t, metrics, name)
 		require.Equal(t, dto.MetricType_GAUGE, metrics[name].GetType(), name)

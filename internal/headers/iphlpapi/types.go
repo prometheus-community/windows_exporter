@@ -41,6 +41,35 @@ type MIB_TCP6ROW_OWNER_PID struct {
 	dwOwningPid     uint32
 }
 
+func (row MIB_TCPROW_OWNER_PID) state() MIB_TCP_STATE { return row.dwState }
+
+func (row MIB_TCPROW_OWNER_PID) localPort() uint16 { return row.dwLocalPort.uint16() }
+
+func (row MIB_TCP6ROW_OWNER_PID) state() MIB_TCP_STATE { return row.dwState }
+
+func (row MIB_TCP6ROW_OWNER_PID) localPort() uint16 { return row.dwLocalPort.uint16() }
+
+// MIB_UDPROW_OWNER_PID structure for IPv4.
+// https://learn.microsoft.com/en-us/windows/win32/api/udpmib/ns-udpmib-mib_udprow_owner_pid
+//
+//nolint:unused
+type MIB_UDPROW_OWNER_PID struct {
+	dwLocalAddr BigEndianUint32
+	dwLocalPort BigEndianUint32
+	dwOwningPid uint32
+}
+
+// MIB_UDP6ROW_OWNER_PID structure for IPv6.
+// https://learn.microsoft.com/en-us/windows/win32/api/udpmib/ns-udpmib-mib_udp6row_owner_pid
+//
+//nolint:unused
+type MIB_UDP6ROW_OWNER_PID struct {
+	ucLocalAddr    [16]byte
+	dwLocalScopeId uint32
+	dwLocalPort    BigEndianUint32
+	dwOwningPid    uint32
+}
+
 type MIB_TCP_STATE uint32
 
 const (
