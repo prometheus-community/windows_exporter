@@ -6,8 +6,9 @@
 # installing it. Release builds only sign the MSI, with the executable signed
 # inside it, so the standalone executable is taken from the signed package.
 #
-# The package embeds one cabinet (see Media in main.wxs). It is read from the
-# _Streams table through msi.dll and unpacked with expand.exe, which works for
+# The package embeds one cabinet (see Media in main.wxs). Its name comes from
+# the Media table, since a signing service may repackage the MSI, and it is
+# read from the _Streams table through msi.dll and unpacked with expand.exe, which works for
 # packages of any architecture, unlike an administrative install. Files in the
 # cabinet are stored under their File table key, not their file name.
 [CmdletBinding()]
@@ -19,9 +20,10 @@ Param (
 )
 $ErrorActionPreference = "Stop"
 
-$Cabinet = "windows_exporter.cab"
 $FileName = "windows_exporter.exe"
 
+# The script may run several times in one PowerShell session.
+if (-not ('MsiPackage' -as [type])) {
 Add-Type -TypeDefinition @'
 using System;
 using System.IO;
@@ -125,8 +127,25 @@ public static class MsiPackage
         });
         if (!found) throw new InvalidOperationException(msi + " has no stream " + stream);
     }
+
+    // Returns the stream name of the only cabinet, which must be embedded.
+    public static string EmbeddedCabinet(string msi)
+    {
+        string cabinet = null;
+        Query(msi, "SELECT `Cabinet` FROM `Media`", delegate (IntPtr record)
+        {
+            string name = GetString(record, 1);
+            if (name == "") return;
+            if (cabinet != null) throw new InvalidOperationException(msi + " has more than one cabinet");
+            if (!name.StartsWith("#")) throw new InvalidOperationException(msi + " uses the external cabinet " + name);
+            cabinet = name.Substring(1);
+        });
+        if (cabinet == null) throw new InvalidOperationException(msi + " has no cabinet");
+        return cabinet;
+    }
 }
 '@
+}
 
 $Msi = (Resolve-Path $Msi).Path
 $Work = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
@@ -134,6 +153,7 @@ $Files = Join-Path $Work "files"
 New-Item -ItemType Directory -Path $Files | Out-Null
 try {
     $FileKey = [MsiPackage]::FileKey($Msi, $FileName)
+    $Cabinet = [MsiPackage]::EmbeddedCabinet($Msi)
     $CabinetPath = Join-Path $Work $Cabinet
     [MsiPackage]::ExportStream($Msi, $Cabinet, $CabinetPath)
 
