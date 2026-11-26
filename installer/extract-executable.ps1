@@ -8,7 +8,7 @@
 #
 # The package embeds one cabinet (see Media in main.wxs). Its name comes from
 # the Media table, since a signing service may repackage the MSI, and it is
-# read from the _Streams table through msi.dll and unpacked with expand.exe, which works for
+# read from the _Streams table through msi.dll and unpacked with the tar.exe of Windows, which works for
 # packages of any architecture, unlike an administrative install. Files in the
 # cabinet are stored under their File table key, not their file name.
 [CmdletBinding()]
@@ -157,16 +157,14 @@ try {
     $CabinetPath = Join-Path $Work $Cabinet
     [MsiPackage]::ExportStream($Msi, $Cabinet, $CabinetPath)
 
-    # expand.exe copies a file that is not a cabinet instead of failing.
-    $Header = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($CabinetPath), 0, 4)
-    if ($Header -ne 'MSCF') {
-        throw "Stream $Cabinet in $Msi is not a cabinet ($((Get-Item $CabinetPath).Length) bytes, header '$Header')"
-    }
-
-    & expand.exe $CabinetPath "-F:*" $Files
+    # expand.exe does not unpack this cabinet. The tar.exe that ships with
+    # Windows is libarchive and reads cabinets; the tar of Git for Windows,
+    # which can come first in PATH, does not.
+    $Tar = Join-Path $env:SystemRoot "System32\tar.exe"
+    & $Tar -x -v -f $CabinetPath -C $Files
     # $ErrorActionPreference does not apply to native commands.
     if ($LASTEXITCODE -ne 0) {
-        throw "expand.exe failed with exit code $LASTEXITCODE for $Msi"
+        throw "tar.exe failed with exit code $LASTEXITCODE for $Cabinet in $Msi"
     }
 
     $Extracted = Join-Path $Files $FileKey
