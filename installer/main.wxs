@@ -120,7 +120,7 @@
             <RegistrySearch Id="Remembered_SERVICE_PASSWORD_SET" Root="HKLM" Key="$(var.SettingsKey)" Name="SERVICE_PASSWORD_SET" Type="raw" Bitness="always64" />
         </Property>
         <SetProperty Id="ServicePasswordSet" After="Restore_SERVICE_ACCOUNT" Sequence="execute" Value="1"
-            Condition="SERVICE_PASSWORD OR (REMEMBERED_SERVICE_PASSWORD_SET AND SERVICE_ACCOUNT AND SERVICE_ACCOUNT=REMEMBERED_SERVICE_ACCOUNT)" />
+            Condition="SERVICE_PASSWORD OR (REMEMBERED_SERVICE_PASSWORD_SET AND SERVICE_ACCOUNT AND SERVICE_ACCOUNT~=REMEMBERED_SERVICE_ACCOUNT)" />
         <CustomAction Id="CheckServicePassword"
             Error="The windows_exporter service runs as [SERVICE_ACCOUNT], which needs a password. Pass it again with SERVICE_PASSWORD, or pass RESET_SETTINGS=1 to install the service as LocalSystem." />
         <!-- END REMEMBERED SETTINGS -->

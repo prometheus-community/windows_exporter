@@ -395,6 +395,25 @@ try {
     Assert-ServiceRunning | Out-Null
     Assert-ServiceFlags -Operation 'the reset' -Expected @('--config.file=') `
         -Unexpected @('--web.listen-address', '--collectors.enabled', '--log.level')
+
+    # The reset must also forget the earlier values, or the next run without
+    # properties would bring them back.
+    $remembered = Get-ItemProperty -Path $settingsKey
+    foreach ($name in 'ENABLED_COLLECTORS', 'EXTRA_FLAGS') {
+        $value = $remembered.PSObject.Properties[$name]
+        if ($null -ne $value -and $value.Value) {
+            throw "$settingsKey still remembers $name=$($value.Value) after the reset"
+        }
+    }
+
+    if ($remembered.LISTEN_PORT -ne "$servicePort") {
+        throw "$settingsKey remembers LISTEN_PORT=$($remembered.LISTEN_PORT) after the reset, expected $servicePort"
+    }
+
+    Invoke-Msiexec -Name 'rerun-reset' -Arguments @('/i', "`"$HigherMsi`"")
+    Assert-ServiceRunning | Out-Null
+    Assert-ServiceFlags -Operation 'the run after the reset' -Expected @('--config.file=') `
+        -Unexpected @('--web.listen-address', '--collectors.enabled', '--log.level')
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the install with settings'
@@ -406,6 +425,29 @@ try {
     }
 
     Assert-ForeignAlive -Operation 'uninstall of the install with settings'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Upgrade an install in another folder without settings'
+    # Without the remembered folder, a major upgrade moved the installation
+    # back to Program Files and left config.yaml behind.
+    $customDir = Join-Path $env:SystemDrive 'windows_exporter_custom'
+    Invoke-Msiexec -Name 'install-folder' -Arguments @('/i', "`"$Msi`"", "APPLICATIONFOLDER=`"$customDir\`"")
+    Assert-ServiceRunning | Out-Null
+    Invoke-Msiexec -Name 'upgrade-folder' -Arguments @('/i', "`"$HigherMsi`"")
+    Assert-ServiceRunning | Out-Null
+    Assert-ServiceFlags -Operation 'the upgrade of the install in another folder' `
+        -Expected @("`"$customDir\windows_exporter.exe`"", "--config.file=`"$customDir\config.yaml`"")
+    if (Test-Path $installedExe) {
+        throw "the upgrade of the install in $customDir installed $installedExe"
+    }
+
+    Invoke-Msiexec -Name 'uninstall-folder' -Arguments @('/x', "`"$HigherMsi`"")
+    Assert-ServiceRemoved
+    if (Test-Path $customDir) {
+        throw "$customDir still exists after uninstall: $((Get-ChildItem -Recurse -Force -Name $customDir) -join ', ')"
+    }
+
+    Assert-ForeignAlive -Operation 'the install in another folder'
     Write-Host '::endgroup::'
 
     Write-Step 'Install this build with a virtual service account'
