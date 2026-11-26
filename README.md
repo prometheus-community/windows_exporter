@@ -94,7 +94,7 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 | Flag                      | Description                                                                                                                                                                                      | Default value |
 |---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `--web.listen-address`    | host:port for exporter.                                                                                                                                                                          | `:9182`       |
-| `--telemetry.path`        | URL path for surfacing collected metrics. Must start with `/`, must not be `/health` and, with `--debug.enabled`, must not be a `/debug/pprof/` route. | `/metrics`    |
+| `--telemetry.path`        | URL path for surfacing collected metrics. Must start with `/`, must not be `/health`, `/-/healthy` or `/-/ready` and, with `--debug.enabled`, must not be a `/debug/pprof/` route. | `/metrics`    |
 | `--collectors.enabled`    | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default.                                               | `[defaults]`  |
 | `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. The margin takes at most half of the client's timeout. Tune to allow for overhead or high loads. Must not be negative.                | `0.5`         |
 | `--scrape.stdout`         | Collect metrics once and write them to stdout, then exit. Logs go to stderr unless `--log.file` is set. PDH rate counters cover only a short interval on the first scrape after startup. | `false`       |
@@ -228,7 +228,7 @@ There are known compatibility issues with Windows Server 2012 R2 and earlier ver
 windows_exporter provides the following HTTP endpoints:
 
 * `/metrics`: Exposes metrics in the [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/).
-* `/health`: Returns 200 OK when the exporter is running.
+* `/health`, `/-/healthy`, `/-/ready`: Return 200 OK when the exporter is running. `/-/healthy` and `/-/ready` match the liveness and readiness paths of Prometheus and other exporters.
 * `/debug/pprof/`: Exposes the [pprof](https://golang.org/pkg/net/http/pprof/) endpoints. Only, if `--debug.enabled` is set.
 
 CPU and goroutine profiles include a `collector` label with the collector name, so profiles can be filtered by collector.
