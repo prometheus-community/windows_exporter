@@ -8,9 +8,9 @@
 #
 # The package embeds one cabinet (see Media in main.wxs). Its name comes from
 # the Media table, since a signing service may repackage the MSI, and it is
-# read from the _Streams table through msi.dll and unpacked with 7-Zip, which works for
-# packages of any architecture, unlike an administrative install. Files in the
-# cabinet are stored under their File table key, not their file name.
+# read from the _Streams table through msi.dll and unpacked with 7-Zip. This
+# works for packages of any architecture, unlike an administrative install.
+# Files in the cabinet are stored under their File table key, not their file name.
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory = $true)]
