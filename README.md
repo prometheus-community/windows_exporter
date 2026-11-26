@@ -112,6 +112,17 @@ The latest release can be downloaded from the [releases page](https://github.com
 All binaries and installation packages are signed with an self-signed certificate. The public key can be found [here](https://github.com/prometheus-community/windows_exporter/blob/master/installer/codesign.cer).
 Once import into the trusted root certificate store, the binaries and installation packages will be trusted.
 
+Release assets and container images also carry a [build provenance attestation](https://docs.github.com/en/actions/concepts/security/artifact-attestations).
+It shows that a file was built by the release workflow of this repository, and from which tag and commit.
+Verify a download or an image with the [GitHub CLI](https://cli.github.com/):
+
+```shell
+gh attestation verify windows_exporter-<version>-amd64.msi --repo prometheus-community/windows_exporter
+gh attestation verify oci://ghcr.io/prometheus-community/windows-exporter:<version> --repo prometheus-community/windows_exporter
+```
+
+Releases up to 0.32.1 have no attestations.
+
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, and may create an exception in the Windows Firewall (see example below).
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
