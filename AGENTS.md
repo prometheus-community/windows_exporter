@@ -56,6 +56,16 @@ their runtime behavior.
   published, so never upload assets after publishing, and never let a second
   run build the same tag. Start releases only with that workflow or a tag push,
   never by creating a release with a new tag in the GitHub UI.
+- Release signing sends only the two MSIs to SignPath. The installer artifact
+  configuration in the SignPath portal (not in this repository) must deep-sign
+  `windows_exporter.exe` inside each package before signing the package.
+  [`installer/extract-executable.ps1`](installer/extract-executable.ps1) then
+  takes the executable out of the signed MSI for the release assets and the
+  container image, and the package job fails if either file is not validly
+  signed. Unsigned builds check that the extracted executable is the built one.
+  It unpacks the cabinet with 7-Zip: `expand.exe` copies the WiX cabinet as a
+  plain file, and the libarchive `tar.exe` of Windows fails on some of its LZX
+  blocks.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
