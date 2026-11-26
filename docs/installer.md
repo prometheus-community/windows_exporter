@@ -1,7 +1,7 @@
 # Installer
 
 This page adds details on the MSI installer to the
-[installation section](../README.md#installation) of the README.
+[installation section](../README.md#installation) of the readme.
 
 ## Upgrades and repairs
 
