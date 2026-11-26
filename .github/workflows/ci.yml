@@ -220,46 +220,6 @@ jobs:
           Get-ChildItem -Path output
           "VERSION=$Version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-          # Use unsigned executables for fork PRs, where signing is unavailable.
-          New-Item -ItemType Directory -Force output\final | Out-Null
-          Copy-Item output\windows_exporter-*.exe output\final\
-
-      - name: upload unsigned artifact
-        id: unsigned-executables
-        if: &sign_release ${{ github.repository == 'prometheus-community/windows_exporter' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: unsigned-executables
-          path: output/*.exe
-          retention-days: 1
-
-      - name: Sign build artifacts
-        id: sign-executables
-        if: *sign_release
-        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_EXECUTABLE_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: '${{ steps.unsigned-executables.outputs.artifact-id }}'
-          # release-signing requests need manual approval in the SignPath
-          # portal; wait for it, up to just under the 6 hour job limit.
-          wait-for-completion-timeout-in-seconds: "21000"
-          output-artifact-directory: output/signed
-          parameters: |
-            version: ${{ toJSON(steps.version.outputs.VERSION) }}
-
-      - name: Stage signed executables
-        if: ${{ steps.sign-executables.outcome == 'success' }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $Version = Get-Content output\VERSION
-          foreach($Arch in "amd64", "arm64") {
-            Copy-Item "output\signed\windows_exporter-$Version-$Arch.exe" output\final\ -ErrorAction Stop
-          }
-
       - name: Install WiX
         run: dotnet tool install --global wix --version 5.0.2
 
@@ -277,7 +237,7 @@ jobs:
 
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $Version ($FileVersion) msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\final\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -MsiVersion $FileVersion -Arch "$Arch"
           }
 
           Move-Item installer\*.msi output\
@@ -285,13 +245,16 @@ jobs:
 
       - name: upload unsigned installers
         id: unsigned-installers
-        if: *sign_release
+        if: &sign_release ${{ github.repository == 'prometheus-community/windows_exporter' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-installers
           path: output/*.msi
           retention-days: 1
 
+      # Only the MSI goes to SignPath. Its artifact configuration deep-signs
+      # windows_exporter.exe inside each package before it signs the package,
+      # so the standalone executable is extracted from the signed MSI below.
       - name: Sign installer artifacts
         id: sign-installers
         if: *sign_release
@@ -310,19 +273,47 @@ jobs:
           parameters: |
             version: ${{ toJSON(steps.version.outputs.VERSION) }}
 
-      - name: Stage signed installers
-        if: ${{ steps.sign-installers.outcome == 'success' }}
+      # Release assets and the container image use the executable from the
+      # MSI, so the executable users download is the one the package installs.
+      - name: Stage release artifacts
+        env:
+          SIGNED: ${{ steps.sign-installers.outcome == 'success' }}
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
+          New-Item -ItemType Directory -Force output\final | Out-Null
+
           foreach($Arch in "amd64", "arm64") {
-            Copy-Item "output\signed\windows_exporter-$Version-$Arch.msi" output\final\ -ErrorAction Stop
+            $Name = "windows_exporter-$Version-$Arch"
+            if ($env:SIGNED -eq 'true') {
+              Copy-Item "output\signed\$Name.msi" output\final\ -ErrorAction Stop
+            } else {
+              # Fork pull requests and other unsigned builds.
+              Copy-Item "output\$Name.msi" output\final\ -ErrorAction Stop
+            }
+
+            .\installer\extract-executable.ps1 -Msi "output\final\$Name.msi" -Destination "output\final\$Name.exe"
+
+            if ($env:SIGNED -eq 'true') {
+              # A configuration that signs only the package would ship an
+              # unsigned executable.
+              foreach($Extension in "msi", "exe") {
+                $Signature = Get-AuthenticodeSignature "output\final\$Name.$Extension"
+                if ($Signature.Status -ne 'Valid') {
+                  throw "$Name.$Extension is not signed: $($Signature.Status) $($Signature.StatusMessage)"
+                }
+              }
+            } else {
+              # Without signing, the package must carry the built executable unchanged.
+              $Built = (Get-FileHash -Algorithm SHA256 "output\$Name.exe").Hash
+              $Extracted = (Get-FileHash -Algorithm SHA256 "output\final\$Name.exe").Hash
+              if ($Built -ne $Extracted) {
+                throw "Executable extracted from $Name.msi differs from the built one"
+              }
+            }
           }
 
-      - name: Stage unsigned installers for fork pull requests
-        if: ${{ steps.sign-installers.outcome == 'skipped' }}
-        run: |
-          Copy-Item output\windows_exporter-*.msi output\final\ -ErrorAction Stop
+          Get-ChildItem -Path output\final
 
       # The runner is a disposable machine, so the MSI can be installed for real:
       # upgrade from the latest release, repair, uninstall and a fresh install,
