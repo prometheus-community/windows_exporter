@@ -968,6 +968,148 @@ func runNSI() {
 	}
 }
 
+// tableFull reads an NSI table with key, dynamic and static parts.
+func tableFull(store uint32, m *npiModuleID, obj uint32, keySize, dynSize, stSize int) (ks, ds, ss [][]byte, err error) {
+	var keys, dyn, st uintptr
+
+	count := uint32(0)
+
+	dynPtr, stPtr := uintptr(unsafe.Pointer(&dyn)), uintptr(unsafe.Pointer(&st))
+	if dynSize == 0 {
+		dynPtr = 0
+	}
+
+	if stSize == 0 {
+		stPtr = 0
+	}
+
+	r0, _, _ := syscall.SyscallN(procNsiAllocateAndGetTable.Addr(),
+		uintptr(store), uintptr(unsafe.Pointer(m)), uintptr(obj),
+		uintptr(unsafe.Pointer(&keys)), uintptr(keySize),
+		0, 0,
+		dynPtr, uintptr(dynSize),
+		stPtr, uintptr(stSize),
+		uintptr(unsafe.Pointer(&count)), 0)
+	if uint32(r0) != 0 {
+		return nil, nil, nil, windows.Errno(uint32(r0))
+	}
+
+	cp := func(base uintptr, size, i int) []byte {
+		if base == 0 || size == 0 {
+			return nil
+		}
+
+		return append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(base+uintptr(i*size))), size)...)
+	}
+
+	for i := range int(count) {
+		ks = append(ks, cp(keys, keySize, i))
+		ds = append(ds, cp(dyn, dynSize, i))
+		ss = append(ss, cp(st, stSize, i))
+	}
+
+	_, _, _ = syscall.SyscallN(procNsiFreeTable.Addr(), keys, 0, dyn, st)
+
+	return ks, ds, ss, nil
+}
+
+// runObj35 reads TCP object 35 (bound connections per static analysis:
+// key 56, dynamic 24, static 32 bytes) and compares its local ports with
+// iphlpapi!InternalGetBoundTcpEndpointTable while holding bound-only sockets.
+func runObj35() {
+	var hs []windows.Handle
+
+	add := func(h []windows.Handle, _ []int, _ error) { hs = append(hs, h...) }
+	add(fill(spec{fam: v4, proto: "tcp", addr: "wildcard"}, 20))
+	add(fill(spec{fam: v6only, proto: "tcp", addr: "wildcard"}, 10))
+	add(fill(spec{fam: dual, proto: "tcp", addr: "wildcard"}, 5))
+	add(fill(spec{fam: v4, proto: "tcp", addr: "loopback"}, 5))
+	fmt.Printf("obj35: holding %d bound-only TCP sockets\n", len(hs))
+
+	for _, sz := range []struct{ k, d, s int }{{56, 24, 32}, {56, 0, 0}, {56, 24, 0}, {56, 0, 32}, {48, 0, 0}, {64, 0, 0}} {
+		ks, _, _, err := tableFull(1, tcpModule, 35, sz.k, sz.d, sz.s)
+		fmt.Printf("obj35: store=1 key=%d dyn=%d static=%d: n=%d err=%v\n", sz.k, sz.d, sz.s, len(ks), err)
+	}
+
+	ks, ds, ss, err := tableFull(1, tcpModule, 35, 56, 24, 32)
+	if err != nil {
+		fmt.Println("obj35: read failed:", err)
+		closeAll(hs)
+
+		return
+	}
+
+	for i := range min(len(ks), 8) {
+		fmt.Printf("obj35: row %d key=%s dyn=%s static=%s\n", i, hex.EncodeToString(ks[i]), hex.EncodeToString(ds[i]), hex.EncodeToString(ss[i]))
+	}
+
+	// SOCKADDR_INET at key offset 0: family (LE u16) then port (BE u16).
+	nsiPorts := map[int]int{}
+	fams := map[uint16]int{}
+
+	for _, k := range ks {
+		fams[binary.LittleEndian.Uint16(k)]++
+		nsiPorts[int(binary.BigEndian.Uint16(k[2:]))]++
+	}
+
+	bp, err := boundPorts()
+	ipPorts := map[int]int{}
+
+	for _, p := range bp {
+		ipPorts[p]++
+	}
+
+	onlyNSI, onlyIP := 0, 0
+
+	for p := range nsiPorts {
+		if ipPorts[p] == 0 {
+			onlyNSI++
+		}
+	}
+
+	for p := range ipPorts {
+		if nsiPorts[p] == 0 {
+			onlyIP++
+		}
+	}
+
+	fmt.Printf("obj35: rows=%d families=%v distinct ports=%d; iphlpapi bound rows=%d distinct=%d err=%v; only in obj35=%d only in iphlpapi=%d\n",
+		len(ks), fams, len(nsiPorts), len(bp), len(ipPorts), err, onlyNSI, onlyIP)
+
+	held := 0
+
+	for _, h := range hs {
+		sa, err := windows.Getsockname(h)
+		if err != nil {
+			continue
+		}
+
+		var port int
+
+		switch a := sa.(type) {
+		case *windows.SockaddrInet4:
+			port = a.Port
+		case *windows.SockaddrInet6:
+			port = a.Port
+		}
+
+		if nsiPorts[port] > 0 {
+			held++
+		}
+	}
+
+	fmt.Printf("obj35: held sockets found in obj35: %d of %d\n", held, len(hs))
+
+	start := time.Now()
+
+	for range 1000 {
+		_, _, _, _ = tableFull(1, tcpModule, 35, 56, 0, 0)
+	}
+
+	fmt.Printf("obj35: 1000 key-only reads in %s\n", time.Since(start))
+	closeAll(hs)
+}
+
 // runObj34 dumps TCP object 34 (port pool ex) and the range object 20 from
 // stores 1 and 3, with the first 4 bytes decoded like object 20 and the rest
 // as little-endian uint16 and uint32 words.
@@ -1514,6 +1656,8 @@ func main() {
 		}
 	case "obj34":
 		runObj34()
+	case "obj35":
+		runObj35()
 	case "netsh":
 		netsh(flag.Args()[1:]...)
 	default:
