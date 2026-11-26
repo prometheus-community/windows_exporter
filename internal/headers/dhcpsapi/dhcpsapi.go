@@ -168,19 +168,20 @@ func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DH
 // allocations, which leak unless freed (about 480 bytes per scrape with one
 // scope). DHCP_SUBNET_INFO packs its strings behind the structure, and freeing
 // them corrupts the heap (STATUS_HEAP_CORRUPTION). Free a new result type's
-// embedded pointers only after checking it the same way. free is
-// dhcpRpcFreeMemory outside of tests.
+// embedded pointers only after checking it the same way. The dhcpRpcFreeMemory
+// parameter of these functions is the function of that name outside of tests,
+// which pass a recorder instead.
 
-func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, free func(uintptr)) {
+func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, dhcpRpcFreeMemory func(uintptr)) {
 	if mibInfo == nil {
 		return
 	}
 
-	free(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
-	free(uintptr(unsafe.Pointer(mibInfo)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(mibInfo)))
 }
 
-func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
+func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, dhcpRpcFreeMemory func(uintptr)) {
 	if table == nil {
 		return
 	}
@@ -198,20 +199,20 @@ func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
 
 			freed[name] = struct{}{}
 
-			free(name)
+			dhcpRpcFreeMemory(name)
 		}
 
-		free(uintptr(unsafe.Pointer(table.Entries)))
+		dhcpRpcFreeMemory(uintptr(unsafe.Pointer(table.Entries)))
 	}
 
-	free(uintptr(unsafe.Pointer(table)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(table)))
 }
 
 // freeReservationInfoArray frees one page of DhcpV4EnumSubnetReservations.
 // Every level is an allocation of its own: the client identifier, the name
 // and the description of each reservation, the reservation, the pointer array
 // and the structure. Checked with HeapValidate and full page heap.
-func freeReservationInfoArray(array *DHCP_RESERVATION_INFO_ARRAY, free func(uintptr)) {
+func freeReservationInfoArray(array *DHCP_RESERVATION_INFO_ARRAY, dhcpRpcFreeMemory func(uintptr)) {
 	if array == nil {
 		return
 	}
@@ -229,15 +230,15 @@ func freeReservationInfoArray(array *DHCP_RESERVATION_INFO_ARRAY, free func(uint
 				uintptr(unsafe.Pointer(element)),
 			} {
 				if pointer != 0 {
-					free(pointer)
+					dhcpRpcFreeMemory(pointer)
 				}
 			}
 		}
 
-		free(uintptr(unsafe.Pointer(array.Elements)))
+		dhcpRpcFreeMemory(uintptr(unsafe.Pointer(array.Elements)))
 	}
 
-	free(uintptr(unsafe.Pointer(array)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(array)))
 }
 
 // dhcpGetSubnetInfo https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpgetsubnetinfo
@@ -348,12 +349,13 @@ func dhcpV4EnumSubnetReservations(
 // reservations and adds up ElementsRead. With reservationsPreferredMaximum the
 // first call returns all of them. If the server returns ERROR_MORE_DATA
 // anyway, the next page is read, although the server leaks for each call that
-// ends that way. free is dhcpRpcFreeMemory outside of tests.
+// ends that way. The dhcpRpcFreeMemory parameter is the function of that name
+// outside of tests, which pass a recorder instead.
 func countSubnetReservations(
 	subnetAddress DHCP_IP_ADDRESS,
 	preferredMaximum uint32,
 	enum reservationEnumerator,
-	free func(uintptr),
+	dhcpRpcFreeMemory func(uintptr),
 ) (uint32, error) {
 	var (
 		count        uint32
@@ -371,7 +373,7 @@ func countSubnetReservations(
 
 		ret := enum(subnetAddress, &resumeHandle, preferredMaximum, &elementsInfo, &elementsRead, &elementsTotal)
 
-		freeReservationInfoArray(elementsInfo, free)
+		freeReservationInfoArray(elementsInfo, dhcpRpcFreeMemory)
 
 		count += elementsRead
 
