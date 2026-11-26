@@ -63,6 +63,8 @@ their runtime behavior.
   takes the executable out of the signed MSI for the release assets and the
   container image, and the package job fails if either file is not validly
   signed. Unsigned builds check that the extracted executable is the built one.
+  It unpacks the cabinet with `%SystemRoot%\System32\tar.exe`; `expand.exe`
+  copies the WiX cabinet as a plain file instead of unpacking it.
 
 New collectors need discussion with maintainers first. Prefer the configurable
 `performancecounter` collector where it can provide the requested metrics, as
