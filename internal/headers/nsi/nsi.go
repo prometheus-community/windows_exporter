@@ -111,12 +111,6 @@ type PortRange struct {
 	NumberOfPorts uint16
 }
 
-// Contains reports whether port lies in the range. The arithmetic uses
-// uint32, so a range that ends at port 65535 does not wrap around.
-func (r PortRange) Contains(port uint16) bool {
-	return port >= r.Start && uint32(port) < uint32(r.Start)+uint32(r.NumberOfPorts)
-}
-
 // Usage splits the range into the ports that exclusions reserve and the
 // ports that inUse reports as taken and that no exclusion covers. Exclusions
 // can extend beyond the range; only the overlap counts.

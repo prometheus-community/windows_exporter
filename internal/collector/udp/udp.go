@@ -46,8 +46,7 @@ type Collector struct {
 	datagramsReceivedErrorsTotal *prometheus.Desc
 	datagramsSentTotal           *prometheus.Desc
 
-	// dynamicPortRangeEnabled is false when nsi.dll or iphlpapi.dll could
-	// not be loaded.
+	// dynamicPortRangeEnabled is false when nsi.dll could not be loaded.
 	dynamicPortRangeEnabled  bool
 	dynamicPortRangeSize     *prometheus.Desc
 	dynamicPortRangeExcluded *prometheus.Desc
@@ -131,9 +130,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	if err := iphlpapi.Load(); err != nil {
+		return err
+	}
+
 	// NSI is undocumented. Without it, run without the range instead of
 	// failing the whole collector.
-	if err := errors.Join(nsi.Load(), iphlpapi.Load()); err != nil {
+	if err := nsi.Load(); err != nil {
 		logger.Warn("failed to load the network store interface, the UDP dynamic port range is not collected",
 			slog.String("collector", Name),
 			slog.Any("err", err),
@@ -207,9 +210,15 @@ func (c *Collector) collectDynamicPortRange(ch chan<- prometheus.Metric) error {
 
 	errs := make([]error, 0)
 
-	for _, af := range []uint32{windows.AF_INET, windows.AF_INET6} {
-		if err := iphlpapi.AddUDPPorts(af, ports); err != nil {
-			errs = append(errs, fmt.Errorf("failed to read the UDP endpoints: %w", err))
+	for _, family := range []struct {
+		af   uint32
+		name string
+	}{
+		{af: windows.AF_INET, name: "ipv4"},
+		{af: windows.AF_INET6, name: "ipv6"},
+	} {
+		if err := iphlpapi.AddUDPPorts(family.af, ports); err != nil {
+			errs = append(errs, fmt.Errorf("failed to read the UDP endpoints for %s: %w", family.name, err))
 		}
 	}
 

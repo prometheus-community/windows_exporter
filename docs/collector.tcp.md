@@ -59,7 +59,8 @@ a new `bind()` to port 0 exactly. Keep in mind:
 
 NSI is undocumented. If `nsi.dll` cannot be loaded, the exporter logs a warning and runs without `dynamic_port_range`.
 If a read fails, the scrape reports an error and drops the metrics that depend on it, instead of reporting zero or a
-default. No administrator rights are needed.
+default. No administrator rights are needed. The NSI reads were verified on Windows Server 2022 and 2025;
+on older builds a read can fail, which drops the affected metrics with a scrape error.
 
 ### Example metric
 

@@ -289,7 +289,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	if connectionsState || dynamicPortRange {
 		if err := c.collectConnectionsState(ch, connectionsState, ports); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting tcp connection state metrics: %w", err))
+			errs = append(errs, fmt.Errorf("failed to read the tcp connection tables: %w", err))
 			portsComplete = false
 		}
 	}

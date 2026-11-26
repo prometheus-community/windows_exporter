@@ -35,6 +35,7 @@ The exporter observes the default network compartment; containers with their own
 
 NSI is undocumented: if `nsi.dll` cannot be loaded, the exporter logs a warning and runs without these metrics. If a
 read fails, the scrape reports an error and drops the metrics that depend on it, instead of reporting zero or a default.
+The NSI reads were verified on Windows Server 2022 and 2025.
 
 ### Example metric
 
