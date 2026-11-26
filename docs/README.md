@@ -10,6 +10,9 @@ Actions workflow publishes default-branch changes to GitHub Pages.
 the rights the exporter needs and which collectors lose data without
 administrator rights.
 
+[Installer](installer.md) describes how the MSI keeps its settings across
+upgrades and repairs.
+
 # Collectors
 - [`ad`](collector.ad.md)
 - [`adcs`](collector.adcs.md)

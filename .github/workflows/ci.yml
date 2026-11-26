@@ -2024,6 +2024,24 @@ jobs:
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
 
+      # Docker Hub rejects a repository description over 25000 bytes, and
+      # container_description.yml pushes README-containers.md, or README.md if
+      # that does not exist, only after the merge. Super-linter has no linter
+      # for file sizes, so check it here to fail the pull request instead.
+      - name: Check Docker Hub description size
+        if: ${{ !cancelled() }}
+        run: |
+          file=README.md
+          if [ -f README-containers.md ]; then
+            file=README-containers.md
+          fi
+          size=$(wc -c < "$file")
+          echo "$file is $size bytes, Docker Hub accepts at most 25000."
+          if [ "$size" -gt 25000 ]; then
+            echo "::error file=$file::$file is $size bytes, Docker Hub accepts at most 25000. Move details into docs/."
+            exit 1
+          fi
+
   # Require this job in the merge rules. It is skipped, which counts as passing,
   # unless a needed job failed or was cancelled.
   fail:
