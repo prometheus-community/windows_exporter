@@ -8,7 +8,7 @@
 #
 # The package embeds one cabinet (see Media in main.wxs). Its name comes from
 # the Media table, since a signing service may repackage the MSI, and it is
-# read from the _Streams table through msi.dll and unpacked with the tar.exe of Windows, which works for
+# read from the _Streams table through msi.dll and unpacked with 7-Zip, which works for
 # packages of any architecture, unlike an administrative install. Files in the
 # cabinet are stored under their File table key, not their file name.
 [CmdletBinding()]
@@ -157,14 +157,17 @@ try {
     $CabinetPath = Join-Path $Work $Cabinet
     [MsiPackage]::ExportStream($Msi, $Cabinet, $CabinetPath)
 
-    # expand.exe does not unpack this cabinet. The tar.exe that ships with
-    # Windows is libarchive and reads cabinets; the tar of Git for Windows,
-    # which can come first in PATH, does not.
-    $Tar = Join-Path $env:SystemRoot "System32\tar.exe"
-    & $Tar -x -v -f $CabinetPath -C $Files
+    # expand.exe copies this cabinet as a plain file, and the libarchive
+    # tar.exe of Windows fails on some of its LZX blocks. 7-Zip, which the
+    # GitHub runner images include, unpacks it reliably.
+    $SevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe"
+    if (-not (Test-Path -PathType Leaf $SevenZip)) {
+        throw "7-Zip is required to unpack $Cabinet, not found at $SevenZip"
+    }
+    & $SevenZip x -y "-o$Files" $CabinetPath
     # $ErrorActionPreference does not apply to native commands.
     if ($LASTEXITCODE -ne 0) {
-        throw "tar.exe failed with exit code $LASTEXITCODE for $Cabinet in $Msi"
+        throw "7-Zip failed with exit code $LASTEXITCODE for $Cabinet in $Msi"
     }
 
     $Extracted = Join-Path $Files $FileKey
