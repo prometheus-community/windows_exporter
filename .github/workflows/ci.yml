@@ -278,6 +278,7 @@ jobs:
       - name: Stage release artifacts
         env:
           SIGNED: ${{ steps.sign-installers.outcome == 'success' }}
+          SIGNING_POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content output\VERSION
@@ -297,11 +298,31 @@ jobs:
             if ($env:SIGNED -eq 'true') {
               # A configuration that signs only the package would ship an
               # unsigned executable.
-              foreach($Extension in "msi", "exe") {
-                $Signature = Get-AuthenticodeSignature "output\final\$Name.$Extension"
-                if ($Signature.Status -ne 'Valid') {
-                  throw "$Name.$Extension is not signed: $($Signature.Status) $($Signature.StatusMessage)"
+              $Thumbprints = foreach($Extension in "msi", "exe") {
+                $File = "$Name.$Extension"
+                $Signature = Get-AuthenticodeSignature "output\final\$File"
+                # UnknownError means the hash matches but the certificate
+                # chain does not verify.
+                if (-not $Signature.SignerCertificate -or $Signature.Status -notin 'Valid', 'UnknownError') {
+                  throw "$File is not signed: $($Signature.Status) $($Signature.StatusMessage)"
                 }
+                if ($Signature.Status -ne 'Valid') {
+                  # The test-signing policy signs with a certificate whose
+                  # root the runner does not trust. Accept that, and only
+                  # that, for it.
+                  $Chain = [Security.Cryptography.X509Certificates.X509Chain]::new()
+                  $Chain.ChainPolicy.RevocationMode = 'NoCheck'
+                  [void]$Chain.Build($Signature.SignerCertificate)
+                  $Problems = @($Chain.ChainStatus | Where-Object Status -ne 'UntrustedRoot')
+                  if ($env:SIGNING_POLICY -ne 'test-signing' -or $Problems) {
+                    throw "$File signature does not verify: $($Signature.StatusMessage) $($Problems.StatusInformation)"
+                  }
+                  Write-Host "::warning::$File is signed by $($Signature.SignerCertificate.Subject), whose root is not trusted (test-signing policy)"
+                }
+                $Signature.SignerCertificate.Thumbprint
+              }
+              if (@($Thumbprints | Select-Object -Unique).Count -ne 1) {
+                throw "$Name.msi and $Name.exe are signed by different certificates"
               }
             } else {
               # Without signing, the package must carry the built executable unchanged.

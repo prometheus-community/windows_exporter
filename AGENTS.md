@@ -61,8 +61,12 @@ their runtime behavior.
   `windows_exporter.exe` inside each package before signing the package.
   [`installer/extract-executable.ps1`](installer/extract-executable.ps1) then
   takes the executable out of the signed MSI for the release assets and the
-  container image, and the package job fails if either file is not validly
-  signed. Unsigned builds check that the extracted executable is the built one.
+  container image, and the package job fails unless both files carry a valid
+  signature from the same certificate. With the `test-signing` policy
+  (`vars.SIGNPATH_SIGNING_POLICY_SLUG`) the root of that certificate is not
+  trusted on the runner, so the job accepts an untrusted root, and nothing
+  else, for that policy only. Unsigned builds check that the extracted
+  executable is the built one.
   It unpacks the cabinet with 7-Zip: `expand.exe` copies the WiX cabinet as a
   plain file, and the libarchive `tar.exe` of Windows fails on some of its LZX
   blocks.
