@@ -133,7 +133,7 @@ func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DH
 		scope.PendingOffers = float64(subnetScopeInfo.NumPendingOffers)
 	}
 
-	subnetReservationCount, err := dhcpV4EnumSubnetReservations(subnet.SubnetAddress)
+	subnetReservationCount, err := countSubnetReservations(subnet.SubnetAddress, reservationsPreferredMaximum, dhcpV4EnumSubnetReservations, dhcpRpcFreeMemory)
 	if err != nil {
 		return DHCPV4Scope{}, fmt.Errorf("failed to get subnet reservation count: %w", err)
 	}
@@ -168,19 +168,20 @@ func getDHCPV4Scope(subnet DHCP_SUPER_SCOPE_TABLE_ENTRY, subnetScopeInfos map[DH
 // allocations, which leak unless freed (about 480 bytes per scrape with one
 // scope). DHCP_SUBNET_INFO packs its strings behind the structure, and freeing
 // them corrupts the heap (STATUS_HEAP_CORRUPTION). Free a new result type's
-// embedded pointers only after checking it the same way. free is
-// dhcpRpcFreeMemory outside of tests.
+// embedded pointers only after checking it the same way. The dhcpRpcFreeMemory
+// parameter of these functions is the function of that name outside of tests,
+// which pass a recorder instead.
 
-func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, free func(uintptr)) {
+func freeMibInfo(mibInfo *DHCP_MIB_INFO_V5, dhcpRpcFreeMemory func(uintptr)) {
 	if mibInfo == nil {
 		return
 	}
 
-	free(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
-	free(uintptr(unsafe.Pointer(mibInfo)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(mibInfo.ScopeInfo)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(mibInfo)))
 }
 
-func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
+func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, dhcpRpcFreeMemory func(uintptr)) {
 	if table == nil {
 		return
 	}
@@ -198,13 +199,46 @@ func freeSuperScopeTable(table *DHCP_SUPER_SCOPE_TABLE, free func(uintptr)) {
 
 			freed[name] = struct{}{}
 
-			free(name)
+			dhcpRpcFreeMemory(name)
 		}
 
-		free(uintptr(unsafe.Pointer(table.Entries)))
+		dhcpRpcFreeMemory(uintptr(unsafe.Pointer(table.Entries)))
 	}
 
-	free(uintptr(unsafe.Pointer(table)))
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(table)))
+}
+
+// freeReservationInfoArray frees one page of DhcpV4EnumSubnetReservations.
+// Every level is an allocation of its own: the client identifier, the name
+// and the description of each reservation, the reservation, the pointer array
+// and the structure. Checked with HeapValidate and full page heap.
+func freeReservationInfoArray(array *DHCP_RESERVATION_INFO_ARRAY, dhcpRpcFreeMemory func(uintptr)) {
+	if array == nil {
+		return
+	}
+
+	if array.Elements != nil {
+		for _, element := range unsafe.Slice(array.Elements, array.NumElements) {
+			if element == nil {
+				continue
+			}
+
+			for _, pointer := range []uintptr{
+				uintptr(unsafe.Pointer(element.ReservedForClient.Data)),
+				element.ReservedClientName.Pointer(),
+				element.ReservedClientDesc.Pointer(),
+				uintptr(unsafe.Pointer(element)),
+			} {
+				if pointer != 0 {
+					dhcpRpcFreeMemory(pointer)
+				}
+			}
+		}
+
+		dhcpRpcFreeMemory(uintptr(unsafe.Pointer(array.Elements)))
+	}
+
+	dhcpRpcFreeMemory(uintptr(unsafe.Pointer(array)))
 }
 
 // dhcpGetSubnetInfo https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpgetsubnetinfo
@@ -265,38 +299,104 @@ func dhcpGetMibInfoV5(mibInfo **DHCP_MIB_INFO_V5) error {
 	return nil
 }
 
-// dhcpV4EnumSubnetReservations https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpv4enumsubnetreservations
-// It returns the number of reservations of the subnet. With a PreferredMaximum
-// of 0 the server returns no elements and the number of reservations left to
-// enumerate in ElementsTotal ([MS-DHCPM] 3.2.4.120).
-func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error) {
-	var (
-		elementsRead  uint32
-		elementsTotal uint32
-		elementsInfo  uintptr
-		resumeHandle  uint32
-	)
+// reservationsPreferredMaximum is the PreferredMaximum of
+// DhcpV4EnumSubnetReservations, in bytes: the value that the Win32
+// documentation names to retrieve all reservations of a subnet with one call.
+//
+// The DHCP Server service keeps about 500 bytes allocated for every call that
+// returns ERROR_MORE_DATA, until the service restarts. That is every call
+// whose PreferredMaximum does not hold all remaining reservations, also the
+// one with a PreferredMaximum of 0 that this package used to read only the
+// count. Measured on Windows Server 2025 (build 26100): 126 MB after 300000
+// calls with a PreferredMaximum of 0, 566 bytes for each page but the last
+// when reading 1500 reservations in pages of 1024 bytes.
+const reservationsPreferredMaximum = 0xFFFFFFFF
 
+// reservationEnumerator is DhcpV4EnumSubnetReservations for the local server.
+type reservationEnumerator func(
+	subnetAddress DHCP_IP_ADDRESS,
+	resumeHandle *uint32,
+	preferredMaximum uint32,
+	elementsInfo **DHCP_RESERVATION_INFO_ARRAY,
+	elementsRead *uint32,
+	elementsTotal *uint32,
+) windows.Errno
+
+// dhcpV4EnumSubnetReservations https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpv4enumsubnetreservations
+func dhcpV4EnumSubnetReservations(
+	subnetAddress DHCP_IP_ADDRESS,
+	resumeHandle *uint32,
+	preferredMaximum uint32,
+	elementsInfo **DHCP_RESERVATION_INFO_ARRAY,
+	elementsRead *uint32,
+	elementsTotal *uint32,
+) windows.Errno {
 	ret, _, _ := procDhcpV4EnumSubnetReservations.Call(
 		0,
 		uintptr(subnetAddress),
-		uintptr(unsafe.Pointer(&resumeHandle)),
-		0,
-		uintptr(unsafe.Pointer(&elementsInfo)),
-		uintptr(unsafe.Pointer(&elementsRead)),
-		uintptr(unsafe.Pointer(&elementsTotal)),
+		uintptr(unsafe.Pointer(resumeHandle)),
+		uintptr(preferredMaximum),
+		uintptr(unsafe.Pointer(elementsInfo)),
+		uintptr(unsafe.Pointer(elementsRead)),
+		uintptr(unsafe.Pointer(elementsTotal)),
 	)
 
-	dhcpRpcFreeMemory(elementsInfo)
+	return windows.Errno(ret)
+}
 
-	switch windows.Errno(ret) {
-	case windows.ERROR_SUCCESS, windows.ERROR_MORE_DATA:
-		return elementsRead + elementsTotal, nil
-	case windows.ERROR_NO_MORE_ITEMS:
-		// The subnet has no reservations.
-		return 0, nil
-	default:
-		return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", windows.Errno(ret))
+// countSubnetReservations returns the number of reservations of the subnet.
+// The server has no call that returns only the count, so it reads the
+// reservations and adds up ElementsRead. With reservationsPreferredMaximum the
+// first call returns all of them. If the server returns ERROR_MORE_DATA
+// anyway, the next page is read, although the server leaks for each call that
+// ends that way. The dhcpRpcFreeMemory parameter is the function of that name
+// outside of tests, which pass a recorder instead.
+func countSubnetReservations(
+	subnetAddress DHCP_IP_ADDRESS,
+	preferredMaximum uint32,
+	enum reservationEnumerator,
+	dhcpRpcFreeMemory func(uintptr),
+) (uint32, error) {
+	var (
+		count        uint32
+		resumeHandle uint32
+	)
+
+	for {
+		var (
+			elementsRead  uint32
+			elementsTotal uint32
+			elementsInfo  *DHCP_RESERVATION_INFO_ARRAY
+		)
+
+		previousHandle := resumeHandle
+
+		ret := enum(subnetAddress, &resumeHandle, preferredMaximum, &elementsInfo, &elementsRead, &elementsTotal)
+
+		freeReservationInfoArray(elementsInfo, dhcpRpcFreeMemory)
+
+		count += elementsRead
+
+		switch ret {
+		case windows.ERROR_SUCCESS, windows.ERROR_NO_MORE_ITEMS:
+			// ERROR_NO_MORE_ITEMS: the subnet has no reservations, or none
+			// after the last page.
+			return count, nil
+		case windows.ERROR_MORE_DATA:
+			if elementsRead == 0 {
+				// The page cannot hold the next reservation, and asking
+				// again would never end. ElementsTotal is the number of
+				// reservations from the resume handle on, so the count is
+				// known without another call.
+				return count + elementsTotal, nil
+			}
+
+			if resumeHandle == previousHandle {
+				return 0, fmt.Errorf("dhcpV4EnumSubnetReservations did not advance after %d reservations: %w", count, ret)
+			}
+		default:
+			return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", ret)
+		}
 	}
 }
 

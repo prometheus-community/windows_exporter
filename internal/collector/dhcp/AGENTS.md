@@ -39,10 +39,31 @@ The scope metrics come from the DHCP Server Management API in
 - A scope can be deleted while the scopes are read; its calls then fail with
   `ERROR_DHCP_SUBNET_NOT_PRESENT` (20005). It is skipped. Other per-scope
   errors are joined, and the scopes that were read are still published.
-- The reservation count calls `DhcpV4EnumSubnetReservations` once with
-  `PreferredMaximum = 0` and adds `ElementsRead` and `ElementsTotal`, where the
-  total counts the reservations not yet returned. Loop over `ERROR_MORE_DATA`
-  instead if a server is seen to report the grand total there.
+- The reservation count reads all reservations of a scope with one
+  `DhcpV4EnumSubnetReservations` call (`PreferredMaximum = 0xFFFFFFFF`) and
+  uses `ElementsRead`. `ElementsTotal` includes the elements of the page it
+  comes with, so it is not added. `PreferredMaximum` is a byte budget: 1024
+  bytes returned 3 reservations with long names, 65536 bytes 221.
+- The DHCP Server service (not the exporter) keeps about 500 bytes allocated
+  for every `DhcpV4EnumSubnetReservations` call that returns
+  `ERROR_MORE_DATA`, until the service restarts (issue #2842, measured on
+  Windows Server 2025, build 26100). That is every call whose
+  `PreferredMaximum` does not hold all remaining reservations: 566 bytes for
+  each page but the last when paging, and 422 bytes for a call with
+  `PreferredMaximum = 0`, which returns `ElementsRead = 0`, the count in
+  `ElementsTotal` and an empty array. Reading only the count that way added
+  126 MB to the service in 300000 calls. Do not page an enumeration of this
+  API and never ask it for the count alone. If the server returns a page
+  without elements anyway, the count is taken from `ElementsTotal` instead of
+  asking again.
+- The client returns every level of a reservation page as an allocation of
+  its own: the client identifier, the name and the description of each
+  reservation, the reservation, the pointer array and the structure. Freeing
+  only the structure leaks about 1 KB per call with three reservations.
+- To find which call makes the service grow, call each API in a loop and read
+  the private bytes of the service host (`QueryServiceStatusEx` for the PID of
+  `DHCPServer`, `GetProcessMemoryInfo`). 20000 calls per API are enough; the
+  host moves by about 1 MB up and down on its own.
 
 ## Counter reference
 

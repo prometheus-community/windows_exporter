@@ -63,3 +63,43 @@ func TestFreeSuperScopeTable(t *testing.T) {
 	freeSuperScopeTable(empty, recordFree(&freed))
 	require.Equal(t, []uintptr{ptr(empty)}, freed)
 }
+
+func TestFreeReservationInfoArray(t *testing.T) {
+	t.Parallel()
+
+	name := win32.NewLPWSTR("host")
+	desc := win32.NewLPWSTR("description")
+	fullID := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x01}
+	bareID := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x02}
+
+	full := &DHCP_IP_RESERVATION_INFO{
+		ReservedForClient:  DHCP_BINARY_DATA{DataLength: 6, Data: &fullID[0]},
+		ReservedClientName: *name,
+		ReservedClientDesc: *desc,
+	}
+	// A reservation without a name and a description.
+	bare := &DHCP_IP_RESERVATION_INFO{
+		ReservedForClient: DHCP_BINARY_DATA{DataLength: 6, Data: &bareID[0]},
+	}
+	elements := []*DHCP_IP_RESERVATION_INFO{full, nil, bare}
+	array := &DHCP_RESERVATION_INFO_ARRAY{NumElements: 3, Elements: &elements[0]}
+
+	var freed []uintptr
+
+	freeReservationInfoArray(array, recordFree(&freed))
+	require.Equal(t, []uintptr{
+		ptr(&fullID[0]), name.Pointer(), desc.Pointer(), ptr(full),
+		ptr(&bareID[0]), ptr(bare),
+		ptr(&elements[0]), ptr(array),
+	}, freed, "the members are freed before the reservation, the reservations before the array")
+
+	// A call that returns no reservations still returns an array to free.
+	freed = nil
+	empty := &DHCP_RESERVATION_INFO_ARRAY{}
+	freeReservationInfoArray(empty, recordFree(&freed))
+	require.Equal(t, []uintptr{ptr(empty)}, freed)
+
+	freed = nil
+	freeReservationInfoArray(nil, recordFree(&freed))
+	require.Empty(t, freed)
+}
