@@ -56,8 +56,8 @@ their runtime behavior.
   published, so never upload assets after publishing, and never let a second
   run build the same tag. Start releases only with that workflow or a tag push,
   never by creating a release with a new tag in the GitHub UI.
-- The publish job attests build provenance (`actions/attest`) of the final
-  executables and MSIs before it creates the draft, and the docker job attests
+- The `publish` job attests build provenance (`actions/attest`) of the final
+  executables and MSIs before it creates the draft, and the `docker` job attests
   each pushed image by its digest. Attest only files that are not changed
   afterwards, so never before signing or extraction: a changed file no longer
   matches its attestation.

@@ -113,14 +113,18 @@ All binaries and installation packages are signed with an self-signed certificat
 Once import into the trusted root certificate store, the binaries and installation packages will be trusted.
 
 Release assets and container images also carry a [build provenance attestation](https://docs.github.com/en/actions/concepts/security/artifact-attestations).
-It shows that a file was built by the release workflow of this repository, and from which tag and commit.
-Verify a download or an image with the [GitHub CLI](https://cli.github.com/):
+It shows that a file was built by the CI workflow of this repository, and from which tag and commit.
+Verify a download or an image of a release with the [GitHub CLI](https://cli.github.com/):
 
 ```shell
-gh attestation verify windows_exporter-<version>-amd64.msi --repo prometheus-community/windows_exporter
-gh attestation verify oci://ghcr.io/prometheus-community/windows-exporter:<version> --repo prometheus-community/windows_exporter
+gh attestation verify windows_exporter-<version>-amd64.msi --repo prometheus-community/windows_exporter \
+  --signer-workflow prometheus-community/windows_exporter/.github/workflows/ci.yml --source-ref refs/tags/v<version>
+gh attestation verify oci://ghcr.io/prometheus-community/windows-exporter:<version> --repo prometheus-community/windows_exporter \
+  --signer-workflow prometheus-community/windows_exporter/.github/workflows/ci.yml --source-ref refs/tags/v<version>
 ```
 
+Images on Docker Hub and quay.io have the same digest and verify the same way.
+Without `--source-ref`, the command also accepts images built from a branch.
 Releases up to 0.32.1 have no attestations.
 
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, and may create an exception in the Windows Firewall (see example below).
