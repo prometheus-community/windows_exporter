@@ -1,6 +1,7 @@
 # Tests the MSI lifecycle on a disposable Windows host: upgrade from the
-# previous release, repair, uninstall, a fresh install and an install with a
-# virtual service account. An independent windows_exporter.exe from another
+# previous release, repair, uninstall, a fresh install, the settings that
+# later runs without properties keep, and an install with a virtual service
+# account. An independent windows_exporter.exe from another
 # directory must survive every operation of the new package. Run it only on
 # a throwaway machine such as a CI runner: it installs and removes the
 # windows_exporter service.
@@ -14,6 +15,10 @@ Param (
     # release. Defaults to $Msi.
     [Parameter(Mandatory = $false)]
     [String] $UpgradeMsi = '',
+    # MSI with a higher version than $Msi, for the major upgrade that must keep
+    # the remembered settings. Defaults to $UpgradeMsi.
+    [Parameter(Mandatory = $false)]
+    [String] $HigherMsi = '',
     # Executable packaged in $Msi and $UpgradeMsi.
     [Parameter(Mandatory = $true)]
     [String] $Executable,
@@ -31,9 +36,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3
 
 if (-not $UpgradeMsi) { $UpgradeMsi = $Msi }
+if (-not $HigherMsi) { $HigherMsi = $UpgradeMsi }
 
 $Msi = (Resolve-Path $Msi).Path
 $UpgradeMsi = (Resolve-Path $UpgradeMsi).Path
+$HigherMsi = (Resolve-Path $HigherMsi).Path
 $Executable = (Resolve-Path $Executable).Path
 
 $serviceName = 'windows_exporter'
@@ -42,6 +49,7 @@ $foreignPort = 19182
 $installDir = Join-Path $env:ProgramFiles 'windows_exporter'
 $installedExe = Join-Path $installDir 'windows_exporter.exe'
 $configFile = Join-Path $installDir 'config.yaml'
+$settingsKey = 'HKLM:\SOFTWARE\prometheus-community\windows_exporter'
 
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 
@@ -123,7 +131,7 @@ function Wait-HttpOk([Int32] $Port, [String] $Path, [Int32] $TimeoutSeconds = 60
     }
 }
 
-function Assert-ServiceRunning {
+function Assert-ServiceRunning([Int32] $Port = $servicePort) {
     $deadline = (Get-Date).AddSeconds(60)
     while ($true) {
         $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -138,7 +146,7 @@ function Assert-ServiceRunning {
         Start-Sleep -Seconds 1
     }
 
-    $metrics = Wait-HttpOk -Port $servicePort -Path '/metrics'
+    $metrics = Wait-HttpOk -Port $Port -Path '/metrics'
     if ($metrics -notmatch '(?m)^windows_exporter_build_info\{') {
         throw 'the service scrape has no windows_exporter_build_info metric'
     }
@@ -153,6 +161,28 @@ function Assert-ServiceRemoved {
 
     if (Test-Path $installedExe) {
         throw "$installedExe still exists after uninstall"
+    }
+}
+
+function Get-ServiceImagePath {
+    return [String] (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\$serviceName").ImagePath
+}
+
+# Checks that the service command line has every expected flag and none of the
+# unexpected ones.
+function Assert-ServiceFlags([String] $Operation, [String[]] $Expected, [String[]] $Unexpected = @()) {
+    $imagePath = Get-ServiceImagePath
+    Write-Host "  ImagePath after $Operation`: $imagePath"
+    foreach ($flag in $Expected) {
+        if (-not $imagePath.Contains($flag)) {
+            throw "the service command line after $Operation has no $flag`: $imagePath"
+        }
+    }
+
+    foreach ($flag in $Unexpected) {
+        if ($imagePath.Contains($flag)) {
+            throw "the service command line after $Operation still has $flag`: $imagePath"
+        }
     }
 }
 
@@ -311,6 +341,116 @@ try {
     Assert-ForeignAlive -Operation 'uninstall of the fresh install'
     Write-Host '::endgroup::'
 
+    Write-Step 'Install this build with settings'
+    # Each install remembers its settings, so later runs without the
+    # properties keep them instead of falling back to the defaults.
+    $settingsPort = 9183
+    $settingsFlags = @("--web.listen-address=`":$settingsPort`"", '--collectors.enabled os,service', '--log.level=debug')
+    Invoke-Msiexec -Name 'install-settings' -Arguments @('/i', "`"$Msi`"", "LISTEN_PORT=$settingsPort", 'ENABLED_COLLECTORS=os,service', 'EXTRA_FLAGS="--log.level=debug"')
+    Assert-ServiceRunning -Port $settingsPort | Out-Null
+    Assert-ServiceFlags -Operation 'the install with settings' -Expected $settingsFlags
+    $remembered = Get-ItemProperty -Path $settingsKey
+    if ($remembered.LISTEN_PORT -ne "$settingsPort" -or $remembered.APPLICATIONFOLDER.TrimEnd('\') -ne $installDir) {
+        throw "$settingsKey does not hold the settings of the install: LISTEN_PORT=$($remembered.LISTEN_PORT), APPLICATIONFOLDER=$($remembered.APPLICATIONFOLDER)"
+    }
+    Assert-ForeignAlive -Operation 'install with settings'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Run this build again without settings'
+    Invoke-Msiexec -Name 'rerun-settings' -Arguments @('/i', "`"$Msi`"")
+    Assert-ServiceRunning -Port $settingsPort | Out-Null
+    Assert-ServiceFlags -Operation 'the run without settings' -Expected $settingsFlags
+    Write-Host '::endgroup::'
+
+    Write-Step 'Repair this build without settings'
+    Invoke-Msiexec -Name 'repair-settings' -Arguments @('/fa', "`"$Msi`"")
+    Assert-ServiceRunning -Port $settingsPort | Out-Null
+    Assert-ServiceFlags -Operation 'the repair' -Expected $settingsFlags
+    Write-Host '::endgroup::'
+
+    # A major upgrade removes the service of $Msi and creates it again.
+    Write-Step 'Upgrade without settings'
+    Invoke-Msiexec -Name 'upgrade-settings' -Arguments @('/i', "`"$HigherMsi`"")
+    if ($HigherMsi -ne $Msi -and $null -eq (Select-String -Path (Join-Path $WorkDir 'upgrade-settings.log') -Encoding unicode -Pattern 'Property\(S\): (WIX_UPGRADE_DETECTED|OLDERVERSIONBEINGUPGRADED) = ')) {
+        throw "the run of $HigherMsi was not a major upgrade"
+    }
+
+    Assert-ServiceRunning -Port $settingsPort | Out-Null
+    Assert-ServiceFlags -Operation 'the upgrade without settings' -Expected $settingsFlags
+    Assert-ForeignAlive -Operation 'upgrade without settings'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Change one setting'
+    # A property on the command line replaces its remembered value only.
+    $changedPort = 9184
+    Invoke-Msiexec -Name 'change-settings' -Arguments @('/i', "`"$HigherMsi`"", "LISTEN_PORT=$changedPort")
+    Assert-ServiceRunning -Port $changedPort | Out-Null
+    Assert-ServiceFlags -Operation 'the change of the port' `
+        -Expected @("--web.listen-address=`":$changedPort`"", '--collectors.enabled os,service', '--log.level=debug') `
+        -Unexpected @(":$settingsPort")
+    Write-Host '::endgroup::'
+
+    Write-Step 'Reset the settings'
+    Invoke-Msiexec -Name 'reset-settings' -Arguments @('/i', "`"$HigherMsi`"", 'RESET_SETTINGS=1')
+    Assert-ServiceRunning | Out-Null
+    Assert-ServiceFlags -Operation 'the reset' -Expected @('--config.file=') `
+        -Unexpected @('--web.listen-address', '--collectors.enabled', '--log.level')
+
+    # The reset must also forget the earlier values, or the next run without
+    # properties would bring them back.
+    $remembered = Get-ItemProperty -Path $settingsKey
+    foreach ($name in 'ENABLED_COLLECTORS', 'EXTRA_FLAGS') {
+        $value = $remembered.PSObject.Properties[$name]
+        if ($null -ne $value -and $value.Value) {
+            throw "$settingsKey still remembers $name=$($value.Value) after the reset"
+        }
+    }
+
+    if ($remembered.LISTEN_PORT -ne "$servicePort") {
+        throw "$settingsKey remembers LISTEN_PORT=$($remembered.LISTEN_PORT) after the reset, expected $servicePort"
+    }
+
+    Invoke-Msiexec -Name 'rerun-reset' -Arguments @('/i', "`"$HigherMsi`"")
+    Assert-ServiceRunning | Out-Null
+    Assert-ServiceFlags -Operation 'the run after the reset' -Expected @('--config.file=') `
+        -Unexpected @('--web.listen-address', '--collectors.enabled', '--log.level')
+    Write-Host '::endgroup::'
+
+    Write-Step 'Uninstall the install with settings'
+    Invoke-Msiexec -Name 'uninstall-settings' -Arguments @('/x', "`"$HigherMsi`"")
+    Assert-ServiceRemoved
+    Assert-InstallDirRemoved
+    if (Test-Path $settingsKey) {
+        throw "$settingsKey still exists after uninstall"
+    }
+
+    Assert-ForeignAlive -Operation 'uninstall of the install with settings'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Upgrade an install in another folder without settings'
+    # Without the remembered folder, a major upgrade moved the installation
+    # back to Program Files and left config.yaml behind. Windows Installer
+    # quotes the executable in ImagePath only when its path has a space.
+    $customDir = Join-Path $env:SystemDrive 'windows_exporter_custom'
+    Invoke-Msiexec -Name 'install-folder' -Arguments @('/i', "`"$Msi`"", "APPLICATIONFOLDER=`"$customDir\`"")
+    Assert-ServiceRunning | Out-Null
+    Invoke-Msiexec -Name 'upgrade-folder' -Arguments @('/i', "`"$HigherMsi`"")
+    Assert-ServiceRunning | Out-Null
+    Assert-ServiceFlags -Operation 'the upgrade of the install in another folder' `
+        -Expected @("$customDir\windows_exporter.exe", "--config.file=`"$customDir\config.yaml`"")
+    if (Test-Path $installedExe) {
+        throw "the upgrade of the install in $customDir installed $installedExe"
+    }
+
+    Invoke-Msiexec -Name 'uninstall-folder' -Arguments @('/x', "`"$HigherMsi`"")
+    Assert-ServiceRemoved
+    if (Test-Path $customDir) {
+        throw "$customDir still exists after uninstall: $((Get-ChildItem -Recurse -Force -Name $customDir) -join ', ')"
+    }
+
+    Assert-ForeignAlive -Operation 'the install in another folder'
+    Write-Host '::endgroup::'
+
     Write-Step 'Install this build with a virtual service account'
     # The installer only sets the account. Without the Performance Monitor
     # Users group, the default collectors cannot read their counters and the
@@ -328,6 +468,27 @@ try {
     }
 
     Assert-ForeignAlive -Operation 'install with a service account'
+    Write-Host '::endgroup::'
+
+    Write-Step 'Run the install with a virtual service account again without settings'
+    # The account must come from the remembered settings, not from a service
+    # that Windows Installer left unchanged.
+    if ((Get-ItemProperty -Path $settingsKey).SERVICE_ACCOUNT -ne $account) {
+        throw "$settingsKey does not remember SERVICE_ACCOUNT $account"
+    }
+
+    Invoke-Msiexec -Name 'rerun-account' -Arguments @('/i', "`"$Msi`"")
+    Assert-ServiceRunning | Out-Null
+    $startName = (Get-CimInstance -ClassName Win32_Service -Filter "Name='$serviceName'").StartName
+    if ($startName -ne $account) {
+        throw "service $serviceName runs as $startName after a run without SERVICE_ACCOUNT, expected $account"
+    }
+
+    $restored = Select-String -Path (Join-Path $WorkDir 'rerun-account.log') -Encoding unicode -Pattern 'Property\(S\): SERVICE_ACCOUNT = '
+    if ($null -eq $restored -or -not ($restored | Where-Object { $_.Line.Contains($account) })) {
+        throw 'the run without SERVICE_ACCOUNT did not restore the remembered account'
+    }
+
     Write-Host '::endgroup::'
 
     Write-Step 'Uninstall the install with a virtual service account'

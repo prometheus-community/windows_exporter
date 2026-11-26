@@ -351,7 +351,7 @@ jobs:
       # upgrade from the latest release, repair, uninstall and a fresh install,
       # with an independent windows_exporter.exe that must survive.
       - name: Test installer
-        # A passing run takes about a minute. Fail a hang with its log
+        # A passing run takes a few minutes. Fail a hang with its log
         # instead of waiting for the job timeout.
         timeout-minutes: 10
         run: |
@@ -372,18 +372,22 @@ jobs:
             $PreviousVersion = '0.32.0-beta.1'
           }
 
+          # Package the same executable with a higher version. The test upgrades
+          # to it from this build to check the remembered settings.
+          .\installer\build.ps1 -PathToExecutable $Executable -Version 99.0.0 -Arch amd64
+          $HigherMsi = Join-Path $env:RUNNER_TEMP 'windows_exporter-99.0.0-amd64.msi'
+          Move-Item installer\windows_exporter-99.0.0-amd64.msi $HigherMsi
+
           # Builds between tags carry the version of an older tag, so installing
-          # them over the latest release would be a downgrade. Package the same
-          # executable with a higher version for the upgrade test.
+          # them over the latest release would be a downgrade. Upgrade to the
+          # higher version instead.
           $UpgradeMsi = $Msi
           $MsiVersion = $Version -replace '^v?([0-9\.]+).*$','$1'
           if ([Version]$MsiVersion -le [Version]($PreviousVersion -replace '^([0-9\.]+).*$','$1')) {
-            .\installer\build.ps1 -PathToExecutable $Executable -Version 99.0.0 -Arch amd64
-            $UpgradeMsi = Join-Path $env:RUNNER_TEMP 'windows_exporter-99.0.0-amd64.msi'
-            Move-Item installer\windows_exporter-99.0.0-amd64.msi $UpgradeMsi
+            $UpgradeMsi = $HigherMsi
           }
 
-          .\tools\test-installer.ps1 -Msi $Msi -UpgradeMsi $UpgradeMsi -Executable $Executable -PreviousVersion $PreviousVersion
+          .\tools\test-installer.ps1 -Msi $Msi -UpgradeMsi $UpgradeMsi -HigherMsi $HigherMsi -Executable $Executable -PreviousVersion $PreviousVersion
         env:
           GH_TOKEN: ${{ github.token }}
 

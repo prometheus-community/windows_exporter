@@ -37,18 +37,25 @@
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
         <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
 
+        <!-- The settings of the service. Each install remembers them in the registry (C_Settings), so an
+            upgrade, a repair or a re-run without the properties on its command line keeps the earlier
+            settings instead of the defaults. A property on the command line replaces its remembered value,
+            and RESET_SETTINGS=1 ignores all remembered values except the install folder. -->
         <Property Id="ENABLED_COLLECTORS" Secure="yes" />
         <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
 
         <Property Id="EXTRA_FLAGS" Secure="yes" />
         <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
-        <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
+        <!-- Without a value, so that the remembered value can fill it. The SetDefault actions below set the default. -->
+        <Property Id="CONFIG_FILE" Secure="yes" />
         <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
         <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
         <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
 
-        <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
+        <Property Id="LISTEN_ADDR" Secure="yes" />
+        <!-- Without a value, so that the remembered value can fill it. The SetDefault actions below set the default. -->
+        <Property Id="LISTEN_PORT" Secure="yes" />
         <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
 
         <Property Id="METRICS_PATH" Secure="yes" />
@@ -63,8 +70,60 @@
         <!-- Account of the service, used by ServiceInstall in files.wxs. Empty installs the service as LocalSystem.
             The installer does not grant the account any rights, see docs/permissions.md. -->
         <Property Id="SERVICE_ACCOUNT" Secure="yes" />
-        <!-- Only a user account needs a password. Hidden keeps it out of the installer log. -->
+        <!-- Only a user account needs a password. Hidden keeps it out of the installer log. It is never remembered. -->
         <Property Id="SERVICE_PASSWORD" Secure="yes" Hidden="yes" />
+
+        <!-- START REMEMBERED SETTINGS -->
+        <?define SettingsKey = "SOFTWARE\prometheus-community\windows_exporter" ?>
+        <Property Id="RESET_SETTINGS" Secure="yes" />
+        <!-- Set by the UI sequence once it restored the settings. The execute sequence then keeps what
+            the dialogs passed, also a value that the user cleared there. -->
+        <Property Id="SETTINGS_RESTORED" Secure="yes" />
+
+        <?foreach Setting in ENABLED_COLLECTORS;EXTRA_FLAGS;CONFIG_FILE;LISTEN_ADDR;LISTEN_PORT;METRICS_PATH;REMOTE_ADDR;TEXTFILE_DIRS;SERVICE_ACCOUNT ?>
+        <Property Id="REMEMBERED_$(var.Setting)">
+            <RegistrySearch Id="Remembered_$(var.Setting)" Root="HKLM" Key="$(var.SettingsKey)" Name="$(var.Setting)" Type="raw" Bitness="always64" />
+        </Property>
+        <SetProperty Id="$(var.Setting)" Action="RestoreUi_$(var.Setting)" Value="[REMEMBERED_$(var.Setting)]" After="AppSearch" Sequence="ui"
+            Condition="NOT $(var.Setting) AND REMEMBERED_$(var.Setting) AND NOT RESET_SETTINGS" />
+        <SetProperty Id="$(var.Setting)" Action="Restore_$(var.Setting)" Value="[REMEMBERED_$(var.Setting)]" After="AppSearch" Sequence="execute"
+            Condition="NOT $(var.Setting) AND REMEMBERED_$(var.Setting) AND NOT RESET_SETTINGS AND NOT SETTINGS_RESTORED" />
+        <?endforeach?>
+
+        <!-- The install folder is searched as a directory, so a folder that no longer exists falls back to the default.
+            Setting it before CostFinalize keeps an APPLICATIONFOLDER given on the command line. RESET_SETTINGS
+            keeps it: only an explicit APPLICATIONFOLDER moves the installation, together with config.yaml in it.
+            The folder is a secure property, so the folder that the UI chose or restored reaches the server; the
+            execute sequence restores it only when nothing set it. -->
+        <Property Id="APPLICATIONFOLDER" Secure="yes" />
+        <Property Id="REMEMBERED_APPLICATIONFOLDER">
+            <RegistrySearch Id="Remembered_APPLICATIONFOLDER" Root="HKLM" Key="$(var.SettingsKey)" Name="APPLICATIONFOLDER" Type="directory" Bitness="always64" />
+        </Property>
+        <SetProperty Id="APPLICATIONFOLDER" Action="RestoreUi_APPLICATIONFOLDER" Value="[REMEMBERED_APPLICATIONFOLDER]" After="AppSearch" Sequence="ui"
+            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER" />
+        <SetProperty Id="APPLICATIONFOLDER" Action="Restore_APPLICATIONFOLDER" Value="[REMEMBERED_APPLICATIONFOLDER]" After="AppSearch" Sequence="execute"
+            Condition="NOT APPLICATIONFOLDER AND REMEMBERED_APPLICATIONFOLDER" />
+
+        <SetProperty Id="SETTINGS_RESTORED" Action="SetSettingsRestored" Value="1" After="RestoreUi_APPLICATIONFOLDER" Sequence="ui" />
+
+        <!-- Defaults of the settings that have one, after the remembered values. -->
+        <SetProperty Id="LISTEN_PORT" Action="SetDefaultListenPortUi" Value="9182" After="RestoreUi_LISTEN_PORT" Sequence="ui" Condition="NOT LISTEN_PORT" />
+        <SetProperty Id="LISTEN_PORT" Action="SetDefaultListenPort" Value="9182" After="Restore_LISTEN_PORT" Sequence="execute" Condition="NOT LISTEN_PORT" />
+        <SetProperty Id="CONFIG_FILE" Action="SetDefaultConfigFileUi" Value="config.yaml" After="RestoreUi_CONFIG_FILE" Sequence="ui" Condition="NOT CONFIG_FILE" />
+        <SetProperty Id="CONFIG_FILE" Action="SetDefaultConfigFile" Value="config.yaml" After="Restore_CONFIG_FILE" Sequence="execute" Condition="NOT CONFIG_FILE" />
+
+        <!-- A user account needs its password, which is never remembered. An upgrade creates the service again
+            and a repair or another run reconfigures it, and whether an empty password then keeps the existing
+            one is not verified. Remember whether the account had one, and stop every run but a full uninstall
+            that would configure the service without it. -->
+        <Property Id="REMEMBERED_SERVICE_PASSWORD_SET">
+            <RegistrySearch Id="Remembered_SERVICE_PASSWORD_SET" Root="HKLM" Key="$(var.SettingsKey)" Name="SERVICE_PASSWORD_SET" Type="raw" Bitness="always64" />
+        </Property>
+        <SetProperty Id="ServicePasswordSet" After="Restore_SERVICE_ACCOUNT" Sequence="execute" Value="1"
+            Condition="SERVICE_PASSWORD OR (REMEMBERED_SERVICE_PASSWORD_SET AND SERVICE_ACCOUNT AND SERVICE_ACCOUNT~=REMEMBERED_SERVICE_ACCOUNT)" />
+        <CustomAction Id="CheckServicePassword"
+            Error="The windows_exporter service runs as [SERVICE_ACCOUNT], which needs a password. Pass it again with SERVICE_PASSWORD, or pass RESET_SETTINGS=1 to install the service as LocalSystem." />
+        <!-- END REMEMBERED SETTINGS -->
 
         <!-- Configuration for how the installer shows in Add/Remove Programs. -->
         <Icon Id="icon.ico" SourceFile=".\icon.ico"/>
@@ -204,6 +263,9 @@
             <Custom Action="RemoveEmptyConfigFile" After="RestoreEmptyConfigFile" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
             <Custom Action="SetInstallLocation" After="CostFinalize" />
 
+            <Custom Action="CheckServicePassword" Before="InstallInitialize"
+                    Condition="NOT (REMOVE~=&quot;ALL&quot;) AND ServicePasswordSet AND NOT SERVICE_PASSWORD" />
+
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"
                     Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
         </InstallExecuteSequence>
@@ -220,6 +282,7 @@
             AllowAbsent="no"
         >
             <ComponentGroupRef Id="CG_Files" />
+            <ComponentRef Id="C_Settings" />
 
             <Feature
                 Id="FirewallException"
@@ -256,8 +319,8 @@
                 <Control Id="PropertyEdit_LISTEN_PORT_Title" Type="Text" X="25" Y="135" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Port to listen" />
                 <Control Id="PropertyEdit_LISTEN_PORT" Type="Edit" X="24" Y="147" Width="300" Height="18" Property="LISTEN_PORT" Text="[LISTEN_PORT]" Indirect="no" />
 
-                <Control Id="PropertyEdit_CONFIG_FILE_Title1" Type="Text" X="25" Y="170" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Path to config file. If empty, no config will be used. If set to 'config.yaml', " />
-                <Control Id="PropertyEdit_CONFIG_FILE_Title2" Type="Text" X="25" Y="180" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="then the config.yaml at the install path will be used." />
+                <Control Id="PropertyEdit_CONFIG_FILE_Title1" Type="Text" X="25" Y="170" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Path to config file. If empty or set to 'config.yaml', the config.yaml at the install " />
+                <Control Id="PropertyEdit_CONFIG_FILE_Title2" Type="Text" X="25" Y="180" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="path will be used." />
                 <Control Id="PropertyEdit_CONFIG_FILE" Type="Edit" X="24" Y="192" Width="300" Height="18" Property="CONFIG_FILE" Text="[CONFIG_FILE]" Indirect="no" />
 
                 <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
@@ -312,6 +375,20 @@
                 <Directory Id="textfile_inputs" Name="textfile_inputs" />
             </Directory>
         </StandardDirectory>
+
+        <!-- The remembered settings, read back by the searches above. The key is deleted and written again on
+            every install, so a setting that is now empty does not keep an earlier value, and it is deleted on
+            uninstall. A major upgrade reads it before the earlier version removes it. -->
+        <Component Directory="APPLICATIONFOLDER" Id="C_Settings" Guid="801dc7e9-b511-457d-94a3-a8b988fcdf55" Bitness="always64">
+            <RemoveRegistryKey Id="RemoveSettings" Action="removeOnInstall" Root="HKLM" Key="$(var.SettingsKey)" />
+            <RegistryKey Root="HKLM" Key="$(var.SettingsKey)" ForceDeleteOnUninstall="yes">
+                <RegistryValue Name="Version" Type="string" Value="$(var.Version)" KeyPath="yes" />
+                <?foreach Setting in ENABLED_COLLECTORS;EXTRA_FLAGS;CONFIG_FILE;LISTEN_ADDR;LISTEN_PORT;METRICS_PATH;REMOTE_ADDR;TEXTFILE_DIRS;SERVICE_ACCOUNT;APPLICATIONFOLDER ?>
+                <RegistryValue Name="$(var.Setting)" Type="string" Value="[$(var.Setting)]" />
+                <?endforeach?>
+                <RegistryValue Name="SERVICE_PASSWORD_SET" Type="string" Value="[ServicePasswordSet]" />
+            </RegistryKey>
+        </Component>
 
         <ComponentGroup Id="CG_FirewallException">
             <Component Directory="APPLICATIONFOLDER" Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">

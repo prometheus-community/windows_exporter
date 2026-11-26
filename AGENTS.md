@@ -42,6 +42,16 @@ their runtime behavior.
   not by a component, so Windows Installer never removes it. The package
   creates it only when not uninstalling and deletes it on a full uninstall
   (not an upgrade) only while it is still empty, so user configuration stays.
+- The installer remembers its settings properties in
+  `HKLM\SOFTWARE\prometheus-community\windows_exporter` (component `C_Settings`
+  in [`installer/main.wxs`](installer/main.wxs)). `RegistrySearch` reads them
+  into `REMEMBERED_*` and guarded `SetProperty` actions restore each one that
+  is not on the command line, in the UI sequence and, unless the UI already
+  did it (`SETTINGS_RESTORED`), in the execute sequence. Properties with a
+  default (`LISTEN_PORT`, `CONFIG_FILE`) must not have a `Value` in the
+  `Property` table, or nothing is ever restored: their defaults are set after
+  the restore. A new settings property must be added to both `foreach` lists.
+  Never remember `SERVICE_PASSWORD`.
 - Release builds give the executable and the MSI a numeric four-part version
   computed in the CI build job (`output/FILE_VERSION`): the fourth field is N
   for `alpha.N`/`beta.N`, 100+N for `rc.N` and 1000 for the release, so MDM
