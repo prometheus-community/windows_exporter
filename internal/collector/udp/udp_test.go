@@ -34,4 +34,16 @@ func TestCollector(t *testing.T) {
 		require.Contains(t, metrics, name)
 		require.Equal(t, dto.MetricType_COUNTER, metrics[name].GetType(), name)
 	}
+
+	// The shared dynamic port range has no address family label.
+	for _, name := range []string{
+		"windows_udp_dynamic_port_range_size",
+		"windows_udp_dynamic_port_range_excluded_ports",
+		"windows_udp_dynamic_port_range_observed_used_ports",
+	} {
+		require.Contains(t, metrics, name)
+		require.Equal(t, dto.MetricType_GAUGE, metrics[name].GetType(), name)
+		require.Len(t, metrics[name].GetMetric(), 1, name)
+		require.Empty(t, metrics[name].GetMetric()[0].GetLabel(), name)
+	}
 }
