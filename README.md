@@ -198,7 +198,8 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 ### Upgrades and repairs
 
 The installer remembers its parameters for later upgrades and repairs, see
-[Upgrades and repairs](docs/installer.md#upgrades-and-repairs).
+[Upgrades and repairs](docs/installer.md#upgrades-and-repairs). Installers up to
+0.32.2-alpha.0 do not, so pass the parameters again on the first upgrade from them.
 
 ## Docker Implementation
 

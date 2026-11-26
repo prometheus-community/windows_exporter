@@ -137,7 +137,8 @@ Write invisible or non-ASCII whitespace in source and test data as Go escapes
 (`\u00a0`, `\u3000`, `\u200b`), never as literal characters. Renovate warns about
 hidden Unicode on `main`, and literals are hard to review.
 
-Keep [`README.md`](README.md) at most 25000 bytes: after a merge,
+Keep [`README.md`](README.md), or `README-containers.md` once it exists, at
+most 25000 bytes: after a merge,
 [`container_description.yml`](.github/workflows/container_description.yml)
 pushes it to Docker Hub, which rejects anything larger. The super-linter job
 checks the size. Put longer topics in a page under [`docs`](docs) and link it.
