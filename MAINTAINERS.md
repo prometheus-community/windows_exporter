@@ -4,6 +4,7 @@
 
 * Ben Reedy <breed808@breed808.com> @breed808
 * Jan-Otto Kröpke <mail@jkroepke.de> @jkroepke
+* Dominik Eisenberg <dominik.eisenberg@beiersdorf.com> @Dominik-esb
 
 ## Emeritus
 
